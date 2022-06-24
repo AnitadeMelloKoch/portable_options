@@ -57,3 +57,12 @@ def loss_function(tensor, batch_k):
                 count_heter += 1
     
     return loss_div/batch_size, loss_homo/count_homo, loss_heter/count_heter
+
+def criterion(anchors, positives, negatives):
+    loss_homo = L_metric(anchors, positives)
+    loss_heter = L_metric(anchors, negatives, False)
+    loss_div = 0
+    for i in range(anchors.shape[0]):
+        loss_div += (L_divergence(anchors[i, ...]) + L_divergence(positives[i, ...]) + L_divergence(negatives[i, ...])) / 3
+    
+    return loss_div / anchors.shape[0], loss_homo, loss_heter
