@@ -1,3 +1,9 @@
+# data
+resources/
+
+# results
+results/
+
 # DS Store
 **/.DS_Store
 
