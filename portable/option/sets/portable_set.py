@@ -5,8 +5,7 @@ import portable.option.ensemble.criterion as criterion
 import numpy as np
 import os
 
-from portable.option.sets.models.mlp import MLP
-from portable.option.sets.models.small_embedding import SmallEmbedding
+from portable.option.sets.models import MLP, SmallEmbedding
 
 class EnsembleClassifier():
 
