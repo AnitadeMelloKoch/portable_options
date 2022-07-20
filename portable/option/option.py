@@ -84,6 +84,9 @@ class Skill():
 
         self.problem_termination_epsilon = problem_termination_epsilon
 
+        self.current_markov_pair = -1
+        self.last_markov_pair = -1
+
     def add_local_classifier(self, obs, info, termination_image, termination_point):
         self.problem_space_classifiers.append(PositionSetPair(
             obs,
@@ -91,8 +94,14 @@ class Skill():
             termination_image,
             termination_point
         ))
+        self.last_markov_pair = self.current_markov_pair
+        self.current_markov_pair = len(self.problem_space_classifiers) - 1
 
-    def check_local_termination(self, pos, idx):
+    def check_local_termination(self, pos, idx=None):
+        # if the given index is None we will use the last initiation set used
+        if idx is None:
+            idx = self.current_markov_pair
+        
         return self.problem_space_classifiers[idx].check_termination(pos)
 
     def check_local_initiation(self, pos):
@@ -100,6 +109,8 @@ class Skill():
         for pair in self.problem_space_classifiers:
             prediction = pair.check_initiation(pos)
             if prediction == 1:
+                self.last_markov_pair = self.current_markov_pair
+                self.current_markov_pair = idx
                 return True, idx
             idx += 1
 
@@ -154,9 +165,14 @@ class Skill():
 
         return votes, vote_conf, vote
 
-    def check_global_termination(self, x):
+    def check_global_termination(self, x, check_previous_markov_pair=False, pos=None):
         votes, vote_conf = self.termination_classifier.get_votes(x)
         vote = self.vote_function(votes, vote_conf)
+
+        if check_previous_markov_pair:
+            assert pos is not None
+            if self.check_local_termination(pos, self.last_markov_pair):
+                vote = 0
 
         return votes, vote_conf, vote        
 
