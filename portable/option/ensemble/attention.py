@@ -67,6 +67,7 @@ class Attention(nn.Module):
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
         global_features = [self.global_feature_extractor(attentions[i] * spacial_features) for i in range(self.num_attention_modules)]
+        ### Leaving this in for now but will move plotting later
         if plot:
             plot_attention_diversity(global_features, self.num_attention_modules, save_dir=self.plot_dir)
         embedding = torch.cat([self.compact_global_features(f).unsqueeze(1) for f in global_features], dim=1)  # (N, num_modules, embedding_size)
