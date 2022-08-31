@@ -11,7 +11,8 @@ from pfrl.utils.batch_states import batch_states
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.value_ensemble import ValueEnsemble
-from portable.option.policy.aggregate import choose_leader, choose_most_popular
+from portable.option.policy.aggregate import choose_leader, choose_most_popular, \
+    upper_confidence_bound, choose_max_sum_qvals
 
 
 class EnsembleAgent(Agent):
@@ -46,6 +47,8 @@ class EnsembleAgent(Agent):
         self.phi = phi
         self.action_selection_strategy = action_selection_strategy
         print(f"using action selection strategy: {self.action_selection_strategy}")
+        if self._using_leader():
+            self.action_leader = np.random.choice(num_modules)
         self.warmup_steps = warmup_steps
         self.batch_size = batch_size
         self.q_target_update_interval = q_target_update_interval
@@ -54,8 +57,8 @@ class EnsembleAgent(Agent):
         self.num_modules = num_modules
         self.step_number = 0
         self.episode_number = 0
-        self.action_leader = np.random.choice(self.num_modules)
-        self.learner_accumulated_reward = {l: 1 for l in range(self.num_modules)}  # laplace smoothing
+        self.learner_accumulated_reward = np.ones(self.num_modules)  # laplace smoothing
+        self.learner_selection_count = np.ones(self.num_modules)  # laplace smoothing
         self.update_epochs_per_step = 1
         self.embedding_plot_freq = embedding_plot_freq
         self.discount_rate = discount_rate
@@ -101,6 +104,9 @@ class EnsembleAgent(Agent):
             update_interval=update_interval,
         )
     
+    def _using_leader(self):
+        return self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']
+    
     def observe(self, obs, action, reward, next_obs, terminal):
         """
         store the experience tuple into the replay buffer
@@ -123,25 +129,29 @@ class EnsembleAgent(Agent):
                 self.replay_buffer.stop_current_episode()
 
             self.replay_updater.update_if_necessary(self.step_number)
-            self.learner_accumulated_reward[self.action_leader] += reward
+            if self._using_leader():
+                self.learner_accumulated_reward[self.action_leader] += reward
             
         # new episode
         if terminal:
             self.episode_number += 1
-            # set leader
-            if self.action_selection_strategy == 'uniform_leader':
-                self.action_leader = np.random.choice(self.num_modules)
-            elif self.action_selection_strategy == 'leader':
-                acc_reward = np.array([self.learner_accumulated_reward[l] for l in range(self.num_modules)])
-                try:
-                    normalized_reward = acc_reward - acc_reward.max()
-                    probability = np.exp(normalized_reward) / np.exp(normalized_reward).sum()  # softmax
-                    self.action_leader = np.random.choice(self.num_modules, p=probability)
-                except ValueError:
-                    print(f"normalized reward: {normalized_reward}")
-                    print(f"probability: {probability}")
-                    print(probability.sum())
-                    raise
+            if self._using_leader():
+                self._set_action_leader()
+
+    def _set_action_leader(self):
+        """choose which learner in the ensemble gets to lead the action selection process"""
+        if self.action_selection_strategy == 'uniform_leader':
+            # choose a random leader
+            self.action_leader = np.random.choice(self.num_modules)
+        elif self.action_selection_strategy == 'greedy_leader':
+            # greedily choose the leader based on the cumulated reward
+            normalized_reward = self.learner_accumulated_reward - self.learner_accumulated_reward.max()
+            probability = np.exp(normalized_reward) / np.exp(normalized_reward).sum()  # softmax
+            self.action_leader = np.random.choice(self.num_modules, p=probability)
+        elif self.action_selection_strategy == 'ucb_leader':
+            # choose a leader based on the Upper Condfience Bound algorithm 
+            self.action_leader = upper_confidence_bound(values=self.learner_accumulated_reward, t=self.step_number, visitation_count=self.learner_selection_count, c=100)
+            self.learner_selection_count[self.action_leader] += 1
 
     def update(self, experiences, errors_out=None):
         """
@@ -195,24 +205,26 @@ class EnsembleAgent(Agent):
                 (action_selected, actions_selected_by_each_learner, q_values_of_each_actions_selected)
         """
         obs = batch_states([obs], self.device, self.phi)
-        actions, q_vals = self.value_ensemble.predict_actions(obs, return_q_values=True)
+        actions, action_q_vals, all_q_vals = self.value_ensemble.predict_actions(obs, return_q_values=True)
         # action selection strategy
         if self.action_selection_strategy == 'vote':
-            action_selection_func = choose_most_popular
-        elif self.action_selection_strategy in ['leader', 'uniform_leader']:
-            action_selection_func = lambda a: choose_leader(a, leader=self.action_leader)
+            action_selection_func = lambda a, qvals: choose_most_popular(a)
+        elif self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']:
+            action_selection_func = lambda a, qvals: choose_leader(a, leader=self.action_leader)
+        elif self.action_selection_strategy == 'add_qvals':
+            action_selection_func = lambda a, qvals: choose_max_sum_qvals(qvals)
         else:
             raise NotImplementedError("action selection strat not supported")
         # epsilon-greedy
         if self.training:
             a = self.explorer.select_action(
                 self.step_number,
-                greedy_action_func=lambda: action_selection_func(actions),
+                greedy_action_func=lambda: action_selection_func(actions, all_q_vals),
             )
         else:
-            a = action_selection_func(actions)
+            a = action_selection_func(actions, all_q_vals)
         if return_ensemble_info:
-            return a, actions, q_vals
+            return a, actions, action_q_vals
         return a
 
     def save(self, save_dir):
@@ -221,9 +233,13 @@ class EnsembleAgent(Agent):
             dill.dump(self, f)
 
     @classmethod
-    def load(cls, load_path, plot_dir=None):
+    def load(cls, load_path, reset=False, plot_dir=None):
         with lzma.open(load_path, 'rb') as f:
             agent = dill.load(f)
         # hack to change the plot_dir of the agent
         agent.value_ensemble.embedding.plot_dir = plot_dir
+        # reset defaults
+        if reset:
+            agent.learner_accumulated_reward = np.ones_like(agent.learner_accumulated_reward)
+            agent.learner_selection_count = np.ones_like(agent.learner_selection_count)
         return agent

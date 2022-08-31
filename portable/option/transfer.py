@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 
 from portable import utils
 from portable.option.option_utils import SingleOptionTrial
-from portable.option.train import train_ensemble_agent
+from portable.option.train import train_ensemble_agent_with_eval
 from portable.option.policy import EnsembleAgent, DoubleDQNAgent
 
 
@@ -40,6 +40,8 @@ class TransferTrial(SingleOptionTrial):
                             help="only do the plotting. Use this after the agent has been trained on transfer tasks.")
         parser.add_argument("--agent", type=str, choices=['dqn', 'ensemble'], default='ensemble',
                             help="the type of agent to transfer on")
+        parser.add_argument("--num_policies", type=int, default=3,
+                            help="number of policies in the ensemble")
         
         # testing params
         parser.add_argument("--steps", type=int, default=50000,
@@ -59,6 +61,7 @@ class TransferTrial(SingleOptionTrial):
         self.params['experiment_name'] = exp_name
     
     def check_params_validity(self):
+        super().check_params_validity()
         # check that all the target start_states are valid
         for target in self.params['target']:
             self.find_start_state_ram_file(target)
@@ -67,28 +70,38 @@ class TransferTrial(SingleOptionTrial):
         self._set_experiment_name()
         # log more frequently because it takes less time to train
         self.params['reward_logging_freq'] = 100
-        self.params['success_rate_save_freq'] = max(1, int(self.params['steps'] / 200))
+        self.params['success_rate_save_freq'] = 1  # in episodes
+        self.params['eval_freq'] = 500
+        self.params['saving_freq'] = self.params['steps']
 
     def setup(self):
+        super().setup()
         self.check_params_validity()
         
         # setting random seeds
         pfrl.utils.set_random_seed(self.params['seed'])
 
+        # find loading dir
+        self.loading_dir = Path(self.params['results_dir']) / self.params['load'] / self.expanded_agent_name
+        try: 
+            assert self.loading_dir.exists()
+        except AssertionError:
+            # for termination-clf agents etc, there is no such dir in the pre-training dir
+            self.loading_dir = Path(self.params['results_dir']) / self.params['load'] / self.detailed_agent_name
+
         # get the hyperparams
-        hyperparams_file = Path(self.params['results_dir']) / self.params['load'] / self.params['agent'] / 'hyperparams.csv'
+        hyperparams_file = self.loading_dir / 'hyperparams.csv'
         self.saved_params = utils.load_hyperparams(hyperparams_file)
 
         # create the saving directories
-        self.saving_dir = Path(self.params['results_dir']).joinpath(self.params['experiment_name']).joinpath(self.params['agent'])
-        if self.params['plot']:
-            utils.create_log_dir(self.saving_dir, remove_existing=False)
-        else:
+        self.saving_dir = self._set_saving_dir()
+        if not self.params['plot']:
             utils.create_log_dir(self.saving_dir, remove_existing=True)
         self.params['saving_dir'] = self.saving_dir
 
         # save the hyperparams
-        utils.save_hyperparams(os.path.join(self.saving_dir, "hyperparams.csv"), self.params)
+        if not self.params['plot']:
+            utils.save_hyperparams(os.path.join(self.saving_dir, "hyperparams.csv"), self.params)
 
     def plot_results(self):
         """
@@ -111,10 +124,11 @@ class TransferTrial(SingleOptionTrial):
         for i, target in enumerate(self.params['target']):
             print(f"Training {trained} -> {target}")
             # make env
-            env = self.make_env(self.saved_params['environment'], self.saved_params['seed'], start_state=target)
+            env = self.make_env(self.saved_params['environment'], self.saved_params['seed'], eval=False, start_state=target)
+            eval_env = self.make_env(self.saved_params['environment'], self.saved_params['seed']+1000, eval=True, start_state=target)
             # find loaded agent
             if trained == self.params['load']:
-                agent_file = Path(self.params['results_dir']) / self.params['load'] / self.params['agent'] / 'agent.pkl'
+                agent_file = self.loading_dir / 'agent.pkl'
             else:
                 agent_file = sub_saving_dir / 'agent.pkl'
             # make saving dir
@@ -127,9 +141,9 @@ class TransferTrial(SingleOptionTrial):
             if self.params['agent'] == 'dqn':
                 agent = DoubleDQNAgent.load(agent_file)
             elif self.params['agent'] == 'ensemble':
-                agent = EnsembleAgent.load(agent_file, plot_dir=plots_dir)
+                agent = EnsembleAgent.load(agent_file, reset=True, plot_dir=plots_dir)
             # train
-            train_ensemble_agent(
+            train_ensemble_agent_with_eval(
                 agent,
                 env,
                 max_steps=self.params['steps'],
@@ -137,6 +151,10 @@ class TransferTrial(SingleOptionTrial):
                 success_rate_save_freq=self.params['success_rate_save_freq'],
                 reward_save_freq=self.params['reward_logging_freq'],
                 agent_save_freq=self.params['saving_freq'],
+                eval_env=eval_env,
+                eval_freq=self.params['eval_freq'],
+                success_threshold_for_well_trained=self.params['success_threshold_for_well_trained'],
+                success_queue_size=self.params['success_queue_size'],
             )
             # advance to next target
             trained = target
@@ -170,7 +188,7 @@ def _grab_when_well_trained_data(targets, dir):
     for subdir in os.listdir(dir):
         if not os.path.isdir(dir / subdir):
             continue
-        well_trained_file = dir / subdir / 'finish_training_time.csv'
+        well_trained_file = dir / subdir / 'eval_well_trained_time.csv'
         try:
             with open(well_trained_file, 'r') as f:
                 csv_reader = csv.reader(f)
@@ -238,7 +256,7 @@ def _grab_average_success_rate_data(targets, dir):
     for subdir in os.listdir(dir):
         if not os.path.isdir(dir.joinpath(subdir)):
             continue
-        success_rates_file = Path(dir) / subdir / 'success_rate.csv'
+        success_rates_file = Path(dir) / subdir / 'eval_success_rate.csv'
         with open(success_rates_file, 'r') as f:
             csv_reader = csv.reader(f)
             success_rates = [float(row[1]) for row in csv_reader]
