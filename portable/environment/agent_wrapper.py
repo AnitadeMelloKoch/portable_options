@@ -1,6 +1,13 @@
+from collections import deque
+from enum import IntEnum
+
+import cv2
 import gym
+import torch
 import numpy as np
 from gym import spaces
+from skimage import color
+
 
 class actions(IntEnum):
     INVALID         = -1
@@ -23,8 +30,13 @@ class actions(IntEnum):
     DOWN_RIGHT_FIRE = 16
     DOWN_LEFT_FIRE  = 17
 
+
 class MonteAgentWrapper(gym.Wrapper):
-    def __init__(self, env, max_steps=60*60*30):
+    """
+    a wrapper for monte agent
+    I'm just currently using it to get the agent space for monte
+    """
+    def __init__(self, env, agent_space=False, max_steps=60*60*30):
         self.T = 0
         self.num_lives = None
         self.lost_life = False
@@ -33,6 +45,8 @@ class MonteAgentWrapper(gym.Wrapper):
         self._elapsed_steps = 0
         self._max_episode_steps = max_steps
         gym.Wrapper.__init__(self, env)
+        self.agent_space = agent_space
+        self.env.unwrapped.stacked_agent_position = deque([], maxlen=4)
 
     def reset(self, **kwargs):
         s0 = self.env.reset(**kwargs)
@@ -41,7 +55,15 @@ class MonteAgentWrapper(gym.Wrapper):
         self.episode_rewards = self.added_rewards.copy()
         self._elapsed_steps = 0
         
-        return s0, info
+        player_x, player_y, _ = self.get_current_position()
+        for _ in range(4):
+            self.env.unwrapped.stacked_agent_position.append((player_x, player_y))
+        
+        if self.agent_space:
+            s0 = self.get_pixels_around_player()
+            s0 = cv2.cvtColor(s0, cv2.COLOR_BGR2GRAY)
+            s0 = np.expand_dims(s0, axis=0)  # add channel dimension
+        return s0
 
     def step(self, action):
         self.T += 1
@@ -59,8 +81,30 @@ class MonteAgentWrapper(gym.Wrapper):
 
         if self._max_episode_steps <= self._elapsed_steps:
             info["needs_reset"] = True
+        
+        player_x, player_y, _ = self.get_current_position()
+        self.env.unwrapped.stacked_agent_position.append((player_x, player_y))
 
+        if self.agent_space:
+            obs = self.get_pixels_around_player()
+            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
+            obs = np.expand_dims(obs, axis=0)  # add channel dimension
         return obs, reward, done, info
+    
+    def render(self, mode='human'):
+        if self.agent_space:
+            img = self.get_pixels_around_player()
+        else:
+            img = self._get_frame()
+        if mode == "rgb_array":
+            return img
+        elif mode == "human":
+            from gym.envs.classic_control import rendering
+
+            if self.env.viewer is None:
+                self.env.viewer = rendering.SimpleImageViewer()
+            self.env.viewer.imshow(img)
+            return self.env.viewer.isopen
 
     def add_reward(self, x, y, room, reward):
         self.added_rewards[(x,y,room)] = reward
@@ -137,12 +181,12 @@ class MonteAgentWrapper(gym.Wrapper):
     @staticmethod
     def getByte(ram, address):
         # Return the byte at the specified emulator RAM location
-        idx = MontezumaPortWrapper._getIndex(address)
+        idx = MonteAgentWrapper._getIndex(address)
         return ram[idx]
 
     def _get_frame(self):
         img_rgb = np.empty([210, 160, 3], dtype=np.uint8)
-        self.env.env.ale.getScreenRGB(img_rgb)
+        self.env.ale.getScreenRGB(img_rgb)
 
         return img_rgb
 
@@ -152,9 +196,8 @@ class MonteAgentWrapper(gym.Wrapper):
         Args:
             width (int)
             height (int)
-
         Returns:
-            image_window (np.ndarry)
+            image_window (np.ndarry) (hwc)
         """
         if trim_direction != actions.INVALID:
             width -= 6
@@ -181,6 +224,57 @@ class MonteAgentWrapper(gym.Wrapper):
             image_window = np.pad(image_window, ((0,0), (0, (2*width) - image_window.shape[1]), (0,0)))
 
         return image_window
+
+
+def crop_agent_space(image, player_position, width=20, height=24, trim_direction=actions.INVALID):
+    """
+    crop the agent space out from an observation
+    This is basically the get_pixels_around_player function, but it doesn't belong to that wrapper class
+    """
+    assert image.shape == (210, 160, 3), image.shape
+    # make agent space
+    if trim_direction != actions.INVALID:
+        width -= 6
+    value_to_index = lambda y: int(-1.01144971 * y + 309.86119429)
+    start_y, end_y = (value_to_index(player_position[1]) - height,
+                        value_to_index(player_position[1]) + height)
+    start_x, end_x = max(0, player_position[0] - width), player_position[0] + width
+    start_y += 0
+    end_y += 8
+    if trim_direction == actions.RIGHT:
+        start_x += 13
+        end_x += 13
+    elif trim_direction == actions.LEFT:
+        start_x -= 7
+        end_x -= 7
+    image_window = image[start_y:end_y, start_x:end_x, :]
+
+    if player_position[0] - width < 0:
+        image_window = np.pad(image_window, ((0,0), (width - player_position[0], 0), (0,0)))
+
+    if image_window.shape[1] != (2*width):
+        image_window = np.pad(image_window, ((0,0), (0, (2*width) - image_window.shape[1]), (0,0)))
+
+    return image_window
+
+
+def build_agent_space_image_stack(env):
+    """
+    access the stacked original images from env.unwrapped
+    return a (1, 4, 56, 40) array
+    """
+    agent_space_state = np.zeros((1, 4, 56, 40))
+    for i, frame in enumerate(env.unwrapped.original_stacked_frames):
+        player_pos = env.unwrapped.stacked_agent_position[i]
+        obs = crop_agent_space(frame, player_pos)
+        assert obs.shape == (56, 40, 3)
+        obs = color.rgb2gray(obs)  # also concerts to floats
+        obs = np.expand_dims(obs, axis=0)  # add channel dimension, (1, 56, 40)
+        agent_space_state[:, i, :, :] = obs
+    tensor_state = torch.from_numpy(np.array(agent_space_state)).float()
+    assert tensor_state.shape == (1, 4, 56, 40), tensor_state.shape  # make sure it's agent space observation
+    return tensor_state
+
 
 class ReshapeFrame(gym.ObservationWrapper):
     def __init__(self, env, channel_order="hwc"):

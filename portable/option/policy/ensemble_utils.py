@@ -14,7 +14,7 @@ def pillow_im_add_margin(pil_img, top=0, right=0, bottom=0, left=0, color=0):
     return result
 
 
-def visualize_state_with_ensemble_actions(obs, meaningful_actions, meaningful_q_vals, action_taken, save_path):
+def visualize_state_with_ensemble_actions(obs, meaningful_actions, meaningful_q_vals, action_taken, reward, save_path):
     """
     use matplotlib.pyplot and Pillow to visualize the state as well as
     each of the actions chosen by the learners in the ensemble
@@ -24,6 +24,7 @@ def visualize_state_with_ensemble_actions(obs, meaningful_actions, meaningful_q_
         meaningful_actions: list of actions as strings
         meaningful_q_vals: list of q-values as strings
         action_taken: action taken by the ensemble, as a string
+        reward: reward obtained at the particular step, as an int
         save_path: path to the png image
     """
     frame = np.array(obs)[-1]
@@ -33,11 +34,11 @@ def visualize_state_with_ensemble_actions(obs, meaningful_actions, meaningful_q_
     # write the action and q value on it too
     txt = "\n".join([a + "  Qval: " + q for a, q in zip(meaningful_actions, meaningful_q_vals)])
     txt += "\n\n taken: " + action_taken
+    txt += "\n\n reward: " + str(reward)
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 10)
     image_editable = ImageDraw.Draw(image)
     image_editable.text((0, 0), txt, 255, font=font)
     image.save(save_path)
-
 
 def visualize_state_with_action(obs, action, save_path):
     """
