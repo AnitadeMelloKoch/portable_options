@@ -11,7 +11,6 @@ class EnsembleClassifier():
 
     def __init__(self, 
         device,
-        num_votes_needed=1,
         embedding_output_size=64, 
         embedding_learning_rate=1e-4, 
         classifier_learning_rate=1e-2, 
@@ -25,7 +24,6 @@ class EnsembleClassifier():
         self.normalize = normalize
         self.num_output_classes = num_output_classes
         self.device = device
-        self.num_votes_needed = num_votes_needed
 
         self.embedding = SmallEmbedding(embedding_size=embedding_output_size, num_attention_modules=self.num_modules, batch_k=self.batch_k, normalize=self.normalize).to(self.device)
         self.classifiers = nn.ModuleList([MLP(embedding_output_size, self.num_output_classes) for _ in range(self.num_modules)]).to(self.device)
@@ -168,6 +166,29 @@ class EnsembleClassifier():
         _, atts = self.embedding(x, sampling=False, return_attention_mask=True)
 
         return atts
+
+    def get_loss(self, dataset):
+        avg_loss = np.zeros(self.num_modules)
+        avg_accuracy = np.zeros(self.num_modules)
+        count = 0
+        num_batches = dataset.batch_num()
+        for _ in range(num_batches):
+            x, y = dataset.get_batch(shuffle=True)
+            x = x.to(self.device)
+            y = y.to(self.device)
+            embeddings = self.embedding(x, sampling=False, return_attention_mask=False)
+            for idx in range(self.num_modules):
+                attention_x = embeddings[:,idx,:]
+                pred_y = self.classifiers[idx](attention_x)
+                classifier_criterion = nn.CrossEntropyLoss()
+                avg_loss[idx] += classifier_criterion(pred_y, y).item()
+                pred_classes = torch.argmax(pred_y, dim=1).detach()
+                avg_accuracy[idx] += (torch.sum(pred_classes == y).item()/len(x))
+            count += 1
+        avg_loss = avg_loss/count
+        avg_accuracy = avg_accuracy/count
+
+        return avg_loss, avg_accuracy
 
 
 
