@@ -34,6 +34,8 @@ class EnsembleClassifier():
             optimizer = optim.Adam(self.classifiers[i].parameters(), classifier_learning_rate)
             self.classifiers_optimizers.append(optimizer)
 
+        self.avg_loss = np.zeros(num_modules)
+
     def save(self, path):
 
         if not os.path.exists(path):
@@ -140,6 +142,8 @@ class EnsembleClassifier():
             print("Average across classifiers: loss = {:.4f} accuracy = {:.4f}".format(np.mean(avg_loss), np.mean(avg_accuracy)))
         self.embedding.eval()
         self.classifiers.eval()
+
+        self.avg_loss = avg_loss
 
     def get_votes(self, x):
         self.embedding.eval()

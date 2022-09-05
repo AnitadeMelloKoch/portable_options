@@ -37,6 +37,10 @@ class Set():
             attention_module_num
         )
 
+        self.attention_module_num = attention_module_num
+        self.votes = None
+        self.avg_loss = np.zeros(self.attention_module_num)
+
     def save(self, path):
         self.classifier.save(path)
         self.confidence.save(path)
@@ -102,17 +106,28 @@ class Set():
                 classifier_epochs_per_cycle
             )
 
+        self.avg_loss = self.classifier.avg_loss
+
     def vote(
             self,
             agent_state):
         votes, conf = self.classifier.get_votes(agent_state)
         vote = self.vote_function(votes, self.confidence.weights, conf)
 
+        self.votes = votes
+
         return vote
 
     def update_confidence(
             self,
-            success_count,
-            failure_count):
+            was_successful):
+        # DOUBLE CHECK THERE IS NO REFERENCE COPY NONSENSE HAPPENING HERE
+        success_count = self.votes
+        failure_count = np.ones(len(self.votes)) - self.votes
+
+        if not was_successful:
+            success_count = failure_count
+            failure_count = self.votes
+
         self.confidence.update_successes(success_count)
         self.confidence.update_failures(failure_count)

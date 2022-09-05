@@ -1,205 +1,433 @@
+from collections import deque
 import logging
 import os
 import pickle
-from enum import IntEnum
+import numpy as np
 
-from portable.option.sets import EnsembleClassifier
-from portable.option.memory import SetDataset
-from portable.option.sets import PositionSetPair
+from portable.option.sets import Set
+from portable.option.sets.utils import PositionSetPair
+from portable.option.policy.agents import EnsembleAgent
+
+from portable.utils import makedir
 
 logger = logging.getLogger(__name__)
 
-class actions(IntEnum):
-    INVALID         = -1
-    NOOP            = 0
-    FIRE            = 1
-    UP              = 2
-    RIGHT           = 3
-    LEFT            = 4
-    DOWN            = 5
-    UP_RIGHT        = 6
-    UP_LEFT         = 7
-    DOWN_RIGHT      = 8
-    DOWN_LEFT       = 9
-    UP_FIRE         = 10
-    RIGHT_FIRE      = 11
-    LEFT_FIRE       = 12
-    DOWN_FIRE       = 13
-    UP_RIGHT_FIRE   = 14
-    UP_LEFT_FIRE    = 15
-    DOWN_RIGHT_FIRE = 16
-    DOWN_LEFT_FIRE  = 17
-
-class Skill():
-    # Base class for skills
+class Option():
     def __init__(
-        self,
-        device,
-        vote_function,
+            self,
+            device,
 
-        problem_termination_epsilon=3,
+            initiation_vote_function,
+            termination_vote_function,
+            policy_phi,
+            action_selection_strategy,
+            prioritized_replay_anneal_steps,
 
-        initiation_attention_module_num=8,
-        initiation_votes_needed=1,
-        initiation_embedding_learning_rate=1e-4,
-        initiation_classifier_learning_rate=1e-2,
-        initiation_embedding_output_size=64,
+            policy_warmup_steps=500000,
+            policy_batchsize=32,
+            policy_buffer_length=100000,
+            policy_update_interval=4,
+            q_target_update_interval=40,
+            policy_embedding_output_size=64,
+            policy_learning_rate=2.5e-4,
+            final_epsilon=0.01,
+            final_exploration_frames=10**6,
+            discount_rate=0.9,
+            policy_attention_module_num=8,
+            policy_num_output_classes=18,
 
-        termination_attention_module_num=8,
-        termination_votes_needed=1,
-        termination_embedding_learning_rate=1e-4,
-        termination_classifier_learning_rate=1e-2,
-        termination_embedding_output_size=64,
+            initiation_beta_distribution_alpha=20,
+            initiation_beta_distribution_beta=10,
+            initiation_attention_module_num=8,
+            initiation_embedding_learning_rate=1e-4,
+            initiation_classifier_learning_rate=1e-2,
+            initiation_embedding_output_size=64,
+            initiation_dataset_max_size=100000,
 
-        max_tries=20
-    
-    ):
+            termination_beta_distribution_alpha=20,
+            termination_beta_distribution_beta=10,
+            termination_attention_module_num=8,
+            termination_embedding_learning_rate=1e-4,
+            termination_classifier_learning_rate=1e-2,
+            termination_embedding_output_size=64,
+            termination_dataset_max_size=100000,
+
+            markov_termination_epsilon=3,
+            min_interactions=100,
+            q_variance_threshold=1,
+            timeout=50
+            ):
         
-        self.initiation_classifier = EnsembleClassifier(
+        self.policy = EnsembleAgent(
             device=device,
-            num_votes_needed=initiation_votes_needed,
+            warmup_steps=policy_warmup_steps,
+            batch_size=policy_batchsize,
+            phi=policy_phi,
+            action_selection_strategy=action_selection_strategy,
+            prioritized_replay_anneal_steps=prioritized_replay_anneal_steps,
+            buffer_length=policy_buffer_length,
+            update_interval=policy_update_interval,
+            q_target_update_interval=q_target_update_interval,
+            embedding_output_size=policy_embedding_output_size,
+            learning_rate=policy_learning_rate,
+            final_epsilon=final_epsilon,
+            final_exploration_frames=final_exploration_frames,
+            discount_rate=discount_rate,
+            num_modules=policy_attention_module_num,
+            num_output_classes=policy_num_output_classes
+        )
+
+        self.initiation = Set(
+            device=device,
+            vote_function=initiation_vote_function,
+            beta_distribution_alpha=initiation_beta_distribution_alpha,
+            beta_distribution_beta=initiation_beta_distribution_beta,
+            attention_module_num=initiation_attention_module_num,
             embedding_learning_rate=initiation_embedding_learning_rate,
             classifier_learning_rate=initiation_classifier_learning_rate,
-            num_modules=initiation_attention_module_num,
-            embedding_output_size=initiation_embedding_output_size
+            embedding_output_size=initiation_embedding_output_size,
+            dataset_max_size=initiation_dataset_max_size
         )
-        self.termination_classifier = EnsembleClassifier(
+
+        self.termination = Set(
             device=device,
-            num_votes_needed=termination_votes_needed,
+            vote_function=termination_vote_function,
+            beta_distribution_alpha=termination_beta_distribution_alpha,
+            beta_distribution_beta=termination_beta_distribution_beta,
+            attention_module_num=termination_attention_module_num,
             embedding_learning_rate=termination_embedding_learning_rate,
             classifier_learning_rate=termination_classifier_learning_rate,
-            num_modules=termination_attention_module_num,
-            embedding_output_size=termination_embedding_output_size
+            embedding_output_size=termination_embedding_output_size,
+            dataset_max_size=termination_dataset_max_size
         )
 
-        self.max_tries = max_tries
-        self.steps = 0
-        self.executing_skill = False
-        self.vote_function = vote_function
-
-        self.initiation_dataset = SetDataset()
-        self.termination_dataset = SetDataset()
-
-        self.problem_space_classifiers = []
-
-        self.problem_termination_epsilon = problem_termination_epsilon
-
-        self.current_markov_pair = -1
-        self.last_markov_pair = -1
-
-    def add_local_classifier(self, obs, info, termination_image, termination_point):
-        self.problem_space_classifiers.append(PositionSetPair(
-            obs,
-            info,
-            termination_image,
-            termination_point
-        ))
-        self.last_markov_pair = self.current_markov_pair
-        self.current_markov_pair = len(self.problem_space_classifiers) - 1
-
-    def check_local_termination(self, pos, idx=None):
-        # if the given index is None we will use the last initiation set used
-        if idx is None:
-            idx = self.current_markov_pair
+        self.markov_classifiers = []
+        self.markov_termination_epsilon = markov_termination_epsilon
+        self.min_interactions = min_interactions
+        self.q_variance_threshold = q_variance_threshold
+        self.option_timeout = timeout
         
-        return self.problem_space_classifiers[idx].check_termination(pos)
+        self.markov_classifier_idx = None
 
-    def check_local_initiation(self, pos):
-        idx = 0
-        for pair in self.problem_space_classifiers:
-            prediction = pair.check_initiation(pos)
-            if prediction == 1:
-                self.last_markov_pair = self.current_markov_pair
-                self.current_markov_pair = idx
-                return True, idx
-            idx += 1
+        
+    @staticmethod
+    def _get_save_paths(path):
+        policy = os.path.join(path, 'policy')
+        initiation = os.path.join(path, 'initiation')
+        termination = os.path.join(path, 'termination')
 
-        return False, -1
-
-    def add_negative_trajectories_initiation(self, obs, info, classifier_idx):
-        if classifier_idx == -1:
-            return 
-
-        self.problem_space_classifiers[classifier_idx].add_negative(
-                obs,
-                info
-            )
-
-    def add_positive_trajectories_initiation(self, obs, info, classifier_idx):
-        if classifier_idx == -1:
-            return
-
-        self.problem_space_classifiers[classifier_idx].add_positive(
-            obs,
-            info
-        )
-
-    def start_skill(self):
-        self.executing_skill = True
-        self.steps = 0
-
-    def end_skill(self):
-        self.executing_skill = False
+        return policy, initiation, termination
 
     def save(self, path):
-        self.initiation_classifier.save(os.path.join(path, 'initiation'))
-        self.termination_classifier.save(os.path.join(path, 'termination'))
-
-        filename = os.path.join(path, 'markov_pairs.pkl')
-        if len(self.problem_space_classifiers) != 0:
-            with open(filename, "wb") as f:
-                pickle.dump(self.problem_space_classifiers, f)
+        policy_path, initiation_path, termination_path = self._get_save_paths(path)
+        
+        makedir(policy_path)
+        makedir(initiation_path)
+        makedir(termination_path)
+        
+        self.policy.save(policy_path)
+        self.initiation.save(initiation_path)
+        self.termination.save(termination_path)
 
     def load(self, path):
-        self.initiation_classifier.load(os.path.join(path, 'initiation'))
-        self.termination_classifier.load(os.path.join(path, 'termination'))
+        policy_path, initiation_path, termination_path = self._get_save_paths(path)
 
-        filename = os.path.join(path, 'markov_pairs.pkl')
-        if os.path.exists(filename):
-            with open(filename, "rb") as f:
-                self.problem_space_classifiers = pickle.load(f)
+        self.policy.load(os.path.join(policy_path, 'agent.pkl'))
+        self.initiation.load(initiation_path)
+        self.termination.load(termination_path)
 
-    def check_global_initiation(self, x):
-        votes, vote_conf = self.initiation_classifier.get_votes(x)
-        vote = self.vote_function(votes, vote_conf)
+    def _add_markov_classifier(
+            self,
+            markov_states,
+            agent_space_states,
+            termination):
+        # adds a markov classifier from the previous run of the option
+        self.markov_classifiers.append(
+            PositionSetPair(
+                markov_states,
+                agent_space_states,
+                termination,
+                self.markov_termination_epsilon
+            )
+        )
 
-        return votes, vote_conf, vote
+    def can_initiate(self, agent_space_state, markov_space_state):
+        # check if option can initiate
+        vote_global = self.initiation(agent_space_state)
+        vote_markov = False
+        self.markov_classifier_idx = None
+        for idx in range(len(self.markov_classifiers)):
+            prediction = self.markov_classifiers[idx].initiation(markov_space_state)
+            if prediction == 1:
+                self.markov_classifier_idx = idx
+                vote_markov = True
+        
+        return vote_global, vote_markov
 
-    def check_global_termination(self, x, check_previous_markov_pair=False, pos=None):
-        votes, vote_conf = self.termination_classifier.get_votes(x)
-        vote = self.vote_function(votes, vote_conf)
+    def run_option( self, 
+                    env, 
+                    state, 
+                    info,
+                    q_values,
+                    option_q,
+                    use_global_classifiers=True):
+        # run the option. Policy takes over control
+        steps = 0
+        total_reward = 0
+        markov_states = []
+        agent_space_states = []
+        # need to get agent state. This is a placeholder
+        agent_state = env.get_agent_state()
 
-        if check_previous_markov_pair:
-            assert pos is not None
-            if self.check_local_termination(pos, self.last_markov_pair):
-                vote = 0
+        while steps < self.option_timeout:
+            markov_states.append(info)
+            agent_space_states.append(agent_state)
+            
+            action = self.policy.act(state)
 
-        return votes, vote_conf, vote        
+            next_state, reward, done, info = env.step(action)
+            agent_state = env.get_agent_state()
+            steps += 1
 
-    def train_initiation(self, 
-            num_cycles=1, 
-            embedding_epochs_per_cycle=10, 
-            classifier_epochs_per_cycle=10):
-        for i in range(num_cycles):
-            self.initiation_classifier.train_embedding(self.initiation_dataset, embedding_epochs_per_cycle)
-            self.initiation_classifier.train_classifiers(self.initiation_dataset, classifier_epochs_per_cycle)
+            if use_global_classifiers:
+                should_terminate = self.termination.vote(agent_state)
+            else:
+                should_terminate = self.markov_classifiers[self.markov_classifier_idx].termination(info)
+            
+            self.policy.observe(state, action, reward, next_state, done)
+            total_reward += reward
 
-    def train_termination(self,
-            num_cycles=1, 
-            embedding_epochs_per_cycle=10, 
-            classifier_epochs_per_cycle=10):
-        for i in range(num_cycles):
+            # need death condition => maybe just terminate on life lost wrapper
+            if done or info['needs_reset'] or should_terminate:
+                # ended episode without dying => success
+                # detected the end of the option => success
+                if (done or should_terminate) and not info['dead']:
+                    self._option_success(
+                        markov_states,
+                        agent_space_states,
+                        info,
+                        agent_state,
+                        q_values,
+                        option_q
+                    )
+                    return steps, total_reward
+                
+                # episode timed out => not a fail or success 
+                # no failure or success
+                if info['needs_reset']:
+                    return steps, total_reward
 
-            self.termination_classifier.train_embedding(self.termination_dataset, embedding_epochs_per_cycle)
-            self.termination_classifier.train_classifiers(self.termination_dataset, classifier_epochs_per_cycle)
+                # we died during option execution => fail
+                if done and info['dead']:
+                    self._option_fail(
+                        markov_states,
+                        agent_space_states
+                    )
+                    return steps, total_reward
+            
+            state = next_state
 
-    def add_data_from_file_initiation(self, positive_files, negative_files):
-        self.initiation_dataset.add_true_files(positive_files)
-        self.initiation_dataset.add_false_files(negative_files)
+        # we didn't find a valid termination for the option before the 
+        # allowed execution time ran out => fail
+        self._option_fail(
+            markov_states,
+            agent_space_states
+        )
 
-    def add_data_from_file_termination(self, positive_files, negative_files):
-        self.termination_dataset.add_true_files(positive_files)
-        self.termination_dataset.add_false_files(negative_files)
+        return steps, total_reward
+            
 
-    def get_action(self, agent_state):
-        pass
+    def _test_markov_classifier(
+            self,
+            initiation_states,
+            termination_states,
+            q_values=None, 
+            option_q=None,
+            test_negative_only=False):
+
+        if test_negative_only:
+            # only test that we don't add too much loss if is negative
+            initiation_loss = self.initiation.loss([], initiation_states)
+            if np.mean(initiation_loss) > 2*np.mean(self.initiation.avg_loss):
+                # too much loss added to initiation classifier
+                return False
+            else:
+                return True
+
+        assert q_values is not None
+        assert option_q is not None
+
+        # check if we can add data from this markov classifier
+        if self.markov_classifiers[self.markov_classifier_idx].interaction_count < self.min_interactions:
+            # we have not interacted with this markov classifier enough to trust it
+            return False
+        
+        initiation_loss = self.initiation.loss(
+            initiation_states,
+            termination_states
+        )
+        termination_loss = self.termination.loss(
+            termination_states,
+            initiation_states
+        )
+
+        if np.mean(initiation_loss) > 2*np.mean(self.initiation.avg_loss):
+            # too much loss added to initiation classifier
+            return False
+
+        if np.mean(termination_loss) > 2*np.mean(self.termination.avg_loss):
+            # too much loss added to termination classifier
+            return False
+
+        q_mean = np.mean(q_values)
+        q_std = np.std(q_values)
+
+        q_variance = (option_q - q_mean)/q_std
+
+        if q_variance < self.q_variance_threshold:
+            # q value was not high enough
+            return False
+
+        return True
+
+    def train_initiation(
+            self,
+            embedding_epochs_per_cycle,
+            classifier_epochs_per_cycle,
+            num_cycles=1):
+        # train initiation classifier
+        self.initiation.train(
+            num_cycles,
+            embedding_epochs_per_cycle,
+            classifier_epochs_per_cycle
+        )
+        
+    def train_termination(
+            self,
+            embedding_epochs_per_cycle,
+            classifier_epochs_per_cycle,
+            num_cycles=1):
+        # train termination classifier
+        self.termination.train(
+            num_cycles,
+            embedding_epochs_per_cycle,
+            classifier_epochs_per_cycle
+        )
+
+    def bootstrap_policy(
+            self, 
+            bootstrap_env,
+            max_steps,
+            success_rate_for_well_trained):
+        # initial policy train
+        # bootstrap_env: the environment the agent policy is trained on
+        #       this environment should reset to an appropriate location and
+        #       end episode (with appropriate reward) when the option policy has 
+        #       hit a termination
+        # max_steps: maximum number of steps the policy can take to train
+        step_number = 0
+        episode_number = 0
+        total_reward = 0
+        success_queue_size = 20
+        success_rates = deque(maxlen=success_queue_size)
+
+        state = bootstrap_env.reset()
+        while step_number < max_steps:
+            # action selection
+            action = self.policy.act(state)
+
+            # step
+            next_state, reward, done, info = bootstrap_env.step(action)
+            self.policy.observe(state, action, reward, next_state, done)
+            total_reward += reward
+            step_number += 1
+            state = next_state
+
+            if done or info['needs_reset']:
+                # check if env sent done signal and agent didn't die
+                success_rates.append(done and not info['dead'])
+                well_trained = len(success_rates) >= success_queue_size/2 \
+                    and np.mean(success_rates) >= success_rate_for_well_trained
+
+                if well_trained:
+                    print('Policy well trained in {} steps and {} episodes.'.format(step_number, episode_number))
+                    return
+
+                episode_number += 1
+                state = bootstrap_env.reset()
+
+    def add_data_from_files_initiation(self, positive_files, negative_files):
+        self.initiation.add_data_from_files(
+            positive_files,
+            negative_files
+        )
+
+    def add_data_from_files_termination(self, positive_files, negative_files):
+        self.termination.add_data_from_files(
+            positive_files,
+            negative_files
+        )
+
+    def _option_success(
+            self,
+            markov_states,
+            agent_space_states,
+            markov_termination,
+            agent_space_termination,
+            q_values,
+            option_q_value):
+        
+        # if we have a markoc classifier add data        
+        if self.markov_classifier_idx is not None:
+            self.markov_classifiers[self.markov_classifier_idx].add_positive(
+                agent_space_states,
+                markov_states
+            )
+            # test markov classifier to see if we can add data to global classifier
+            if self._test_markov_classifier(
+                agent_space_states,
+                [agent_space_termination],
+                q_values=q_values,
+                option_q=option_q_value
+            ):
+                self.initiation.add_data(
+                    agent_space_states,
+                    [agent_space_termination]
+                )
+                self.termination.add_data(
+                    [agent_space_termination],
+                    agent_space_states
+                )
+                self.initiation.update_confidence(was_successful=True)
+                self.termination.update_confidence(was_successful=True)
+
+        # if we don't have markov classifier add markov classifier
+        else:
+            self._add_markov_classifier(
+                markov_states,
+                agent_space_states,
+                markov_termination
+            )
+
+    def _option_fail(
+            self,
+            markov_states,
+            agent_space_states):
+
+        # if we have markov classifier add negative data to classifier
+        if self.markov_classifier_idx is not None:
+            self.markov_classifiers[self.markov_classifier_idx].add_negative(
+                agent_space_states, markov_states
+            )
+        # if we don't have classifier add negative samples to global classifier (?)
+        # maybe check if loss looks good (?)
+        if self._test_markov_classifier(
+            agent_space_states,
+            [],
+            test_negative_only=True
+        ):
+            self.initiation.add_data(
+                negative_data=agent_space_states
+            )
+            self.initiation.update_confidence(was_successful=False)
+        
