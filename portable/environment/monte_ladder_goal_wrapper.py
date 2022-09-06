@@ -3,7 +3,7 @@ import os
 import numpy as np
 from gym import Wrapper
 
-from portable.ale_utils import get_player_position, get_player_room_number
+from portable.utils import get_player_position, get_player_room_number
 
 
 class GoalsCollection:

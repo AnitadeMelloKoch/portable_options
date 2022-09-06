@@ -32,47 +32,60 @@ class actions(IntEnum):
 
 
 class MonteAgentWrapper(gym.Wrapper):
-    """
-    a wrapper for monte agent
-    I'm just currently using it to get the agent space for monte
-    """
-    def __init__(self, env, agent_space=False, max_steps=60*60*30):
+    def __init__(self, env, agent_space=False, stack_observations=True, max_steps=60*60*30):
         self.T = 0
         self.num_lives = None
         self.lost_life = False
-        self.added_rewards = {}
-        self.episode_rewards = self.added_rewards.copy()
         self._elapsed_steps = 0
         self._max_episode_steps = max_steps
         gym.Wrapper.__init__(self, env)
-        self.agent_space = agent_space
+        self.use_agent_space = agent_space
         self.env.unwrapped.stacked_agent_position = deque([], maxlen=4)
+        self.use_stacked_obs = stack_observations
+        self.stacked_agent_state = torch.zeros((1, 56, 40, 4))
+        self.stacked_state = torch.zeros((1, 84, 84, 4))
+
+    def update_state(self, obs):
+        self.stacked_state = torch.roll(self.stacked_state, -1, 1)
+        self.stacked_state[0, -1, ...] = torch.from_numpy(obs)
+
+    def update_agent_stack(self):
+        self.stacked_agent_state = torch.roll(self.stacked_agent_state, -1, 1)
+        self.stacked_agent_state[0, -1, ...] = self.agent_space()
 
     def reset(self, **kwargs):
         s0 = self.env.reset(**kwargs)
+        self.stacked_agent_state = torch.zeros((1, 56, 40, 4))
+        self.stacked_state = torch.zeros((1, 84, 84, 4))
+        self.update_state(s0)
+        self.update_agent_stack()
         self.num_lives = self.get_num_lives(self.get_current_ram())
         info = self.get_current_info(info={})
-        self.episode_rewards = self.added_rewards.copy()
         self._elapsed_steps = 0
         
         player_x, player_y, _ = self.get_current_position()
         for _ in range(4):
             self.env.unwrapped.stacked_agent_position.append((player_x, player_y))
-        
-        if self.agent_space:
-            s0 = self.get_pixels_around_player()
-            s0 = cv2.cvtColor(s0, cv2.COLOR_BGR2GRAY)
-            s0 = np.expand_dims(s0, axis=0)  # add channel dimension
-        return s0
+
+        if self.use_agent_space:
+            if self.use_stacked_obs:
+                s0 = self.stacked_agent_state
+            else:
+                s0 = self.agent_space()
+        else:
+            if self.use_stacked_obs:
+                s0 = self.stacked_state
+
+        return s0, info
 
     def step(self, action):
         self.T += 1
         self.lost_life = False
         obs, reward, done, info = self.env.step(action)
-        reward += self.check_reward()
+        self.update_state(obs)
+        self.update_agent_stack()
         info = self.get_current_info(info=info)
         if self.num_lives is not None and self.num_lives > info["lives"]:
-            self.episode_rewards = self.added_rewards.copy()
             self.lost_life = True
 
         self.num_lives = info["lives"]
@@ -85,14 +98,27 @@ class MonteAgentWrapper(gym.Wrapper):
         player_x, player_y, _ = self.get_current_position()
         self.env.unwrapped.stacked_agent_position.append((player_x, player_y))
 
-        if self.agent_space:
-            obs = self.get_pixels_around_player()
-            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-            obs = np.expand_dims(obs, axis=0)  # add channel dimension
+        if self.use_agent_space:
+            if self.use_stacked_obs:
+                obs = self.stacked_agent_state
+            else:
+                obs = self.agent_space()
+        else:
+            if self.use_stacked_obs:
+                obs = self.stacked_state
+    
         return obs, reward, done, info
     
+    def agent_space(self):
+        # get single agent space frame
+        obs = self.get_pixels_around_player()
+        obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
+        obs = np.expand_dims(obs, axis=0)
+        
+        return obs  # add channel dimension
+
     def render(self, mode='human'):
-        if self.agent_space:
+        if self.use_agent_space:
             img = self.get_pixels_around_player()
         else:
             img = self._get_frame()
@@ -105,23 +131,6 @@ class MonteAgentWrapper(gym.Wrapper):
                 self.env.viewer = rendering.SimpleImageViewer()
             self.env.viewer.imshow(img)
             return self.env.viewer.isopen
-
-    def add_reward(self, x, y, room, reward):
-        self.added_rewards[(x,y,room)] = reward
-
-    def check_reward(self):
-        ram = self.get_current_ram()
-
-        x = self.get_player_x(ram)
-        y = self.get_player_y(ram)
-        room = self.get_screen_num(ram)
-
-        if (x, y, room) in self.added_rewards:
-            reward = self.episode_rewards[(x,y,room)]
-            self.episode_rewards[(x,y,room)] = 0
-            return reward
-
-        return 0
 
     def get_is_life_lost(self):
         return self.lost_life
@@ -138,6 +147,8 @@ class MonteAgentWrapper(gym.Wrapper):
         info["jumping"] = self.get_is_jumping(ram)
         info["needs_reset"] = False
         info["elapsed_steps"] = self._elapsed_steps
+        info["stacked_state"] = self.stacked_state
+        info["stacked_agent_state"] = self.stacked_agent_state
 
         return info
 

@@ -54,6 +54,9 @@ def create_log_dir(dir_path, remove_existing=True, log_git=True):
         
     return outdir
 
+def makedir(path):
+    if not os.path.exists:
+        os.makedirs(path)
 
 def load_hyperparams(filepath):
     params = dict()

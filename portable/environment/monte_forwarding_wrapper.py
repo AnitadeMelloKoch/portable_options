@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from gym import Wrapper
 
-from portable.ale_utils import set_player_ram
+from portable.utils import set_player_ram
 
 
 class MonteForwarding(Wrapper):

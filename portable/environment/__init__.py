@@ -8,3 +8,4 @@ from .monte_ladder_goal_wrapper import MonteLadderGoalWrapper
 from .agent_wrapper import MonteAgentWrapper
 from .monte_initiation_set_wrapper import MonteInitiationSetWrapper
 from .monte_termination_set_wrapper import MonteTerminationSetWrapper
+from .monte_bootstrap_wrapper import MonteBootstrapWrapper

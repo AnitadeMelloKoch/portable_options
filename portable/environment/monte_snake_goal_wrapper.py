@@ -1,5 +1,5 @@
 from portable.environment.monte_object_goal_wrapper import MonteObjectGoalWrapper
-from portable.ale_utils import get_player_position, get_player_room_number
+from portable.utils import get_player_position, get_player_room_number
 
 
 # y pos of the player in those rooms on the platform
