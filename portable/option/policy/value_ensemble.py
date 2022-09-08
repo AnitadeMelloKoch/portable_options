@@ -32,8 +32,7 @@ class ValueEnsemble():
 
         self.embedding = Attention(
             embedding_size=embedding_output_size, 
-            num_attention_modules=self.num_modules, 
-            plot_dir=plot_dir
+            num_attention_modules=self.num_modules
         ).to(self.device)
 
         self.recurrent_memory = nn.GRU(
@@ -64,7 +63,7 @@ class ValueEnsemble():
         self.embedding.load_state_dict(torch.load(os.path.join(path, 'embedding.pt')))
         self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
 
-    def train(self, exp_batch, errors_out=None, update_target_network=False, plot_embedding=False):
+    def train(self, exp_batch, errors_out=None, update_target_network=False):
         """
         update both the embedding network and the value network by backproping
         the sumed divergence and q learning loss
@@ -82,7 +81,7 @@ class ValueEnsemble():
         loss = 0
 
         # divergence loss
-        state_embeddings = self.embedding(batch_states, return_attention_mask=False, plot=plot_embedding)  # (batch_size, num_modules, embedding_size)
+        state_embeddings = self.embedding(batch_states, return_attention_mask=False)  # (batch_size, num_modules, embedding_size)
         state_embeddings, _ = self.recurrent_memory(state_embeddings)  # (batch_size, num_modules, gru_out_size)
         l_div = batched_L_divergence(state_embeddings)
         loss += l_div

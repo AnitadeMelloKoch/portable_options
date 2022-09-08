@@ -91,7 +91,7 @@ def set_player_ram(env, ram_state):
     """
     state_ref = env.unwrapped.ale.cloneState()
     env.unwrapped.ale.deleteState(state_ref)
-
+    
     new_state_ref = env.unwrapped.ale.decodeState(ram_state)
     env.unwrapped.ale.restoreState(new_state_ref)
     env.unwrapped.ale.deleteState(new_state_ref)

@@ -2,17 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from portable.plot import plot_attention_diversity
-
-
 class Attention(nn.Module):
 
     def __init__(self, 
                 stack_size=4, 
                 embedding_size=64, 
                 attention_depth=32, 
-                num_attention_modules=8, 
-                plot_dir=None):
+                num_attention_modules=8):
         super(Attention, self).__init__()
         self.num_attention_modules = num_attention_modules
         self.out_dim = embedding_size
@@ -32,9 +28,7 @@ class Attention(nn.Module):
         self.pool2 = nn.MaxPool2d(2)
 
         self.linear = nn.LazyLinear(self.out_dim)
-
-        self.plot_dir = plot_dir
-
+        
     def spatial_feature_extractor(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool1(x)
@@ -52,7 +46,7 @@ class Attention(nn.Module):
         x = F.normalize(x)
         return x
 
-    def forward(self, x, return_attention_mask=False, plot=False):
+    def forward(self, x, return_attention_mask=False):
         spacial_features = self.spatial_feature_extractor(x)
         attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
 
@@ -65,8 +59,6 @@ class Attention(nn.Module):
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
         global_features = [self.global_feature_extractor(attentions[i] * spacial_features) for i in range(self.num_attention_modules)]
-        if plot:
-            plot_attention_diversity(global_features, self.num_attention_modules, save_dir=self.plot_dir)
         embedding = torch.cat([self.compact_global_features(f).unsqueeze(1) for f in global_features], dim=1)  # (N, num_modules, embedding_size)
 
         return embedding if not return_attention_mask else (embedding, attentions)

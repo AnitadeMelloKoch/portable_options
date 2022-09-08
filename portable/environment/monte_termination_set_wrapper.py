@@ -1,7 +1,7 @@
 import numpy as np
 from gym import Wrapper
 
-from portable.option.sets.portable_set import EnsembleClassifier
+from portable.option.sets.models import EnsembleClassifier
 from portable.environment.agent_wrapper import build_agent_space_image_stack
 
 

@@ -43,6 +43,7 @@ class EnsembleClassifier():
 
         torch.save(self.embedding.state_dict(), os.path.join(path, 'embedding.pt'))
         torch.save(self.classifiers.state_dict(), os.path.join(path, 'classifier.pt'))
+        np.save(os.path.join(path, 'loss.npy'), self.avg_loss)
 
     def load(self, path):
 
@@ -51,6 +52,11 @@ class EnsembleClassifier():
 
         if not os.path.exists(os.path.join(path, 'classifier.pt')):
             return
+
+        if os.path.exists(os.path.join(path, 'loss.npy')):
+            self.avg_loss = np.load(os.path.join(path, 'loss.npy'))
+        else:
+            print("NO LOSS FILE FOUND")
 
         print('Loading from {}'.format(path))
 
@@ -73,8 +79,7 @@ class EnsembleClassifier():
         for epoch in range(epochs):
             loss_div, loss_homo, loss_heter = 0, 0, 0
             counter = 0
-            num_batches = dataset.batch_num()
-            dataset.shuffle()
+            num_batches = dataset.num_batches
             for _ in range(num_batches + 1):
                 x, _ = dataset.get_batch()
                 x = x.to(self.device)
@@ -88,6 +93,7 @@ class EnsembleClassifier():
                 self.embedding_optimizer.zero_grad()
                 l_div, l_homo, l_heter = criterion.criterion(anchors, positives, negatives)
                 l = l_div + l_homo + l_heter
+                
                 l.backward()
                 self.embedding_optimizer.step()
 
@@ -114,8 +120,7 @@ class EnsembleClassifier():
             avg_loss = np.zeros(self.num_modules)
             avg_accuracy = np.zeros(self.num_modules)
             count = 0
-            num_batches = dataset.batch_num()
-            dataset.shuffle()
+            num_batches = dataset.num_batches
             for _ in range(num_batches):
                 x, y = dataset.get_batch(shuffle=True)
                 x = x.to(self.device)
@@ -175,7 +180,7 @@ class EnsembleClassifier():
         avg_loss = np.zeros(self.num_modules)
         avg_accuracy = np.zeros(self.num_modules)
         count = 0
-        num_batches = dataset.batch_num()
+        num_batches = dataset.num_batches
         for _ in range(num_batches):
             x, y = dataset.get_batch(shuffle=True)
             x = x.to(self.device)

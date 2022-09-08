@@ -57,9 +57,14 @@ class SetDataset():
     def _set_batch_num(self):
         # get number of batches to run through so we see all the true data at least once
         # randomly get negative samples
-        self.num_batches = math.ceil(
-            min(self.true_length, self.false_length)/(self.data_batchsize)
-        )
+        if self.true_length == 0 or self.false_length == 0:
+            self.num_batches = math.ceil(
+                max(self.true_length, self.false_length)/(self.data_batchsize)
+            )
+        else:
+            self.num_batches = math.ceil(
+                min(self.true_length, self.false_length)/(self.data_batchsize)
+            )
 
     def add_true_files(self, file_list):
         # load data from a file for true data

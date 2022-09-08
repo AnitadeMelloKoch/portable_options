@@ -190,7 +190,7 @@ class EnsembleAgent(Agent):
                     errors_out = []
             # actual update
             update_target_net =  self.step_number % self.q_target_update_interval == 0
-            self.value_ensemble.train(exp_batch, errors_out, update_target_net, plot_embedding=(self.step_number % self.embedding_plot_freq == 0))
+            self.value_ensemble.train(exp_batch, errors_out, update_target_net)
             # update prioritiy
             if has_weight:
                 assert isinstance(self.replay_buffer, replay_buffers.PrioritizedReplayBuffer)

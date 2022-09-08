@@ -7,12 +7,15 @@ def L_divergence(feats):
     """
     feats is of shape (n_modules, n_features)
     """
-    every_tuple_features = feats[every_tuple, :]  # (num_tuple, 2, dim)
-    every_tuple_difference = every_tuple_features.diff(dim=1).squeeze(1)  # (num_tuple, dim)
-    loss = torch.clamp(1 - torch.sum(every_tuple_difference.pow(2), dim=-1), min=0)  # (num_tuple, )
-    mean_loss = loss.mean(dim=0)
-    return mean_loss
+    n_modules, _ = feats.shape
+    feat_1 = feats.repeat(n_modules, 1)
+    feat_2 = torch.repeat_interleave(feats, torch.tensor([n_modules]*n_modules, device=feats.device), dim=0)
 
+    sums = torch.sum(torch.sub(feat_1, feat_2), dim=1).pow(2)
+    sums = sums[sums.nonzero()].squeeze() # removes the elements that are 0 because we have subtracted a vector from itself
+    loss = torch.clamp(1 - sums, min=0)
+
+    return loss.mean()
 
 def batched_L_divergence(batch_feats):
     """
@@ -62,6 +65,7 @@ def criterion(anchors, positives, negatives):
     loss_homo = L_metric(anchors, positives)
     loss_heter = L_metric(anchors, negatives, False)
     loss_div = 0
+
     for i in range(anchors.shape[0]):
         loss_div += (L_divergence(anchors[i, ...]) + L_divergence(positives[i, ...]) + L_divergence(negatives[i, ...])) / 3
     

@@ -9,18 +9,20 @@ import lzma
 import dill
 
 from portable.option import Option
-from portable.utils import makedir, set_player_ram
+from portable.utils import set_player_ram, load_gin_configs
+from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
 
 @gin.configurable
 class Experiment():
     def __init__(
         self,
         base_dir,
+        seed,
         experiment_name,
         initiation_vote_function,
         termination_vote_function,
         policy_phi,
-        experiment_env,
+        experiment_env_function,
         device_type="cpu",
         train_initiation=True,
         initiation_positive_files=[],
@@ -41,22 +43,28 @@ class Experiment():
         ):
 
         assert device_type in ["cpu", "cuda"]
+        assert initiation_vote_function in VOTE_FUNCTION_NAMES
+        assert termination_vote_function in VOTE_FUNCTION_NAMES
+
         self.device = torch.device(device_type)
 
         self.option = Option(
             device=self.device,
-            initiation_vote_function=initiation_vote_function,
-            termination_vote_function=termination_vote_function,
+            initiation_vote_function=get_vote_function(initiation_vote_function),
+            termination_vote_function=get_vote_function(termination_vote_function),
             policy_phi=policy_phi
         )
 
-        self.env = experiment_env
+        random.seed(seed)
+        self.seed = seed
         self.name = experiment_name
-
-        self.base_dir = os.path.join(base_dir, experiment_name)
+        self.base_dir = os.path.join(base_dir, self.name, str(self.seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
-        makedir(self.log_dir)
+        os.makedirs(self.log_dir, exist_ok=True)
+
+        self.env = experiment_env_function(self.seed)
+
 
         log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(
@@ -65,7 +73,7 @@ class Experiment():
             level=logging.INFO
         )
 
-        logging.info("[experiment] Beginning experiment {}".format(experiment_name))
+        logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
         
         if train_initiation:
             self._train_initiation(
@@ -96,7 +104,8 @@ class Experiment():
             "name": [],
             "performance": []
         }
-        
+
+
     def _train_initiation(
             self,
             positive_files,
@@ -166,7 +175,7 @@ class Experiment():
         self.option.load(self.save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'rb') as f:
-            dill.load(self.trial_data, f)
+            self.trial_data = dill.load(f)
 
     def _set_env_ram(self, ram, state, agent_state, use_agent_space):
         _ = set_player_ram(self.env, ram)
@@ -181,26 +190,24 @@ class Experiment():
 
     def run_trial(
             self, 
-            possible_initial_rams, 
-            state_list,
-            agent_state_list,
+            possible_inits,
             number_episodes_in_trial, 
             trial_name="",
             use_agent_space=False):
-        assert isinstance(possible_initial_rams, list)
+        assert isinstance(possible_inits, list)
         logging.info("[experiment] Starting trial {}".format(trial_name))
 
         results = []
 
         for _ in range(number_episodes_in_trial):
-            rand_idx = random.randint(len(possible_initial_rams))
+            rand_state = random.choice(possible_inits)
             state = self._set_env_ram(
-                self.env,
-                state_list[rand_idx],
-                agent_state_list[rand_idx],
+                rand_state["ram"],
+                rand_state["state"],
+                rand_state["agent_state"],
                 use_agent_space
             )
-            agent_state = agent_state_list[rand_idx]
+            agent_state = rand_state["agent_state"]
             info = self.env.get_current_info()
 
             can_initiate = self.option.can_initiate(agent_state, info)

@@ -1,3 +1,4 @@
+import lzma
 import os
 import csv
 import sys
@@ -8,6 +9,8 @@ import argparse
 from pydoc import locate
 from collections import defaultdict
 from distutils.util import strtobool
+import gin
+import dill
 
 
 def create_log_dir(dir_path, remove_existing=True, log_git=True):
@@ -54,9 +57,25 @@ def create_log_dir(dir_path, remove_existing=True, log_git=True):
         
     return outdir
 
-def makedir(path):
-    if not os.path.exists:
-        os.makedirs(path)
+def load_gin_configs(gin_files, gin_bindings):
+  """Loads gin configuration files.
+
+  Args:
+    gin_files: list, of paths to the gin configuration files for this
+      experiment.
+    gin_bindings: list, of gin parameter bindings to override the values in
+      the config files.
+  """
+  gin.parse_config_files_and_bindings(gin_files,
+                                      bindings=gin_bindings,
+                                      skip_unknown=False)
+
+def load_init_states(filenames):
+    states = []
+    for filename in filenames:
+        with open(filename, 'rb') as f:
+            states.append(dill.load(f))
+    return states
 
 def load_hyperparams(filepath):
     params = dict()

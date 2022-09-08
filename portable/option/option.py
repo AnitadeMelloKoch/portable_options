@@ -9,8 +9,6 @@ from portable.option.sets import Set
 from portable.option.sets.utils import PositionSetPair
 from portable.option.policy.agents import EnsembleAgent
 
-from portable.utils import makedir
-
 logger = logging.getLogger(__name__)
 
 @gin.configurable
@@ -129,9 +127,9 @@ class Option():
     def save(self, path):
         policy_path, initiation_path, termination_path = self._get_save_paths(path)
         
-        makedir(policy_path)
-        makedir(initiation_path)
-        makedir(termination_path)
+        os.makedirs(policy_path, exist_ok=True)
+        os.makedirs(initiation_path, exist_ok=True)
+        os.makedirs(termination_path, exist_ok=True)
         
         self.policy.save(policy_path)
         self.initiation.save(initiation_path)
@@ -365,12 +363,17 @@ class Option():
         self.log("[option] Bootstrapping option policy...")
 
         state, info = bootstrap_env.reset()
+
         while step_number < max_steps:
             # action selection
+            # really should change this
+            state = state.squeeze()
             action = self.policy.act(state)
 
             # step
             next_state, reward, done, info = bootstrap_env.step(action)
+            #  really need to change this too
+            next_state = next_state.squeeze()
             self.policy.observe(state, action, reward, next_state, done)
             total_reward += reward
             step_number += 1
@@ -384,11 +387,16 @@ class Option():
 
                 if well_trained:
                     self.log('[option] Policy well trained in {} steps and {} episodes.'.format(step_number, episode_number))
+                    print('[option] Policy well trained in {} steps and {} episodes.'.format(step_number, episode_number))
                     return
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
+                self.log("[option] Completed Episode {} success rate {}".format(episode_number-1, np.mean(success_rates)))
+                print("[option] Completed Episode {} success rate {}".format(episode_number-1, np.mean(success_rates)))
+
         self.log("[option] Policy did not reach well trained threshold")
+        print("[option] Policy did not reach well trained threshold")
 
     def add_data_from_files_initiation(self, positive_files, negative_files):
         self.initiation.add_data_from_files(
