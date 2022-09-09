@@ -386,17 +386,18 @@ class Option():
                     and np.mean(success_rates) >= success_rate_for_well_trained
 
                 if well_trained:
-                    self.log('[option] Policy well trained in {} steps and {} episodes.'.format(step_number, episode_number))
-                    print('[option] Policy well trained in {} steps and {} episodes.'.format(step_number, episode_number))
+                    self.log('[option] Policy well trained in {} steps and {} episodes. Success rate {}'.format(step_number, episode_number, np.mean(success_rates)))
+                    print('[option] Policy well trained in {} steps and {} episodes. Success rate {}'.format(step_number, episode_number, np.mean(success_rates)))
                     return
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
-                self.log("[option] Completed Episode {} success rate {}".format(episode_number-1, np.mean(success_rates)))
-                print("[option] Completed Episode {} success rate {}".format(episode_number-1, np.mean(success_rates)))
+                if (episode_number - 1) % 50 == 0:
+                    self.log("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
+                    print("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
 
-        self.log("[option] Policy did not reach well trained threshold")
-        print("[option] Policy did not reach well trained threshold")
+        self.log("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
+        print("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
 
     def add_data_from_files_initiation(self, positive_files, negative_files):
         self.initiation.add_data_from_files(
