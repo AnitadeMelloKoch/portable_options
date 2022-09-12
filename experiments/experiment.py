@@ -7,10 +7,12 @@ import gin
 import torch
 import lzma
 import dill
+import numpy as np
 
 from portable.option import Option
-from portable.utils import set_player_ram, load_gin_configs
+from portable.utils import set_player_ram
 from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
+from portable.option.policy.agents.abstract_agent import evaluating
 
 @gin.configurable
 class Experiment():
@@ -127,7 +129,8 @@ class Experiment():
         self.option.train_initiation(
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
-            number_cycles
+            number_cycles,
+            shuffle_data=True
         )
 
     def _train_termination(
@@ -151,7 +154,8 @@ class Experiment():
         self.option.train_termination(
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
-            number_cycles
+            number_cycles,
+            shuffle_data=True
         )
 
     def _train_policy(
@@ -191,46 +195,133 @@ class Experiment():
     def run_trial(
             self, 
             possible_inits,
-            number_episodes_in_trial, 
+            true_terminations,
+            number_episodes_in_trial,
+            eval, 
             trial_name="",
             use_agent_space=False):
         assert isinstance(possible_inits, list)
         logging.info("[experiment] Starting trial {}".format(trial_name))
+        print("[experiment] Starting trial {}".format(trial_name))
+
+        self.env.reset()
 
         results = []
 
         for _ in range(number_episodes_in_trial):
-            rand_state = random.choice(possible_inits)
+            rand_idx = random.randint(len(self.init_states))
+            rand_state = self.init_states[rand_idx]
             state = self._set_env_ram(
                 rand_state["ram"],
                 rand_state["state"],
                 rand_state["agent_state"],
                 use_agent_space
             )
+            state.squeeze()
             agent_state = rand_state["agent_state"]
-            info = self.env.get_current_info()
+            info = self.env.get_current_info({})
 
             can_initiate = self.option.can_initiate(agent_state, info)
 
             if not can_initiate:
                 results.append(0)
             else:
-                _, total_reward, _, _, steps = self.option.run(
-                    self.env,
-                    state,
-                    info,
-                    [0],
-                    0
-                )
+                if eval:
+                    _, _, _, _, _ = self.option.evaluate(
+                        self.env,
+                        state,
+                        info
+                    )
+                else:
+                    _, _, _, _, _ = self.option.run(
+                        self.env,
+                        state,
+                        info,
+                        [0],
+                        0
+                    )
 
-                results.append(total_reward)
+                results.append(int(self.env.get_current_position() in true_terminations[rand_idx]))
             
         self.trial_data["name"].append(trial_name)
         self.trial_data["performance"].append(results)
 
-        logging.info("[experiment] Finished trial {} average reward: {}".format(
+        if not eval:
+            self.option.train_initiation( 0, 50)
+            self.option.train_termination( 0, 50)
+
+        logging.info("[experiment] Finished trial {} performance: {}".format(
             trial_name,
-            sum(results)/number_episodes_in_trial
+            np.mean(results)
+            ))
+        print("[experiment] Finished trial {} performance: {}".format(
+            trial_name,
+            np.mean(results)
             ))
         
+    def bootstrap_from_room(
+            self,
+            possible_inits,
+            true_terminations, 
+            true_initiations,
+            number_episodes_in_trial,
+            use_agent_space=False):
         
+        assert isinstance(possible_inits, list)
+        assert isinstance(true_terminations, list)
+        assert isinstance(true_initiations, list)
+        
+        self.env.reset()
+
+        for _ in range(number_episodes_in_trial):
+            rand_idx = random.randint(len(self.init_states))
+            rand_state = self.init_states[rand_idx]
+            state = self._set_env_ram(
+                rand_state["ram"],
+                rand_state["state"],
+                rand_state["agent"],
+                use_agent_space
+            )
+
+            state.squeeze()
+
+            agent_state = rand_state["agent_state"]
+            info = self.env.get_current_info({})
+            done = False
+
+            while not done or info["needs_reset"]:
+
+                can_initiate = self.option.can_initiate(agent_state, info)
+
+                if not can_initiate:
+                    if self.env.get_current_position() in true_initiations:
+                        self.option.initiation_update_confidence(was_successful=False)
+                    else:
+                        self.option.initiation_update_confidence(was_successful=True)
+                    break
+
+                if not self.env.get_current_position() in true_initiations:
+                    self.option.initiation_update_confidence(was_successful=False)
+                else:
+                    self.option.initiation_update_confidence(was_successful=True)
+
+                state, _, done, info, _ = self.option.evaluate(
+                    self.env,
+                    state,
+                    info
+                )
+
+                if self.env.get_current_position() in true_terminations[rand_idx]:
+                    self.option.termination_update_confidence(was_successful=True)
+                    break
+                else:
+                    self.option.termination_update_confidence(was_successful=False)
+
+
+
+
+
+
+
+
+

@@ -31,7 +31,9 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
 
     def reset(self):
         self.env.reset()
-        rand_state = random.choice(self.init_states)
+        rand_idx = random.randint(len(self.init_states))
+        rand_state = self.init_states[rand_idx]
+        true_termination = self.termination_points[rand_idx]
         s0 = set_player_ram(self.env, rand_state["ram"])
         self.stacked_agent_state = rand_state["agent_state"]
         self.stacked_state = rand_state["state"]
@@ -54,16 +56,19 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         
         return s0, info
 
-    def _check_termination(self):
+    def _check_termination(self, true_terminations):
         player_x, player_y, room_num = self.get_current_position()
 
-        if (player_x, player_y, room_num) in self.termination_points:
+        if (player_x, player_y, room_num) in true_terminations:
             return True
 
         return False
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
+        # remove environment reward
+        # we only want to reward the agent for doing the option we are trying to train and nothing else
+        reward = 0
         hit_termination = self._check_termination()
         if hit_termination and not done:
             done = True

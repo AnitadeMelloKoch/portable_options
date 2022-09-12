@@ -1,7 +1,10 @@
+import logging
 import numpy as np
 from portable.option.memory import SetDataset
 from portable.option.sets.utils import BayesianWeighting
 from portable.option.sets.models import EnsembleClassifier
+
+logger = logging.getLogger(__name__)
 
 class Set():
     def __init__(
@@ -95,15 +98,18 @@ class Set():
             self,
             num_cycles=1,
             embedding_epochs_per_cycle=10,
-            classifier_epochs_per_cycle=10):
+            classifier_epochs_per_cycle=10,
+            shuffle_data=False):
         for i in range(num_cycles):
             self.classifier.train_embedding(
                 self.dataset,
-                embedding_epochs_per_cycle
+                embedding_epochs_per_cycle,
+                shuffle_data=shuffle_data
             )
             self.classifier.train_classifiers(
                 self.dataset,
-                classifier_epochs_per_cycle
+                classifier_epochs_per_cycle,
+                shuffle_data=shuffle_data
             )
 
         self.avg_loss = self.classifier.avg_loss
@@ -113,6 +119,9 @@ class Set():
             agent_state):
         votes, conf = self.classifier.get_votes(agent_state)
         vote = self.vote_function(votes, self.confidence.weights, conf)
+
+        if vote == 1:
+            logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, self.confidence.weights, vote))
 
         self.votes = votes
 

@@ -71,7 +71,7 @@ class EnsembleClassifier():
         for i in range(self.num_modules):
             self.classifiers[i].eval()
 
-    def train_embedding(self, dataset, epochs):
+    def train_embedding(self, dataset, epochs, shuffle_data):
         # dataset is a pytorch dataset
         self.embedding.train()
         self.set_classifiers_eval()
@@ -80,6 +80,8 @@ class EnsembleClassifier():
             loss_div, loss_homo, loss_heter = 0, 0, 0
             counter = 0
             num_batches = dataset.num_batches
+            if shuffle_data:
+                dataset.shuffle()
             for _ in range(num_batches + 1):
                 x, _ = dataset.get_batch()
                 x = x.to(self.device)
@@ -112,7 +114,7 @@ class EnsembleClassifier():
         self.embedding.eval()
         self.classifiers.eval()
 
-    def train_classifiers(self, dataset, epochs):
+    def train_classifiers(self, dataset, epochs, shuffle_data):
         self.embedding.eval()
         self.set_classifiers_train()
 
@@ -121,6 +123,8 @@ class EnsembleClassifier():
             avg_accuracy = np.zeros(self.num_modules)
             count = 0
             num_batches = dataset.num_batches
+            if shuffle_data:
+                dataset.shuffle()
             for _ in range(num_batches):
                 x, y = dataset.get_batch(shuffle=True)
                 x = x.to(self.device)

@@ -46,8 +46,10 @@ class MonteAgentWrapper(gym.Wrapper):
         self.stacked_state = torch.zeros((1, 4, 84, 84))
 
     def update_state(self, obs):
+        # print(obs.squeeze().shape)
+        # print(self.stacked_state.shape)
         self.stacked_state = torch.roll(self.stacked_state, -1, 1)
-        self.stacked_state[0, -1, ...] = torch.from_numpy(obs)
+        self.stacked_state[0, -1, ...] = torch.from_numpy(obs.squeeze())
 
     def update_agent_stack(self):
         self.stacked_agent_state = torch.roll(self.stacked_agent_state, -1, 1)
@@ -55,8 +57,8 @@ class MonteAgentWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         s0 = self.env.reset(**kwargs)
-        self.stacked_agent_state = torch.zeros((1, 56, 40, 4))
-        self.stacked_state = torch.zeros((1, 84, 84, 4))
+        self.stacked_agent_state = torch.zeros((1, 4, 56, 40))
+        self.stacked_state = torch.zeros((1, 4, 84, 84))
         self.update_state(s0)
         self.update_agent_stack()
         self.num_lives = self.get_num_lives(self.get_current_ram())

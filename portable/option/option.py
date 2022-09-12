@@ -4,12 +4,14 @@ import os
 import pickle
 import numpy as np
 import gin
+from portable.option.policy.agents.abstract_agent import evaluating
 
 from portable.option.sets import Set
 from portable.option.sets.utils import PositionSetPair
 from portable.option.policy.agents import EnsembleAgent
 
 logger = logging.getLogger(__name__)
+import time
 
 @gin.configurable
 class Option():
@@ -165,7 +167,7 @@ class Option():
 
     def can_initiate(self, agent_space_state, markov_space_state):
         # check if option can initiate
-        vote_global = self.initiation(agent_space_state)
+        vote_global = self.initiation.vote(agent_space_state)
         vote_markov = False
         self.markov_classifier_idx = None
         for idx in range(len(self.markov_classifiers)):
@@ -194,10 +196,14 @@ class Option():
             #double check this, don't really wanna save whole info
             markov_states.append(info)
             agent_space_states.append(agent_state)
+
+            state = state.squeeze()
             
             action = self.policy.act(state)
 
             next_state, reward, done, info = env.step(action)
+            env.render()
+            time.sleep(0.05)
             agent_state = info["stacked_agent_state"]
             steps += 1
 
@@ -222,18 +228,18 @@ class Option():
                         q_values,
                         option_q
                     )
-                    self.log("[option] Option completed successfully (done: {}, should_terminate: {})".format(done, should_terminate))
+                    self.log("[option run] Option completed successfully (done: {}, should_terminate: {})".format(done, should_terminate))
                     return next_state, total_reward, done, info, steps
                 
                 # episode timed out => not a fail or success 
                 # no failure or success
                 if info['needs_reset']:
-                    self.log("[option] Environment needs reset. Returning")
+                    self.log("[option run] Environment needs reset. Returning")
                     return next_state, total_reward, done, info, steps 
 
                 # we died during option execution => fail
                 if done and info['dead']:
-                    self.log("[option] Option failed because agent died. Returning")
+                    self.log("[option run] Option failed because agent died. Returning")
                     self._option_fail(
                         markov_states,
                         agent_space_states
@@ -252,6 +258,52 @@ class Option():
 
         return next_state, total_reward, done, info, steps
             
+    def evaluate(self,
+                env,
+                state,
+                info,
+                use_global_classifiers=True):
+        # runs option in evaluation mode (does not store transitions for later training)
+        # does not create Markov classifiers
+        steps = 0
+        total_reward = 0
+        with evaluating(self.policy):
+            while steps < self.option_timeout:
+                state = state.squeeze()
+                action = self.policy.act(state)
+
+                next_state, reward, done, info = env.step(action)
+                env.render()
+                time.sleep(1)
+                agent_state = info["stacked_agent_state"]
+                steps += 1
+
+                if use_global_classifiers:
+                    should_terminate = self.termination.vote(agent_state)
+                else:
+                    should_terminate = self.markov_classifiers[self.markov_classifier_idx].termination(info)
+
+                self.policy.observe(state, action, reward, next_state, done)
+                total_reward += reward
+
+                if done or info['needs_reset'] or should_terminate:
+                    if (done or should_terminate) and not info['dead']:
+                        self.log("[option eval] Option completed successfully (done: {}, should_terminate {})".format(done, should_terminate))
+                        return next_state, total_reward, done, info, steps
+
+                    if info['needs_reset']:
+                        self.log("[option eval] Environment needs reset. Returning")
+                        return next_state, total_reward, done, info, steps
+
+                    if done and info['dead']:
+                        self.log("[option eval] Option failed because agent died. Returning")
+                        return next_state, total_reward, done, info, steps
+                
+                state = next_state
+
+            self.log("[option eval] Option timed out. Returning")
+
+            return next_state, total_reward, done, info, steps
 
     def _test_markov_classifier(
             self,
@@ -320,13 +372,15 @@ class Option():
             self,
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
-            num_cycles=1):
+            num_cycles=1,
+            shuffle_data=False):
         # train initiation classifier
         self.log("[option] Training initiation classifier...")
         self.initiation.train(
             num_cycles,
             embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle
+            classifier_epochs_per_cycle,
+            shuffle_data=shuffle_data
         )
         self.log("[option] Finished training initiation classifier")
         
@@ -334,13 +388,15 @@ class Option():
             self,
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
-            num_cycles=1):
+            num_cycles=1,
+            shuffle_data=False):
         # train termination classifier
         self.log("[option] Training termination classifier...")
         self.termination.train(
             num_cycles,
             embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle
+            classifier_epochs_per_cycle,
+            shuffle_data=shuffle_data
         )
         self.log("[option] Finished training termination classifier")
 
@@ -358,7 +414,7 @@ class Option():
         step_number = 0
         episode_number = 0
         total_reward = 0
-        success_queue_size = 20
+        success_queue_size = 500
         success_rates = deque(maxlen=success_queue_size)
         self.log("[option] Bootstrapping option policy...")
 
@@ -382,7 +438,7 @@ class Option():
             if done or info['needs_reset']:
                 # check if env sent done signal and agent didn't die
                 success_rates.append(done and not info['dead'])
-                well_trained = len(success_rates) >= success_queue_size/2 \
+                well_trained = len(success_rates) == success_queue_size \
                     and np.mean(success_rates) >= success_rate_for_well_trained
 
                 if well_trained:
@@ -410,6 +466,12 @@ class Option():
             positive_files,
             negative_files
         )
+
+    def initiation_update_confidence(self, was_successful):
+        self.initiation.update_confidence(was_successful)
+
+    def termination_update_confidence(self, was_successful):
+        self.termination.update_confidence(was_successful)
 
     def _option_success(
             self,
