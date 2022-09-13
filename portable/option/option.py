@@ -196,8 +196,6 @@ class Option():
             #double check this, don't really wanna save whole info
             markov_states.append(info)
             agent_space_states.append(agent_state)
-
-            state = state.squeeze()
             
             action = self.policy.act(state)
 
@@ -269,12 +267,11 @@ class Option():
         total_reward = 0
         with evaluating(self.policy):
             while steps < self.option_timeout:
-                state = state.squeeze()
                 action = self.policy.act(state)
 
                 next_state, reward, done, info = env.step(action)
-                env.render()
-                time.sleep(1)
+                # env.render()
+                # time.sleep(1)
                 agent_state = info["stacked_agent_state"]
                 steps += 1
 
@@ -422,14 +419,11 @@ class Option():
 
         while step_number < max_steps:
             # action selection
-            # really should change this
-            state = state.squeeze()
             action = self.policy.act(state)
 
             # step
             next_state, reward, done, info = bootstrap_env.step(action)
             #  really need to change this too
-            next_state = next_state.squeeze()
             self.policy.observe(state, action, reward, next_state, done)
             total_reward += reward
             step_number += 1

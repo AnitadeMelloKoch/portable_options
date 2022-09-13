@@ -28,12 +28,13 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self.init_states = list_init_states
         self.termination_points = list_termination_points
         self.reward = reward_on_success
+        self.true_termination = []
 
     def reset(self):
         self.env.reset()
-        rand_idx = random.randint(len(self.init_states))
+        rand_idx = random.randint(0, len(self.init_states)-1)
         rand_state = self.init_states[rand_idx]
-        true_termination = self.termination_points[rand_idx]
+        self.true_termination = self.termination_points[rand_idx]
         s0 = set_player_ram(self.env, rand_state["ram"])
         self.stacked_agent_state = rand_state["agent_state"]
         self.stacked_state = rand_state["state"]
@@ -56,10 +57,10 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         
         return s0, info
 
-    def _check_termination(self, true_terminations):
+    def _check_termination(self):
         player_x, player_y, room_num = self.get_current_position()
 
-        if (player_x, player_y, room_num) in true_terminations:
+        if (player_x, player_y, room_num) in self.true_termination:
             return True
 
         return False

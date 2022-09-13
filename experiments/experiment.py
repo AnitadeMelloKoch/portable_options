@@ -178,8 +178,9 @@ class Experiment():
     def load(self):
         self.option.load(self.save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
-        with lzma.open(file_name, 'rb') as f:
-            self.trial_data = dill.load(f)
+        if os.path.exists(file_name):
+            with lzma.open(file_name, 'rb') as f:
+                self.trial_data = dill.load(f)
 
     def _set_env_ram(self, ram, state, agent_state, use_agent_space):
         _ = set_player_ram(self.env, ram)
@@ -191,6 +192,20 @@ class Experiment():
         else:
             return state
 
+    @staticmethod
+    def _get_percent_completed(start_pos, final_pos, possible_terminations):
+        def manhatten(a, b):
+            return sum(abs(val1, val2) for val1, val2 in zip((a[0],a[1]),(b[0],b[1])))
+
+        original_distance = []
+        completed_distance = []
+        for term in possible_terminations:
+            original_distance.append(start_pos, term)
+            completed_distance.append(final_pos, term)
+        original_distance = np.mean(original_distance)
+        completed_distance = np.mean(completed_distance)
+
+        return 1 - completed_distance/original_distance
 
     def run_trial(
             self, 
@@ -209,16 +224,16 @@ class Experiment():
         results = []
 
         for _ in range(number_episodes_in_trial):
-            rand_idx = random.randint(len(self.init_states))
-            rand_state = self.init_states[rand_idx]
+            rand_idx = random.randint(0, len(possible_inits)-1)
+            rand_state = possible_inits[rand_idx]
             state = self._set_env_ram(
                 rand_state["ram"],
                 rand_state["state"],
                 rand_state["agent_state"],
                 use_agent_space
             )
-            state.squeeze()
             agent_state = rand_state["agent_state"]
+            start_pos = rand_state["position"]
             info = self.env.get_current_info({})
 
             can_initiate = self.option.can_initiate(agent_state, info)
@@ -241,7 +256,7 @@ class Experiment():
                         0
                     )
 
-                results.append(int(self.env.get_current_position() in true_terminations[rand_idx]))
+                results.append(self._get_percent_completed(start_pos, self.env.get_current_position(), true_terminations))
             
         self.trial_data["name"].append(trial_name)
         self.trial_data["performance"].append(results)
@@ -263,27 +278,23 @@ class Experiment():
             self,
             possible_inits,
             true_terminations, 
-            true_initiations,
             number_episodes_in_trial,
             use_agent_space=False):
         
         assert isinstance(possible_inits, list)
         assert isinstance(true_terminations, list)
-        assert isinstance(true_initiations, list)
         
         self.env.reset()
 
         for _ in range(number_episodes_in_trial):
-            rand_idx = random.randint(len(self.init_states))
-            rand_state = self.init_states[rand_idx]
+            rand_idx = random.randint(0, len(possible_inits)-1)
+            rand_state = possible_inits[rand_idx]
             state = self._set_env_ram(
                 rand_state["ram"],
                 rand_state["state"],
-                rand_state["agent"],
+                rand_state["agent_state"],
                 use_agent_space
             )
-
-            state.squeeze()
 
             agent_state = rand_state["agent_state"]
             info = self.env.get_current_info({})
@@ -291,19 +302,12 @@ class Experiment():
 
             while not done or info["needs_reset"]:
 
+                logging.info("info: {}".format(info))
+
                 can_initiate = self.option.can_initiate(agent_state, info)
 
                 if not can_initiate:
-                    if self.env.get_current_position() in true_initiations:
-                        self.option.initiation_update_confidence(was_successful=False)
-                    else:
-                        self.option.initiation_update_confidence(was_successful=True)
                     break
-
-                if not self.env.get_current_position() in true_initiations:
-                    self.option.initiation_update_confidence(was_successful=False)
-                else:
-                    self.option.initiation_update_confidence(was_successful=True)
 
                 state, _, done, info, _ = self.option.evaluate(
                     self.env,

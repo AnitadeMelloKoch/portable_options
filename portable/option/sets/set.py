@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+import torch
 from portable.option.memory import SetDataset
 from portable.option.sets.utils import BayesianWeighting
 from portable.option.sets.models import EnsembleClassifier
@@ -117,6 +118,9 @@ class Set():
     def vote(
             self,
             agent_state):
+
+        agent_state = torch.unsqueeze(agent_state, dim=0)
+
         votes, conf = self.classifier.get_votes(agent_state)
         vote = self.vote_function(votes, self.confidence.weights, conf)
 

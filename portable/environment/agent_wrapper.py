@@ -42,25 +42,21 @@ class MonteAgentWrapper(gym.Wrapper):
         self.use_agent_space = agent_space
         self.env.unwrapped.stacked_agent_position = deque([], maxlen=4)
         self.use_stacked_obs = stack_observations
-        self.stacked_agent_state = torch.zeros((1, 4, 56, 40))
-        self.stacked_state = torch.zeros((1, 4, 84, 84))
+        self.stacked_agent_state = torch.zeros((4, 56, 40))
+        self.stacked_state = torch.zeros((4, 84, 84))
 
-    def update_state(self, obs):
-        # print(obs.squeeze().shape)
-        # print(self.stacked_state.shape)
-        self.stacked_state = torch.roll(self.stacked_state, -1, 1)
-        self.stacked_state[0, -1, ...] = torch.from_numpy(obs.squeeze())
+    def update_state(self, obs, state):
+        state = torch.roll(state, -1, 0)
+        state[-1, ...] = torch.from_numpy(obs)
 
-    def update_agent_stack(self):
-        self.stacked_agent_state = torch.roll(self.stacked_agent_state, -1, 1)
-        self.stacked_agent_state[0, -1, ...] = torch.from_numpy(self.agent_space())
+        return state
 
     def reset(self, **kwargs):
         s0 = self.env.reset(**kwargs)
-        self.stacked_agent_state = torch.zeros((1, 4, 56, 40))
-        self.stacked_state = torch.zeros((1, 4, 84, 84))
-        self.update_state(s0)
-        self.update_agent_stack()
+        self.stacked_agent_state = torch.zeros((4, 56, 40))
+        self.stacked_state = torch.zeros((4, 84, 84))
+        self.update_state(s0, self.stacked_state)
+        self.update_state(self.agent_space(), self.stacked_agent_state)
         self.num_lives = self.get_num_lives(self.get_current_ram())
         info = self.get_current_info(info={})
         self._elapsed_steps = 0
@@ -84,8 +80,8 @@ class MonteAgentWrapper(gym.Wrapper):
         self.T += 1
         self.lost_life = False
         obs, reward, done, info = self.env.step(action)
-        self.update_state(obs)
-        self.update_agent_stack()
+        self.update_state(obs, self.stacked_state)
+        self.update_state(self.agent_space(), self.stacked_agent_state)
         info = self.get_current_info(info=info)
         if self.num_lives is not None and self.num_lives > info["lives"]:
             self.lost_life = True
