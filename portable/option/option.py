@@ -145,7 +145,8 @@ class Option():
     def load(self, path):
         policy_path, initiation_path, termination_path = self._get_save_paths(path)
 
-        self.policy = self.policy.load(os.path.join(policy_path, 'agent.pkl'))
+        if os.path.exists(os.path.join(policy_path, 'agent.pkl')):
+            self.policy = self.policy.load(os.path.join(policy_path, 'agent.pkl'))
         self.initiation.load(initiation_path)
         self.termination.load(termination_path)
 
