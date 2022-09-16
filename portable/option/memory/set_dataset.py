@@ -12,9 +12,11 @@ class SetDataset():
         ):
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
+        self.priority_false_data = torch.from_numpy(np.array([])).float()
 
         self.true_length = 0
         self.false_length = 0
+        self.priority_false_length = 0
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
         self.counter = 0
@@ -25,11 +27,12 @@ class SetDataset():
     def _getfilenames(path):
         true_filename = os.path.join(path, 'true_data.pkl')
         false_filename = os.path.join(path, 'false_data.pkl')
+        priority_false_filename = os.path.join(path, 'priority_false_data.pkl')
 
-        return true_filename, false_filename
+        return true_filename, false_filename, priority_false_filename
 
     def save(self, path):
-        true_filename, false_filename = self._getfilenames(path)
+        true_filename, false_filename, priority_false_filename = self._getfilenames(path)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -39,8 +42,11 @@ class SetDataset():
         with open(false_filename, "wb") as f:
             pickle.dump(self.false_data, f)
 
+        with open(priority_false_filename, "wb") as f:
+            pickle.dump(self.priority_false_data, f)
+
     def load(self, path):
-        true_filename, false_filename = self._getfilenames(path)
+        true_filename, false_filename, priority_false_filename = self._getfilenames(path)
         if not os.path.exists(true_filename):
             print('[SetDataset] No true data found. Nothing was loaded')
             return
@@ -48,11 +54,26 @@ class SetDataset():
             print('[SetDataset] No false data found. Nothing was loaded')
             return
         
+        if not os.path.exists(false_filename):
+            print('[SetDataset] No priority false data found. Nothing was loaded')
+            return
+        
         with open(true_filename, "rb") as f:
             self.true_data = pickle.load(f)
+        
+        self.true_length = len(self.true_data)
 
         with open(false_filename, "rb") as f:
             self.false_data = pickle.load(f)
+
+        self.false_length = len(self.false_data)
+
+        with open(priority_false_filename, "rb") as f:
+            self.priority_false_data = pickle.load(f)
+
+        self.priority_false_length = len(self.priority_false_data)
+
+        self._set_batch_num()
 
     def _set_batch_num(self):
         # get number of batches to run through so we see all the true data at least once
@@ -63,7 +84,7 @@ class SetDataset():
             )
         else:
             self.num_batches = math.ceil(
-                min(self.true_length, self.false_length)/(self.data_batchsize)
+                max(self.true_length, self.priority_false_length)/(self.data_batchsize)
             )
 
     def add_true_files(self, file_list):
@@ -84,6 +105,17 @@ class SetDataset():
             data = torch.from_numpy(data).float()
             self.false_data = self.concatenate(self.false_data, data)
         self.false_length = len(self.false_data)
+        self._set_batch_num()
+        self.shuffle()
+        self.counter = 0
+
+    def add_priority_false_files(self, file_list):
+        # load data from a file for priority false data
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data).float()
+            self.priority_false_data = self.concatenate(self.priority_false_data, data)
+        self.priority_false_length = len(self.priority_false_data)
         self._set_batch_num()
         self.shuffle()
         self.counter = 0
@@ -110,12 +142,26 @@ class SetDataset():
         self._set_batch_num()
         self.counter = 0
 
+    def add_priority_false_data(self, data_list):
+        data = torch.squeeze(
+            torch.stack(data_list), 1
+        )
+        self.priority_false_data = self.concatenate(data, self.priority_false_data)
+        if len(self.priority_false_data) > self.list_max_size//2:
+            self.priority_false_data = self.priority_false_data[:self.list_max_size//2]
+        self.priority_false_length = len(self.priority_false_data)
+        self._set_batch_num()
+        self.counter = 0
+
     def shuffle(self):
         self.true_data = self.true_data[
             torch.randperm(self.true_length)
         ]
         self.false_data = self.false_data[
             torch.randperm(self.false_length)
+        ]
+        self.priority_false_data = self.priority_false_data[
+            torch.randperm(self.priority_false_length)
         ]
 
     @staticmethod
@@ -135,15 +181,28 @@ class SetDataset():
         if self.true_length == 0 or self.false_length == 0:
             return self._unibatch()
 
-        false_batch = self._get_minibatch(
-            self.false_index(),
-            self.false_data,
-            self.data_batchsize)
+        if self.priority_false_length > 0:
+            normal_false = self._get_minibatch(
+                self.false_index(True),
+                self.false_data,
+                self.data_batchsize // 2
+            )
+            priority_false = self._get_minibatch(
+                self.priority_false_index(),
+                self.priority_false_data,
+                self.data_batchsize - self.data_batchsize//2
+            )
+            false_batch = self.concatenate(normal_false, priority_false)
+        else:
+            false_batch = self._get_minibatch(
+                self.false_index(False),
+                self.false_data,
+                self.data_batchsize)
         true_batch = self._get_minibatch(
             self.true_index(),
             self.true_data,
             self.data_batchsize)
-        labels = [0]*self.data_batchsize + [1]*self.data_batchsize
+        labels = [0]*len(false_batch) + [1]*len(true_batch)
         labels = torch.from_numpy(np.array(labels))
 
         self.counter += 1
@@ -160,22 +219,31 @@ class SetDataset():
     def true_index(self):
         return (self.counter*self.data_batchsize) % self.true_length
 
-    def false_index(self):
+    def false_index(self, use_priority_false):
+        if use_priority_false:
+            return (self.counter*self.data_batchsize//2) % self.false_length
         return (self.counter*self.data_batchsize) % self.false_length
+
+    def priority_false_index(self):
+        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_length
 
     def _unibatch(self):
         if self.true_length == 0:
-            return self._get_minibatch(
-                self.false_index(), 
+            data =  self._get_minibatch(
+                self.false_index(False), 
                 self.false_data, 
                 self.batchsize
-                ), torch.from_numpy(np.array([0]*self.batchsize))
+                ) 
+            labels = torch.from_numpy(np.array([0]*len(data)))
         else:
-            return self._get_minibatch(
+            data = self._get_minibatch(
                 self.true_index(), 
                 self.true_data, 
                 self.batchsize
-                ), torch.from_numpy(np.array([1]*self.batchsize))
+                )
+            labels = torch.from_numpy(np.array([1]*len(data)))
+        
+        return data, labels
 
     @staticmethod
     def concatenate(arr1, arr2):

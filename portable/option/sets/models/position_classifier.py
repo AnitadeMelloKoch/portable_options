@@ -5,20 +5,18 @@ from collections import deque
 from sklearn.svm import OneClassSVM, SVC
 
 class TrainingExample:
-    def __init__(self, obs, info):
+    def __init__(self, obs, pos):
         self.obs = obs
-        self.info = self._construct_info(info)
-
-    def _construct_info(self, x):
-        return x if isinstance(x, dict) else dict(player_x=x[0], player_y=x[1])
+        self.x = pos[0]
+        self.y = pos[1]
 
     @property
     def pos(self):
-        pos = self.info['player_x'], self.info['player_y']
+        pos = self.x, self.y
         return np.array(pos)
 
     def __iter__(self):
-        return ((self.obs, self.info) for _ in [0])
+        return ((self.obs, self.x, self.y) for _ in [0])
 
 class PositionClassifier:
     def __init__(self, epsilon=None, gamma=1, maxlen=600):
@@ -94,7 +92,6 @@ class PositionClassifier:
     def construct_feature_matrix(examples):
         examples = list(itertools.chain.from_iterable(examples))
         positions = [example.pos for example in examples]
-
         return np.array(positions)
 
 

@@ -80,8 +80,8 @@ class MonteAgentWrapper(gym.Wrapper):
         self.T += 1
         self.lost_life = False
         obs, reward, done, info = self.env.step(action)
-        self.update_state(obs, self.stacked_state)
-        self.update_state(self.agent_space(), self.stacked_agent_state)
+        self.stacked_state = self.update_state(obs, self.stacked_state)
+        self.stacked_agent_state = self.update_state(self.agent_space(), self.stacked_agent_state)
         info = self.get_current_info(info=info)
         if self.num_lives is not None and self.num_lives > info["lives"]:
             self.lost_life = True
@@ -142,6 +142,7 @@ class MonteAgentWrapper(gym.Wrapper):
         info["player_y"] = self.get_player_y(ram)
         info["dead"] = int(info["lives"] < self.num_lives)
         info["screen_num"] = self.get_screen_num(ram)
+        info["position"] = (info["player_x"], info["player_y"], info["screen_num"])
         info["jumping"] = self.get_is_jumping(ram)
         info["needs_reset"] = False
         info["elapsed_steps"] = self._elapsed_steps

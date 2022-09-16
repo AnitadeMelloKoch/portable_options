@@ -25,23 +25,28 @@ class Experiment():
         termination_vote_function,
         policy_phi,
         experiment_env_function,
+        get_percentage_function,
+        check_termination_true_function,
         device_type="cpu",
         train_initiation=True,
         initiation_positive_files=[],
         initiation_negative_files=[],
+        initiation_priority_negative_files=[],
         train_initiation_embedding_epoch_per_cycle=10,
         train_initiation_classifier_epoch_per_cycle=10,
         train_initiation_cycles=1,
         train_termination=True,
         termination_positive_files=[],
         termination_negative_files=[],
+        termination_priority_negative_files=[],
         train_termination_embedding_epoch_per_cycle=10,
         train_termination_classifier_epoch_per_cycle=10,
         train_termination_cycles=1,
         train_policy=True,
         policy_bootstrap_env=None,
         train_policy_max_steps=10000,
-        train_policy_success_rate=0.8
+        train_policy_success_rate=0.8,
+        max_option_tries=5
         ):
 
         assert device_type in ["cpu", "cuda"]
@@ -67,6 +72,9 @@ class Experiment():
 
         self.env = experiment_env_function(self.seed)
 
+        self._get_percent_completed = get_percentage_function
+        self._check_termination_correct = check_termination_true_function
+        self.max_option_tries = max_option_tries
 
         log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(
@@ -77,10 +85,13 @@ class Experiment():
 
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
         
+        self.load()
+
         if train_initiation:
             self._train_initiation(
                 initiation_positive_files,
                 initiation_negative_files,
+                initiation_priority_negative_files,
                 train_initiation_embedding_epoch_per_cycle,
                 train_initiation_classifier_epoch_per_cycle,
                 train_initiation_cycles
@@ -90,6 +101,7 @@ class Experiment():
             self._train_termination(
                 termination_positive_files,
                 termination_negative_files,
+                termination_priority_negative_files,
                 train_termination_embedding_epoch_per_cycle,
                 train_termination_classifier_epoch_per_cycle,
                 train_termination_cycles
@@ -112,6 +124,7 @@ class Experiment():
             self,
             positive_files,
             negative_files,
+            priority_negative_files,
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
             number_cycles):
@@ -124,7 +137,8 @@ class Experiment():
 
         self.option.add_data_from_files_initiation(
             positive_files,
-            negative_files
+            negative_files,
+            priority_negative_files
         )
         self.option.train_initiation(
             embedding_epochs_per_cycle,
@@ -137,6 +151,7 @@ class Experiment():
             self,
             positive_files,
             negative_files,
+            priority_negative_files,
             embedding_epochs_per_cycle,
             classifier_epochs_per_cycle,
             number_cycles):
@@ -149,7 +164,8 @@ class Experiment():
 
         self.option.add_data_from_files_termination(
             positive_files,
-            negative_files
+            negative_files,
+            priority_negative_files
         )
         self.option.train_termination(
             embedding_epochs_per_cycle,
@@ -169,14 +185,22 @@ class Experiment():
             success_rate_for_well_trained
         )
 
-    def save(self):
-        self.option.save(self.save_dir)
+    def save(self, additional_path=None):
+        if additional_path is not None:
+            save_dir = os.path.join(self.save_dir, additional_path)
+        else:
+            save_dir = self.save_dir
+        self.option.save(save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
             dill.dump(self.trial_data, f)
 
-    def load(self):
-        self.option.load(self.save_dir)
+    def load(self, additional_path=None):
+        if additional_path is not None:
+            save_dir = os.path.join(self.save_dir, additional_path)
+        else:
+            save_dir = self.save_dir
+        self.option.load(save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         if os.path.exists(file_name):
             with lzma.open(file_name, 'rb') as f:
@@ -191,21 +215,6 @@ class Experiment():
             return agent_state
         else:
             return state
-
-    @staticmethod
-    def _get_percent_completed(start_pos, final_pos, possible_terminations):
-        def manhatten(a, b):
-            return sum(abs(val1, val2) for val1, val2 in zip((a[0],a[1]),(b[0],b[1])))
-
-        original_distance = []
-        completed_distance = []
-        for term in possible_terminations:
-            original_distance.append(start_pos, term)
-            completed_distance.append(final_pos, term)
-        original_distance = np.mean(original_distance)
-        completed_distance = np.mean(completed_distance)
-
-        return 1 - completed_distance/original_distance
 
     def run_trial(
             self, 
@@ -223,7 +232,10 @@ class Experiment():
 
         results = []
 
-        for _ in range(number_episodes_in_trial):
+        for x in range(number_episodes_in_trial):
+            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
+            completed = False
+            
             rand_idx = random.randint(0, len(possible_inits)-1)
             rand_state = possible_inits[rand_idx]
             state = self._set_env_ram(
@@ -232,38 +244,51 @@ class Experiment():
                 rand_state["agent_state"],
                 use_agent_space
             )
+
             agent_state = rand_state["agent_state"]
             start_pos = rand_state["position"]
             info = self.env.get_current_info({})
+            for y in range(self.max_option_tries):
+                logging.info("Attempt {}/{}".format(y, self.max_option_tries))
+                can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
-            can_initiate = self.option.can_initiate(agent_state, info)
-
-            if not can_initiate:
-                results.append(0)
-            else:
-                if eval:
-                    _, _, _, _, _ = self.option.evaluate(
-                        self.env,
-                        state,
-                        info
-                    )
+                if not can_initiate:
+                    results.append(0)
+                    break
                 else:
-                    _, _, _, _, _ = self.option.run(
-                        self.env,
-                        state,
-                        info,
-                        [0],
-                        0
-                    )
+                    if eval:
+                        _, _, _, info, _ = self.option.evaluate(
+                            self.env,
+                            state,
+                            info
+                        )
+                    else:
+                        _, _, _, info, _ = self.option.run(
+                            self.env,
+                            state,
+                            info,
+                            [0],
+                            0
+                        )
+                    agent_state = info["stacked_agent_state"]
+                    position = info["position"]
 
-                results.append(self._get_percent_completed(start_pos, self.env.get_current_position(), true_terminations))
+                    completed = self._check_termination_correct(position, true_terminations[rand_idx])
+                    if completed:
+                        break
+            if completed:
+                result = 1
+            else:
+                result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx])
+            results.append(result)
+            logging.info("Result: {}".format(completed))
             
         self.trial_data["name"].append(trial_name)
         self.trial_data["performance"].append(results)
 
         if not eval:
-            self.option.train_initiation( 0, 50)
-            self.option.train_termination( 0, 50)
+            self.option.train_initiation( 5, 10)
+            self.option.train_termination( 5, 10)
 
         logging.info("[experiment] Finished trial {} performance: {}".format(
             trial_name,
@@ -284,9 +309,13 @@ class Experiment():
         assert isinstance(possible_inits, list)
         assert isinstance(true_terminations, list)
         
+        logging.info("Bootstrapping weights from training room")
+        print("Bootstrapping weights from training room")
+
         self.env.reset()
 
-        for _ in range(number_episodes_in_trial):
+        for x in range(number_episodes_in_trial):
+            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
             rand_idx = random.randint(0, len(possible_inits)-1)
             rand_state = possible_inits[rand_idx]
             state = self._set_env_ram(
@@ -300,13 +329,18 @@ class Experiment():
             info = self.env.get_current_info({})
             done = False
 
-            while not done or info["needs_reset"]:
+            count = 0
+
+            while not done or info["needs_reset"] or count < 10:
+
+                count += 1
 
                 logging.info("info: {}".format(info))
 
                 can_initiate = self.option.can_initiate(agent_state, info)
 
                 if not can_initiate:
+                    logging.info("Break because initiation was not triggered")
                     break
 
                 state, _, done, info, _ = self.option.evaluate(
@@ -315,8 +349,9 @@ class Experiment():
                     info
                 )
 
-                if self.env.get_current_position() in true_terminations[rand_idx]:
+                if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx]):
                     self.option.termination_update_confidence(was_successful=True)
+                    logging.info("Breaking because correct termination was found")
                     break
                 else:
                     self.option.termination_update_confidence(was_successful=False)

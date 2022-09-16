@@ -13,8 +13,8 @@ class Set():
             device,
             vote_function,
 
-            beta_distribution_alpha=20,
-            beta_distribution_beta=10,
+            beta_distribution_alpha=30,
+            beta_distribution_beta=5,
 
             attention_module_num=8,
             embedding_learning_rate=1e-4,
@@ -54,13 +54,16 @@ class Set():
         self.classifier.load(path)
         self.confidence.load(path)
         self.dataset.load(path)
+        self.avg_loss = self.classifier.avg_loss
 
     def add_data(   
             self,
             positive_data=[],
-            negative_data=[]):
+            negative_data=[],
+            priority_negative_data=[]):
         assert isinstance(positive_data, list)
         assert isinstance(negative_data, list)
+        assert isinstance(priority_negative_data, list)
 
         if len(positive_data) > 0:
             self.dataset.add_true_data(positive_data)
@@ -68,15 +71,21 @@ class Set():
         if len(negative_data) > 0:
             self.dataset.add_false_data(negative_data)
 
+        if len(priority_negative_data) > 0:
+            self.dataset.add_priority_false_data(priority_negative_data)
+
     def add_data_from_files(
             self,
             positive_files,
-            negative_files):
+            negative_files,
+            priority_negative_files):
         assert isinstance(positive_files, list)
         assert isinstance(negative_files, list)
+        assert isinstance(priority_negative_files, list)
 
         self.dataset.add_true_files(positive_files)
         self.dataset.add_false_files(negative_files)
+        self.dataset.add_priority_false_files(priority_negative_files)
 
     def loss(   
             self,

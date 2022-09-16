@@ -32,10 +32,10 @@ class PositionSetPair():
     def fit_initiation(self):
         self.initiation.fit_classifier()
 
-    def initiation(self, pos):
+    def can_initiate(self, pos):
         return self.initiation.predict(pos)
 
-    def termination(self, pos):
+    def can_terminate(self, pos):
         pos = pos if not isinstance(pos, dict) else (pos['player_x'], pos['player_y'])
         if pos[0] <= (self.termination[0]+self.epsilon) and \
             pos[0] >= (self.termination[0]-self.epsilon) and \

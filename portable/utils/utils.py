@@ -11,6 +11,7 @@ from collections import defaultdict
 from distutils.util import strtobool
 import gin
 import dill
+import matplotlib.pyplot as plt
 
 
 def create_log_dir(dir_path, remove_existing=True, log_git=True):
@@ -88,6 +89,17 @@ def load_hyperparams(filepath):
                 params[name] = locate(dtype)(value)
     return params
 
+def plot_state(state, plot_name):
+    fig = plt.figure(num=1, clear=True)
+    gs = fig.add_gridspec(nrows=1, ncols=4)
+
+    for x in range(4):
+        ax = fig.add_subplot(gs[0,x])
+        ax.imshow(state[x], cmap='gray')
+        ax.axis('off')
+
+    fig.savefig(plot_name, bbox_inches='tight')
+    plt.close('all')
 
 def save_hyperparams(filepath, params):
     with open(filepath, 'w', newline='') as file:

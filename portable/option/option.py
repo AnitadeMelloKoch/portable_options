@@ -9,6 +9,7 @@ from portable.option.policy.agents.abstract_agent import evaluating
 from portable.option.sets import Set
 from portable.option.sets.utils import PositionSetPair
 from portable.option.policy.agents import EnsembleAgent
+from portable.utils.utils import plot_state
 
 logger = logging.getLogger(__name__)
 import time
@@ -38,16 +39,16 @@ class Option():
             policy_attention_module_num=8,
             policy_num_output_classes=18,
 
-            initiation_beta_distribution_alpha=20,
-            initiation_beta_distribution_beta=10,
+            initiation_beta_distribution_alpha=30,
+            initiation_beta_distribution_beta=5,
             initiation_attention_module_num=8,
             initiation_embedding_learning_rate=1e-4,
             initiation_classifier_learning_rate=1e-2,
             initiation_embedding_output_size=64,
             initiation_dataset_max_size=100000,
 
-            termination_beta_distribution_alpha=20,
-            termination_beta_distribution_beta=10,
+            termination_beta_distribution_alpha=30,
+            termination_beta_distribution_beta=5,
             termination_attention_module_num=8,
             termination_embedding_learning_rate=1e-4,
             termination_classifier_learning_rate=1e-2,
@@ -58,6 +59,7 @@ class Option():
             min_interactions=100,
             q_variance_threshold=1,
             timeout=50,
+            allowed_additional_loss=2,
 
             log=True):
         
@@ -112,6 +114,7 @@ class Option():
         
         self.markov_classifier_idx = None
         self.use_log = log
+        self.allowed_loss = allowed_additional_loss
 
         
     def log(self, message):
@@ -142,7 +145,7 @@ class Option():
     def load(self, path):
         policy_path, initiation_path, termination_path = self._get_save_paths(path)
 
-        self.policy.load(os.path.join(policy_path, 'agent.pkl'))
+        self.policy = self.policy.load(os.path.join(policy_path, 'agent.pkl'))
         self.initiation.load(initiation_path)
         self.termination.load(termination_path)
 
@@ -151,13 +154,13 @@ class Option():
     def _add_markov_classifier(
             self,
             markov_states,
-            agent_space_states,
+            positions,
             termination):
         # adds a markov classifier from the previous run of the option
         self.markov_classifiers.append(
             PositionSetPair(
                 markov_states,
-                agent_space_states,
+                positions,
                 termination,
                 self.markov_termination_epsilon
             )
@@ -171,7 +174,7 @@ class Option():
         vote_markov = False
         self.markov_classifier_idx = None
         for idx in range(len(self.markov_classifiers)):
-            prediction = self.markov_classifiers[idx].initiation(markov_space_state)
+            prediction = self.markov_classifiers[idx].can_initiate(markov_space_state)
             if prediction == 1:
                 self.markov_classifier_idx = idx
                 vote_markov = True
@@ -188,27 +191,27 @@ class Option():
         # run the option. Policy takes over control
         steps = 0
         total_reward = 0
-        markov_states = []
         agent_space_states = []
         agent_state = info["stacked_agent_state"]
+        positions = []
 
         while steps < self.option_timeout:
             #double check this, don't really wanna save whole info
-            markov_states.append(info)
             agent_space_states.append(agent_state)
+            positions.append((info["player_x"], info["player_y"]))
             
             action = self.policy.act(state)
 
             next_state, reward, done, info = env.step(action)
-            env.render()
-            time.sleep(0.05)
+            # env.render()
+            # time.sleep(0.2)
             agent_state = info["stacked_agent_state"]
             steps += 1
 
             if use_global_classifiers:
                 should_terminate = self.termination.vote(agent_state)
             else:
-                should_terminate = self.markov_classifiers[self.markov_classifier_idx].termination(info)
+                should_terminate = self.markov_classifiers[self.markov_classifier_idx].can_terminate((info["player_x"],info["player_y"]))
             
             self.policy.observe(state, action, reward, next_state, done)
             total_reward += reward
@@ -219,7 +222,7 @@ class Option():
                 # detected the end of the option => success
                 if (done or should_terminate) and not info['dead']:
                     self._option_success(
-                        markov_states,
+                        positions,
                         agent_space_states,
                         info,
                         agent_state,
@@ -237,9 +240,9 @@ class Option():
 
                 # we died during option execution => fail
                 if done and info['dead']:
-                    self.log("[option run] Option failed because agent died. Returning")
+                    self.log("[option run] Option failed because agent died. Returning \n\t {}".format(info['position']))
                     self._option_fail(
-                        markov_states,
+                        positions,
                         agent_space_states
                     )
                     return next_state, total_reward, done, info, steps
@@ -249,10 +252,10 @@ class Option():
         # we didn't find a valid termination for the option before the 
         # allowed execution time ran out => fail
         self._option_fail(
-            markov_states,
+            positions,
             agent_space_states
         )
-        self.log("[option] Option timed out. Returning")
+        self.log("[option] Option timed out. Returning\n\t {}".format(info['position']))
 
         return next_state, total_reward, done, info, steps
             
@@ -271,14 +274,14 @@ class Option():
 
                 next_state, reward, done, info = env.step(action)
                 # env.render()
-                # time.sleep(1)
+                # time.sleep(0.2)
                 agent_state = info["stacked_agent_state"]
                 steps += 1
 
                 if use_global_classifiers:
                     should_terminate = self.termination.vote(agent_state)
                 else:
-                    should_terminate = self.markov_classifiers[self.markov_classifier_idx].termination(info)
+                    should_terminate = self.markov_classifiers[self.markov_classifier_idx].can_terminate((info["player_x"],info["player_y"]))
 
                 self.policy.observe(state, action, reward, next_state, done)
                 total_reward += reward
@@ -298,9 +301,9 @@ class Option():
                 
                 state = next_state
 
-            self.log("[option eval] Option timed out. Returning")
+        self.log("[option eval] Option timed out. Returning")
 
-            return next_state, total_reward, done, info, steps
+        return next_state, total_reward, done, info, steps
 
     def _test_markov_classifier(
             self,
@@ -314,7 +317,7 @@ class Option():
             # only test that we don't add too much loss if is negative
             self.log("[option] Testing negative samples only from Markov classifier")
             initiation_loss = self.initiation.loss([], initiation_states)
-            if np.mean(initiation_loss) > 2*np.mean(self.initiation.avg_loss):
+            if np.mean(self.initiation.confidence.weights*initiation_loss) > self.allowed_loss*np.mean(self.initiation.confidence.weights*self.initiation.avg_loss):
                 # too much loss added to initiation classifier
                 self.log("[option] Initiation loss too high. Data not added")
                 return False
@@ -341,13 +344,15 @@ class Option():
             initiation_states
         )
 
-        if np.mean(initiation_loss) > 2*np.mean(self.initiation.avg_loss):
+        if np.mean(self.initiation.confidence.weights*initiation_loss) > self.allowed_loss*np.mean(self.initiation.confidence.weights*self.initiation.avg_loss):
             # too much loss added to initiation classifier
+            self.log("[option] Data loss: {} avg loss: {}".format(self.initiation.confidence.weights*initiation_loss, self.initiation.confidence.weights*self.initiation.avg_loss))
             self.log("[option] Initiation loss too high. Data not added")
             return False
-
-        if np.mean(termination_loss) > 2*np.mean(self.termination.avg_loss):
+        
+        if np.mean(self.termination.confidence.weights*termination_loss) > self.allowed_loss*np.mean(self.termination.confidence.weights*self.termination.avg_loss):
             # too much loss added to termination classifier
+            self.log("[option] Data loss: {} avg loss: {}".format(self.termination.confidence.weights*termination_loss, self.termination.confidence.weights*self.termination.avg_loss))
             self.log("[option] Termination loss too high. Data not added")
             return False
 
@@ -442,23 +447,25 @@ class Option():
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
-                if (episode_number - 1) % 50 == 0:
+                if (episode_number - 1) % 5 == 0:
                     self.log("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
                     print("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
 
         self.log("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
         print("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
 
-    def add_data_from_files_initiation(self, positive_files, negative_files):
+    def add_data_from_files_initiation(self, positive_files, negative_files, priority_negative_files):
         self.initiation.add_data_from_files(
             positive_files,
-            negative_files
+            negative_files,
+            priority_negative_files
         )
 
-    def add_data_from_files_termination(self, positive_files, negative_files):
+    def add_data_from_files_termination(self, positive_files, negative_files, priority_negative_files):
         self.termination.add_data_from_files(
             positive_files,
-            negative_files
+            negative_files,
+            priority_negative_files
         )
 
     def initiation_update_confidence(self, was_successful):
@@ -469,7 +476,7 @@ class Option():
 
     def _option_success(
             self,
-            markov_states,
+            positions,
             agent_space_states,
             markov_termination,
             agent_space_termination,
@@ -480,7 +487,7 @@ class Option():
         if self.markov_classifier_idx is not None:
             self.markov_classifiers[self.markov_classifier_idx].add_positive(
                 agent_space_states,
-                markov_states
+                positions
             )
             # test markov classifier to see if we can add data to global classifier
             if self._test_markov_classifier(
@@ -503,20 +510,20 @@ class Option():
         # if we don't have markov classifier add markov classifier
         else:
             self._add_markov_classifier(
-                markov_states,
                 agent_space_states,
-                markov_termination
+                positions,
+                markov_termination,
             )
 
     def _option_fail(
             self,
-            markov_states,
+            positions,
             agent_space_states):
 
         # if we have markov classifier add negative data to classifier
         if self.markov_classifier_idx is not None:
             self.markov_classifiers[self.markov_classifier_idx].add_negative(
-                agent_space_states, markov_states
+                agent_space_states, positions
             )
         # if we don't have classifier add negative samples to global classifier (?)
         # maybe check if loss looks good (?)

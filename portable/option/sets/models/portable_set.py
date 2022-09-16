@@ -6,6 +6,9 @@ import numpy as np
 import os
 
 from portable.option.sets.models import MLP, SmallEmbedding
+import logging
+
+logger = logging.getLogger(__name__)
 
 class EnsembleClassifier():
 
@@ -109,7 +112,7 @@ class EnsembleClassifier():
             loss_heter /= (counter+1)
             loss_div /= (counter+1)
 
-            print('Epoch %d batches %d\tdiv:%.4f\thomo:%.4f\theter:%.4f'%(epoch, counter+1, loss_div, loss_homo, loss_heter))
+            logger.info('Epoch %d batches %d\tdiv:%.4f\thomo:%.4f\theter:%.4f'%(epoch, counter+1, loss_div, loss_homo, loss_heter))
 
         self.embedding.eval()
         self.classifiers.eval()
@@ -145,10 +148,10 @@ class EnsembleClassifier():
             avg_loss = avg_loss/count
             avg_accuracy = avg_accuracy/count
 
-            print("Epoch {}:".format(epoch))
+            logger.info("Epoch {}:".format(epoch))
             for idx in range(self.num_modules):
-                print("\t - Classifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
-            print("Average across classifiers: loss = {:.4f} accuracy = {:.4f}".format(np.mean(avg_loss), np.mean(avg_accuracy)))
+                logger.info("\t - Classifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
+            logger.info("Average across classifiers: loss = {:.4f} accuracy = {:.4f}".format(np.mean(avg_loss), np.mean(avg_accuracy)))
         self.embedding.eval()
         self.classifiers.eval()
 
