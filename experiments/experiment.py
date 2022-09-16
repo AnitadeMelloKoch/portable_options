@@ -207,6 +207,7 @@ class Experiment():
                 self.trial_data = dill.load(f)
 
     def _set_env_ram(self, ram, state, agent_state, use_agent_space):
+        self.env.reset()
         _ = set_player_ram(self.env, ram)
         self.env.stacked_state = state
         self.env.stacked_agent_state = agent_state
@@ -227,8 +228,6 @@ class Experiment():
         assert isinstance(possible_inits, list)
         logging.info("[experiment] Starting trial {}".format(trial_name))
         print("[experiment] Starting trial {}".format(trial_name))
-
-        self.env.reset()
 
         results = []
 
@@ -270,6 +269,10 @@ class Experiment():
                             [0],
                             0
                         )
+
+                    if info["needs_reset"]:
+                        break
+
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
 
@@ -311,8 +314,6 @@ class Experiment():
         
         logging.info("Bootstrapping weights from training room")
         print("Bootstrapping weights from training room")
-
-        self.env.reset()
 
         for x in range(number_episodes_in_trial):
             logging.info("Episode {}/{}".format(x, number_episodes_in_trial))

@@ -379,6 +379,7 @@ class Option():
             shuffle_data=False):
         # train initiation classifier
         self.log("[option] Training initiation classifier...")
+        print("[option] Training initiation classifier...")
         self.initiation.train(
             num_cycles,
             embedding_epochs_per_cycle,
@@ -386,6 +387,7 @@ class Option():
             shuffle_data=shuffle_data
         )
         self.log("[option] Finished training initiation classifier")
+        print("[option] Finished training initiation classifier")
         
     def train_termination(
             self,
@@ -395,6 +397,7 @@ class Option():
             shuffle_data=False):
         # train termination classifier
         self.log("[option] Training termination classifier...")
+        print("[option] Training termination classifier...")
         self.termination.train(
             num_cycles,
             embedding_epochs_per_cycle,
@@ -402,6 +405,7 @@ class Option():
             shuffle_data=shuffle_data
         )
         self.log("[option] Finished training termination classifier")
+        print("[option] Finished training termination classifier")
 
     def bootstrap_policy(
             self, 
@@ -448,7 +452,7 @@ class Option():
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
-                if (episode_number - 1) % 5 == 0:
+                if (episode_number - 1) % 50 == 0:
                     self.log("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
                     print("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
 
