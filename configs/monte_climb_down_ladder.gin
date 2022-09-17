@@ -3,7 +3,7 @@ import experiments.experiment
 
 Experiment.experiment_name = "climb_down_ladder"
 Experiment.initiation_vote_function = "weighted_vote_low"
-Experiment.termination_vote_function = "weighted_vote_high"
+Experiment.termination_vote_function = "weighted_vote_low"
 Experiment.device_type="cuda"
 Experiment.train_initiation = True 
 Experiment.train_termination = True
@@ -28,3 +28,4 @@ Option.initiation_beta_distribution_alpha = 100
 Option.initiation_beta_distribution_beta = 10
 Option.termination_beta_distribution_alpha = 100
 Option.termination_beta_distribution_beta = 10
+
