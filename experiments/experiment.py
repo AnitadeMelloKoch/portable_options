@@ -332,7 +332,7 @@ class Experiment():
 
             count = 0
 
-            while not done or info["needs_reset"] or count < 10:
+            while not done or info["needs_reset"] or count < 100:
 
                 count += 1
 

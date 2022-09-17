@@ -1,7 +1,7 @@
 import portable.option.option
 import experiments.experiment
 
-Experiment.experiment_name = "climb_down_ladder"
+Experiment.experiment_name = "walk_left"
 Experiment.initiation_vote_function = "weighted_vote_low"
 Experiment.termination_vote_function = "weighted_vote_low"
 Experiment.device_type="cuda"

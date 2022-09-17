@@ -78,7 +78,6 @@ def make_env(seed):
 initiation_state_files = [
     [
         'resources/monte_env_states/room1/platforms/left_top_platform_right.pkl',
-        'resources/monte_env_states/room1/platforms/left_top_platform_right_no_door.pkl',
         'resources/monte_env_states/room1/platforms/middle_right_platform_right.pkl',
         'resources/monte_env_states/room1/platforms/middle_left_platform_right.pkl',
         'resources/monte_env_states/room1/platforms/middle_ladder_top_right.pkl',
@@ -125,7 +124,6 @@ initiation_state_files = [
 
 terminations = [
     [
-        [(50, 235, 1)],
         [(50, 235, 1)],
         [(130, 192, 1)],
         [(9, 192, 1)],

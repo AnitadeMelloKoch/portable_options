@@ -300,7 +300,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            500,
+            100,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
