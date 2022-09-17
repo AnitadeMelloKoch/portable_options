@@ -336,8 +336,6 @@ class Experiment():
 
                 count += 1
 
-                logging.info("info: {}".format(info))
-
                 can_initiate = self.option.can_initiate(agent_state, info)
 
                 if not can_initiate:
