@@ -248,7 +248,7 @@ if __name__ == "__main__":
         termination_priority_negative_files=termination_priority_negative_files
     )
 
-    # experiment.save()
+    experiment.save()
 
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
@@ -268,7 +268,7 @@ if __name__ == "__main__":
             use_agent_space=True
         )
 
-    # experiment.save(additional_path=room_names[0])
+    experiment.save(additional_path=room_names[0])
 
     for x in range(1, len(initiation_state_files)):
         idx = order[x]
@@ -291,7 +291,7 @@ if __name__ == "__main__":
                 use_agent_space=True
             )
         
-        # experiment.save(additional_path=room_names[idx])
+        experiment.save(additional_path=room_names[idx])
 
     
     

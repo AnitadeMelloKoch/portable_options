@@ -190,7 +190,7 @@ class Experiment():
             save_dir = os.path.join(self.save_dir, additional_path)
         else:
             save_dir = self.save_dir
-        self.option.save(save_dir)
+        # self.option.save(save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
             dill.dump(self.trial_data, f)
