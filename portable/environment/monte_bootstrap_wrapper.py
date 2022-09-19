@@ -7,6 +7,7 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
             env, 
             list_init_states,
             list_termination_points,
+            check_true_termination,
             reward_on_success=1,
             agent_space=False,
             max_steps=60 * 60 * 30):
@@ -29,6 +30,7 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self.termination_points = list_termination_points
         self.reward = reward_on_success
         self.true_termination = []
+        self._check_termination = check_true_termination
 
     def reset(self):
         self.env.reset()
@@ -57,20 +59,12 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         
         return s0, info
 
-    def _check_termination(self):
-        player_x, player_y, room_num = self.get_current_position()
-
-        if (player_x, player_y, room_num) in self.true_termination:
-            return True
-
-        return False
-
     def step(self, action):
         obs, reward, done, info = super().step(action)
         # remove environment reward
         # we only want to reward the agent for doing the option we are trying to train and nothing else
         reward = 0
-        hit_termination = self._check_termination()
+        hit_termination = self._check_termination(self.get_current_position(), self.true_termination, self)
         if hit_termination and not done:
             done = True
             reward += self.reward

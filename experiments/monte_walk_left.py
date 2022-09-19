@@ -8,7 +8,7 @@ from portable.environment import MonteAgentWrapper
 from portable.utils import load_gin_configs
 from portable.utils.utils import load_init_states
 
-def get_percent_completed(start_pos, final_pos, terminations):
+def get_percent_completed(start_pos, final_pos, terminations, env):
     def manhatten(a, b):
         return sum(abs(val1-val2) for val1, val2 in zip((a[0], a[1]),(b[0],b[1])))
 
@@ -22,7 +22,7 @@ def get_percent_completed(start_pos, final_pos, terminations):
 
     return 1 - (completed_distance/original_distance)
 
-def check_termination_correct(final_pos, terminations):
+def check_termination_correct(final_pos, terminations, env):
     epsilon = 2
     def in_epsilon_square(current_position, final_position):
         if current_position[0] <= (final_position[0] + epsilon) and \
@@ -85,7 +85,7 @@ initiation_state_files = [
         'resources/monte_env_states/room1/ladder/middle_top_0.pkl',
         'resources/monte_env_states/room1/ladder/left_top_0.pkl',
     ],[
-        'resources/monte_env_states/room0/lasers/right_of_middle_laser.pkl'
+        'resources/monte_env_states/room0/lasers/right_of_middle_lasers.pkl'
     ],[
         # maybe shouldn't use room 2
         'resources/monte_env_states/room2/ladder/top_0.pkl',
@@ -196,39 +196,9 @@ bootstrap_env = MonteBootstrapWrapper(
     bootstrap_env,
     load_init_states(initiation_state_files[0]),
     terminations[0],
+    check_termination_correct,
     agent_space=True
 )
-
-if __name__ == "__main__":
-    
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--base_dir", type=str, required=True)
-    parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--config_file", nargs='+', type=str, required=True)
-    parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
-            ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
-            ' "create_atari_environment.game_name="Pong"").')
-    
-    args = parser.parse_args()
-
-    load_gin_configs(args.config_file, args.gin_bindings)
-
-    experiment = Experiment(
-        base_dir=args.base_dir,
-        seed=args.seed,
-        policy_phi=phi,
-        experiment_env_function=make_env,
-        get_percentage_function=get_percent_completed,
-        check_termination_true_function=check_termination_correct,
-        policy_bootstrap_env=bootstrap_env,
-        initiation_positive_files=initiation_positive_files,
-        initiation_negative_files=initiation_negative_files,
-        initiation_priority_negative_files=initiation_priority_negative_files,
-        termination_positive_files=termination_positive_files,
-        termination_negative_files=termination_negative_files,
-        termination_priority_negative_files=termination_priority_negative_files
-    )
 
 if __name__ == "__main__":
     
@@ -275,7 +245,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[y]),
             terminations[idx],
-            200,
+            50,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
             use_agent_space=True
@@ -288,7 +258,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            1000,
+            100,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
@@ -298,7 +268,7 @@ if __name__ == "__main__":
             experiment.run_trial(
                 load_init_states(initiation_state_files[idy]),
                 terminations[idy],
-                200,
+                50,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
                 use_agent_space=True

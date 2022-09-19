@@ -231,12 +231,14 @@ class Option():
                         option_q
                     )
                     self.log("[option run] Option completed successfully (done: {}, should_terminate: {})".format(done, should_terminate))
+                    info['option_timed_out'] = False
                     return next_state, total_reward, done, info, steps
                 
                 # episode timed out => not a fail or success 
                 # no failure or success
                 if info['needs_reset']:
                     self.log("[option run] Environment needs reset. Returning")
+                    info['option_timed_out'] = False
                     return next_state, total_reward, done, info, steps 
 
                 # we died during option execution => fail
@@ -246,6 +248,7 @@ class Option():
                         positions,
                         agent_space_states
                     )
+                    info['option_timed_out'] = False
                     return next_state, total_reward, done, info, steps
             
             state = next_state
@@ -257,6 +260,7 @@ class Option():
             agent_space_states
         )
         self.log("[option] Option timed out. Returning\n\t {}".format(info['position']))
+        info['option_timed_out'] = True
 
         return next_state, total_reward, done, info, steps
             
@@ -290,19 +294,23 @@ class Option():
                 if done or info['needs_reset'] or should_terminate:
                     if (done or should_terminate) and not info['dead']:
                         self.log("[option eval] Option completed successfully (done: {}, should_terminate {})".format(done, should_terminate))
+                        info['option_timed_out'] = False
                         return next_state, total_reward, done, info, steps
 
                     if info['needs_reset']:
                         self.log("[option eval] Environment needs reset. Returning")
+                        info['option_timed_out'] = False
                         return next_state, total_reward, done, info, steps
 
                     if done and info['dead']:
                         self.log("[option eval] Option failed because agent died. Returning")
+                        info['option_timed_out'] = False
                         return next_state, total_reward, done, info, steps
                 
                 state = next_state
 
         self.log("[option eval] Option timed out. Returning")
+        info['option_timed_out'] = True
 
         return next_state, total_reward, done, info, steps
 

@@ -10,12 +10,11 @@ import argparse
 
 from portable.utils.utils import load_gin_configs
 
-def get_percent_completed(start_pos, final_pos, terminations):
+def get_percent_completed(start_pos, final_pos, terminations, env):
     top_of_room = 253
     bottom_of_room = 135
 
     def manhatten(top,bot):
-
         distance = 0
         # in same room
         if top[2] == bot[2]:
@@ -37,8 +36,7 @@ def get_percent_completed(start_pos, final_pos, terminations):
     return 1 - (completed_distance/original_distance)
 
 
-def check_termination_correct(final_pos, terminations):
-
+def check_termination_correct(final_pos, terminations, env):
     epsilon = 2
     def in_epsilon_square(current_position, final_position):
         if current_position[0] <= (final_position[0] + epsilon) and \
@@ -239,6 +237,7 @@ bootstrap_env = MonteBootstrapWrapper(
     bootstrap_env,
     load_init_states(initiation_state_files[0]),
     terminations[0],
+    check_termination_correct,
     agent_space=True
 )
 
@@ -278,7 +277,7 @@ if __name__ == "__main__":
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
         terminations[0],
-        50,
+        25,
         use_agent_space=True
     )
 
@@ -287,7 +286,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            50,
+            25,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
             use_agent_space=True
@@ -300,7 +299,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            100,
+            50,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
@@ -310,7 +309,7 @@ if __name__ == "__main__":
             experiment.run_trial(
                 load_init_states(initiation_state_files[idy]),
                 terminations[idy],
-                50,
+                25,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
                 use_agent_space=True

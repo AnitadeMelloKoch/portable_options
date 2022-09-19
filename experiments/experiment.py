@@ -249,6 +249,7 @@ class Experiment():
             info = self.env.get_current_info({})
             for y in range(self.max_option_tries):
                 logging.info("Attempt {}/{}".format(y, self.max_option_tries))
+                timedout = 0
                 can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
                 if not can_initiate:
@@ -273,16 +274,22 @@ class Experiment():
                     if info["needs_reset"]:
                         break
 
+                    if info['option_timed_out']:
+                        if timedout < 3:
+                            timedout += 1
+                        else:
+                            break
+
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
 
-                    completed = self._check_termination_correct(position, true_terminations[rand_idx])
+                    completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
                     if completed:
                         break
             if completed:
                 result = 1
             else:
-                result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx])
+                result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
             results.append(result)
             logging.info("Result: {}".format(completed))
             
@@ -331,8 +338,9 @@ class Experiment():
             done = False
 
             count = 0
+            timedout = 0
 
-            while not done or info["needs_reset"] or count < 100:
+            while not done or info["needs_reset"] or count < 100 or timedout < 3:
 
                 count += 1
 
@@ -348,7 +356,14 @@ class Experiment():
                     info
                 )
 
-                if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx]):
+                if info['needs_reset']:
+                    logging.info("Breaking because environment needs reset")
+                    break
+
+                if info['option_timed_out']:
+                    timedout += 1
+
+                if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx], self.env):
                     self.option.termination_update_confidence(was_successful=True)
                     logging.info("Breaking because correct termination was found")
                     break
