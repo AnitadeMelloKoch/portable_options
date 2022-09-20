@@ -8,6 +8,7 @@ import torch
 import lzma
 import dill
 import numpy as np
+import matplotlib.pyplot as plt
 
 from portable.option import Option
 from portable.utils import set_player_ram
@@ -191,6 +192,7 @@ class Experiment():
         else:
             save_dir = self.save_dir
         # self.option.save(save_dir)
+        os.makedirs(self.save_dir, exist_ok=True)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
             dill.dump(self.trial_data, f)
@@ -370,8 +372,22 @@ class Experiment():
                 else:
                     self.option.termination_update_confidence(was_successful=False)
 
+    def plot(self, names):
 
+        results = {}
+        for x in range(len(names)):
+            results[names[x]] = []
+        
+        for x in range(len(self.trial_data["name"])):
+            trial_name = self.trial_data["name"][x]
+            if trial_name.find("bootstrap") == -1:
+                trial_room = trial_name.split("_")[0]
+                results[trial_room].append(np.mean(self.trial_data["performance"][x]))
 
+        for key in results:
+            plt.plot(results[key])
+
+        plt.savefig(self.log_dir + '/plot.jpg')
 
 
 
