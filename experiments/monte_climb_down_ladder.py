@@ -272,52 +272,53 @@ if __name__ == "__main__":
         termination_priority_negative_files=termination_priority_negative_files
     )
 
-    experiment.save()
+    # experiment.save()
 
-    experiment.bootstrap_from_room(
-        load_init_states(initiation_state_files[0]),
-        terminations[0],
-        25,
-        use_agent_space=True
-    )
+    # experiment.bootstrap_from_room(
+    #     load_init_states(initiation_state_files[0]),
+    #     terminations[0],
+    #     25,
+    #     use_agent_space=True
+    # )
 
-    for y in range(len(initiation_state_files)):
-        idx = order[y]
-        experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
-            25,
-            eval=True,
-            trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
-            use_agent_space=True
-        )
+    # for y in range(len(initiation_state_files)):
+    #     idx = order[y]
+    #     experiment.run_trial(
+    #         load_init_states(initiation_state_files[idx]),
+    #         terminations[idx],
+    #         25,
+    #         eval=True,
+    #         trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
+    #         use_agent_space=True
+    #     )
 
-    experiment.save(additional_path=room_names[0])
+    # experiment.save(additional_path=room_names[0])
 
-    # experiment.load(room_names[7])
+    # # experiment.load(room_names[7])
 
-    for x in range(1, len(initiation_state_files)):
-        idx = order[x]
-        experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
-            50,
-            eval=False,
-            trial_name="{}_train".format(room_names[idx]),
-            use_agent_space=True
-        )
-        for y in range(len(initiation_state_files)):
-            idy = order[y]
-            experiment.run_trial(
-                load_init_states(initiation_state_files[idy]),
-                terminations[idy],
-                25,
-                eval=True,
-                trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
-                use_agent_space=True
-            )
+    # for x in range(1, len(initiation_state_files)):
+    #     idx = order[x]
+    #     experiment.run_trial(
+    #         load_init_states(initiation_state_files[idx]),
+    #         terminations[idx],
+    #         50,
+    #         eval=False,
+    #         trial_name="{}_train".format(room_names[idx]),
+    #         use_agent_space=True
+    #     )
+    #     for y in range(len(initiation_state_files)):
+    #         idy = order[y]
+    #         experiment.run_trial(
+    #             load_init_states(initiation_state_files[idy]),
+    #             terminations[idy],
+    #             25,
+    #             eval=True,
+    #             trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
+    #             use_agent_space=True
+    #         )
         
-        experiment.save(additional_path=room_names[idx])
+    #     experiment.save(additional_path=room_names[idx])
 
-    
+    experiment.load(additional_path=room_names[3])
+    experiment.plot(room_names)
     

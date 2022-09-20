@@ -231,7 +231,7 @@ if __name__ == "__main__":
         termination_priority_negative_files=termination_priority_negative_files
     )
 
-    experiment.save()
+    # experiment.save()
 
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
