@@ -29,7 +29,7 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     ram = env.unwrapped.ale.getRAM()
     original_distance = 0
     final_distance = 0
-    if room in [0,2,3,18]:
+    if room in [0,1,2,3,18]:
         # skulls
         skull_x = get_skull_position(ram)
         end_pos = (skull_x-6, ground_y)
@@ -68,7 +68,7 @@ def check_termination_correct(final_pos, terminations, env):
     room = terminations[2]
     ground_y = terminations[1]
     ram = env.unwrapped.ale.getRAM()
-    if room in [0,2,3,18]:
+    if room in [0,1,2,3,18]:
         # skulls
         skull_x = get_skull_position(ram)
         end_pos = (skull_x-6, ground_y)
