@@ -17,8 +17,8 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     for term in terminations:
         original_distance.append(manhatten(start_pos, term))
         completed_distance.append(manhatten(final_pos, term))
-    original_distance = min(original_distance)+1e-5
-    completed_distance = min(completed_distance)+1e-5
+    original_distance = np.mean(original_distance)+1e-5
+    completed_distance = np.mean(completed_distance)+1e-5
 
     return 1 - (completed_distance/original_distance)
 
@@ -124,7 +124,7 @@ initiation_state_files = [
 
 terminations = [
     [
-        [(50, 235, 1)],
+        [(24, 235, 1)],
         [(130, 192, 1)],
         [(9, 192, 1)],
         [(77, 235, 1)],
