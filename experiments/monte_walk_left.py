@@ -17,8 +17,8 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     for term in terminations:
         original_distance.append(manhatten(start_pos, term))
         completed_distance.append(manhatten(final_pos, term))
-    original_distance = min(original_distance)
-    completed_distance = min(completed_distance)
+    original_distance = min(original_distance)+1e-5
+    completed_distance = min(completed_distance)+1e-5
 
     return 1 - (completed_distance/original_distance)
 
