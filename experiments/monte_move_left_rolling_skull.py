@@ -26,6 +26,7 @@ def get_snake_x(position):
         return 25
 
 def in_epsilon_square(current_position, final_position):
+    print(final_position)
     epsilon = 2
     if current_position[0] <= (final_position[0] + epsilon) and \
         current_position[0] >= (final_position[0] - epsilon) and \
@@ -66,7 +67,7 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
             final_distance = manhatten(final_pos, end_pos)
     elif room in [9,11,22]:
         # snakes
-        end_pos = terminations[0]
+        end_pos = terminations
         if in_epsilon_square(final_pos, end_pos):
             return 1
         else:
@@ -113,10 +114,14 @@ def check_termination_correct(final_pos, terminations, env):
         return False
 
 initiation_positive_files = [
-    'resources/monte_images/jump_left_initiation_positive.npy'
+    'resources/monte_images/rolling_skull_1_initiation_positive.npy',
+    'resources/monte_images/rolling_skull_2_initiation_positive.npy'
 ]
 initiation_negative_files = [
-    'resources/monte_images/jump_left_initiation_negative.npy'
+    'resources/monte_images/rolling_skull_1_initiation_negative.npy',
+    'resources/monte_images/rolling_skull_2_initiation_negative.npy',
+    'resources/monte_images/jump_left_initiation_negative.npy',
+    
 ]
 initiation_priority_negative_files = [
     'resources/monte_images/death.npy',
@@ -126,13 +131,18 @@ initiation_priority_negative_files = [
 ]
 
 termination_positive_files = [
-    'resources/monte_images/jump_left_termination_positive.npy'
+    'resources/monte_images/rolling_skull_1_termination_positive.npy',
+    'resources/monte_images/rolling_skull_2_termination_positive.npy'
 ]
 termination_negative_files = [
-    'resources/monte_images/jump_left_termination_negative.npy'
+    'resources/monte_images/rolling_skull_1_termination_negative.npy',
+    'resources/monte_images/rolling_skull_2_termination_negative.npy',
+    'resources/monte_images/jump_left_termination_negative.npy',
+
 ]
 termination_priority_negative_files = [
-    'resources/monte_images/jump_left_initiation_positive.npy'
+    'resources/monte_images/rolling_skull_1_termination_positive.npy',
+    'resources/monte_images/rolling_skull_2_termination_positive.npy'
 ]
 
 def phi(x):
@@ -154,25 +164,17 @@ initiation_state_files = [
         'resources/monte_env_states/room1/enemy/right_of_skull_0.pkl',
         'resources/monte_env_states/room1/enemy/right_of_skull_1.pkl',
     ],[
-        'resources/monte_env_states/room2/enemy/right_of_skull_0.pkl',
-        'resources/monte_env_states/room2/enemy/right_of_skull_1.pkl',
+        'resources/monte_env_states/room5/enemy/right_of_skull.pkl',
+    ],[
+        'resources/monte_env_states/room18/enemy/right_skull.pkl',
     ],[
         'resources/monte_env_states/room4/enemy/right_of_spider_0.pkl',
         'resources/monte_env_states/room4/enemy/right_of_spider_1.pkl',
     ],[
-        'resources/monte_env_states/room3/enemy/right_of_skulls.pkl',
-    ],[
-        'resources/monte_env_states/room9/enemy/right_of_right_snake.pkl',
+        'resources/monte_env_states/room2/enemy/right_of_skull_0.pkl',
+        'resources/monte_env_states/room2/enemy/right_of_skull_1.pkl',
     ],[
         'resources/monte_env_states/room11/enemy/right_of_right_snake.pkl',
-    ],[
-        'resources/monte_env_states/room13/enemy/right_spider.pkl',
-    ],[
-        'resources/monte_env_states/room18/enemy/right_skull.pkl',
-    ],[
-        'resources/monte_env_states/room21/enemy/right_spider.pkl',
-    ],[
-        'resources/monte_env_states/room22/enemy/right_snake.pkl',
     ]
 ]
 
@@ -181,43 +183,31 @@ terminations = [
         (0, 148, 1),
         (0, 148, 1),
     ],[
-        (0, 235, 2),
-        (0, 235, 2)
+        (0, 235, 5),
+    ],[
+        (0, 235, 18),
     ],[
         (0, 235, 4),
-        (0, 235, 4)
+        (0, 235, 4),
     ],[
-        (0, 235, 3)
+        (0, 235, 2),
+        (0, 235, 2),
     ],[
-        (0, 235, 9)
-    ],[
-        (0, 235, 11)
-    ],[
-        (0, 235, 13)
-    ],[
-        (0, 235, 18)
-    ],[
-        (0, 235, 21)
-    ],[
-        (0, 235, 22)
+        (97, 235, 11)
     ]
 ]
 
 room_names = [
     "room1", # 0
-    "room2", # 1
-    "room4", # 2
-    "room3", # 3
-    "room9", # 4
-    "room11",# 5
-    "room13",# 6
-    "room18",# 7
-    "room21",# 8
-    "room22",# 9
+    "room5", # 1
+    "room18", # 2
+    "room4",
+    "room2",
+    "room11",
 ]
 
 order = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    0, 1, 2, 3, 4, 5
 ]
 
 bootstrap_env = atari_wrappers.wrap_deepmind(

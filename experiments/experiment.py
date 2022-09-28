@@ -117,7 +117,11 @@ class Experiment():
 
         self.trial_data = {
             "name": [],
-            "performance": []
+            "performance": [],
+            "start_pos": [],
+            "end_pos": [],
+            "true_terminations": [],
+            "completed": [],
         }
 
 
@@ -232,6 +236,10 @@ class Experiment():
         print("[experiment] Starting trial {}".format(trial_name))
 
         results = []
+        start_poses = []
+        end_poses = []
+        true_terminationses = []
+        completeds = []
 
         for x in range(number_episodes_in_trial):
             logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
@@ -249,14 +257,18 @@ class Experiment():
             agent_state = rand_state["agent_state"]
             start_pos = rand_state["position"]
             info = self.env.get_current_info({})
-            for y in range(self.max_option_tries):
-                logging.info("Attempt {}/{}".format(y, self.max_option_tries))
-                timedout = 0
+            attempt = 0
+            timedout = 0
+            must_break = False
+            while (attempt < self.max_option_tries) and (timedout < 3) and (not must_break):
+            # for y in range(self.max_option_tries):
+                attempt += 1
+                logging.info("Attempt {}/{}".format(attempt, self.max_option_tries))
                 can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
                 if not can_initiate:
                     results.append(0)
-                    break
+                    must_break = True
                 else:
                     if eval:
                         _, _, _, info, _ = self.option.evaluate(
@@ -274,29 +286,34 @@ class Experiment():
                         )
 
                     if info["needs_reset"]:
-                        break
+                        must_break = True
 
                     if info['option_timed_out']:
-                        if timedout < 3:
-                            timedout += 1
-                        else:
-                            break
+                        logging.info("[experiment] option timed out {} times".format(timedout))
+                        timedout += 1
 
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
 
                     completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
                     if completed:
-                        break
+                        must_break = True
             if completed:
                 result = 1
             else:
                 result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
             results.append(result)
+            start_poses.append(start_pos)
+            end_poses.append(position)
+            true_terminationses.append(true_terminations[rand_idx])
+            completeds.append(completed)
             logging.info("Result: {}".format(completed))
             
         self.trial_data["name"].append(trial_name)
-        self.trial_data["performance"].append(results)
+        self.trial_data["start_pos"].append(start_poses)
+        self.trial_data["end_pos"].append(end_poses)
+        self.trial_data["true_terminations"].append(true_terminationses)
+        self.trial_data["completed"].append(completeds)
 
         if not eval:
             self.option.train_initiation( 5, 10)
@@ -342,7 +359,7 @@ class Experiment():
             count = 0
             timedout = 0
 
-            while not done or info["needs_reset"] or count < 100 or timedout < 3:
+            while (not done) and (info["needs_reset"]) and (count < 100) and (timedout < 3):
 
                 count += 1
 
@@ -363,6 +380,7 @@ class Experiment():
                     break
 
                 if info['option_timed_out']:
+                    logging.info('[experiment] option has timed out {} times'.format(timedout))
                     timedout += 1
 
                 if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx], self.env):

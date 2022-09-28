@@ -92,6 +92,7 @@ class SetDataset():
         for file in file_list:
             data = np.load(file)
             data = torch.from_numpy(data).float()
+            data = data.squeeze()
             self.true_data = self.concatenate(self.true_data, data)
         self.true_length = len(self.true_data)
         self._set_batch_num()
@@ -103,6 +104,7 @@ class SetDataset():
         for file in file_list:
             data = np.load(file)
             data = torch.from_numpy(data).float()
+            data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
         self.false_length = len(self.false_data)
         self._set_batch_num()
@@ -114,6 +116,7 @@ class SetDataset():
         for file in file_list:
             data = np.load(file)
             data = torch.from_numpy(data).float()
+            data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)
         self.priority_false_length = len(self.priority_false_data)
         self._set_batch_num()
