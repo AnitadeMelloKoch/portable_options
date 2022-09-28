@@ -284,7 +284,7 @@ if __name__ == "__main__":
             use_agent_space=True
         )
 
-    experiment.save(additional_path=room_names[0])
+    experiment.save()
 
     for x in range(1, len(initiation_state_files)):
         idx = order[x]
@@ -307,7 +307,7 @@ if __name__ == "__main__":
                 use_agent_space=True
             )
         
-        experiment.save(additional_path=room_names[idx])
+        experiment.save()
 
     
     
