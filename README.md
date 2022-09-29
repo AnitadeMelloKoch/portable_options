@@ -1,6 +1,22 @@
 # portable_options
 
-## training 
+## procgen experiments
+to do transfer learning, for example:
 ```bash
-python -m portable.train 
+python -m portable.procgen.transfer --env coinrun --num_levels 20 --transfer_steps 500000 --num_policies 3 --seed 0
+```
+for plotting:
+```bash
+python -m portable.procgen.plot -p -l ./results/
+```
+
+## montezuma experiments
+```bash
+python -m experiments.monte_move_left_spider --base_dir runs --seed {} --config_file configs/monte_move_left_spider.gin
+
+python -m experiments.monte_move_left_snake --base_dir runs --seed {} --config_file configs/monte_move_left_snake.gin
+
+python -m experiments.monte_move_left_rolling_skull --base_dir runs --seed {} --config_file configs/monte_move_left_rolling_skull.gin
+
+python -m experiments.monte_move_left_dancing_skull --base_dir runs --seed {} --config_file configs/monte_move_left_dancing_skull.gin 
 ```
