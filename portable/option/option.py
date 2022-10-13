@@ -296,7 +296,7 @@ class Option():
                         self.log("[option eval] Option completed successfully (done: {}, should_terminate {})".format(done, should_terminate))
                         info['option_timed_out'] = False
                         return next_state, total_reward, done, info, steps
-
+                        
                     if info['needs_reset']:
                         self.log("[option eval] Environment needs reset. Returning")
                         info['option_timed_out'] = False
