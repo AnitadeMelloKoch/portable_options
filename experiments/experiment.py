@@ -267,17 +267,16 @@ class Experiment():
                 can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
                 if not can_initiate:
-                    results.append(0)
                     must_break = True
                 else:
                     if eval:
-                        _, _, _, info, _ = self.option.evaluate(
+                        _, _, done, info, _ = self.option.evaluate(
                             self.env,
                             state,
                             info
                         )
                     else:
-                        _, _, _, info, _ = self.option.run(
+                        _, _, done, info, _ = self.option.run(
                             self.env,
                             state,
                             info,
@@ -292,16 +291,16 @@ class Experiment():
                         logging.info("[experiment] option timed out {} times".format(timedout))
                         timedout += 1
 
+                    if done:
+                        must_break = True
+
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
 
                     completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
                     if completed:
                         must_break = True
-            if completed:
-                result = 1
-            else:
-                result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
+            result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
             results.append(result)
             start_poses.append(start_pos)
             end_poses.append(position)

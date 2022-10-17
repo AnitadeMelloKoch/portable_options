@@ -45,7 +45,7 @@ class Option():
             initiation_embedding_learning_rate=1e-4,
             initiation_classifier_learning_rate=1e-2,
             initiation_embedding_output_size=64,
-            initiation_dataset_max_size=100000,
+            initiation_dataset_max_size=50000,
 
             termination_beta_distribution_alpha=30,
             termination_beta_distribution_beta=5,
@@ -53,7 +53,7 @@ class Option():
             termination_embedding_learning_rate=1e-4,
             termination_classifier_learning_rate=1e-2,
             termination_embedding_output_size=64,
-            termination_dataset_max_size=100000,
+            termination_dataset_max_size=50000,
 
             markov_termination_epsilon=3,
             min_interactions=100,
