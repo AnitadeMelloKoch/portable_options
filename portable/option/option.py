@@ -57,7 +57,6 @@ class Option():
 
             markov_termination_epsilon=3,
             min_interactions=100,
-            q_variance_threshold=1,
             timeout=50,
             allowed_additional_loss=2,
 
@@ -109,7 +108,6 @@ class Option():
         self.markov_classifiers = []
         self.markov_termination_epsilon = markov_termination_epsilon
         self.min_interactions = min_interactions
-        self.q_variance_threshold = q_variance_threshold
         self.option_timeout = timeout
         
         self.markov_classifier_idx = None
@@ -186,8 +184,6 @@ class Option():
             env, 
             state, 
             info,
-            q_values,
-            option_q,
             use_global_classifiers=True):
         # run the option. Policy takes over control
         steps = 0
@@ -226,9 +222,7 @@ class Option():
                         positions,
                         agent_space_states,
                         info,
-                        agent_state,
-                        q_values,
-                        option_q
+                        agent_state
                     )
                     self.log("[option run] Option completed successfully (done: {}, should_terminate: {})".format(done, should_terminate))
                     info['option_timed_out'] = False
@@ -318,8 +312,6 @@ class Option():
             self,
             initiation_states,
             termination_states,
-            q_values=None, 
-            option_q=None,
             test_negative_only=False):
 
         if test_negative_only:
@@ -332,9 +324,6 @@ class Option():
                 return False
             else:
                 return True
-
-        assert q_values is not None
-        assert option_q is not None
 
         self.log("[option] Testing samples from Markov classifier")
 
@@ -365,17 +354,6 @@ class Option():
             self.log("[option] Termination loss too high. Data not added")
             return False
 
-        ## For now we are not using q_values
-        #   -> we have no policy over options
-        # q_mean = np.mean(q_values)
-        # q_std = np.std(q_values)
-
-        # q_variance = (option_q - q_mean)/q_std
-
-        # if q_variance < self.q_variance_threshold:
-        #     # q value was not high enough
-        #     self.log("[option] q value not high enough. Data not added")
-        #     return False
         self.log("[option] Samples from Markov classifier will be added")
         return True
 
@@ -492,9 +470,7 @@ class Option():
             positions,
             agent_space_states,
             markov_termination,
-            agent_space_termination,
-            q_values,
-            option_q_value):
+            agent_space_termination):
         
         # if we have a markoc classifier add data        
         if self.markov_classifier_idx is not None:
@@ -505,9 +481,7 @@ class Option():
             # test markov classifier to see if we can add data to global classifier
             if self._test_markov_classifier(
                 agent_space_states,
-                [agent_space_termination],
-                q_values=q_values,
-                option_q=option_q_value
+                [agent_space_termination]
             ):
                 self.initiation.add_data(
                     agent_space_states,
