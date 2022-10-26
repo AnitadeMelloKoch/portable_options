@@ -1,13 +1,7 @@
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 import logging
 from typing import Any
-
-
-import numpy as np
-import os
 import logging
-
-from portable.option.sets.models import PositionClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +13,10 @@ execution. This is to be used for verification of an instance
 which can be used for association and assimilation.
 """
 
-class MarkovOption():
+class MarkovOption(object, metaclass=ABCMeta):
 
     def __init__(self,
             use_log=True):
-        
-        self.initiation = None
-        self.policy = None
-        self.termination = None
-
         self.use_log = use_log
 
     def log(self, message):
@@ -56,12 +45,42 @@ class MarkovOption():
         raise NotImplementedError()
 
     @abstractmethod
+    def can_terminate(
+            self, 
+            agent_space_state: Any):
+        """
+        Check Markov Option termination condition
+        Input:
+            agent_space_state: state to be evaluated.
+        Return:
+            bool: True if can terminate False if can't terminate
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def interact_initiation(
             self, 
             positive_agent_space_states: list, 
             negative_agent_space_states: list):
         """
         Provide feedback to initiation classifier.
+        Input:
+            positive_agent_space_states: list of positive samples, if any,
+                for this instance of the Option.
+            negative_agent_space_states: list of negative samples, if any,
+                for this instance of the Option.
+        Returns:
+            None
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def interact_termination(
+            self,
+            positive_agent_space_states: list,
+            negative_agent_space_states: list):
+        """
+        Provide feedback to termination classifier.
         Input:
             positive_agent_space_states: list of positive samples, if any,
                 for this instance of the Option.

@@ -1,3 +1,4 @@
+import copy
 import os
 import lzma
 import dill
@@ -46,6 +47,12 @@ class EnsembleAgent(Agent):
         self.device = device
         self.phi = phi
         self.action_selection_strategy = action_selection_strategy
+        self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
+        self.buffer_length = buffer_length
+        self.embedding_output_size = embedding_output_size
+        self.learning_rate = learning_rate
+        self.final_epsilon = final_epsilon
+        self.final_exploration_frames = final_exploration_frames
         print(f"using action selection strategy: {self.action_selection_strategy}")
         if self._using_leader():
             self.action_leader = np.random.choice(num_modules)
@@ -104,6 +111,32 @@ class EnsembleAgent(Agent):
             update_interval=update_interval,
         )
     
+    def initialize_new_policy(self):
+
+        new_policy = EnsembleAgent(
+            device=self.device,
+            warmup_steps=self.warmup_steps,
+            batch_size=self.batch_size,
+            phi=self.phi,
+            action_selection_strategy=self.action_selection_strategy,
+            prioritized_replay_anneal_steps=self.prioritized_replay_anneal_steps,
+            buffer_length=self.buffer_length,
+            update_interval=self.update_interval,
+            q_target_update_interval=self.q_target_update_interval,
+            embedding_output_size=self.embedding_output_size,
+            learning_rate=self.learning_rate,
+            final_epsilon=self.final_epsilon,
+            final_exploration_frames=self.final_exploration_frames,
+            discount_rate=self.discount_rate,
+            num_modules=self.num_modules,
+            num_output_classes=self.num_output_classes
+        )
+
+        new_policy.value_ensemble = copy.deepcopy(self.value_ensemble)
+
+        return new_policy
+        
+
     def _using_leader(self):
         return self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']
     
