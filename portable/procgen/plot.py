@@ -6,6 +6,32 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
+def plot_reward_curve(csv_dir):
+    """
+    this is used to plot for a single agent
+    read progress.csv and plot the reward curves, save in the save dir as csv
+    """
+    csv_path = os.path.join(csv_dir, 'progress.csv')
+    df = pandas.read_csv(csv_path, comment='#')
+
+    # get rid of the NaN data points
+    max_nan_step = df.loc[df.isna().any(axis=1)]['level_total_steps'].max()
+    df = df.query(f"level_total_steps > {max_nan_step}")
+
+    steps = df['total_steps']
+    train_reward = df['ep_reward_mean']
+    eval_reward = df['eval_ep_reward_mean']
+    plt.plot(steps, train_reward, label='train')
+    plt.plot(steps, eval_reward, label='eval')
+    plt.legend()
+    plt.title('Learning Curve')
+    plt.xlabel('Steps')
+    plt.ylabel('Episodic Reward')
+    save_path = os.path.dirname(csv_path) + '/learning_curve.png'
+    plt.savefig(save_path)
+    plt.close()
+
+
 def pretty_title(game_name):
     """
     make the first letter upper case

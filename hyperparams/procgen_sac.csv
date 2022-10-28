@@ -1,0 +1,12 @@
+n_hidden_channels,1024,int
+learning_rate,3e-4,float
+adam_eps,1e-1,float
+n_step_return,3,int
+nepochs,1,int
+nsteps,256,int
+discount,0.98,float
+update_interval,1,int
+replay_start_size,10000,int
+batch_size,256,int
+max_steps,25_000_000,int
+save_interval,50_000,int

@@ -1,5 +1,10 @@
 # portable_options
 
+## ant experiments
+```bash
+python3 -m portable.procgen.transfer --agent sac --num_envs 16 --max_steps 10_000_000 --env ant_box
+```
+
 ## procgen experiments
 to do transfer learning, for example:
 ```bash

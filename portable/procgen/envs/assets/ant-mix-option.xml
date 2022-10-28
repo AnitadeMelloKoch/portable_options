@@ -1,0 +1,141 @@
+<mujoco model="ant">
+  <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
+  <option integrator="RK4" timestep="0.01"/>
+  <default>
+    <joint armature="1" damping="1" limited="true"/>
+    <geom conaffinity="1" condim="3" density="5.0" friction="0.5 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+    <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+    <texture builtin="checker" height="100" name="texplane" rgb1=".1 .2 .3" rgb2=".1 .2 .3" type="2d" width="100"/>
+    <texture builtin="checker" height="100" name="texball" rgb1="0 0 0" rgb2="1 1 1" type="2d" width="100"/>
+    <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="10 5" texture="texplane"/>
+    <material name="MatPlane_goal" reflectance="0.5" shininess="1" specular="1" texrepeat="10 12.5" texture="texplane"/>
+    <material name="MatPlane_boxmid" reflectance="0.5" shininess="1" specular="1" texrepeat="10 4" texture="texplane"/>
+    <material name="MatPlane_boxback" reflectance="0.5" shininess="1" specular="1" texrepeat="10 6" texture="texplane"/>
+    <material name="MatPlane_front" reflectance="0.5" shininess="1" specular="1" texrepeat="10 2.5" texture="texplane"/>
+    <material name="MatPlane_gather" reflectance="0.5" shininess="1" specular="1" texrepeat="10 8" texture="texplane"/>
+    <material name="geom" texture="texgeom" texuniform="true"/>
+  </asset>
+  <worldbody>
+    <!-- test object -->
+
+    <body name="box0" pos="0 0 0">
+      <!-- <joint name="OBJTx" pos="0 0 0" axis="1 0 0" type="slide" limited="false" damping="0" /> -->
+      <joint name="OBJTy0" pos="0 0 0" axis="0 1 0" type="slide" limited="false" damping="0" />
+      <joint name="OBJTz0" pos="0 0 0" axis="0 0 1" type="slide" limited="false" damping="0" />
+    <geom name="objGeom0"  priority = "2"  pos="0 0 0" size="2 1.95 0.5" rgba="0.6627450980392157 0.6627450980392157 0.6627450980392157 1" type="box" friction="0 0 0.5"  mass="0.000001"/>
+    </body>
+    <body name="box1" pos="0 0 0">
+      <!-- <joint name="OBJTx" pos="0 0 0" axis="1 0 0" type="slide" limited="false" damping="0" /> -->
+      <joint name="OBJTy1" pos="0 0 0" axis="0 1 0" type="slide" limited="false" damping="0" />
+      <joint name="OBJTz1" pos="0 0 0" axis="0 0 1" type="slide" limited="false" damping="0" />
+    <geom name="objGeom1"  priority = "2"  pos="0 0 0" size="2 1.95 0.5" rgba="0.6627450980392157 0.6627450980392157 0.6627450980392157 1" type="box" friction="0 0 0.5"  mass="0.000001"/>
+    </body>
+
+
+    <body name="agent_torso" pos="0 0 0.75">
+      <camera name="track" mode="trackcom" pos="0 -5 1.2" xyaxes="1 0 0 0 0 1"/>
+
+      <geom name="agent_torso_geom" pos="0 0 0" size="0.25" type="sphere" priority = "3"/>
+      <joint armature="0" damping="0" limited="false" margin="0.01" name="root" pos="0 0 0" type="free"/>
+      <body name="agent_front_left_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="aux_1_geom" size="0.08" type="capsule" priority = "3"/>
+        <body name="aux_1" pos="0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="agent_left_leg_geom" size="0.08" type="capsule" priority = "3"/>
+          <body pos="0.2 0.2 0">
+            <joint axis="-1 1 0" name="ankle_1" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 0.4 0.0" name="agent_left_ankle_geom" size="0.08" type="capsule" priority = "3"/>
+          </body>
+        </body>
+      </body>
+      <body name="agent_front_right_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="aux_2_geom" size="0.08" type="capsule" priority = "3"/>
+        <body name="aux_2" pos="-0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="agent_right_leg_geom" size="0.08" type="capsule" priority = "3"/>
+          <body pos="-0.2 0.2 0">
+            <joint axis="1 1 0" name="ankle_2" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 0.4 0.0" name="agent_right_ankle_geom" size="0.08" type="capsule" priority = "3"/>
+          </body>
+        </body>
+      </body>
+      <body name="agent_back_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="aux_3_geom" size="0.08" type="capsule" priority = "3"/>
+        <body name="aux_3" pos="-0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_3" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="agent_back_leg_geom" size="0.08" type="capsule" priority = "3"/>
+          <body pos="-0.2 -0.2 0">
+            <joint axis="-1 1 0" name="ankle_3" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 -0.4 0.0" name="agent_third_ankle_geom" size="0.08" type="capsule" priority = "3"/>
+          </body>
+        </body>
+      </body>
+      <body name="agent_right_back_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="aux_4_geom" size="0.08" type="capsule" priority = "3"/>
+        <body name="aux_4" pos="0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_4" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="agent_rightback_leg_geom" size="0.08" type="capsule" priority = "3"/>
+          <body pos="0.2 -0.2 0">
+            <joint axis="1 1 0" name="ankle_4" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 -0.4 0.0" name="agent_fourth_ankle_geom" size="0.08" type="capsule" priority = "3"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <geom name="curbleft0" pos="-7.35 10 0.5" conaffinity="1" rgba="0.9 0.3 0.3 1" size="10 1 1" type="box"/>
+    <geom name="curbright0" pos="4.15 10 0.5" conaffinity="1" rgba="0.9 0.3 0.3 1" size="10 1 1" type="box"/>
+    <geom name="curbleft1" pos="-7.35 77 0.5" conaffinity="1" rgba="0.9 0.3 0.3 1" size="10 1 1" type="box"/>
+    <geom name="curbright1" pos="4.15 77 0.5" conaffinity="1" rgba="0.9 0.3 0.3 1" size="10  1 1" type="box"/>
+
+
+    <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
+    <geom name="startplane" pos="0 -5 -0.5" rgba="0.8 0.9 0.8 1" conaffinity="1"  friction="1 1 1" material="MatPlane" size="10 5 0.5" type="box" priority = "3"/>
+
+    <geom name="antgoal0_plane" pos="0 12.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_goal" size="10 12.5 0.5" type="box" priority = "3"/>
+    <geom name="antbridge0_frontplane" pos="0 27.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_front" size="10 2.5 0.5" type="box" priority = "3"/>
+    <geom name="antbridge0_rearplane" pos="0 48.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_front" size="10 2.5 0.5" type="box" priority = "3"/>
+
+    <geom name="antgoal1_plane" pos="0 79.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_goal" size="10 12.5 0.5" type="box" priority = "3"/>
+    <geom name="antbridge1_frontplane" pos="0 94.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_front" size="10 2.5 0.5" type="box" priority = "3"/>
+    <geom name="antbridge1_rearplane" pos="0 115.5 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_front" size="10 2.5 0.5" type="box" priority = "3"/>
+
+
+    <geom name="antbox0_frontplane" pos="0 63 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane" size="10 5 0.5" type="box" />
+    <geom name="antbox0_midplane" pos="0 70 -1.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_boxmid" size="10 4 0.5" type="box" />
+    <geom name="antbox0_backplane" pos="0 78 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_boxmid" size="10 6 0.5" type="box" />
+
+    <geom name="antbox1_frontplane" pos="0 89 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane" size="10 5 0.5" type="box" />
+    <geom name="antbox1_midplane" pos="0 96 -1.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_boxmid" size="10 4 0.5" type="box" />
+    <geom name="antbox1_backplane" pos="0 104 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane_boxmid" size="10 6 0.5" type="box" />
+
+
+    <geom name="finishplane" pos="0 154 -0.5" conaffinity="1" rgba="0.8 0.9 0.8 1" friction="1 1 1" material="MatPlane" size="10 5 0.5" type="box" priority = "3"/>
+
+    <geom name="bridge0" pos="0 38 -0.5" conaffinity="1" rgba="0.82352941 0.41176471 0.11764706 1" size="1.8 8 0.5" type="box" />
+    <geom name="bridge1" pos="0 105 -0.5" conaffinity="1" rgba="0.54509804 0.27058824 0.0745098 1" size="1.8 8 0.5" type="box" />
+
+<!--    <geom name="coin_geom1_0" pos= "0 56 0.3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom2_0" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  pos="0 62 0.3" rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom1_1" pos= "0 123 0.3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom2_1" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  pos="0 129 0.3" rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom1_2" pos= "0 190 0.3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom2_2" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  pos="0 196 0.3" rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom1_3" pos= "0 231 0.3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom2_3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  pos="0 237 0.3" rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom1_4" pos= "0 247 0.3" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  rgba="1 0.874509804 0 1" />-->
+<!--    <geom name="coin_geom2_4" conaffinity="0" contype="0" type="sphere" size=".3" condim="3"  pos="0 253 0.3" rgba="1 0.874509804 0 1" />-->
+  </worldbody>
+  <actuator>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3" gear="150"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3" gear="150"/>
+  </actuator>
+</mujoco>

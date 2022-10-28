@@ -13,3 +13,6 @@ matplotlib==3.4.3
 dill==0.3.4
 scikit-image==0.19.3
 gin-config==0.5.0
+mujoco_py==2.1.2.14
+pandas==1.5.1
+seaborn==0.12.1
