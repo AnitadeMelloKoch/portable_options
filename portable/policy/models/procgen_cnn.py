@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from portable.procgen.models.impala import ConvSequence
+from portable.policy.models.impala import ConvSequence
 
 
 class ProcgenCNN(nn.Module):

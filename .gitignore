@@ -3,6 +3,7 @@
 
 # results
 results/
+MUJOCO_LOG.TXT
 
 # DS Store
 **/.DS_Store

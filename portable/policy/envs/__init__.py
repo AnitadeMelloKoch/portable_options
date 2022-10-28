@@ -10,7 +10,7 @@ def make_ant_env(env_name, num_envs=1, eval=False):
     create the env environment
     """
     import gym
-    from portable.procgen.vec_env.vec_monitor import VecMonitor
+    from portable.policy.vec_env.vec_monitor import VecMonitor
 
     assert 'ant' in env_name
     if env_name == "ant_box":

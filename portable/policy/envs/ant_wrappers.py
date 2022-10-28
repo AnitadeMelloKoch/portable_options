@@ -1,6 +1,6 @@
 import numpy as np
 
-from portable.procgen.vec_env.vec_env import VecEnvObservationWrapper
+from portable.policy.vec_env.vec_env import VecEnvObservationWrapper
 
 
 class DoubleToFloatWrapper(VecEnvObservationWrapper):
