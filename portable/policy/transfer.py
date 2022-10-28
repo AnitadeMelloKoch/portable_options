@@ -22,14 +22,14 @@ from pfrl.agents import DoubleDQN
 from pfrl.utils import set_random_seed
 from pfrl.q_functions import DiscreteActionValueHead
 
-from portable.procgen.vec_env import VecExtractDictObs, VecNormalize, VecChannelOrder, VecMonitor
-from portable.procgen.ensemble import AttentionEmbedding
-from portable.procgen.agents import PPO, EnsembleAgent, SAC, SingleSharedBias
-from portable.procgen.envs import make_ant_env
-from portable.procgen.models import ProcgenCNN, ImpalaCNN, PPOMLP
-from portable.procgen.plot import plot_reward_curve
+from portable.policy.vec_env import VecExtractDictObs, VecNormalize, VecChannelOrder, VecMonitor
+from portable.policy.ensemble import AttentionEmbedding
+from portable.policy.agents import PPO, EnsembleAgent, SAC, SingleSharedBias
+from portable.policy.envs import make_ant_env
+from portable.policy.models import ProcgenCNN, ImpalaCNN, PPOMLP
+from portable.policy.plot import plot_reward_curve
 from portable.utils import BaseTrial
-from portable.procgen import logger
+from portable.policy import logger
 from portable.utils import utils
 
 class ProcgenAntTrial(BaseTrial):

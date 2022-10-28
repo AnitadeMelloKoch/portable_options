@@ -10,9 +10,9 @@ from pfrl import replay_buffers
 from pfrl.replay_buffer import batch_experiences
 from pfrl.utils.batch_states import batch_states
 
-from portable.procgen.ensemble.criterion import batched_L_divergence
-from portable.procgen.agents.abstract_agent import Agent, evaluating
-from portable.procgen.ensemble.aggregate import choose_most_popular, choose_leader, \
+from portable.policy.ensemble.criterion import batched_L_divergence
+from portable.policy.agents.abstract_agent import Agent, evaluating
+from portable.policy.ensemble.aggregate import choose_most_popular, choose_leader, \
     choose_max_sum_qvals, upper_confidence_bound
 
 

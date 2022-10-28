@@ -64,7 +64,7 @@ class AntMixLongEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.second_coins_get = [0, 0, 0, 0, 0]
         self.ob_shape = {"joint": [29]}
         self.ob_type = self.ob_shape.keys()
-        xml_path = os.path.join(os.getcwd(), "portable/procgen/envs/assets/ant-mix-option.xml")
+        xml_path = os.path.join(os.getcwd(), "portable/policy/envs/assets/ant-mix-option.xml")
         mujoco_env.MujocoEnv.__init__(self, xml_path, 5)
         utils.EzPickle.__init__(self)
 

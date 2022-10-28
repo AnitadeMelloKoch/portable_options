@@ -13,8 +13,8 @@ from pfrl.utils import evaluating
 from pfrl.initializers import init_chainer_default
 from pfrl.q_functions import DiscreteActionValueHead, DuelingDQN
 
-from portable.procgen.models.small_cnn import SmallCNN
-from portable.procgen.agents.abstract_agent import Agent
+from portable.policy.models.small_cnn import SmallCNN
+from portable.policy.agents.abstract_agent import Agent
 
 
 class DoubleDQN(agents.DoubleDQN, Agent):

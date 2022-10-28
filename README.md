@@ -2,18 +2,18 @@
 
 ## ant experiments
 ```bash
-python3 -m portable.procgen.transfer --agent sac --num_envs 16 --max_steps 2_000_000 --env ant_box
+python3 -m portable.policy.transfer --agent sac --num_envs 16 --max_steps 2_000_000 --env ant_box
 ```
 available envs: `ant_box`, `ant_bridge`, `ant_goal`. `ant_mixed` is available but not tested
 
 ## procgen experiments
 to do transfer learning, for example:
 ```bash
-python -m portable.procgen.transfer --env coinrun --num_levels 20 --transfer_steps 500000 --num_policies 3 --seed 0
+python -m portable.policy.transfer --env coinrun --num_levels 20 --transfer_steps 500000 --num_policies 3 --seed 0
 ```
 for plotting:
 ```bash
-python -m portable.procgen.plot -p -l ./results/
+python -m portable.policy.plot -p -l ./results/
 ```
 
 ## montezuma experiments

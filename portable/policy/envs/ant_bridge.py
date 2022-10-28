@@ -39,7 +39,7 @@ class AntBridgeEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.pass_bridge = False
         self.pass_reward = 10
         self.start_reward = 5
-        xml_path = os.path.join(os.getcwd(), "portable/procgen/envs/assets/ant-bridge.xml")
+        xml_path = os.path.join(os.getcwd(), "portable/policy/envs/assets/ant-bridge.xml")
         mujoco_env.MujocoEnv.__init__(self, xml_path, 5)
         utils.EzPickle.__init__(self)
         self.reset_task(0)

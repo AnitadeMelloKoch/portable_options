@@ -41,7 +41,7 @@ class AntBoxEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self._outside = False
         self.ob_shape = {"joint": [29]}
         self.ob_type = self.ob_shape.keys()
-        xml_path = os.path.join(os.getcwd(), "portable/procgen/envs/assets/ant-box.xml")
+        xml_path = os.path.join(os.getcwd(), "portable/policy/envs/assets/ant-box.xml")
         mujoco_env.MujocoEnv.__init__(self, xml_path, 5)
         utils.EzPickle.__init__(self)
 
