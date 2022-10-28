@@ -1,4 +1,3 @@
-import lzma
 import os
 import csv
 import sys
@@ -6,9 +5,11 @@ import shutil
 import logging
 import datetime
 import argparse
+from pathlib import Path
 from pydoc import locate
 from collections import defaultdict
 from distutils.util import strtobool
+
 import gin
 import dill
 import matplotlib.pyplot as plt
@@ -164,6 +165,8 @@ class BaseTrial:
         parser.add_argument("--seed", type=int, default=0,
                             help="Random seed")
         # hyperparams
+        parser.add_argument('--params_dir', type=Path, default='hyperparams',
+                            help='the hyperparams directory')
         parser.add_argument('--hyperparams', type=str, default='hyperparams/atari.csv',
                             help='path to the hyperparams file to use')
         return parser
@@ -181,10 +184,10 @@ class BaseTrial:
         """
         load the hyper params from args to a params dictionary
         """
-        params = load_hyperparams(args.hyperparams)
+        params = load_hyperparams(args.params_dir.joinpath(args.hyperparams + '.csv'))
         for arg_name, arg_value in vars(args).items():
-            if arg_name == 'hyperparams':
-                continue
+            # if arg_name == 'hyperparams':
+            #     continue
             params[arg_name] = arg_value
         for arg_name, arg_value in args.other_args:
             update_param(params, arg_name, arg_value)

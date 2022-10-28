@@ -3,6 +3,7 @@
 
 # results
 results/
+MUJOCO_LOG.TXT
 
 # DS Store
 **/.DS_Store
@@ -118,7 +119,6 @@ celerybeat.pid
 .env
 .venv
 env/
-*env/
 venv/
 ENV/
 env.bak/
