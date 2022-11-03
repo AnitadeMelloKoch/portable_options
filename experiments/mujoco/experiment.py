@@ -6,12 +6,13 @@ import logging
 from pfrl.utils import set_random_seed
 import lzma
 import dill
+import gin
 
 from experiments.mujoco.environment.vec_env import VecExtractDictObs, VecNormalize, VecChannelOrder, VecMonitor
 from experiments.mujoco.environment import make_ant_env
 from portable.option import MujocoOption
 
-
+@gin.configurable
 class MujocoExperiment():
 
     def __init__(

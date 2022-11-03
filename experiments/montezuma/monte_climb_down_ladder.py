@@ -1,6 +1,6 @@
 from portable.environment import MonteBootstrapWrapper
 import os
-from experiments import Experiment
+from experiments.montezuma import Experiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
