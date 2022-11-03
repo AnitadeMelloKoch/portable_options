@@ -115,6 +115,7 @@ class Option():
         self.markov_classifier_idx = None
         self.use_log = log
         self.allowed_loss = allowed_additional_loss
+        self.policy_num_output_classes = policy_num_output_classes
 
         
     def log(self, message):
@@ -197,7 +198,6 @@ class Option():
         positions = []
 
         while steps < self.option_timeout:
-            #double check this, don't really wanna save whole info
             agent_space_states.append(agent_state)
             positions.append((info["player_x"], info["player_y"]))
             
