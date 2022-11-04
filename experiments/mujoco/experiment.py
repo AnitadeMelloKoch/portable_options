@@ -7,6 +7,8 @@ from pfrl.utils import set_random_seed
 import lzma
 import dill
 import gin
+from collections import deque
+import numpy as np
 
 from experiments.mujoco.environment.vec_env import VecExtractDictObs, VecNormalize, VecChannelOrder, VecMonitor
 from experiments.mujoco.environment import make_ant_env
@@ -50,12 +52,17 @@ class MujocoExperiment():
         self.device = torch.device(device_type)
         self.env_name = env_name
         self.trial_max_steps = trial_max_steps
+        self.env_max_steps = train_policy_max_steps
         self.max_option_tries = max_option_tries
+
+        env = make_ant_env(self.env_name, 1, eval=True)
 
         self.option = MujocoOption(
             device=self.device,
             initiation_vote_function=initiation_vote_function,
-            termination_vote_function=termination_vote_function
+            termination_vote_function=termination_vote_function,
+            policy_observation_shape=env.observation_space.shape[-1],
+            env_action_space=env.action_space[0]
         )
 
         random.seed(seed)
@@ -105,7 +112,6 @@ class MujocoExperiment():
             )
         if train_policy:
             self._train_policy(
-                env_name,
                 train_policy_max_steps,
                 policy_success_rate
             )
@@ -166,10 +172,60 @@ class MujocoExperiment():
 
     def _train_policy(
             self,
-            env_name,
             max_steps,
             success_rate):
-        pass
+        
+        train_env = make_ant_env(self.env_name, self.num_envs, eval=False)
+        train_epinfo_buf = deque(maxlen=100)
+        train_obs = train_env.reset()
+        train_steps = np.zeros(self.num_envs, dtype=int)
+
+        test_env = make_ant_env(self.env_name, self.num_envs, eval=True)
+        test_epinfo_buf = deque(maxlen=100)
+        test_obs = test_env.reset()
+        test_steps = np.zeros(self.num_envs, dtype=int)
+
+        max_steps = max_steps//self.num_envs
+
+        for step_cnt in range(max_steps):
+            # roll-out training environments
+            assert self.option.policy.training
+            train_obs, _, _, train_steps, _, train_epinfo = self.option.one_step(
+                train_env,
+                train_obs,
+                train_steps,
+                max_steps
+            )
+            train_epinfo_buf.extend(train_epinfo)
+
+            # Roll-out in the test environments.
+            with self.option.policy.eval_mode():
+                assert not self.option.policy.training
+                test_obs, _, _, test_steps, _, test_epinfo = self.option.one_step(
+                    test_env,
+                    test_obs,
+                    test_steps,
+                    max_steps
+                )
+                test_epinfo_buf.extend(test_epinfo)
+
+            assert self.option.policy.training
+
+            if (step_cnt + 1) % 100 == 0:
+                logging.info('steps', step_cnt + 1)
+                logging.info('total_steps', (step_cnt + 1) * self.num_envs)
+                logging.info('ep_reward_mean',
+                            self.safe_mean([info['r'] for info in train_epinfo_buf]))
+                logging.info('ep_len_mean',
+                            self.safe_mean([info['l'] for info in train_epinfo_buf]))
+                logging.info('eval_ep_reward_mean',
+                            self.safe_mean([info['r'] for info in test_epinfo_buf]))
+                logging.info('eval_ep_len_mean',
+                            self.safe_mean([info['l'] for info in test_epinfo_buf]))
+
+    @staticmethod
+    def safe_mean(xs):
+        return np.nan if len(xs) == 0 else np.mean(xs)
 
     def make_vector_env(self, eval=False):
         """vector environment for mujoco"""

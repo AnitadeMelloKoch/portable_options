@@ -40,7 +40,7 @@ if __name__ == "__main__":
     experiment = MujocoExperiment(
         base_dir=args.base_dir,
         seed=args.seed,
-        experiment_name="ant_box",
+        env_name='ant_box',
         initiation_positive_files=initiation_positive_files,
         initiation_negative_files=initiation_negative_files,
         initiation_priority_negative_files=initiation_priority_negative_files,

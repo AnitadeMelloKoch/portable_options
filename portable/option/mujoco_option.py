@@ -24,27 +24,16 @@ class MujocoOption(Option):
             device, 
             initiation_vote_function, 
             termination_vote_function, 
-            policy_phi, 
-            action_selection_strategy, 
-            prioritized_replay_anneal_steps, 
             policy_observation_shape,
-            policy_hidden_channels,
-            policy_n_step_return,
-            policy_gamma,
-            policy_replay_start_size,
             env_action_space,
-            policy_warmup_steps=500000, 
+            policy_hidden_channels=1024,
+            policy_n_step_return=3,
+            policy_gamma=0.98,
+            policy_replay_start_size=10000,
             policy_batchsize=32, 
             policy_buffer_length=100000, 
             policy_update_interval=4, 
-            q_target_update_interval=40, 
-            policy_embedding_output_size=64, 
             policy_learning_rate=0.00025, 
-            final_epsilon=0.01, 
-            final_exploration_frames=10 ** 6, 
-            discount_rate=0.9, 
-            policy_attention_module_num=8, 
-            policy_num_output_classes=18, 
             initiation_beta_distribution_alpha=30, 
             initiation_beta_distribution_beta=5, 
             initiation_attention_module_num=8, 
@@ -68,21 +57,21 @@ class MujocoOption(Option):
         super().__init__(device, 
                          initiation_vote_function, 
                          termination_vote_function, 
-                         policy_phi, 
-                         action_selection_strategy, 
-                         prioritized_replay_anneal_steps, 
-                         policy_warmup_steps, 
-                         policy_batchsize, 
-                         policy_buffer_length,
-                         policy_update_interval, 
-                         q_target_update_interval, 
-                         policy_embedding_output_size, 
-                         policy_learning_rate, 
-                         final_epsilon, 
-                         final_exploration_frames, 
-                         discount_rate, 
-                         policy_attention_module_num, 
-                         policy_num_output_classes, 
+                         lambda x : 0, 
+                         "ucb_leader", 
+                         1000, 
+                         0, 
+                         32, 
+                         64,
+                         4, 
+                         10, 
+                         64, 
+                         1, 
+                         1, 
+                         10, 
+                         0.1, 
+                         1, 
+                         4, 
                          initiation_beta_distribution_alpha, 
                          initiation_beta_distribution_beta, 
                          initiation_attention_module_num, 
@@ -104,9 +93,7 @@ class MujocoOption(Option):
                          allowed_additional_loss, 
                          log)
 
-        action_size = self.policy_num_output_classes
-        self.policy_obs_size = policy_observation_shape
-        self.policy_hidden_channels = policy_hidden_channels
+        action_size = env_action_space.shape[0]
         def squashed_diagonal_gaussian_head(x):
                 assert x.shape[-1] == action_size * 2
                 mean, log_scale = torch.chunk(x, 2, dim=1)
@@ -120,11 +107,11 @@ class MujocoOption(Option):
                     base_distribution, [distributions.transforms.TanhTransform(cache_size=1)]
                 )
         policy = nn.Sequential(
-            nn.Linear(self.policy_obs_size, self.policy_hidden_channels),
+            nn.Linear(policy_observation_shape, policy_hidden_channels),
             nn.ReLU(),
-            nn.Linear(self.policy_hidden_channels, self.policy_hidden_channels),
+            nn.Linear(policy_hidden_channels, policy_hidden_channels),
             nn.ReLU(),
-            nn.Linear(self.policy_hidden_channels, action_size*2),
+            nn.Linear(policy_hidden_channels, action_size*2),
             Lambda(squashed_diagonal_gaussian_head)
         )
         torch.nn.init.xavier_uniform_(policy[0].weight)
@@ -137,11 +124,11 @@ class MujocoOption(Option):
         def make_q_func_with_optim():
             q_func = nn.Sequential(
                 pfrl.nn.ConcatObsAndAction(),
-                nn.Linear(self.policy_obs_size+action_size, self.policy_hidden_channels),
+                nn.Linear(policy_observation_shape+action_size, policy_hidden_channels),
                 nn.ReLU(),
-                nn.Linear(self.policy_hidden_channels, self.policy_hidden_channels),
+                nn.Linear(policy_hidden_channels, policy_hidden_channels),
                 nn.ReLU(),
-                nn.Linear(self.policy_hidden_channels, 1)
+                nn.Linear(policy_hidden_channels, 1)
             )
             torch.nn.init.xavier_uniform_(q_func[1].weight)
             torch.nn.init.xavier_uniform_(q_func[3].weight)
@@ -177,12 +164,12 @@ class MujocoOption(Option):
             temperature_optimizer_lr=policy_learning_rate
         )
 
-    def one_step(self, env, state, steps, info):
+    def one_step(self, env, state, steps, env_max_steps):
         # execute one step
         action = self.policy.batch_act(state)
         next_state, reward, done, infos = env.step(action)
         steps += 1
-        reset = steps == info["env_max_steps"]
+        reset = steps == env_max_steps
         steps[done] = 0
 
         self.policy.batch_observe(
@@ -199,7 +186,7 @@ class MujocoOption(Option):
             if maybe_epinfo:
                 epinfo.append(maybe_epinfo)
 
-        return next_state, reward, done, infos, epinfo
+        return next_state, reward, done, steps, infos, epinfo
 
     def run(self, 
             env, 
@@ -221,7 +208,7 @@ class MujocoOption(Option):
         while option_steps < self.option_timeout:
             agent_space_states.append(agent_state)
             
-            next_state, reward, done, infos, epinfo = self.one_step(env, state, steps, info)
+            next_state, reward, done, steps, infos, epinfo = self.one_step(env, state, steps, self.option_timeout*100)
             # next_state, reward, done, info = env.step(action)
             # agent_state = info["stacked_agent_state"]
             position = infos[0]["position"]
