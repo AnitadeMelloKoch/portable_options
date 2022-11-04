@@ -1,0 +1,28 @@
+import portable.option.mujoco_option
+import experiments.mujoco.experiment
+
+Experiment.experiment_name = "ant_box"
+Experiment.initiation_vote_function = "weighted_vote_low"
+Experiment.termination_vote_function = "weighted_vote_low"
+Experiment.device_type = "cuda"
+Experiment.train_initiation = False
+Experiment.train_termination = False
+Experiment.train_policy = False
+Experiment.train_initiation_classifier_epoch_per_cycle = 60
+Experiment.train_initiation_embedding_epoch_per_cycle = 100
+Experiment.train_termination_classifier_epoch_per_cycle = 60
+Experiment.train_termination_embedding_epoch_per_cycle = 100
+Experiment.train_policy_max_steps = 1000000
+Experiment.train_policy_success_rate = 0.95
+Experiment.max_option_tries = 100
+
+MujocoOption.timeout = 1000
+MujocoOption.min_interactions = 20
+MujocoOption.allowed_additional_loss = 3
+MujocoOption.initiation_beta_distribution_alpha = 100
+MujocoOption.initiation_beta_distribution_beta = 10
+MujocoOption.termination_beta_distribution_alpha = 100
+MujocoOption.termination_beta_distribution_beta = 10
+Option.initiation_attention_module_num = 5
+Option.termination_attention_module_num = 5
+
