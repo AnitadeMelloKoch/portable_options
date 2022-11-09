@@ -49,8 +49,8 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     if room in [0,1,2,3,18]:
         # skulls
         skull_x = get_skull_position(ram)
-        end_pos = (skull_x-6, ground_y)
-        if final_pos[0] < skull_x and final_pos[1] <= ground_y:
+        end_pos = (skull_x-25, ground_y)
+        if final_pos[0] < (skull_x-25) and final_pos[1] <= ground_y:
             return 1
         else:
             original_distance = manhatten(start_pos, end_pos)
@@ -87,7 +87,7 @@ def check_termination_correct(final_pos, terminations, env):
     if room in [0,1,2,3,18]:
         # skulls
         skull_x = get_skull_position(ram)
-        end_pos = (skull_x-6, ground_y)
+        end_pos = (skull_x-25, ground_y)
         if final_pos[0] < skull_x and final_pos[1] <= ground_y:
             return True
         else:

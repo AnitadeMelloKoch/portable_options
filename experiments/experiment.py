@@ -122,6 +122,7 @@ class Experiment():
             "end_pos": [],
             "true_terminations": [],
             "completed": [],
+            "dead": []
         }
 
 
@@ -195,7 +196,7 @@ class Experiment():
             save_dir = os.path.join(self.save_dir, additional_path)
         else:
             save_dir = self.save_dir
-        # self.option.save(save_dir)
+        self.option.save(save_dir)
         os.makedirs(self.save_dir, exist_ok=True)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
@@ -240,6 +241,7 @@ class Experiment():
         end_poses = []
         true_terminationses = []
         completeds = []
+        deads = []
 
         for x in range(number_episodes_in_trial):
             logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
@@ -301,6 +303,10 @@ class Experiment():
                     if completed:
                         must_break = True
             result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
+            if info["dead"]:
+                result = 0
+            # print(result)
+            # input("press any button to continue")
             results.append(result)
             start_poses.append(start_pos)
             end_poses.append(position)
