@@ -46,11 +46,24 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     ram = env.unwrapped.ale.getRAM()
     original_distance = 0
     final_distance = 0
-    if room in [0,1,2,3,18]:
+    if final_pos[2] != room:
+        return 0
+    if final_pos[2] == 4 and final_pos[0] == 5:
+        return 0
+    if room in [2,3]:
+        # skulls
+        skull_x = get_skull_position(ram)
+        end_pos = (skull_x-25, ground_y)
+        if final_pos[0] < skull_x-25 and final_pos[1] <= ground_y:
+            return 1
+        else:
+            original_distance = manhatten(start_pos, end_pos)
+            final_distance = manhatten(final_pos, end_pos)
+    if room in [0,1,18]:
         # skulls
         skull_x = get_skull_position(ram)
         end_pos = (skull_x-6, ground_y)
-        if final_pos[0] < skull_x and final_pos[1] <= ground_y:
+        if final_pos[0] < skull_x-6 and final_pos[1] <= ground_y:
             return 1
         else:
             original_distance = manhatten(start_pos, end_pos)
@@ -66,8 +79,10 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
             final_distance = manhatten(final_pos, end_pos)
     elif room in [9,11,22]:
         # snakes
-        end_pos = terminations
-        if in_epsilon_square(final_pos, end_pos):
+        test_pos = (final_pos[0]-3, final_pos[1], final_pos[2])
+        snake_x = get_snake_x(test_pos)
+        end_pos = (snake_x, ground_y)
+        if final_pos[0] < snake_x and final_pos[1] <= ground_y:
             return 1
         else:
             original_distance = manhatten(start_pos, end_pos)
@@ -84,11 +99,23 @@ def check_termination_correct(final_pos, terminations, env):
     room = terminations[2]
     ground_y = terminations[1]
     ram = env.unwrapped.ale.getRAM()
-    if room in [0,1,2,3,18]:
+    if final_pos[2] != room:
+        return False
+    if final_pos[2] == 4 and final_pos[0] == 5:
+        return False
+    if room in [2,3]:
+        # skulls
+        skull_x = get_skull_position(ram)
+        end_pos = (skull_x-25, ground_y)
+        if final_pos[0] < skull_x-25 and final_pos[1] <= ground_y:
+            return True
+        else:
+            return False
+    if room in [0,1,18]:
         # skulls
         skull_x = get_skull_position(ram)
         end_pos = (skull_x-6, ground_y)
-        if final_pos[0] < skull_x and final_pos[1] <= ground_y:
+        if final_pos[0] < skull_x-6 and final_pos[1] <= ground_y:
             return True
         else:
             return False
@@ -96,7 +123,7 @@ def check_termination_correct(final_pos, terminations, env):
         # spiders
         spider_x, _ = get_object_position(ram)
         end_pos = (spider_x - 6, ground_y)
-        if final_pos[0] < spider_x and final_pos[1] <= ground_y:
+        if final_pos[0] < spider_x and final_pos[1] <= ground_y and final_pos[2] == room:
             return True
         else:
             return False
@@ -140,8 +167,6 @@ termination_negative_files = [
 
 ]
 termination_priority_negative_files = [
-    'resources/monte_images/snake_1_termination_positive.npy',
-    'resources/monte_images/snake_2_termination_positive.npy'
 ]
 
 def phi(x):
@@ -161,7 +186,6 @@ def make_env(seed):
 initiation_state_files = [
     [
         'resources/monte_env_states/room9/enemy/right_of_left_snake.pkl',
-    ],[
         'resources/monte_env_states/room9/enemy/right_of_right_snake.pkl',
     ],[
         'resources/monte_env_states/room11/enemy/right_of_left_snake.pkl',
@@ -184,7 +208,6 @@ initiation_state_files = [
 terminations = [
     [
         (11, 235, 9),
-    ],[
         (42, 235, 9),
     ],[
         (35, 235, 11),
@@ -266,19 +289,19 @@ if __name__ == "__main__":
 
     experiment.save()
 
-    experiment.bootstrap_from_room(
-        load_init_states(initiation_state_files[0]),
-        terminations[0],
-        50,
-        use_agent_space=True
-    )
+    # experiment.bootstrap_from_room(
+    #     load_init_states(initiation_state_files[0]),
+    #     terminations[0],
+    #     50,
+    #     use_agent_space=True
+    # )
 
     for y in range(len(initiation_state_files)):
         idx = order[y]
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            50,
+            3,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
             use_agent_space=True

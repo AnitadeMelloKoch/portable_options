@@ -12,7 +12,7 @@ Experiment.train_initiation_classifier_epoch_per_cycle = 60
 Experiment.train_initiation_embedding_epoch_per_cycle = 100
 Experiment.train_termination_classifier_epoch_per_cycle = 60
 Experiment.train_termination_embedding_epoch_per_cycle = 100
-Experiment.train_policy_max_steps = 1000000
+Experiment.train_policy_max_steps = 2000000
 Experiment.train_policy_success_rate = 0.95
 Experiment.max_option_tries = 50
 
@@ -28,5 +28,3 @@ Option.initiation_beta_distribution_alpha = 100
 Option.initiation_beta_distribution_beta = 10
 Option.termination_beta_distribution_alpha = 100
 Option.termination_beta_distribution_beta = 10
-Option.initiation_dataset_max_size = 50000
-Option.termination_dataset_max_size = 50000
