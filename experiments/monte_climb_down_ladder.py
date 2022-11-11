@@ -292,8 +292,8 @@ if __name__ == "__main__":
             use_agent_space=True
         )
 
-    experiment.save(additional_path=room_names[0])
-
+    # experiment.save(additional_path=room_names[0])
+    experiment.save()
     # # experiment.load(room_names[7])
 
     for x in range(1, len(initiation_state_files)):
@@ -317,8 +317,8 @@ if __name__ == "__main__":
                 use_agent_space=True
             )
         
-        experiment.save(additional_path=room_names[idx])
-
+        # experiment.save(additional_path=room_names[idx])
+        experiment.save()
     # experiment.load(additional_path=room_names[3])
     # experiment.plot(room_names)
     

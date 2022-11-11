@@ -299,7 +299,7 @@ if __name__ == "__main__":
             use_agent_space=True
         )
 
-    # experiment.save()
+    experiment.save()
 
     for x in range(1, len(initiation_state_files)):
         idx = order[x]

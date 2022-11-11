@@ -196,7 +196,7 @@ class Experiment():
             save_dir = os.path.join(self.save_dir, additional_path)
         else:
             save_dir = self.save_dir
-        self.option.save(save_dir)
+        # self.option.save(save_dir)
         os.makedirs(self.save_dir, exist_ok=True)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
