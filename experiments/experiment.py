@@ -140,12 +140,12 @@ class Experiment():
         if len(negative_files) == 0:
             logging.warning('[experiment] No negative files were given for the initiation set.')
 
-        self.option.add_data_from_files_initiation(
+        self.option.initiation.add_data_from_files(
             positive_files,
             negative_files,
             priority_negative_files
         )
-        self.option.train_initiation(
+        self.option.initiation.train(
             embedding_epochs,
             classifier_epochs
         )
@@ -164,12 +164,12 @@ class Experiment():
         if len(negative_files) == 0:
             logging.warning('[experiment] No negative files were given for the termination set.')
 
-        self.option.add_data_from_files_termination(
+        self.option.termination.add_data_from_files(
             positive_files,
             negative_files,
             priority_negative_files
         )
-        self.option.train_termination(
+        self.option.termination.train(
             embedding_epochs,
             classifier_epochs
         )

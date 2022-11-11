@@ -381,34 +381,6 @@ class Option():
 
         return next_state, total_reward, done, info, steps
 
-    def train_initiation(
-            self,
-            embedding_epochs,
-            classifier_epochs):
-        # train initiation classifier
-        self.log("[option] Training initiation classifier...")
-        print("[option] Training initiation classifier...")
-        self.initiation.train(
-            embedding_epochs,
-            classifier_epochs
-        )
-        self.log("[option] Finished training initiation classifier")
-        print("[option] Finished training initiation classifier")
-        
-    def train_termination(
-            self,
-            embedding_epochs,
-            classifier_epochs):
-        # train termination classifier
-        self.log("[option] Training termination classifier...")
-        print("[option] Training termination classifier...")
-        self.termination.train(
-            embedding_epochs,
-            classifier_epochs
-        )
-        self.log("[option] Finished training termination classifier")
-        print("[option] Finished training termination classifier")
-
     def bootstrap_policy(
             self, 
             bootstrap_env,
@@ -460,20 +432,6 @@ class Option():
 
         self.log("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
         print("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
-
-    def add_data_from_files_initiation(self, positive_files, negative_files, priority_negative_files):
-        self.initiation.add_data_from_files(
-            positive_files,
-            negative_files,
-            priority_negative_files
-        )
-
-    def add_data_from_files_termination(self, positive_files, negative_files, priority_negative_files):
-        self.termination.add_data_from_files(
-            positive_files,
-            negative_files,
-            priority_negative_files
-        )
 
     def initiation_update_confidence(self, was_successful, votes):
         self.initiation.update_confidence(was_successful, votes)

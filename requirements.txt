@@ -13,3 +13,7 @@ matplotlib==3.4.3
 dill==0.3.4
 scikit-image==0.19.3
 gin-config==0.5.0
+dopamine-rl
+pandas
+pillow
+pygame
