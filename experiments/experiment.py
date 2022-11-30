@@ -122,6 +122,7 @@ class Experiment():
             "end_pos": [],
             "true_terminations": [],
             "completed": [],
+            "dead": []
         }
 
 
@@ -240,6 +241,7 @@ class Experiment():
         end_poses = []
         true_terminationses = []
         completeds = []
+        deads = []
 
         for x in range(number_episodes_in_trial):
             logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
@@ -256,6 +258,7 @@ class Experiment():
 
             agent_state = rand_state["agent_state"]
             start_pos = rand_state["position"]
+            # print(rand_state["position"])
             info = self.env.get_current_info({})
             attempt = 0
             timedout = 0
@@ -299,13 +302,20 @@ class Experiment():
 
                     completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
                     if completed:
+                        # print("termination triggered")
                         must_break = True
+            # print(position)
             result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
+            if info["dead"]:
+                result = 0
+            # print('result',result)
+            # input("press any button to continue")
             results.append(result)
             start_poses.append(start_pos)
             end_poses.append(position)
             true_terminationses.append(true_terminations[rand_idx])
             completeds.append(completed)
+            deads.append(info["dead"])
             logging.info("Result: {}".format(completed))
             
         self.trial_data["name"].append(trial_name)
@@ -313,6 +323,7 @@ class Experiment():
         self.trial_data["end_pos"].append(end_poses)
         self.trial_data["true_terminations"].append(true_terminationses)
         self.trial_data["completed"].append(completeds)
+        self.trial_data["dead"].append(deads)
 
         if not eval:
             self.option.train_initiation( 5, 10)

@@ -14,6 +14,8 @@ from portable.utils.utils import plot_state
 logger = logging.getLogger(__name__)
 import time
 
+import matplotlib.pyplot as plt
+
 @gin.configurable
 class Option():
     def __init__(
@@ -200,8 +202,13 @@ class Option():
             action = self.policy.act(state)
 
             next_state, reward, done, info = env.step(action)
-            # env.render()
-            # time.sleep(0.2)
+            # screen = env.render('rgb_array')
+            # fig = plt.figure(num=1, clear=True)
+            # ax = fig.add_subplot()
+            # ax.imshow(screen)
+            # ax.axis('off')
+            # time.sleep(0.5)
+            # plt.show(block=False)
             agent_state = info["stacked_agent_state"]
             steps += 1
 
@@ -272,8 +279,14 @@ class Option():
                 action = self.policy.act(state)
 
                 next_state, reward, done, info = env.step(action)
-                # env.render()
-                # time.sleep(0.2)
+                # screen = env.render('rgb_array')
+                # fig = plt.figure(num=1, clear=True)
+                # ax = fig.add_subplot()
+                # ax.imshow(screen)
+                # ax.axis('off')
+                # # time.sleep(0.5)
+                # plt.show(block=False)
+                # input(info["position"])
                 agent_state = info["stacked_agent_state"]
                 steps += 1
 
