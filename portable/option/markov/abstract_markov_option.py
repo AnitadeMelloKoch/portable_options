@@ -114,3 +114,47 @@ class MarkovOption(object, metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    def _option_success(self,
+                        success_data: dict):
+
+        """
+        If an option execution is successful, train Markov classifiers with 
+        successful trajectory.
+        Input: 
+            success_data: data needed to train the Markov option
+        Output:
+            None
+        """
+
+        raise NotImplementedError()
+
+    @abstractmethod
+    def _option_fail(self,
+                     failure_data: dict):
+        
+        """
+        If an option execution is unsuccessful, train Markoc classifiers with
+        unsuccessful trajectory.
+        Input:
+            failure_data: data needed to train the Markov option
+        Output:
+            None
+        """
+
+        raise NotImplementedError()
+
+    @abstractmethod
+    def can_assimilate(self):
+
+        """
+        Check if option can be added back to original option.
+        Input:
+            not sure yet...
+        Output:
+            can_assimilate: boolean. True if should assimilate option, 
+                false otherwise
+        """
+
+        raise NotImplementedError()
+

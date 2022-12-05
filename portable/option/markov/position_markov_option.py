@@ -1,5 +1,7 @@
 from portable.option.markov import MarkovOption
 from portable.option.sets.models import PositionClassifier
+from portable.option.policy.agents import evaluating
+from contextlib import nullcontext
 
 class PositionMarkovOption(MarkovOption):
     """
@@ -82,41 +84,88 @@ class PositionMarkovOption(MarkovOption):
         agent_space_states = []
         agent_state = info["stacked_agent_state"]
         positions = []
+        position = (info["player_x"], info["player_y"])
 
-        while steps < self.option_timeout:
-            agent_space_states.append(agent_state)
-            positions.append((info["player_x"], info["player_y"]))
+        # if we are evaluating then set policy to eval mode else ignore
+        with evaluating(self.policy) if evaluate else nullcontext():
+            while steps < self.option_timeout:
+                agent_space_states.append(agent_state)
+                positions.append(position)
 
-            action = self.policy.act(state)
+                action = self.policy.act(state)
 
-            next_state, reward, done, info = env.step(action)
+                next_state, reward, done, info = env.step(action)
 
-            agent_state = info["stacked_agent_state"]
-            steps += 1
+                agent_state = info["stacked_agent_state"]
+                position = (info["player_x"], info["player_y"])
+                steps += 1
 
-            should_terminate = self.can_terminate((info["player_x"], info["player_y"]))
+                should_terminate = self.can_terminate(position)
 
-            self.policy.observe(state, action, reward, next_state, done)
-            total_reward += reward
+                self.policy.observe(state, action, reward, next_state, done)
+                total_reward += reward
 
-            if done or info['needs_reset'] or should_terminate:
-                if (done or should_terminate) and not info['dead']:
-                    #TODO
-                    pass
+                if done or info['needs_reset'] or should_terminate:
+                    # agent died. Should end as failure regardless of if option identified end
+                    if done and info['dead']:
+                        self.log('[Markov option] Episode ended and we are still executing option. Option failed')
+                        info['option_timed_out'] = False
+                        positions.append(position)
+                        agent_space_states.append(agent_state)
+                        self._option_fail({
+                            "positions": positions,
+                            "agent_space_states":agent_space_states
+                        })
+                        return next_state, total_reward, done, info, steps
+                    # environment needs reset
+                    if info['needs_reset']:
+                        info['option_timed_out'] = False
+                        # option did not fail or succeed. Trajectory won't be used to update option
+                        self.log('[Markov option] Environment timed out.')
+                        return next_state, total_reward, done, info, steps
+                    # option ended 'successfully'
+                    if should_terminate:
+                        # option completed 'successfully'. 
+                        self.log('[Markov option] Option ended "successfully". Ending option')
+                        info['option_timed_out'] = False
+                        self._option_success({
+                            "positions": positions,
+                            "agent_space_states":agent_space_states,
+                            "termination": position,
+                            "agent_space_termination": agent_state
+                        })
+                        return next_state, total_reward, done, info, steps
+                state = next_state
 
-                if info['needs_reset']:
-                    info['option_timed_out'] = False
-                    return next_state, total_reward, done, info, steps
+        self.log("[Markov option] Option timed out")
+        info["option_timed_out"] = True
 
-                if done and info['dead']:
-                    #TODO
-                    pass
+        positions.append(position)
+        agent_space_states.append(agent_state)
 
-            state = next_state
-
-        ## TODO
-
+        self._option_fail({
+            "positions": positions,
+            "agent_space_states":agent_space_states
+        })
 
         return next_state, total_reward, done, info, steps
 
+    def _option_success(self, success_data: dict):
+        positions = success_data["positions"]
+        agent_space_states = success_data["agent_space_states"]
+        termination = success_data["termination"]
+        agent_space_termination = success_data["agent_space_termination"]
+
+        self.initiation.add_positive_examples(positions, agent_space_states)
+        self.initiation.add_negative_examples([termination], [agent_space_termination])
+
+        self.termination.append(termination)
+
+    def _option_fail(self, failure_data: dict):
+        positions = failure_data["positions"]
+        agent_space_states = failure_data["agent_space_states"]
+
+        self.initiation.add_negative(
+            agent_space_states, positions
+        )
     

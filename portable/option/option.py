@@ -4,7 +4,7 @@ import os
 import pickle
 import numpy as np
 import gin
-from portable.option.policy.agents.abstract_agent import evaluating
+from portable.option.policy.agents import evaluating
 
 from portable.option.sets import Set
 from portable.option.sets.utils import PositionSetPair
