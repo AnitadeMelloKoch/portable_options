@@ -58,40 +58,6 @@ class MarkovOption(object, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def interact_initiation(
-            self, 
-            positive_agent_space_states: list, 
-            negative_agent_space_states: list):
-        """
-        Provide feedback to initiation classifier.
-        Input:
-            positive_agent_space_states: list of positive samples, if any,
-                for this instance of the Option.
-            negative_agent_space_states: list of negative samples, if any,
-                for this instance of the Option.
-        Returns:
-            None
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def interact_termination(
-            self,
-            positive_agent_space_states: list,
-            negative_agent_space_states: list):
-        """
-        Provide feedback to termination classifier.
-        Input:
-            positive_agent_space_states: list of positive samples, if any,
-                for this instance of the Option.
-            negative_agent_space_states: list of negative samples, if any,
-                for this instance of the Option.
-        Returns:
-            None
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
     def run(self,
             env: Any,
             state: Any,
@@ -144,17 +110,4 @@ class MarkovOption(object, metaclass=ABCMeta):
 
         raise NotImplementedError()
 
-    @abstractmethod
-    def can_assimilate(self):
-
-        """
-        Check if option can be added back to original option.
-        Input:
-            not sure yet...
-        Output:
-            can_assimilate: boolean. True if should assimilate option, 
-                false otherwise
-        """
-
-        raise NotImplementedError()
 

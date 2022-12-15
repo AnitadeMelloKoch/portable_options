@@ -2,6 +2,11 @@ from portable.option.markov import MarkovOption
 from portable.option.sets.models import PositionClassifier
 from portable.option.policy.agents import evaluating
 from contextlib import nullcontext
+import os
+import pickle
+import numpy as np
+from collections import deque
+
 
 class PositionMarkovOption(MarkovOption):
     """
@@ -14,6 +19,12 @@ class PositionMarkovOption(MarkovOption):
         terminations,
         initial_policy,
         max_option_steps,
+        initiation_votes,
+        termination_votes,
+        min_required_interactions,
+        success_rate_required,
+        assimilation_min_required_interactions,
+        assimilation_success_rate_required,
         epsilon=2, 
         use_log=True):
         
@@ -23,12 +34,58 @@ class PositionMarkovOption(MarkovOption):
         self.initiation.add_positive_examples(images, positions)
 
         self.policy = initial_policy.initialize_new_policy()
+        self.initiation_votes = initiation_votes
+        self.termination_votes = termination_votes
         
         self.termination = terminations
         self.epsilon = epsilon
 
         self.interaction_count = 0
         self.option_timeout = max_option_steps
+
+        self.performance = deque(maxlen=min_required_interactions)
+        self.interactions = 0
+        self.min_interactions = min_required_interactions
+        self.success_rate_required = success_rate_required
+        self.assimilation_performance = deque(maxlen=assimilation_min_required_interactions)
+        self.assimilation_min_interactions = assimilation_min_required_interactions
+        self.assimilation_success_rate_required = assimilation_success_rate_required
+
+    @staticmethod
+    def _get_save_paths(path):
+        policy = os.path.join(path, 'policy')
+        initiation = os.path.join(path, 'initiation')
+        termination = os.path.join(path, 'termination')
+
+        return policy, initiation, termination
+
+    def save(self, path: str):
+        policy_path, initiation_path, termination_path = self._get_save_paths(path)
+        
+        os.makedirs(policy_path, exist_ok=True)
+        os.makedirs(initiation_path, exist_ok=True)
+        os.makedirs(termination_path, exist_ok=True)
+        
+        self.policy.save(policy_path)
+        self.initiation.save(initiation_path)
+
+        with open(os.path.join(termination_path, 'terminations.pkl')) as f:
+            pickle.dump(self.termination, f)
+        
+        np.save(self.epsilon, os.path.join(termination_path, 'epsilon.npy'))
+
+    def load(self, path: str):
+        policy_path, initiation_path, termination_path = self._get_save_paths(path)
+        
+        self.policy.load(policy_path)
+        self.initiation.load(initiation_path)
+
+        if os.path.exists(os.path.join(termination_path, 'terminations.pkl')):
+            with open(termination_path, 'terminations.pkl', "rb") as f:
+                self.termination = pickle.load(f)
+
+        if os.path.exists(os.path.join(termination_path, 'epsilon.npy')):
+            self.epsilon = np.load(os.path.join(termination_path, 'epsilon.npy'))
 
     def can_initiate(self, 
                      agent_space_state):
@@ -50,27 +107,6 @@ class PositionMarkovOption(MarkovOption):
             if in_epsilon_square(agent_space_state, state):
                 return True
         return False
-
-    def interact_initiation(self, 
-                            positive_agent_space_states, 
-                            negative_agent_space_states):
-        # first element in *_agent_space_states should be image and 
-        # second element should be position
-        self.initiation.add_positive_examples(positive_agent_space_states[0], positive_agent_space_states[1])
-        self.initiation.add_negative_examples(negative_agent_space_states[0], negative_agent_space_states[1])
-        self.initiation.fit_classifier()
-
-    def interact_termination(self, 
-                             positive_agent_space_states, 
-                             negative_agent_space_states):
-        
-        for state in positive_agent_space_states:
-            if state not in self.termination:
-                self.termination.append(state)
-
-        for state in negative_agent_space_states:
-            if state in self.termination:
-                self.termination.remove(state)
 
 
     def run(self, 
@@ -99,23 +135,42 @@ class PositionMarkovOption(MarkovOption):
                 agent_state = info["stacked_agent_state"]
                 position = (info["player_x"], info["player_y"])
                 steps += 1
+                # we are storing the environment reward to be used outside the agent
+                total_reward += reward
 
                 should_terminate = self.can_terminate(position)
 
-                self.policy.observe(state, action, reward, next_state, done)
-                total_reward += reward
+                # overwrite reward with reward for option
+                if should_terminate:
+                    reward = 1
+                else:
+                    reward = 0
+
+                self.policy.observe(state, action, reward, next_state, done or should_terminate)
 
                 if done or info['needs_reset'] or should_terminate:
                     # agent died. Should end as failure regardless of if option identified end
-                    if done and info['dead']:
+                    if info['dead']:
+                        self.log('[Markov option] Agent died. Option failed')
+                        info['option_timed_out'] = False
+                        positions.append(position)
+                        agent_space_states.append(agent_state)
+                        if evaluate:
+                            self._option_fail({
+                                "positions": positions,
+                                "agent_space_states":agent_space_states
+                            })
+                        return next_state, total_reward, done, info, steps
+                    if done and not should_terminate:
                         self.log('[Markov option] Episode ended and we are still executing option. Option failed')
                         info['option_timed_out'] = False
                         positions.append(position)
                         agent_space_states.append(agent_state)
-                        self._option_fail({
-                            "positions": positions,
-                            "agent_space_states":agent_space_states
-                        })
+                        if evaluate:
+                            self._option_fail({
+                                "positions": positions,
+                                "agent_space_states":agent_space_states
+                            })
                         return next_state, total_reward, done, info, steps
                     # environment needs reset
                     if info['needs_reset']:
@@ -128,12 +183,13 @@ class PositionMarkovOption(MarkovOption):
                         # option completed 'successfully'. 
                         self.log('[Markov option] Option ended "successfully". Ending option')
                         info['option_timed_out'] = False
-                        self._option_success({
-                            "positions": positions,
-                            "agent_space_states":agent_space_states,
-                            "termination": position,
-                            "agent_space_termination": agent_state
-                        })
+                        if evaluate:
+                            self._option_success({
+                                "positions": positions,
+                                "agent_space_states":agent_space_states,
+                                "termination": position,
+                                "agent_space_termination": agent_state
+                            })
                         return next_state, total_reward, done, info, steps
                 state = next_state
 
@@ -143,10 +199,84 @@ class PositionMarkovOption(MarkovOption):
         positions.append(position)
         agent_space_states.append(agent_state)
 
-        self._option_fail({
-            "positions": positions,
-            "agent_space_states":agent_space_states
-        })
+        if evaluate:
+            self._option_fail({
+                "positions": positions,
+                "agent_space_states":agent_space_states
+            })
+
+        return next_state, total_reward, done, info, steps
+
+    def can_assimilate(self):
+        if len(self.assimilation_performance) < self.assimilation_min_interactions:
+            return None
+        if np.mean(self.assimilation_performance) >= self.assimilation_success_rate_required:
+            return True
+        else:
+            return False
+
+    def is_well_trained(self):
+        if len(self.performance) < self.min_interactions:
+            return False
+        if np.mean(self.performance) >= self.success_rate_required:
+            return True
+        else:
+            return False
+
+    def assimilate_run(self,
+                       env,
+                       state,
+                       info):
+        steps = 0
+        total_reward = 0
+        position = (info["player_x"], info["player_y"])
+
+        with evaluating(self.policy):
+            while steps < self.option_timeout:
+
+                action = self.policy.act(state)
+
+                next_state, reward, done, info = env.step(action)
+
+                position = (info["player_x"], info["player_y"])
+                steps += 1
+                total_reward += reward
+
+                should_terminate = self.can_terminate(position)
+
+                if should_terminate:
+                    reward = 1
+                else:
+                    reward = 0
+
+                self.policy.observe(state, action, reward, next_state, done or should_terminate)
+
+                if done or info['needs_reset'] or should_terminate:
+                    if info["dead"]:
+                        self.log('[assimilation test] Agent died. Option failed.')
+                        info['option_timed_out'] = False
+                        self.assimilation_performance.append(0)
+                        return next_state, total_reward, done, info, steps
+
+                    if done and not should_terminate:
+                        self.log('[assimilation test] Episode ended but we are still executing option. Option failed.')
+                        info['option_timed_out'] = False
+                        self.assimilation_performance.append(0)
+                        return next_state, total_reward, done, info
+                    
+                    if info['needs_reset']:
+                        info['option_timed_out'] = False
+                        self.log('[assimilation test] Environment timed out.')
+                        return next_state, total_reward, done, info, steps
+                    if should_terminate:
+                        self.log('[assimilation test] Option ended successfully. Ending option')
+                        info['option_timed_out'] = False
+                        self.assimilation_performance.append(1)
+                        return next_state, total_reward, done, info, steps
+            state = next_state
+        self.log("[assimilation test] Option timed out")
+        info["option_timed_out"] = True
+        self.assimilation_performance.append(0)
 
         return next_state, total_reward, done, info, steps
 
@@ -158,14 +288,18 @@ class PositionMarkovOption(MarkovOption):
 
         self.initiation.add_positive_examples(positions, agent_space_states)
         self.initiation.add_negative_examples([termination], [agent_space_termination])
+        self.initiation.fit_classifier()
 
         self.termination.append(termination)
+        self.performance.append(1)
 
     def _option_fail(self, failure_data: dict):
         positions = failure_data["positions"]
         agent_space_states = failure_data["agent_space_states"]
 
-        self.initiation.add_negative(
+        self.initiation.add_negative_examples(
             agent_space_states, positions
         )
+        self.initiation.fit_classifier()
+        self.performance.append(0)
     

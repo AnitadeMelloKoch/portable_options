@@ -3,6 +3,8 @@ import itertools
 import numpy as np  
 from collections import deque
 from sklearn.svm import OneClassSVM, SVC
+import os
+import pickle
 
 class TrainingExample:
     def __init__(self, obs, pos):
@@ -25,6 +27,45 @@ class PositionClassifier:
         self.negative_examples = deque([], maxlen=maxlen)
         self.epsilon = epsilon
         self.gamma = gamma
+
+    def save(self, path):
+        if self.classifier is not None:
+            with open(os.path.join(path, 'classifier.pkl')) as f:
+                pickle.dump(self.classifier, f)
+        
+        if len(self.positive_examples) > 0:
+            with open(os.path.join(path, 'positive_examples.pkl')) as f:
+                pickle.dump(self.positive_examples, f)
+        
+        if len(self.negative_examples) > 0:
+            with open(os.path.join(path, 'negative_examples.pkl')) as f:
+                pickle.dump(self.negative_examples)
+
+        np.save(os.path.join(path, 'epsilon.npy'), self.epsilon)
+        np.save(os.path.join(path, 'gamma.npy'), self.gamma)
+
+    def load(self, path):
+        classifier_file = os.path.join(path, 'classifier.pkl')
+        positive_file = os.path.join(path, 'positive_examples.pkl')
+        negative_file = os.path.join(path, 'negative_examples.pkl')
+
+        if os.path.exists(classifier_file):
+            with open(classifier_file, "rb") as f:
+                self.classifier = pickle.load(f)
+
+        if os.path.exists(positive_file):
+            with open(positive_file, "rb") as f:
+                self.positive_examples = pickle.load(f)
+
+        if os.path.exists(negative_file):
+            with open(negative_file, "rb") as f:
+                self.negative_examples = pickle.load(f)
+
+        if os.path.exists(os.path.join(path, 'epsilon.npy')):
+            self.epsilon = np.load(os.path.join(path, 'epsilon.npy'))
+
+        if os.path.exists(os.path.join(path, 'gamma.npy')):
+            self.gamma = np.load(os.path.join(path, 'gamma.npy'))
 
     def predict(self, state):
         assert isinstance(self.classifier, (OneClassSVM, SVC))

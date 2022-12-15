@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 
 n_modules = None  # number of modules, global variable that needs to be initialized once
@@ -17,7 +18,7 @@ def L_divergence(feats):
 
     return loss.mean()
 
-def batched_L_divergence(batch_feats):
+def batched_L_divergence(batch_feats, weights):
     """
     batch_feats is of shape (batch_size, n_modules, n_features)
     """
@@ -28,6 +29,9 @@ def batched_L_divergence(batch_feats):
     if every_tuple is None:
         every_tuple = torch.combinations(torch.Tensor(range(batch_feats.shape[1])), 2).long()
         
+    weights = np.expand_dims(weights, axis=(0, 2))
+    batch_feats = weights*batch_feats
+
     every_tuple_features = batch_feats[:, every_tuple, :]  # (batch_size, num_tuple, 2, dim)
     every_tuple_difference = every_tuple_features.diff(dim=2).squeeze(2)  # (batch_size, num_tuple, dim)
     loss = torch.clamp(1 - torch.sum(every_tuple_difference.pow(2), dim=-1), min=0)  # (batch_size, num_tuple)

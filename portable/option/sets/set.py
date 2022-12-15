@@ -13,9 +13,6 @@ class Set():
             device,
             vote_function,
 
-            beta_distribution_alpha=30,
-            beta_distribution_beta=5,
-
             attention_module_num=8,
             embedding_learning_rate=1e-4,
             classifier_learning_rate=1e-2,
@@ -35,24 +32,16 @@ class Set():
 
         self.dataset = SetDataset(max_size=dataset_max_size)
 
-        self.confidence = BayesianWeighting(
-            beta_distribution_alpha,
-            beta_distribution_beta,
-            attention_module_num
-        )
-
         self.attention_module_num = attention_module_num
         self.votes = None
         self.avg_loss = np.zeros(self.attention_module_num)
 
     def save(self, path):
         self.classifier.save(path)
-        self.confidence.save(path)
         self.dataset.save(path)
 
     def load(self, path):
         self.classifier.load(path)
-        self.confidence.load(path)
         self.dataset.load(path)
         self.avg_loss = self.classifier.avg_loss
 
@@ -130,8 +119,8 @@ class Set():
 
         agent_state = torch.unsqueeze(agent_state, dim=0)
 
-        votes, conf = self.classifier.get_votes(agent_state)
-        vote = self.vote_function(votes, self.confidence.weights, conf)
+        votes, conf, confidences = self.classifier.get_votes(agent_state)
+        vote = self.vote_function(votes, confidences, conf)
 
         if vote == 1:
             logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, self.confidence.weights, vote))

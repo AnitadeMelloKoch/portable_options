@@ -19,6 +19,8 @@ class BayesianWeighting():
         self.successes = np.zeros(self.num_heads)
         self.failures = np.zeros(self.num_heads)
 
+        self.update_weights()
+
     def save(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
