@@ -9,6 +9,7 @@ import numpy as np
 from portable.option.ensemble.criterion import batched_L_divergence
 from portable.option.ensemble.attention import Attention 
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
+from portable.option.policy import UpperConfidenceBound
 
 
 class ValueEnsemble():
@@ -22,7 +23,8 @@ class ValueEnsemble():
         num_modules=8, 
         num_output_classes=18,
         plot_dir=None,
-        verbose=False,):
+        verbose=False,
+        c=100):
         
         self.num_modules = num_modules
         self.num_output_classes = num_output_classes
@@ -52,16 +54,30 @@ class ValueEnsemble():
             learning_rate,
         )
 
+        self.upper_confidence_bound = UpperConfidenceBound(num_modules=num_modules, c=c)
+        self.action_leader = np.random.choice(num_modules)
+
     def save(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
 
         torch.save(self.embedding.state_dict(), os.path.join(path, 'embedding.pt'))
         torch.save(self.q_networks.state_dict(), os.path.join(path, 'policy_networks.pt'))
+        self.upper_confidence_bound.save(os.path.join(path, 'upper_conf_bound'))
 
     def load(self, path):
         self.embedding.load_state_dict(torch.load(os.path.join(path, 'embedding.pt')))
         self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
+        self.upper_confidence_bound.load(os.path.join(path, 'upper_conf_bound'))
+
+    def step(self):
+        self.upper_confidence_bound.step()
+
+    def update_accumulated_rewards(self, reward):
+        self.upper_confidence_bound.update_accumulated_rewards(self.action_leader, reward)
+
+    def update_leader(self):
+        self.action_leader = self.upper_confidence_bound.select_leader()
 
     def train(self, exp_batch, errors_out=None, update_target_network=False):
         """
@@ -83,7 +99,7 @@ class ValueEnsemble():
         # divergence loss
         state_embeddings = self.embedding(batch_states, return_attention_mask=False)  # (batch_size, num_modules, embedding_size)
         state_embeddings, _ = self.recurrent_memory(state_embeddings)  # (batch_size, num_modules, gru_out_size)
-        l_div = batched_L_divergence(state_embeddings)
+        l_div = batched_L_divergence(state_embeddings, self.upper_confidence_bound.weights())
         loss += l_div
 
         # q learning loss
@@ -161,9 +177,11 @@ class ValueEnsemble():
                 q_values[idx] = q_vals.max
                 all_q_values[idx, :] = q_vals.q_values.cpu().numpy()
 
+            selected_action = actions[self.action_leader]
+
         if return_q_values:
-            return actions, q_values, all_q_values
-        return actions
+            return selected_action, actions, q_values, all_q_values
+        return selected_action
 
     def get_attention(self, x):
         self.embedding.eval()

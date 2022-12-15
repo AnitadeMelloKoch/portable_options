@@ -69,7 +69,6 @@ class Option():
             warmup_steps=policy_warmup_steps,
             batch_size=policy_batchsize,
             phi=policy_phi,
-            action_selection_strategy=action_selection_strategy,
             prioritized_replay_anneal_steps=prioritized_replay_anneal_steps,
             buffer_length=policy_buffer_length,
             update_interval=policy_update_interval,
