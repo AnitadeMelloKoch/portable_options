@@ -12,10 +12,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# TODO
-#   - need to change L_divergence to take weights x
-#   - combine embedding and linear into one x
-
 class EnsembleClassifier():
 
     def __init__(self, 

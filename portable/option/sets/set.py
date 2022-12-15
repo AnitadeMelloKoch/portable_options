@@ -132,7 +132,6 @@ class Set():
     def update_confidence(
             self,
             was_successful):
-        # DOUBLE CHECK THERE IS NO REFERENCE COPY NONSENSE HAPPENING HERE
         success_count = self.votes
         failure_count = np.ones(len(self.votes)) - self.votes
 
@@ -140,5 +139,5 @@ class Set():
             success_count = failure_count
             failure_count = self.votes
 
-        self.confidence.update_successes(success_count)
-        self.confidence.update_failures(failure_count)
+        self.classifier.update_successes(success_count)
+        self.classifier.update_failures(failure_count)
