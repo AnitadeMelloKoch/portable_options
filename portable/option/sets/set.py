@@ -131,13 +131,14 @@ class Set():
 
     def update_confidence(
             self,
-            was_successful):
-        success_count = self.votes
-        failure_count = np.ones(len(self.votes)) - self.votes
+            was_successful,
+            votes):
+        success_count = votes
+        failure_count = np.ones(len(votes)) - votes
 
         if not was_successful:
             success_count = failure_count
-            failure_count = self.votes
+            failure_count = votes
 
         self.classifier.update_successes(success_count)
         self.classifier.update_failures(failure_count)

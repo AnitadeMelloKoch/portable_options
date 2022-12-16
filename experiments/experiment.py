@@ -228,7 +228,7 @@ class Experiment():
             self, 
             possible_inits,
             true_terminations,
-            number_episodes_in_trial,
+            max_episodes_in_trial,
             eval, 
             trial_name="",
             use_agent_space=False):
@@ -242,9 +242,13 @@ class Experiment():
         true_terminationses = []
         completeds = []
         deads = []
+        instantiation_instances = set()
 
-        for x in range(number_episodes_in_trial):
-            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
+        episode_count = 0
+        instance_well_trained = False
+
+        while episode_count < max_episodes_in_trial or instance_well_trained:
+            logging.info("Episode {}/{}".format(x, max_episodes_in_trial))
             completed = False
             
             rand_idx = random.randint(0, len(possible_inits)-1)
@@ -264,46 +268,45 @@ class Experiment():
             timedout = 0
             must_break = False
             while (attempt < self.max_option_tries) and (timedout < 3) and (not must_break):
-            # for y in range(self.max_option_tries):
                 attempt += 1
                 logging.info("Attempt {}/{}".format(attempt, self.max_option_tries))
-                can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
-                if not can_initiate:
+                result = self.option.run(
+                    self.env,
+                    state,
+                    info,
+                    eval
+                )
+
+                if self.option.markov_idx is not None:
+                    instantiation_instances.add(self.option.markov_idx)
+
+                if result is None:
+                    logging.info("[experiment] Option did not initiate")
                     must_break = True
-                else:
-                    if eval:
-                        _, _, done, info, _ = self.option.evaluate(
-                            self.env,
-                            state,
-                            info
-                        )
-                    else:
-                        _, _, done, info, _ = self.option.run(
-                            self.env,
-                            state,
-                            info,
-                            [0],
-                            0
-                        )
+                
+                _, _, done, info, _ = result
 
-                    if info["needs_reset"]:
-                        must_break = True
+                if info["needs_reset"]:
+                    logging.info("[experiment] Environment needs reset")
+                    must_break = True
+                if info["option_timed_out"]:
+                    timedout += 1
+                    logging.info("[experiment] Option timed out ({}/{})".format(timedout, 3))
 
-                    if info['option_timed_out']:
-                        logging.info("[experiment] option timed out {} times".format(timedout))
-                        timedout += 1
+                if done:
+                    must_break = True
 
-                    if done:
-                        must_break = True
+                agent_state = info["stacked_agent_state"]
+                position = info["position"]
 
-                    agent_state = info["stacked_agent_state"]
-                    position = info["position"]
+                completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
+                if completed:
+                    must_break = True
 
-                    completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
-                    if completed:
-                        # print("termination triggered")
-                        must_break = True
+            episode_count += 1
+            instance_well_trained = all([instance.is_well_trained() for instance in instantiation_instances])
+            
             # print(position)
             result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
             if info["dead"]:
@@ -325,10 +328,6 @@ class Experiment():
         self.trial_data["completed"].append(completeds)
         self.trial_data["dead"].append(deads)
 
-        if not eval:
-            self.option.train_initiation( 5, 10)
-            self.option.train_termination( 5, 10)
-
         logging.info("[experiment] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
@@ -338,6 +337,15 @@ class Experiment():
             np.mean(results)
             ))
         
+    def test_assimilate(
+        self,
+        possible_inits,
+        true_terminations,
+        use_agent_space=False
+    ):
+        "Run assimilation phase and see if option can be reincorporated into original option"
+        pass
+
     def bootstrap_from_room(
             self,
             possible_inits,
@@ -369,7 +377,7 @@ class Experiment():
             count = 0
             timedout = 0
 
-            while (not done) and (info["needs_reset"]) and (count < 100) and (timedout < 3):
+            while (not done) and (not info["needs_reset"]) and (count < 100) and (timedout < 3):
 
                 count += 1
 
@@ -394,11 +402,11 @@ class Experiment():
                     timedout += 1
 
                 if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx], self.env):
-                    self.option.termination_update_confidence(was_successful=True)
+                    self.option.termination_update_confidence(was_successful=True, votes=self.option.termination.votes)
                     logging.info("Breaking because correct termination was found")
                     break
                 else:
-                    self.option.termination_update_confidence(was_successful=False)
+                    self.option.termination_update_confidence(was_successful=False, votes=self.option.termination.votes)
 
     def plot(self, names):
 

@@ -7,7 +7,7 @@ import gin
 from portable.option.policy.agents import evaluating
 
 from portable.option.sets import Set
-from portable.option.markov.position_markov_option import PositionMarkovOption
+from portable.option.markov import PositionMarkovOption
 from portable.option.policy.agents import EnsembleAgent
 from portable.utils.utils import plot_state
 
@@ -25,7 +25,6 @@ class Option():
             initiation_vote_function,
             termination_vote_function,
             policy_phi,
-            action_selection_strategy,
             prioritized_replay_anneal_steps,
 
             policy_warmup_steps=500000,
@@ -59,8 +58,8 @@ class Option():
 
             markov_termination_epsilon=3,
             min_interactions=100,
+            min_success_rate=0.9,
             timeout=50,
-            allowed_additional_loss=2,
 
             log=True):
         
@@ -106,15 +105,13 @@ class Option():
             dataset_max_size=termination_dataset_max_size
         )
 
-        # self.markov_classifiers = []
         self.markov_termination_epsilon = markov_termination_epsilon
-        # self.min_interactions = min_interactions
         self.markov_instantiations = []
         self.option_timeout = timeout
+        self.markov_min_interactions = min_interactions
+        self.markov_min_success_rate = min_success_rate
         
-        # self.markov_idx = None
         self.use_log = log
-        # self.allowed_loss = allowed_additional_loss
 
         
     def log(self, message):
@@ -176,9 +173,13 @@ class Option():
                 positions=positions,
                 terminations=terminations,
                 initial_policy=self.policy,
+                max_option_steps=self.option_timeout,
                 initiation_votes=initiation_votes,
                 termination_votes=termination_votes,
-                max_option_steps=self.option_timeout,
+                min_required_interactions=self.markov_min_interactions,
+                success_rate_required=self.markov_min_success_rate,
+                assimilation_min_required_interactions=self.markov_min_interactions//2,
+                assimilation_success_rate_required=self.markov_min_success_rate,
                 epsilon=self.markov_termination_epsilon,
                 use_log=self.use_log
             )
@@ -202,6 +203,27 @@ class Option():
     def run(self, 
             env, 
             state, 
+            info,
+            eval):
+        agent_state = info["stacked_agent_state"]
+        position = (info["player_x"], info["player_y"])
+        global_vote, markov_vote = self.can_initiate(agent_state, position)
+
+        if global_vote and not markov_vote:
+            if eval:
+                return self._portable_run(env, state, info)
+            else:
+                return self._portable_evaluate(env, state, info)
+        elif markov_vote:
+            return self.markov_instantiations[self.markov_idx].run(
+                env, state, info, eval
+            )
+        else:
+            return None
+
+    def _portable_run(self, 
+            env, 
+            state, 
             info):
         # run the option. Policy takes over control
         steps = 0
@@ -212,7 +234,6 @@ class Option():
         position = (info["player_x"], info["player_y"])
 
         while steps < self.option_timeout:
-            #double check this, don't really wanna save whole info
             agent_space_states.append(agent_state)
             positions.append(position)
             
@@ -295,13 +316,12 @@ class Option():
 
         return next_state, total_reward, done, info, steps
             
-    def evaluate(self,
+    def _portable_evaluate(self,
                 env,
                 state,
-                info,
-                use_global_classifiers=True):
+                info):
         # runs option in evaluation mode (does not store transitions for later training)
-        # does not create Markov classifiers
+        # does not create Markov instantiations
         steps = 0
         total_reward = 0
         with evaluating(self.policy):
@@ -354,18 +374,6 @@ class Option():
         info['option_timed_out'] = True
 
         return next_state, total_reward, done, info, steps
-
-    def assimilate(self):
-        # want to test if markov option can assimilate
-        """
-        List of things to do:
-            - add data to portable option
-            - retrain portable options
-            - update confidences
-        
-        If not able to assimilate, create new portable option
-        """
-        pass
 
     def train_initiation(
             self,
@@ -469,18 +477,17 @@ class Option():
             priority_negative_files
         )
 
-    def initiation_update_confidence(self, was_successful):
-        self.initiation.update_confidence(was_successful)
+    def initiation_update_confidence(self, was_successful, votes):
+        self.initiation.update_confidence(was_successful, votes)
 
-    def termination_update_confidence(self, was_successful):
-        self.termination.update_confidence(was_successful)
+    def termination_update_confidence(self, was_successful, votes):
+        self.termination.update_confidence(was_successful, votes)
 
     def _option_success(
             self,
             positions,
             agent_space_states,
-            markov_termination,
-            agent_space_termination):
+            markov_termination):
         
         # we successfully completed the option once so we want to create a new instance
         # assume an existing instance does not exist because we attempted to use the portable option
@@ -502,8 +509,5 @@ class Option():
 
     def _option_fail(self):
         # option failed so do not create a new instanmce and downvote initiation sets that triggered
-        
-        # TODO need to change the way that update confidence works
-        # TODO actually need to change a bunch of stuff here if we are weighting everything by confidence weighting
-        self.initiation.update_confidence(was_successful=False)
+        self.initiation.update_confidence(was_successful=False, votes=self.termination.votes)
         
