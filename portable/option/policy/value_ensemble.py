@@ -54,7 +54,7 @@ class ValueEnsemble():
             learning_rate,
         )
 
-        self.upper_confidence_bound = UpperConfidenceBound(num_modules=num_modules, c=c)
+        self.upper_confidence_bound = UpperConfidenceBound(num_modules=num_modules, c=c, device=device)
         self.action_leader = np.random.choice(num_modules)
 
     def save(self, path):

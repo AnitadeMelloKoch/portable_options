@@ -45,7 +45,8 @@ class EnsembleClassifier():
         self.confidences = BayesianWeighting(
             beta_distribution_alpha,
             beta_distribution_beta,
-            self.num_modules
+            self.num_modules,
+            device
         )
 
     def save(self, path):
@@ -96,15 +97,15 @@ class EnsembleClassifier():
             dataset.shuffle()
             num_batches = dataset.num_batches
             avg_loss = 0
-            avg_accuracy = [0]*self.num_modules
-            for _ in range(num_batches+1):
+            avg_accuracy = np.zeros(self.num_modules)
+            for num in range(num_batches):
                 loss = 0
                 x, y = dataset.get_batch()
                 x = x.to(self.device)
                 y = y.to(self.device)
 
                 embeddings = self.embedding(x)
-                l_div = criterion.batched_L_divergence(embeddings, self.confidences.weights)
+                l_div = criterion.batched_L_divergence(embeddings, self.confidences.weights())
                 loss += l_div
                 for idx, classifier in enumerate(self.classifiers):
                     classifier_input = embeddings[:,idx,:]
@@ -118,20 +119,28 @@ class EnsembleClassifier():
                 loss.backward(retain_graph=True)
                 self.optimizer.step()
                 avg_loss += loss.item()
+                
             avg_loss = avg_loss/num_batches
             avg_accuracy = avg_accuracy/num_batches
 
             logger.info("Epoch {}: Avg loss - {}".format(epoch, loss))
             # maybe print weighting
             for idx in range(self.num_modules):
-                logger.info("  Classifier {}: accuracy {:.4f}".format(idx, avg_accuracy))
+                logger.info("  Classifier {}: accuracy {:.4f}".format(idx, avg_accuracy[idx]))
+
+            print("Epoch {}: Avg loss = {}".format(epoch, loss))
+            # maybe print weighting
+            for idx in range(self.num_modules):
+                print("  Classifier {}: accuracy {:.4f}".format(idx, avg_accuracy[idx]))
+
+
         self.set_eval()
         self.avg_loss = avg_loss
 
     def get_votes(self, x):
         x = x.to(self.device)
 
-        embeddings = self.embedding(x, sampling=False, return_attention_mask=False).detach()
+        embeddings = self.embedding(x, return_attention_mask=False).detach()
         pred_idx = np.zeros(self.num_modules, dtype=np.int16)
         pred = np.zeros(self.num_modules)
 
@@ -141,7 +150,7 @@ class EnsembleClassifier():
             pred_idx[idx] = np.argmax(pred_y)
             pred[idx] = pred_y[pred_idx[idx]]
 
-        return pred_idx, pred, self.confidences.weights
+        return pred_idx, pred, self.confidences.weights(False)
 
     def update_successes(self, successes):
         self.confidences.update_successes(successes)
@@ -153,6 +162,6 @@ class EnsembleClassifier():
         self.embedding.eval()
         x = x.to(self.device)
 
-        _, atts = self.embedding(x, sampling=False, return_attention_mask=True)
+        _, atts = self.embedding(x, return_attention_mask=True)
 
         return atts

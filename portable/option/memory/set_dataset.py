@@ -182,7 +182,7 @@ class SetDataset():
 
         return minibatch
 
-    def get_batch(self, shuffle=False):
+    def get_batch(self):
 
         if self.true_length == 0 or self.false_length == 0:
             return self._unibatch()
@@ -191,23 +191,27 @@ class SetDataset():
             normal_false = self._get_minibatch(
                 self.false_index(True),
                 self.false_data,
-                self.data_batchsize // 2
+                self.data_batchsize // 2,
+                self.shuffled_indices_false
             )
             priority_false = self._get_minibatch(
                 self.priority_false_index(),
                 self.priority_false_data,
-                self.data_batchsize - self.data_batchsize//2
+                self.data_batchsize - self.data_batchsize//2,
+                self.shuffled_indices_false_priority
             )
             false_batch = self.concatenate(normal_false, priority_false)
         else:
             false_batch = self._get_minibatch(
                 self.false_index(False),
                 self.false_data,
-                self.data_batchsize)
+                self.data_batchsize,
+                self.shuffled_indices_false)
         true_batch = self._get_minibatch(
             self.true_index(),
             self.true_data,
-            self.data_batchsize)
+            self.data_batchsize,
+            self.shuffled_indices_true)
         labels = [0]*len(false_batch) + [1]*len(true_batch)
         labels = torch.from_numpy(np.array(labels))
 
@@ -215,10 +219,9 @@ class SetDataset():
 
         data = self.concatenate(false_batch, true_batch)
 
-        if shuffle:
-            shuffle_idxs = torch.randperm(len(data))
-            data = data[shuffle_idxs]
-            labels = labels[shuffle_idxs]
+        shuffle_idxs = torch.randperm(len(data))
+        data = data[shuffle_idxs]
+        labels = labels[shuffle_idxs]
 
         return data, labels
 

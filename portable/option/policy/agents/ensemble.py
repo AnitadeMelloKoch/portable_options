@@ -60,6 +60,7 @@ class EnsembleAgent(Agent):
         self.update_epochs_per_step = 1
         self.embedding_plot_freq = embedding_plot_freq
         self.discount_rate = discount_rate
+        self.c = c
         
         # ensemble
         self.value_ensemble = ValueEnsemble(
@@ -110,7 +111,6 @@ class EnsembleAgent(Agent):
             warmup_steps=self.warmup_steps,
             batch_size=self.batch_size,
             phi=self.phi,
-            action_selection_strategy=self.action_selection_strategy,
             prioritized_replay_anneal_steps=self.prioritized_replay_anneal_steps,
             buffer_length=self.buffer_length,
             update_interval=self.update_interval,
@@ -121,7 +121,8 @@ class EnsembleAgent(Agent):
             final_exploration_frames=self.final_exploration_frames,
             discount_rate=self.discount_rate,
             num_modules=self.num_modules,
-            num_output_classes=self.num_output_classes
+            num_output_classes=self.num_output_classes,
+            c=self.c
         )
 
         new_policy.value_ensemble = copy.deepcopy(self.value_ensemble)

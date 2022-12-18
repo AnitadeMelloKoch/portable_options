@@ -14,18 +14,20 @@ class Set():
             vote_function,
 
             attention_module_num=8,
-            embedding_learning_rate=1e-4,
-            classifier_learning_rate=1e-2,
+            learning_rate=1e-3,
             embedding_output_size=64,
+            beta_distribution_alpha=30,
+            beta_distribution_beta=5,
 
             dataset_max_size=100000
         ):
         self.classifier = EnsembleClassifier(
             device=device,
-            embedding_learning_rate=embedding_learning_rate,
-            classifier_learning_rate=classifier_learning_rate,
+            learning_rate=learning_rate,
             num_modules=attention_module_num,
-            embedding_output_size=embedding_output_size
+            embedding_output_size=embedding_output_size,
+            beta_distribution_alpha=beta_distribution_alpha,
+            beta_distribution_beta=beta_distribution_beta
         )
 
         self.vote_function = vote_function
@@ -95,21 +97,12 @@ class Set():
 
     def train(
             self,
-            num_cycles=1,
-            embedding_epochs_per_cycle=10,
-            classifier_epochs_per_cycle=10,
-            shuffle_data=False):
-        for i in range(num_cycles):
-            self.classifier.train_embedding(
-                self.dataset,
-                embedding_epochs_per_cycle,
-                shuffle_data=shuffle_data
-            )
-            self.classifier.train_classifiers(
-                self.dataset,
-                classifier_epochs_per_cycle,
-                shuffle_data=shuffle_data
-            )
+            epochs):
+            
+        self.classifier.train(
+            self.dataset,
+            epochs
+        )
 
         self.avg_loss = self.classifier.avg_loss
 
@@ -123,7 +116,7 @@ class Set():
         vote = self.vote_function(votes, confidences, conf)
 
         if vote == 1:
-            logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, self.confidence.weights, vote))
+            logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, confidences, vote))
 
         self.votes = votes
 

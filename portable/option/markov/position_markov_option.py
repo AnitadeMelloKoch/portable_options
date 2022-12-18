@@ -17,6 +17,7 @@ class PositionMarkovOption(MarkovOption):
         images,
         positions,
         terminations,
+        termination_images,
         initial_policy,
         max_option_steps,
         initiation_votes,
@@ -32,12 +33,14 @@ class PositionMarkovOption(MarkovOption):
 
         self.initiation = PositionClassifier()
         self.initiation.add_positive_examples(images, positions)
+        self.initiation.fit_classifier()
 
         self.policy = initial_policy.initialize_new_policy()
         self.initiation_votes = initiation_votes
         self.termination_votes = termination_votes
         
         self.termination = terminations
+        self.termination_images = termination_images
         self.epsilon = epsilon
 
         self.interaction_count = 0
@@ -286,8 +289,8 @@ class PositionMarkovOption(MarkovOption):
         termination = success_data["termination"]
         agent_space_termination = success_data["agent_space_termination"]
 
-        self.initiation.add_positive_examples(positions, agent_space_states)
-        self.initiation.add_negative_examples([termination], [agent_space_termination])
+        self.initiation.add_positive_examples(agent_space_states,positions)
+        self.initiation.add_negative_examples([agent_space_termination],[termination])
         self.initiation.fit_classifier()
 
         self.termination.append(termination)

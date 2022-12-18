@@ -29,7 +29,8 @@ def batched_L_divergence(batch_feats, weights):
     if every_tuple is None:
         every_tuple = torch.combinations(torch.Tensor(range(batch_feats.shape[1])), 2).long()
         
-    weights = np.expand_dims(weights, axis=(0, 2))
+    weights = torch.unsqueeze(weights, 1)
+    weights = torch.unsqueeze(weights, 0)
     batch_feats = weights*batch_feats
 
     every_tuple_features = batch_feats[:, every_tuple, :]  # (batch_size, num_tuple, 2, dim)

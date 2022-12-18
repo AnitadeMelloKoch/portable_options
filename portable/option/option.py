@@ -43,16 +43,14 @@ class Option():
             initiation_beta_distribution_alpha=30,
             initiation_beta_distribution_beta=5,
             initiation_attention_module_num=8,
-            initiation_embedding_learning_rate=1e-4,
-            initiation_classifier_learning_rate=1e-2,
+            initiation_learning_rate=1e-3,
             initiation_embedding_output_size=64,
             initiation_dataset_max_size=50000,
 
             termination_beta_distribution_alpha=30,
             termination_beta_distribution_beta=5,
             termination_attention_module_num=8,
-            termination_embedding_learning_rate=1e-4,
-            termination_classifier_learning_rate=1e-2,
+            termination_learning_rate=1e-3,
             termination_embedding_output_size=64,
             termination_dataset_max_size=50000,
 
@@ -87,8 +85,7 @@ class Option():
             beta_distribution_alpha=initiation_beta_distribution_alpha,
             beta_distribution_beta=initiation_beta_distribution_beta,
             attention_module_num=initiation_attention_module_num,
-            embedding_learning_rate=initiation_embedding_learning_rate,
-            classifier_learning_rate=initiation_classifier_learning_rate,
+            learning_rate=initiation_learning_rate,
             embedding_output_size=initiation_embedding_output_size,
             dataset_max_size=initiation_dataset_max_size
         )
@@ -99,8 +96,7 @@ class Option():
             beta_distribution_alpha=termination_beta_distribution_alpha,
             beta_distribution_beta=termination_beta_distribution_beta,
             attention_module_num=termination_attention_module_num,
-            embedding_learning_rate=termination_embedding_learning_rate,
-            classifier_learning_rate=termination_classifier_learning_rate,
+            learning_rate=termination_learning_rate,
             embedding_output_size=termination_embedding_output_size,
             dataset_max_size=termination_dataset_max_size
         )
@@ -163,6 +159,7 @@ class Option():
             images,
             positions,
             terminations,
+            termination_images,
             initiation_votes,
             termination_votes
         ):
@@ -172,6 +169,7 @@ class Option():
                 images=images,
                 positions=positions,
                 terminations=terminations,
+                termination_images=termination_images,
                 initial_policy=self.policy,
                 max_option_steps=self.option_timeout,
                 initiation_votes=initiation_votes,
@@ -210,7 +208,7 @@ class Option():
         global_vote, markov_vote = self.can_initiate(agent_state, position)
 
         if global_vote and not markov_vote:
-            if eval:
+            if eval is False:
                 return self._portable_run(env, state, info)
             else:
                 return self._portable_evaluate(env, state, info)
@@ -252,7 +250,7 @@ class Option():
             steps += 1
             total_reward += reward
 
-            should_terminate = self.markov_classifiers[self.markov_idx].can_terminate(position)
+            should_terminate = self.termination.vote(agent_state)
             
             # overwrite reward with reward for option
             if should_terminate:
@@ -263,16 +261,14 @@ class Option():
 
             # need death condition => maybe just terminate on life lost wrapper
             if done or info['needs_reset'] or should_terminate:
+
                 # agent died. Should be marked as failure
                 if info['dead']:
                     self.log('[Portable option] Agent died. Option failed.')
                     info['option_timed_out'] = False
                     positions.append(position)
                     agent_space_states.append(agent_state)
-                    self._option_fail(
-                        positions,
-                        agent_space_states
-                    )
+                    self._option_fail()
                     return next_state, total_reward, done, info, steps
                 if done and not should_terminate:
                     # episode ended but we didn't detect a termination state. Count as failure
@@ -280,10 +276,9 @@ class Option():
                     info['option_timed_out'] = False
                     positions.append(position)
                     agent_space_states.append(agent_state)
-                    self._option_fail(
-                        positions,
-                        agent_space_states
-                    )
+                    self._option_fail()
+
+                    return next_state, total_reward, done, info, steps
                 # environment needs reset
                 if info['needs_reset']:
                     self.log('[Portable option] Environment timed out')
@@ -307,10 +302,7 @@ class Option():
         # allowed execution time ran out => fail
         positions.append(position)
         agent_space_states.append(agent_state)
-        self._option_fail(
-            positions,
-            agent_space_states
-        )
+        self._option_fail()
         self.log("[option] Option timed out. Returning\n\t {}".format(info['position']))
         info['option_timed_out'] = True
 
@@ -377,36 +369,24 @@ class Option():
 
     def train_initiation(
             self,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            num_cycles=1,
-            shuffle_data=False):
+            epochs):
         # train initiation classifier
         self.log("[option] Training initiation classifier...")
         print("[option] Training initiation classifier...")
         self.initiation.train(
-            num_cycles,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            shuffle_data=shuffle_data
+            epochs
         )
         self.log("[option] Finished training initiation classifier")
         print("[option] Finished training initiation classifier")
         
     def train_termination(
             self,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            num_cycles=1,
-            shuffle_data=False):
+            epochs):
         # train termination classifier
         self.log("[option] Training termination classifier...")
         print("[option] Training termination classifier...")
         self.termination.train(
-            num_cycles,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            shuffle_data=shuffle_data
+            epochs
         )
         self.log("[option] Finished training termination classifier")
         print("[option] Finished training termination classifier")
@@ -487,7 +467,8 @@ class Option():
             self,
             positions,
             agent_space_states,
-            markov_termination):
+            markov_termination,
+            agent_termination):
         
         # we successfully completed the option once so we want to create a new instance
         # assume an existing instance does not exist because we attempted to use the portable option
@@ -498,14 +479,14 @@ class Option():
         initiation_votes = self.initiation.votes
 
         # really need to check that these inputs are correct because I don't think they are :/
-        new_instance = self.create_instance(
+        self.create_instance(
             agent_space_states,
             positions,
             [markov_termination],
+            [agent_termination],
             initiation_votes,
             termination_votes
         )
-        self.markov_instantiations.append(new_instance)
 
     def _option_fail(self):
         # option failed so do not create a new instanmce and downvote initiation sets that triggered

@@ -9,6 +9,7 @@ import lzma
 import dill
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from portable.option import Option
 from portable.utils import set_player_ram
@@ -33,16 +34,12 @@ class Experiment():
         initiation_positive_files=[],
         initiation_negative_files=[],
         initiation_priority_negative_files=[],
-        train_initiation_embedding_epoch_per_cycle=10,
-        train_initiation_classifier_epoch_per_cycle=10,
-        train_initiation_cycles=1,
+        train_initiation_epochs=100,
         train_termination=True,
         termination_positive_files=[],
         termination_negative_files=[],
         termination_priority_negative_files=[],
-        train_termination_embedding_epoch_per_cycle=10,
-        train_termination_classifier_epoch_per_cycle=10,
-        train_termination_cycles=1,
+        train_termination_epochs=100,
         train_policy=True,
         policy_bootstrap_env=None,
         train_policy_max_steps=10000,
@@ -88,42 +85,39 @@ class Experiment():
         
         self.load()
 
-        if train_initiation:
+        if train_initiation is True:
             self._train_initiation(
                 initiation_positive_files,
                 initiation_negative_files,
                 initiation_priority_negative_files,
-                train_initiation_embedding_epoch_per_cycle,
-                train_initiation_classifier_epoch_per_cycle,
-                train_initiation_cycles
+                train_initiation_epochs
             )
         
-        if train_termination:
+        if train_termination is True:
             self._train_termination(
                 termination_positive_files,
                 termination_negative_files,
                 termination_priority_negative_files,
-                train_termination_embedding_epoch_per_cycle,
-                train_termination_classifier_epoch_per_cycle,
-                train_termination_cycles
+                train_termination_epochs
             )
 
-        if train_policy:
+        if train_policy is True:
             self._train_policy(
                 policy_bootstrap_env,
                 train_policy_max_steps,
                 train_policy_success_rate
             )
 
-        self.trial_data = {
-            "name": [],
-            "performance": [],
-            "start_pos": [],
-            "end_pos": [],
-            "true_terminations": [],
-            "completed": [],
-            "dead": []
-        }
+        self.trial_data = pd.DataFrame([], 
+            columns=[
+                "normalized_distance",
+                "start_position",
+                "end_position",
+                "true_terminations",
+                "completed",
+                "dead",
+                "steps"], index=pd.Index([], name='name')
+        )
 
 
     def _train_initiation(
@@ -131,9 +125,7 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles):
+            epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the initiation set.')
@@ -147,10 +139,7 @@ class Experiment():
             priority_negative_files
         )
         self.option.train_initiation(
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles,
-            shuffle_data=True
+            epochs
         )
 
     def _train_termination(
@@ -158,9 +147,7 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles):
+            epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the termination set.')
@@ -174,10 +161,7 @@ class Experiment():
             priority_negative_files
         )
         self.option.train_termination(
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles,
-            shuffle_data=True
+            epochs
         )
 
     def _train_policy(
@@ -230,7 +214,7 @@ class Experiment():
             true_terminations,
             max_episodes_in_trial,
             eval, 
-            trial_name="",
+            trial_name,
             use_agent_space=False):
         assert isinstance(possible_inits, list)
         logging.info("[experiment] Starting trial {}".format(trial_name))
@@ -242,13 +226,14 @@ class Experiment():
         true_terminationses = []
         completeds = []
         deads = []
+        stepses = []
         instantiation_instances = set()
 
         episode_count = 0
         instance_well_trained = False
 
-        while episode_count < max_episodes_in_trial or instance_well_trained:
-            logging.info("Episode {}/{}".format(x, max_episodes_in_trial))
+        while episode_count < max_episodes_in_trial and (not instance_well_trained):
+            logging.info("Episode {}/{}".format(episode_count, max_episodes_in_trial))
             completed = False
             
             rand_idx = random.randint(0, len(possible_inits)-1)
@@ -271,7 +256,7 @@ class Experiment():
                 attempt += 1
                 logging.info("Attempt {}/{}".format(attempt, self.max_option_tries))
 
-                result = self.option.run(
+                option_result = self.option.run(
                     self.env,
                     state,
                     info,
@@ -281,31 +266,36 @@ class Experiment():
                 if self.option.markov_idx is not None:
                     instantiation_instances.add(self.option.markov_idx)
 
-                if result is None:
+                if option_result is None:
                     logging.info("[experiment] Option did not initiate")
+                    result = 0
                     must_break = True
-                
-                _, _, done, info, _ = result
+                    position = info["position"]
+                    completed = False
+                    steps = 0
 
-                if info["needs_reset"]:
-                    logging.info("[experiment] Environment needs reset")
-                    must_break = True
-                if info["option_timed_out"]:
-                    timedout += 1
-                    logging.info("[experiment] Option timed out ({}/{})".format(timedout, 3))
+                else:
+                    _, _, done, info, steps = option_result
 
-                if done:
-                    must_break = True
+                    if info["needs_reset"]:
+                        logging.info("[experiment] Environment needs reset")
+                        must_break = True
+                    if info["option_timed_out"]:
+                        timedout += 1
+                        logging.info("[experiment] Option timed out ({}/{})".format(timedout, 3))
 
-                agent_state = info["stacked_agent_state"]
-                position = info["position"]
+                    if done:
+                        must_break = True
 
-                completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
-                if completed:
-                    must_break = True
+                    agent_state = info["stacked_agent_state"]
+                    position = info["position"]
+
+                    completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
+                    if completed:
+                        must_break = True
 
             episode_count += 1
-            instance_well_trained = all([instance.is_well_trained() for instance in instantiation_instances])
+            instance_well_trained = all([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
             
             # print(position)
             result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
@@ -319,14 +309,25 @@ class Experiment():
             true_terminationses.append(true_terminations[rand_idx])
             completeds.append(completed)
             deads.append(info["dead"])
-            logging.info("Result: {}".format(completed))
+            stepses.append(steps)
+            logging.info("Succeeded: {}".format(completed))
+
+
+        d = pd.DataFrame(
+            [
+                {
+                    "normalized_distance": results,
+                    "start_position": start_poses,
+                    "end_position": end_poses,
+                    "true_terminations": true_terminationses,
+                    "completed": completeds,
+                    "dead": deads,
+                    "steps": stepses
+                }
+            ], index=pd.Index(data=[trial_name], name='name')
+        )
             
-        self.trial_data["name"].append(trial_name)
-        self.trial_data["start_pos"].append(start_poses)
-        self.trial_data["end_pos"].append(end_poses)
-        self.trial_data["true_terminations"].append(true_terminationses)
-        self.trial_data["completed"].append(completeds)
-        self.trial_data["dead"].append(deads)
+        self.trial_data = self.trial_data.append(d)
 
         logging.info("[experiment] Finished trial {} performance: {}".format(
             trial_name,
@@ -336,15 +337,122 @@ class Experiment():
             trial_name,
             np.mean(results)
             ))
+        return instantiation_instances
         
     def test_assimilate(
         self,
         possible_inits,
         true_terminations,
+        instantiation_instances,
+        max_episodes_in_trial,
+        trial_name,
         use_agent_space=False
     ):
         "Run assimilation phase and see if option can be reincorporated into original option"
-        pass
+        assert isinstance(possible_inits, list)
+
+        if isinstance(instantiation_instances, set):
+            instantiation_instances = list(instantiation_instances)
+
+        logging.info("[experiment] Starting assimilation test.")
+        logging.info(instantiation_instances)
+        print("[experiment] Starting assimilation test.")
+
+        results = []
+        start_poses = []
+        end_poses = []
+        true_terminationses = []
+        completeds = []
+        deads = []
+        stepses = []
+
+        episode_count = 0
+        instance_succeeded = False
+
+        for instance_idx in instantiation_instances:
+            instance = self.option.markov_instantiations[instance_idx]
+            while episode_count < max_episodes_in_trial and (not instance_succeeded):
+                logging.info("Assimilation test {}/{}".format(episode_count, max_episodes_in_trial))
+                completed = False
+
+                rand_idx = random.randint(0, len(possible_inits) - 1)
+                rand_state = possible_inits[rand_idx]
+                state = self._set_env_ram(
+                    rand_state["ram"],
+                    rand_state["state"],
+                    rand_state["agent_state"],
+                    use_agent_space
+                )
+                termination = true_terminations[rand_idx]
+                
+                agent_state = rand_state["agent_state"]
+                start_pos = rand_state["position"]
+                info = self.env.get_current_info({})
+
+                completed = False
+                position = info["position"]
+                dead = False
+                result = 0
+                steps = 0
+
+                if instance.can_initiate((info["player_x"], info["player_y"])):
+                    _, _, done, info, steps = instance.assimilate_run(
+                        self.env,
+                        state,
+                        info
+                    )
+
+                    position = info["position"]
+                    dead = info["dead"]
+                    completed = self._check_termination_correct(
+                        position,
+                        termination
+                    )
+
+                    if not dead:
+                        result = self._get_percent_completed(
+                            start_pos,
+                            position,
+                            termination,
+                            self.env
+                        )
+                    
+                results.append(result)
+                start_poses.append(start_pos)
+                end_poses.append(position)
+                true_terminationses.append(termination)
+                completeds.append(completed)
+                deads.append(dead)
+                stepses.append(steps)
+                instance_succeeded = instance.can_assimilate()
+                if instance_succeeded is None:
+                    instance_succeeded = False
+            logging.info("Instance {} succeeded: {}".format(instance_idx, completed))
+            
+            d = pd.DataFrame(
+                [
+                    {
+                        "normalized_distance": results,
+                        "start_position": start_poses,
+                        "end_position": end_poses,
+                        "true_terminations": true_terminationses,
+                        "completed": completeds,
+                        "dead": deads,
+                        "steps": stepses
+                    }
+                ], index=pd.Index(data=[trial_name+str(instance_idx)], name='name')
+            )
+
+            self.trial_data = self.trial_data.append(d)
+
+        logging.info("[experiment] Finished trial {} performance: {}".format(
+            trial_name,
+            np.mean(results)
+        ))
+        print("[experiment] Finished trial {} performance: {}".format(
+            trial_name,
+            np.mean(results)
+        ))
 
     def bootstrap_from_room(
             self,
@@ -381,17 +489,19 @@ class Experiment():
 
                 count += 1
 
-                can_initiate = self.option.can_initiate(agent_state, info)
-
-                if not can_initiate:
-                    logging.info("Break because initiation was not triggered")
-                    break
-
-                state, _, done, info, _ = self.option.evaluate(
+                option_result = self.option.run(
                     self.env,
                     state,
-                    info
+                    info,
+                    eval=True
                 )
+
+                if option_result is None:
+                    logging.info("initiation was not triggered")
+                    self.option.initiation_update_confidence(was_successful=False, votes=self.option.initiation.votes)
+                    break
+
+                _, _, done, info, _ = option_result
 
                 if info['needs_reset']:
                     logging.info("Breaking because environment needs reset")
