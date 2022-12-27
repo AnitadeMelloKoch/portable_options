@@ -312,7 +312,7 @@ if __name__ == "__main__":
             trial_name="{}_assimilate_test_".format(room_names[idx]),
             use_agent_space=True
         )
-        print("everything should work")
+
         for y in range(len(initiation_state_files)):
             idy = order[y]
             experiment.run_trial(

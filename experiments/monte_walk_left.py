@@ -12,15 +12,15 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
     def manhatten(a, b):
         return sum(abs(val1-val2) for val1, val2 in zip((a[0], a[1]),(b[0],b[1])))
 
-    original_distance = []
+    true_distance = []
     completed_distance = []
     for term in terminations:
-        original_distance.append(manhatten(start_pos, term))
-        completed_distance.append(manhatten(final_pos, term))
-    original_distance = np.mean(original_distance)+1e-5
-    completed_distance = np.mean(completed_distance)+1e-5
+        true_distance.append(manhatten(start_pos, term))
+        completed_distance.append(manhatten(start_pos, final_pos))
+    true_distance = np.min(true_distance)+1e-5
+    completed_distance = np.min(completed_distance)+1e-5
 
-    return 1 - (completed_distance/original_distance)
+    return completed_distance/true_distance
 
 def check_termination_correct(final_pos, terminations, env):
     epsilon = 2
