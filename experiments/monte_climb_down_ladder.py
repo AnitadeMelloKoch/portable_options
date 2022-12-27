@@ -277,7 +277,7 @@ if __name__ == "__main__":
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
         terminations[0],
-        50,
+        100,
         use_agent_space=True
     )
 
@@ -299,7 +299,7 @@ if __name__ == "__main__":
         instantiation_instances = experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            1000,
+            2000,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
@@ -318,7 +318,7 @@ if __name__ == "__main__":
             experiment.run_trial(
                 load_init_states(initiation_state_files[idy]),
                 terminations[idy],
-                50,
+                100,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
                 use_agent_space=True

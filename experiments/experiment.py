@@ -406,7 +406,8 @@ class Experiment():
                     dead = info["dead"]
                     completed = self._check_termination_correct(
                         position,
-                        termination
+                        termination,
+                        self.env
                     )
 
                     if not dead:
