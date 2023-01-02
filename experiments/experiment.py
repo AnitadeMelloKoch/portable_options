@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from portable.option import Option
-from portable.utils import set_player_ram
+from portable.utils import set_player_ram, plot_attentions, plot_state
 from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
 from portable.option.policy.agents.abstract_agent import evaluating
 
@@ -65,8 +65,10 @@ class Experiment():
         self.name = experiment_name
         self.base_dir = os.path.join(base_dir, self.name, str(self.seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
+        self.plot_dir = os.path.join(self.base_dir, 'plots')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
 
         self.env = experiment_env_function(self.seed)
 
@@ -374,6 +376,7 @@ class Experiment():
             while episode_count < max_episodes_in_trial and (not instance_succeeded):
                 logging.info("Assimilation test {}/{}".format(episode_count, max_episodes_in_trial))
                 completed = False
+                episode_count += 1
 
                 rand_idx = random.randint(0, len(possible_inits) - 1)
                 rand_state = possible_inits[rand_idx]
@@ -536,6 +539,54 @@ class Experiment():
 
         plt.savefig(self.log_dir + '/plot.jpg')
 
+    def test_classifiers(self, possible_inits_true, possible_inits_false):
+        assert isinstance(possible_inits_true, list)
+        assert isinstance(possible_inits_false, list)
+
+
+        for idx, instance in enumerate(possible_inits_true):
+            state = instance["agent_state"]
+            plot_name = os.path.join(self.plot_dir, "attentions_initiation_true")
+            os.makedirs(plot_name, exist_ok=True)
+            plot_state(state, plot_name+'/'+str(idx)+'.png')
+
+            print("Instance {}/{}".format(idx, len(possible_inits_true)))
+
+            votes, class_conf, confidences, attentions = self.option.initiation.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_true", "initiation", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+            votes, class_conf, confidences, attentions = self.option.termination.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_true", "termination", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+        for idx, instance in enumerate(possible_inits_false):
+            state = self._set_env_ram(
+                instance["ram"],
+                instance["state"],
+                instance["agent_state"],
+                True
+            )
+            plot_name = os.path.join(self.plot_dir, "attentions_initiation_false")
+            os.makedirs(plot_name, exist_ok=True)
+            plot_state(state, plot_name+'/'+str(idx)+'.png')
+
+            print("Instance {}/{}".format(idx, len(possible_inits_false)))
+            votes, class_conf, confidences, attentions = self.option.initiation.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_false", "initiation", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+            votes, class_conf, confidences, attentions = self.option.termination.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_false", "termination", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
 
 
 

@@ -111,12 +111,12 @@ class EnsembleClassifier():
                     classifier_input = embeddings[:,idx,:]
                     pred_y = classifier(classifier_input)
                     c_loss = self.classifier_loss(pred_y, y)
-                    loss += c_loss
+                    loss += self.confidences.weights()[idx]*c_loss
                     pred_class = torch.argmax(pred_y, dim=1).detach()
                     avg_accuracy[idx] += (torch.sum(pred_class == y).item()/len(x))
                 
                 self.optimizer.zero_grad()
-                loss.backward(retain_graph=True)
+                loss.backward()
                 self.optimizer.step()
                 avg_loss += loss.item()
                 
@@ -137,7 +137,8 @@ class EnsembleClassifier():
         self.set_eval()
         self.avg_loss = avg_loss
 
-    def get_votes(self, x):
+    def get_votes(self, x, return_attention=False):
+        self.set_eval()
         x = x.to(self.device)
 
         embeddings = self.embedding(x, return_attention_mask=False).detach()
@@ -150,6 +151,9 @@ class EnsembleClassifier():
             pred_idx[idx] = np.argmax(pred_y)
             pred[idx] = pred_y[pred_idx[idx]]
 
+        if return_attention:
+            return pred_idx, pred, self.confidences.weights(False), self.get_attention(x)
+
         return pred_idx, pred, self.confidences.weights(False)
 
     def update_successes(self, successes):
@@ -159,9 +163,7 @@ class EnsembleClassifier():
         self.confidences.update_failures(failures)
 
     def get_attention(self, x):
-        self.embedding.eval()
+        self.set_eval()
         x = x.to(self.device)
-
         _, atts = self.embedding(x, return_attention_mask=True)
-
         return atts

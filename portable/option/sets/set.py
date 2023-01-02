@@ -122,6 +122,12 @@ class Set():
 
         return vote
 
+    def get_attentions(self, agent_state):
+        agent_state = torch.unsqueeze(agent_state, dim=0)
+        votes, conf, confidences, attentions = self.classifier.get_votes(agent_state, True)
+
+        return votes, conf, confidences, attentions
+
     def update_confidence(
             self,
             was_successful,

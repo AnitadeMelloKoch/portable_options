@@ -274,55 +274,62 @@ if __name__ == "__main__":
 
     experiment.save()
 
-    experiment.bootstrap_from_room(
-        load_init_states(initiation_state_files[0]),
-        terminations[0],
-        100,
-        use_agent_space=True
-    )
-
-    for y in range(len(initiation_state_files)):
-        idx = order[y]
-        experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
-            100,
-            eval=True,
-            trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
-            use_agent_space=True
-        )
-
-    experiment.save()
-
-    for x in range(1, len(initiation_state_files)):
-        idx = order[x]
-        instantiation_instances = experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
-            2000,
-            eval=False,
-            trial_name="{}_train".format(room_names[idx]),
-            use_agent_space=True
-        )
-        experiment.test_assimilate(
+    def run():
+        experiment.bootstrap_from_room(
             load_init_states(initiation_state_files[0]),
             terminations[0],
-            instantiation_instances,
-            500,
-            trial_name="{}_assimilate_test_".format(room_names[idx]),
+            100,
             use_agent_space=True
         )
 
         for y in range(len(initiation_state_files)):
-            idy = order[y]
+            idx = order[y]
             experiment.run_trial(
-                load_init_states(initiation_state_files[idy]),
-                terminations[idy],
+                load_init_states(initiation_state_files[idx]),
+                terminations[idx],
                 100,
                 eval=True,
-                trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
+                trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
                 use_agent_space=True
             )
-        
+
         experiment.save()
+
+        for x in range(1, len(initiation_state_files)):
+            idx = order[x]
+            instantiation_instances = experiment.run_trial(
+                load_init_states(initiation_state_files[idx]),
+                terminations[idx],
+                2000,
+                eval=False,
+                trial_name="{}_train".format(room_names[idx]),
+                use_agent_space=True
+            )
+            experiment.test_assimilate(
+                load_init_states(initiation_state_files[0]),
+                terminations[0],
+                instantiation_instances,
+                500,
+                trial_name="{}_assimilate_test_".format(room_names[idx]),
+                use_agent_space=True
+            )
+
+            for y in range(len(initiation_state_files)):
+                idy = order[y]
+                experiment.run_trial(
+                    load_init_states(initiation_state_files[idy]),
+                    terminations[idy],
+                    100,
+                    eval=True,
+                    trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
+                    use_agent_space=True
+                )
+            
+            experiment.save()
     
+    def attention_test():
+        experiment.test_classifiers(load_init_states(
+            initiation_state_files[0]+initiation_state_files[1])
+            ,[])
+
+    attention_test()
