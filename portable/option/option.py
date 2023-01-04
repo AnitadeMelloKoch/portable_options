@@ -43,14 +43,16 @@ class Option():
             initiation_beta_distribution_alpha=30,
             initiation_beta_distribution_beta=5,
             initiation_attention_module_num=8,
-            initiation_learning_rate=1e-3,
+            initiation_classifier_learning_rate=1e-4,
+            initiation_embedding_learning_rate=1e-2,
             initiation_embedding_output_size=64,
             initiation_dataset_max_size=50000,
 
             termination_beta_distribution_alpha=30,
             termination_beta_distribution_beta=5,
             termination_attention_module_num=8,
-            termination_learning_rate=1e-3,
+            termination_classifier_learning_rate=1e-4,
+            termination_embedding_learning_rate=1e-2,
             termination_embedding_output_size=64,
             termination_dataset_max_size=50000,
 
@@ -85,7 +87,8 @@ class Option():
             beta_distribution_alpha=initiation_beta_distribution_alpha,
             beta_distribution_beta=initiation_beta_distribution_beta,
             attention_module_num=initiation_attention_module_num,
-            learning_rate=initiation_learning_rate,
+            classifier_learning_rate=initiation_classifier_learning_rate,
+            embedding_learning_rate=initiation_embedding_learning_rate,
             embedding_output_size=initiation_embedding_output_size,
             dataset_max_size=initiation_dataset_max_size
         )
@@ -96,7 +99,8 @@ class Option():
             beta_distribution_alpha=termination_beta_distribution_alpha,
             beta_distribution_beta=termination_beta_distribution_beta,
             attention_module_num=termination_attention_module_num,
-            learning_rate=termination_learning_rate,
+            classifier_learning_rate=termination_classifier_learning_rate,
+            embedding_learning_rate=termination_embedding_learning_rate,
             embedding_output_size=termination_embedding_output_size,
             dataset_max_size=termination_dataset_max_size
         )
@@ -187,6 +191,7 @@ class Option():
 
     def can_initiate(self, agent_space_state, markov_space_state):
         # check if option can initiate
+        self.log("[option] Checking initiation")
         vote_global = self.initiation.vote(agent_space_state)
         vote_markov = False
         self.markov_idx = None
@@ -250,6 +255,7 @@ class Option():
             steps += 1
             total_reward += reward
 
+            self.log("[option] checking termination")
             should_terminate = self.termination.vote(agent_state)
             
             # overwrite reward with reward for option
@@ -334,6 +340,7 @@ class Option():
                 # environment reward for use outside option
                 total_reward += reward
 
+                self.log("[option] checking termination")
                 should_terminate = self.termination.vote(agent_state)
 
                 # get option reward for policy

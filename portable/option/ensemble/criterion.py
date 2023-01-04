@@ -39,6 +39,30 @@ def batched_L_divergence(batch_feats, weights):
     mean_loss = loss.sum(-1).mean()
     return mean_loss
 
+def batched_criterion(feats, feat_class, weights):
+
+    # x[:,:].view(1,-1)-x[:,:].view(-1,1)
+    batch_size = feats.shape[0]
+    num_modules = feats.shape[1]
+    expanded_weights = torch.unsqueeze(weights, -1)
+    expanded_weights = torch.unsqueeze(expanded_weights, 0)
+    expanded_feats = expanded_weights*feats
+    expanded_feats = torch.unsqueeze(expanded_feats, 1)
+    expanded_feats = expanded_feats.repeat(1, batch_size, 1, 1)
+
+
+    dist = torch.sum((expanded_feats-torch.transpose(expanded_feats, 0, 1)).pow(2), -1)
+    expanded_classes = torch.unsqueeze(feat_class, 1).repeat(1, batch_size)
+
+    loss = 0
+
+    mask = expanded_classes == torch.transpose(expanded_classes, 0, 1)
+
+    loss += torch.mean(dist[mask])
+    loss += torch.mean(torch.clamp(1-dist[torch.logical_not(mask)], min=0))
+    loss += batched_L_divergence(feats, weights)
+
+    return loss
 
 def L_metric(feat1, feat2, same_class=True):
     d = torch.sum((feat1 - feat2).pow(2).view((-1, feat1.size(-1))), 1)

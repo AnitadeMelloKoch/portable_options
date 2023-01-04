@@ -296,6 +296,9 @@ class PositionMarkovOption(MarkovOption):
         self.termination.append(termination)
         self.performance.append(1)
 
+        self.log('[Markov option] Success Rate: {} Num interactions: {}'.format(np.mean(self.performance), len(self.performance)))
+
+
     def _option_fail(self, failure_data: dict):
         positions = failure_data["positions"]
         agent_space_states = failure_data["agent_space_states"]
@@ -306,3 +309,4 @@ class PositionMarkovOption(MarkovOption):
         self.initiation.fit_classifier()
         self.performance.append(0)
     
+        self.log('[Markov option] Success Rate: {} Num interactions: {}'.format(np.mean(self.performance), len(self.performance)))

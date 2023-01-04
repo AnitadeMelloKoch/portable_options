@@ -14,7 +14,8 @@ class Set():
             vote_function,
 
             attention_module_num=8,
-            learning_rate=1e-3,
+            embedding_learning_rate=1e-4,
+            classifier_learning_rate=1e-2,
             embedding_output_size=64,
             beta_distribution_alpha=30,
             beta_distribution_beta=5,
@@ -23,7 +24,8 @@ class Set():
         ):
         self.classifier = EnsembleClassifier(
             device=device,
-            learning_rate=learning_rate,
+            embedding_learning_rate=embedding_learning_rate,
+            classifier_learning_rate=classifier_learning_rate,
             num_modules=attention_module_num,
             embedding_output_size=embedding_output_size,
             beta_distribution_alpha=beta_distribution_alpha,
@@ -108,15 +110,15 @@ class Set():
 
     def vote(
             self,
-            agent_state):
+            agent_state,
+            log=False):
 
         agent_state = torch.unsqueeze(agent_state, dim=0)
 
         votes, conf, confidences = self.classifier.get_votes(agent_state)
         vote = self.vote_function(votes, confidences, conf)
 
-        if vote == 1:
-            logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, confidences, vote))
+        logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, confidences, vote))
 
         self.votes = votes
 

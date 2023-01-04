@@ -17,7 +17,8 @@ class EnsembleClassifier():
     def __init__(self, 
         device,
         embedding_output_size=64, 
-        learning_rate=1e-3,
+        embedding_learning_rate=1e-4,
+        classifier_learning_rate=1e-2,
         num_modules=8, 
         num_output_classes=2,
         
@@ -34,9 +35,16 @@ class EnsembleClassifier():
             MLP(embedding_output_size, self.num_output_classes) for _ in range(
                 self.num_modules)]).to(self.device)
 
-        self.optimizer = optim.Adam(
-            list(self.embedding.parameters()) + list(self.classifiers.parameters()),
-            learning_rate
+        self.classifier_optimizer = optim.Adam(
+            list(self.classifiers.parameters()),
+            classifier_learning_rate
+        )
+
+        self.embedding_optimizer = optim.SGD(
+            list(self.embedding.parameters()),
+            embedding_learning_rate,
+            momentum=0.95,
+            weight_decay=1e-4
         )
 
         self.avg_loss = np.zeros(num_modules)
@@ -105,8 +113,7 @@ class EnsembleClassifier():
                 y = y.to(self.device)
 
                 embeddings = self.embedding(x)
-                l_div = criterion.batched_L_divergence(embeddings, self.confidences.weights())
-                loss += l_div
+                l_div = criterion.batched_criterion(embeddings, y, self.confidences.weights())
                 for idx, classifier in enumerate(self.classifiers):
                     classifier_input = embeddings[:,idx,:]
                     pred_y = classifier(classifier_input)
@@ -115,9 +122,14 @@ class EnsembleClassifier():
                     pred_class = torch.argmax(pred_y, dim=1).detach()
                     avg_accuracy[idx] += (torch.sum(pred_class == y).item()/len(x))
                 
-                self.optimizer.zero_grad()
+                loss = loss/self.num_modules
+                loss += l_div
+
+                self.classifier_optimizer.zero_grad()
+                self.embedding_optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                self.classifier_optimizer.step()
+                self.embedding_optimizer.step()
                 avg_loss += loss.item()
                 
             avg_loss = avg_loss/num_batches
