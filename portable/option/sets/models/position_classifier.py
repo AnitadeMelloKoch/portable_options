@@ -136,8 +136,10 @@ class PositionClassifier:
         return np.array(positions)
 
     def get_images(self):
-        positive_samples = [example.obs for example in self.positive_examples]
-        negative_samples = [example.obs for example in self.negative_examples]
+        positive_examples = list(itertools.chain.from_iterable(self.positive_examples))
+        positive_samples = [example.obs for example in positive_examples]
+        negative_examples = list(itertools.chain.from_iterable(self.negative_examples))
+        negative_samples = [example.obs for example in negative_examples]
 
         return positive_samples, negative_samples
 
