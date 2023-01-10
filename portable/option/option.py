@@ -4,6 +4,7 @@ import os
 import pickle
 import numpy as np
 import gin
+import random
 from portable.option.policy.agents import evaluating
 
 from portable.option.sets import Set
@@ -60,6 +61,7 @@ class Option():
             min_interactions=100,
             min_success_rate=0.9,
             timeout=50,
+            min_option_length=3,
 
             log=True):
         
@@ -110,6 +112,7 @@ class Option():
         self.option_timeout = timeout
         self.markov_min_interactions = min_interactions
         self.markov_min_success_rate = min_success_rate
+        self.min_option_length = min_option_length
         
         self.use_log = log
 
@@ -257,13 +260,15 @@ class Option():
 
             self.log("[option] checking termination")
             should_terminate = self.termination.vote(agent_state)
+            if steps < self.min_option_length:
+                should_terminate = False
             
             # overwrite reward with reward for option
-            if should_terminate:
+            if should_terminate is True:
                 reward = 1
             else:
                 reward = 0
-            self.policy.observe(state, action, reward, next_state, done)
+            self.policy.observe(state, action, reward, next_state, done, update_policy=False)
 
             # need death condition => maybe just terminate on life lost wrapper
             if done or info['needs_reset'] or should_terminate:
@@ -342,6 +347,8 @@ class Option():
 
                 self.log("[option] checking termination")
                 should_terminate = self.termination.vote(agent_state)
+                if steps < self.min_option_length:
+                    should_terminate = False
 
                 # get option reward for policy
                 if should_terminate:
@@ -376,24 +383,28 @@ class Option():
 
     def train_initiation(
             self,
-            epochs):
+            embedding_epochs,
+            classifier_epochs):
         # train initiation classifier
         self.log("[option] Training initiation classifier...")
         print("[option] Training initiation classifier...")
         self.initiation.train(
-            epochs
+            embedding_epochs,
+            classifier_epochs
         )
         self.log("[option] Finished training initiation classifier")
         print("[option] Finished training initiation classifier")
         
     def train_termination(
             self,
-            epochs):
+            embedding_epochs,
+            classifier_epochs):
         # train termination classifier
         self.log("[option] Training termination classifier...")
         print("[option] Training termination classifier...")
         self.termination.train(
-            epochs
+            embedding_epochs,
+            classifier_epochs
         )
         self.log("[option] Finished training termination classifier")
         print("[option] Finished training termination classifier")
@@ -499,3 +510,25 @@ class Option():
         # option failed so do not create a new instanmce and downvote initiation sets that triggered
         self.initiation.update_confidence(was_successful=False, votes=self.termination.votes)
         
+    def update_option(self, 
+                      markov_option,
+                      policy_epochs,
+                      embedding_epochs,
+                      classifier_epochs):
+        self.policy.replay_buffer = markov_option.policy.replay_buffer
+        positive_samples_init, negative_samples_init = markov_option.initiation.get_images()
+        self.initiation.add_data(positive_data=positive_samples_init, negative_data=negative_samples_init)
+        self.termination.add_data(
+            positive_data = markov_option.termination_images,
+            negative_data=random.sample(positive_samples_init, len(markov_option.termination_images))
+        )
+
+        self.policy.train(policy_epochs)
+        self.initiation.train(
+            embedding_epochs,
+            classifier_epochs
+        )
+        self.termination.train(
+            embedding_epochs,
+            classifier_epochs
+        )

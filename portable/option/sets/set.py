@@ -2,7 +2,6 @@ import logging
 import numpy as np
 import torch
 from portable.option.memory import SetDataset
-from portable.option.sets.utils import BayesianWeighting
 from portable.option.sets.models import EnsembleClassifier
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,8 @@ class Set():
             beta_distribution_alpha=30,
             beta_distribution_beta=5,
 
-            dataset_max_size=100000
+            dataset_max_size=100000,
+            dataset_batch_size=16
         ):
         self.classifier = EnsembleClassifier(
             device=device,
@@ -28,13 +28,14 @@ class Set():
             classifier_learning_rate=classifier_learning_rate,
             num_modules=attention_module_num,
             embedding_output_size=embedding_output_size,
+            batch_k=dataset_batch_size//2,
             beta_distribution_alpha=beta_distribution_alpha,
             beta_distribution_beta=beta_distribution_beta
         )
 
         self.vote_function = vote_function
 
-        self.dataset = SetDataset(max_size=dataset_max_size)
+        self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
 
         self.attention_module_num = attention_module_num
         self.votes = None
@@ -99,19 +100,20 @@ class Set():
 
     def train(
             self,
-            epochs):
+            embedding_epochs,
+            classifier_epochs):
             
         self.classifier.train(
             self.dataset,
-            epochs
+            embedding_epochs,
+            classifier_epochs
         )
 
         self.avg_loss = self.classifier.avg_loss
 
     def vote(
             self,
-            agent_state,
-            log=False):
+            agent_state):
 
         agent_state = torch.unsqueeze(agent_state, dim=0)
 

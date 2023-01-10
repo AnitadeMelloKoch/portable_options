@@ -133,9 +133,19 @@ class EnsembleAgent(Agent):
         self.step_number += 1
         self.value_ensemble.step()
 
-    def observe(self, obs, action, reward, next_obs, terminal):
+    def train(self, epochs):
+        if len(self.replay_buffer) < self.batch_size*epochs:
+            return False
+        
+        for _ in range(epochs):
+            transitions = self.replay_buffer.sample(self.batch_size)
+            self.replay_updater.update_func(transitions)
+
+        return True
+
+    def observe(self, obs, action, reward, next_obs, terminal, update_policy=True):
         """
-        store the experience tuple into the replay buffer
+        store the experience tuple into the replayreplay_buffer buffer
         and update the agent if necessary
         """
         self.update_step()
@@ -154,7 +164,8 @@ class EnsembleAgent(Agent):
             if terminal:
                 self.replay_buffer.stop_current_episode()
 
-            self.replay_updater.update_if_necessary(self.step_number)
+            if update_policy is True:
+                self.replay_updater.update_if_necessary(self.step_number)
             self.value_ensemble.update_accumulated_rewards(reward)
             
         # new episode

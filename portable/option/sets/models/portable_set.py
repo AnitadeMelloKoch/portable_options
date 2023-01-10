@@ -5,8 +5,7 @@ import portable.option.ensemble.criterion as criterion
 import numpy as np
 import os
 
-from portable.option.sets.models import MLP
-from portable.option.ensemble import Attention
+from portable.option.sets.models import MLP, SmallEmbedding
 from portable.option.sets.utils import BayesianWeighting
 import logging
 
@@ -21,6 +20,8 @@ class EnsembleClassifier():
         classifier_learning_rate=1e-2,
         num_modules=8, 
         num_output_classes=2,
+        batch_k=8,
+        normalize=False,
         
         beta_distribution_alpha=30,
         beta_distribution_beta=5):
@@ -29,17 +30,18 @@ class EnsembleClassifier():
         self.num_output_classes = num_output_classes
         self.device = device
 
-        self.embedding = Attention(embedding_size=embedding_output_size, 
-                                   num_attention_modules=self.num_modules).to(self.device)
+        self.embedding = SmallEmbedding(embedding_size=embedding_output_size, 
+                                   num_attention_modules=self.num_modules,
+                                   batch_k=batch_k,
+                                   normalize=normalize).to(self.device)
         self.classifiers = nn.ModuleList([
             MLP(embedding_output_size, self.num_output_classes) for _ in range(
                 self.num_modules)]).to(self.device)
 
-        self.classifier_optimizer = optim.Adam(
-            list(self.classifiers.parameters()),
-            classifier_learning_rate
-        )
-
+        self.classifier_optimizers = []
+        for i in range(self.num_modules):
+            optimizer = optim.Adam(self.classifiers[i].parameters(), classifier_learning_rate)
+            self.classifier_optimizers.append(optimizer)
         self.embedding_optimizer = optim.SGD(
             list(self.embedding.parameters()),
             embedding_learning_rate,
@@ -89,68 +91,102 @@ class EnsembleClassifier():
         self.classifiers.load_state_dict(torch.load(os.path.join(path, 'classifier.pt')))
         self.confidences.load(os.path.join(path, 'confidence'))
 
-    def set_train(self):
-        self.embedding.train()
+    def set_classifiers_train(self):
         for classifier in self.classifiers:
             classifier.train()
     
-    def set_eval(self):
-        self.embedding.eval()
+    def set_classifiers_eval(self):
         for classifier in self.classifiers:
             classifier.eval()
 
-    def train(self, dataset, epochs):
-        self.set_train()
+    def train(self, 
+              dataset, 
+              embedding_epochs, 
+              classifier_epochs):
+        self.train_embedding(dataset, embedding_epochs)
+        self.train_classifiers(dataset, classifier_epochs)
+
+    def train_embedding(self, dataset, epochs):
+        self.set_classifiers_eval()
+        self.embedding.train()
+
         for epoch in range(epochs):
-            dataset.shuffle()
+            loss_div, loss_homo, loss_heter = 0,0,0
+            counter = 0
             num_batches = dataset.num_batches
-            avg_loss = 0
+            dataset.shuffle()
+            for _ in range(num_batches):
+                x, _ = dataset.get_batch(shuffle_batch=False)
+                x = x.to(self.device)
+
+                _, anchors, positive, negative, _ = self.embedding(x, sampling=True)
+                if anchors.size()[0] == 0:
+                    continue
+                
+                anchors = anchors.view(anchors.size(0), self.num_modules, -1)
+                positive = positive.view(positive.size(0), self.num_modules, -1)
+                negative = negative.view(negative.size(0), self.num_modules, -1)
+
+                l_div, l_homo, l_heter = criterion.criterion(anchors, positive, negative, self.confidences.weights())
+                loss = l_div + l_homo + l_heter
+
+                self.embedding_optimizer.zero_grad()
+                loss.backward()
+                self.embedding_optimizer.step()
+
+                loss_div += l_div.item()
+                loss_homo += l_homo.item()
+                loss_heter += l_heter.item()
+
+                counter += 1
+
+            loss_homo /= counter+1
+            loss_heter /= counter+1
+            loss_div /= counter+1
+
+            logger.info('Epoch {}: \tdiv:{:.4f}\thomo:{:.4f}\theter:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
+            print('Epoch {}: \tdiv:{:.4f}\thomo:{:.4f}\theter:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
+
+    def train_classifiers(self, dataset, epochs):
+        self.embedding.eval()
+        self.set_classifiers_train()
+
+        for epoch in range(epochs):
+            avg_loss = np.zeros(self.num_modules)
             avg_accuracy = np.zeros(self.num_modules)
-            for num in range(num_batches):
-                loss = 0
+            count = 0
+            num_batches = dataset.num_batches
+            dataset.shuffle()
+            for _ in range(num_batches):
                 x, y = dataset.get_batch()
                 x = x.to(self.device)
                 y = y.to(self.device)
 
                 embeddings = self.embedding(x)
-                l_div = criterion.batched_criterion(embeddings, y, self.confidences.weights())
-                for idx, classifier in enumerate(self.classifiers):
-                    classifier_input = embeddings[:,idx,:]
-                    pred_y = classifier(classifier_input)
-                    c_loss = self.classifier_loss(pred_y, y)
-                    loss += self.confidences.weights()[idx]*c_loss
-                    pred_class = torch.argmax(pred_y, dim=1).detach()
-                    avg_accuracy[idx] += (torch.sum(pred_class == y).item()/len(x))
-                
-                loss = loss/self.num_modules
-                loss += l_div
+                for idx in range(self.num_modules):
+                    attention_x = embeddings[:,idx,:]
+                    pred_y = self.classifiers[idx](attention_x)
+                    loss = self.classifier_loss(pred_y, y)
+                    self.classifier_optimizers[idx].zero_grad()
+                    loss.backward(retain_graph=True)
+                    self.classifier_optimizers[idx].step()
+                    avg_loss[idx] += loss.item()
+                    pred_classes = torch.argmax(pred_y, dim=1).detach()
+                    avg_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
+                count += 1
+            avg_loss = avg_loss/count
+            avg_accuracy = avg_accuracy/count
 
-                self.classifier_optimizer.zero_grad()
-                self.embedding_optimizer.zero_grad()
-                loss.backward()
-                self.classifier_optimizer.step()
-                self.embedding_optimizer.step()
-                avg_loss += loss.item()
-                
-            avg_loss = avg_loss/num_batches
-            avg_accuracy = avg_accuracy/num_batches
-
-            logger.info("Epoch {}: Avg loss - {}".format(epoch, loss))
-            # maybe print weighting
+            logger.info("Epoch {}:".format(epoch))
+            print("Epoch {}:".format(epoch))
             for idx in range(self.num_modules):
-                logger.info("  Classifier {}: accuracy {:.4f}".format(idx, avg_accuracy[idx]))
+                logger.info("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
+                print("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
 
-            print("Epoch {}: Avg loss = {}".format(epoch, loss))
-            # maybe print weighting
-            for idx in range(self.num_modules):
-                print("  Classifier {}: accuracy {:.4f}".format(idx, avg_accuracy[idx]))
-
-
-        self.set_eval()
-        self.avg_loss = avg_loss
 
     def get_votes(self, x, return_attention=False):
-        self.set_eval()
+        self.set_classifiers_eval()
+        self.embedding.eval()
         x = x.to(self.device)
 
         embeddings = self.embedding(x, return_attention_mask=False).detach()
@@ -175,7 +211,8 @@ class EnsembleClassifier():
         self.confidences.update_failures(failures)
 
     def get_attention(self, x):
-        self.set_eval()
+        self.set_classifiers_eval()
+        self.embedding.eval()
         x = x.to(self.device)
         _, atts = self.embedding(x, return_attention_mask=True)
         return atts

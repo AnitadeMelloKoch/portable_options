@@ -135,6 +135,11 @@ class PositionClassifier:
         positions = [example.pos for example in examples]
         return np.array(positions)
 
+    def get_images(self):
+        positive_samples = [example.obs for example in self.positive_examples]
+        negative_samples = [example.obs for example in self.negative_examples]
+
+        return positive_samples, negative_samples
 
     def fit_classifier(self):
         if (len(self.negative_examples) > 0 and len(self.positive_examples) > 0):

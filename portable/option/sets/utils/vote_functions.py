@@ -14,7 +14,7 @@ def get_vote_function(vote_function_name):
 
 def weighted_vote_low(votes, vote_confidences, weights):
     votes_weighted = np.multiply(np.multiply(votes, vote_confidences), weights)
-    if np.sum(votes_weighted) >= 1.4:
+    if np.sum(votes_weighted) >= 0.4:
         return 1
     else:
         return 0

@@ -332,4 +332,5 @@ if __name__ == "__main__":
             initiation_state_files[0]+initiation_state_files[1])
             ,[])
 
-    attention_test()
+    run()
+    # attention_test()

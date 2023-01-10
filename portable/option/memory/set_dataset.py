@@ -182,7 +182,7 @@ class SetDataset():
 
         return minibatch
 
-    def get_batch(self):
+    def get_batch(self, shuffle_batch=True):
 
         if self.true_length == 0 or self.false_length == 0:
             return self._unibatch()
@@ -219,9 +219,10 @@ class SetDataset():
 
         data = self.concatenate(false_batch, true_batch)
 
-        shuffle_idxs = torch.randperm(len(data))
-        data = data[shuffle_idxs]
-        labels = labels[shuffle_idxs]
+        if shuffle_batch is True:
+            shuffle_idxs = torch.randperm(len(data))
+            data = data[shuffle_idxs]
+            labels = labels[shuffle_idxs]
 
         return data, labels
 

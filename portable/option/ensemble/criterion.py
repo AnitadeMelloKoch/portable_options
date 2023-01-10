@@ -54,15 +54,13 @@ def batched_criterion(feats, feat_class, weights):
     dist = torch.sum((expanded_feats-torch.transpose(expanded_feats, 0, 1)).pow(2), -1)
     expanded_classes = torch.unsqueeze(feat_class, 1).repeat(1, batch_size)
 
-    loss = 0
-
     mask = expanded_classes == torch.transpose(expanded_classes, 0, 1)
 
-    loss += torch.mean(dist[mask])
-    loss += torch.mean(torch.clamp(1-dist[torch.logical_not(mask)], min=0))
-    loss += batched_L_divergence(feats, weights)
+    homo_loss = torch.mean(dist[mask])
+    heter_loss = torch.mean(torch.clamp(1-dist[torch.logical_not(mask)], min=0))
+    div_loss = batched_L_divergence(feats, weights)
 
-    return loss
+    return homo_loss, heter_loss, div_loss
 
 def L_metric(feat1, feat2, same_class=True):
     d = torch.sum((feat1 - feat2).pow(2).view((-1, feat1.size(-1))), 1)
@@ -93,12 +91,20 @@ def loss_function(tensor, batch_k):
     
     return loss_div/batch_size, loss_homo/count_homo, loss_heter/count_heter
 
-def criterion(anchors, positives, negatives):
-    loss_homo = L_metric(anchors, positives)
-    loss_heter = L_metric(anchors, negatives, False)
+def criterion(anchors, positives, negatives, weights):
+
+    expanded_weights = torch.unsqueeze(weights, -1)
+    expanded_weights = torch.unsqueeze(expanded_weights, 0)
+
+    weighted_anchors = expanded_weights*anchors
+    weighted_positives = expanded_weights*positives
+    weighted_negatives = expanded_weights*negatives
+
+    loss_homo = L_metric(weighted_anchors, weighted_positives)
+    loss_heter = L_metric(weighted_anchors, weighted_negatives, False)
     loss_div = 0
 
     for i in range(anchors.shape[0]):
-        loss_div += (L_divergence(anchors[i, ...]) + L_divergence(positives[i, ...]) + L_divergence(negatives[i, ...])) / 3
+        loss_div += (L_divergence(weighted_anchors[i, ...]) + L_divergence(weighted_positives[i, ...]) + L_divergence(weighted_negatives[i, ...])) / 3
     
     return loss_div / anchors.shape[0], loss_homo, loss_heter

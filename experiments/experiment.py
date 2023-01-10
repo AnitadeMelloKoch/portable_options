@@ -34,12 +34,14 @@ class Experiment():
         initiation_positive_files=[],
         initiation_negative_files=[],
         initiation_priority_negative_files=[],
-        train_initiation_epochs=100,
+        train_initiation_embedding_epochs=100,
+        train_initiation_classifier_epochs=100,
         train_termination=True,
         termination_positive_files=[],
         termination_negative_files=[],
         termination_priority_negative_files=[],
-        train_termination_epochs=100,
+        train_termination_embedding_epochs=100,
+        train_termination_classifier_epochs=100,
         train_policy=True,
         policy_bootstrap_env=None,
         train_policy_max_steps=10000,
@@ -92,7 +94,8 @@ class Experiment():
                 initiation_positive_files,
                 initiation_negative_files,
                 initiation_priority_negative_files,
-                train_initiation_epochs
+                train_initiation_embedding_epochs,
+                train_initiation_classifier_epochs,
             )
         
         if train_termination is True:
@@ -100,7 +103,8 @@ class Experiment():
                 termination_positive_files,
                 termination_negative_files,
                 termination_priority_negative_files,
-                train_termination_epochs
+                train_termination_embedding_epochs,
+                train_termination_classifier_epochs,
             )
 
         if train_policy is True:
@@ -127,7 +131,8 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            epochs):
+            embedding_epochs,
+            classifier_epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the initiation set.')
@@ -141,7 +146,8 @@ class Experiment():
             priority_negative_files
         )
         self.option.train_initiation(
-            epochs
+            embedding_epochs,
+            classifier_epochs
         )
 
     def _train_termination(
@@ -149,7 +155,8 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            epochs):
+            embedding_epochs,
+            classifier_epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the termination set.')
@@ -163,7 +170,8 @@ class Experiment():
             priority_negative_files
         )
         self.option.train_termination(
-            epochs
+            embedding_epochs,
+            classifier_epochs
         )
 
     def _train_policy(
@@ -431,6 +439,13 @@ class Experiment():
                 instance_succeeded = instance.can_assimilate()
                 if instance_succeeded is None:
                     instance_succeeded = False
+                if instance_succeeded is True:
+                    self.option.update_option(
+                        instance,
+                        200,
+                        20,
+                        80
+                    )
             logging.info("Instance {} succeeded: {}".format(instance_idx, completed))
             
             d = pd.DataFrame(
