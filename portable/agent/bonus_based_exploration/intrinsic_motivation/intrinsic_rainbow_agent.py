@@ -18,10 +18,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from threading import stack_size
-from bonus_based_exploration import intrinsic_motivation
+from portable.agent.bonus_based_exploration import intrinsic_motivation
 
-from bonus_based_exploration.intrinsic_motivation import intrinsic_dqn_agent
-from bonus_based_exploration.intrinsic_motivation import intrinsic_rewards
+from portable.agent.bonus_based_exploration.intrinsic_motivation import intrinsic_dqn_agent
+from portable.agent.bonus_based_exploration.intrinsic_motivation import intrinsic_rewards
 from dopamine.agents.dqn import dqn_agent as base_dqn_agent
 from dopamine.agents.rainbow import rainbow_agent as base_rainbow_agent
 from dopamine.discrete_domains import atari_lib

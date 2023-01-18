@@ -38,6 +38,101 @@ def make_env(seed):
 
     return MonteAgentWrapper(env, agent_space=True)
 
+# options
+# climb down ladder
+# climb up ladder
+# climb down rope
+# climb up rope
+# jump left
+# jump right
+# jump up
+# skull
+
+initiation_positive_files = [
+    [
+        'resources/climb_down_ladder_initiation_positive.npy'
+    ],[
+        'resources/climb_up_ladder_initiation_positive.npy'
+    ],[
+        'resources/climb_down_rope_initiation_positive.npy'
+    ],[
+        'resources/climb_up_rope_initiation_positive.npy'
+    ],[
+        'resources/jump_left_initiation_positive.npy'
+    ],[
+        'resources/jump_right_initiation_positive.npy'
+    ],[
+        'resources/jump_up_initiation_positive.npy'
+    ],[
+        ''
+    ]
+]
+
+initiation_negative_files = [
+    [
+        'resources/climb_down_ladder_initiation_negative.npy'
+    ],[
+        'resources/climb_up_ladder_initiation_negative.npy'
+    ],[
+        'resources/climb_down_rope_initiation_negative.npy'
+    ],[
+        'resources/climb_up_rope_initiation_negative.npy'
+    ],[
+        'resources/jump_left_initiation_negative.npy'
+    ],[
+        'resources/jump_right_initiation_negative.npy'
+    ],[
+        'resources/jump_up_initiation_negative.npy'
+    ]
+]
+
+initiation_priority_negative_files = []
+
+termination_positive_files = [
+    [
+        'resources/climb_down_ladder_1_termination_positive.npy',
+        'resources/climb_down_ladder_2_termination_positive.npy',
+        'resources/climb_down_ladder_3_termination_positive.npy',
+        'resources/climb_down_ladder_4_termination_positive.npy',
+    ],[
+        'resources/climb_up_ladder_termination_positive.npy'
+    ],[
+        'resources/climb_down_rope_termination_positive.npy'
+    ],[
+        'resources/climb_up_rope_initiation_positive.npy'
+    ],[
+        'resources/jump_left_initiation_positive.npy'
+    ],[
+        'resources/jump_right_initiation_positive.npy'
+    ],[
+        'resources/jump_up_initiation_positive.npy'
+    ]
+]
+
+termination_negative_files = [
+    [
+        'resources/climb_down_ladder_initiation_negative.npy'
+    ],[
+        'resources/climb_up_ladder_initiation_negative.npy'
+    ],[
+        'resources/climb_down_rope_initiation_negative.npy'
+    ],[
+        'resources/climb_up_rope_initiation_negative.npy'
+    ],[
+        'resources/jump_left_initiation_negative.npy'
+    ],[
+        'resources/jump_right_initiation_negative.npy'
+    ],[
+        'resources/jump_up_initiation_negative.npy'
+    ]
+]
+
+termination_priority_neagtive_files = []
+
+environment_rams = [
+    []
+]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 

@@ -14,7 +14,6 @@ import pandas as pd
 from portable.option import Option
 from portable.utils import set_player_ram, plot_attentions, plot_state
 from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
-from portable.option.policy.agents.abstract_agent import evaluating
 
 @gin.configurable
 class Experiment():
@@ -190,7 +189,7 @@ class Experiment():
             save_dir = os.path.join(self.save_dir, additional_path)
         else:
             save_dir = self.save_dir
-        # self.option.save(save_dir)
+        self.option.save(save_dir)
         os.makedirs(self.save_dir, exist_ok=True)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
@@ -227,8 +226,8 @@ class Experiment():
             trial_name,
             use_agent_space=False):
         assert isinstance(possible_inits, list)
-        logging.info("[experiment] Starting trial {}".format(trial_name))
-        print("[experiment] Starting trial {}".format(trial_name))
+        logging.info("[experiment:run_trial] Starting trial {}".format(trial_name))
+        print("[experiment:run_trial] Starting trial {}".format(trial_name))
 
         results = []
         start_poses = []
@@ -277,7 +276,7 @@ class Experiment():
                     instantiation_instances.add(self.option.markov_idx)
 
                 if option_result is None:
-                    logging.info("[experiment] Option did not initiate")
+                    logging.info("[experiment:run_trial] Option did not initiate")
                     result = 0
                     must_break = True
                     position = info["position"]
@@ -288,11 +287,11 @@ class Experiment():
                     _, _, done, info, steps = option_result
 
                     if info["needs_reset"]:
-                        logging.info("[experiment] Environment needs reset")
+                        logging.info("[experiment:run_trial] Environment needs reset")
                         must_break = True
                     if info["option_timed_out"]:
                         timedout += 1
-                        logging.info("[experiment] Option timed out ({}/{})".format(timedout, 3))
+                        logging.info("[experiment:run_trial] Option timed out ({}/{})".format(timedout, 3))
 
                     if done:
                         must_break = True
@@ -339,10 +338,17 @@ class Experiment():
             
         self.trial_data = self.trial_data.append(d)
 
-        logging.info("[experiment] Finished trial {} performance: {}".format(
+        logging.info("[experiment:run_trial] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
             ))
+        logging.info("[experiment:run_trial] All instances well trained: {}".format(
+            instance_well_trained))
+        if not instance_well_trained:
+            logging.info("[experiment:run_trial] instance success rates:"
+                .format([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
+            )
+
         print("[experiment] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
@@ -364,9 +370,12 @@ class Experiment():
         if isinstance(instantiation_instances, set):
             instantiation_instances = list(instantiation_instances)
 
-        logging.info("[experiment] Starting assimilation test.")
+        if len(instantiation_instances) == 0:
+            logging.info("[experiment:test_assimilation] No instances to test.")
+
+        logging.info("[experiment:test_assimilation] Starting assimilation test.")
         logging.info(instantiation_instances)
-        print("[experiment] Starting assimilation test.")
+        print("[experiment:test_assimilation] Starting assimilation test.")
 
         results = []
         start_poses = []
@@ -443,10 +452,11 @@ class Experiment():
                     self.option.update_option(
                         instance,
                         200,
-                        20,
-                        80
+                        10,
+                        150
                     )
-            logging.info("Instance {} succeeded: {}".format(instance_idx, completed))
+            logging.info("Instance {} succeeded: {} average performance: {}"
+                .format(instance_idx, completed, np.mean(results)))
             
             d = pd.DataFrame(
                 [
@@ -472,6 +482,7 @@ class Experiment():
             trial_name,
             np.mean(results)
         ))
+        self.option.markov_instantiations = []
 
     def bootstrap_from_room(
             self,

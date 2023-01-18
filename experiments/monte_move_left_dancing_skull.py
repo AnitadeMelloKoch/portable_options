@@ -6,7 +6,6 @@ from pfrl.wrappers import atari_wrappers
 from portable.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
-from portable.utils.ale_utils import get_object_position, get_skull_position
 from portable.utils.utils import load_gin_configs
 from experiments import check_termination_correct_enemy, get_percent_completed_enemy
 
@@ -152,7 +151,7 @@ if __name__ == "__main__":
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
         terminations[0],
-        50,
+        100,
         use_agent_space=True
     )
 
@@ -161,7 +160,7 @@ if __name__ == "__main__":
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            50,
+            100,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
             use_agent_space=True
@@ -171,20 +170,28 @@ if __name__ == "__main__":
 
     for x in range(1, len(initiation_state_files)):
         idx = order[x]
-        experiment.run_trial(
+        instantiation_instances = experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            100,
+            2000,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
         )
+        experiment.test_assimilate(
+                load_init_states(initiation_state_files[0]),
+                terminations[0],
+                instantiation_instances,
+                500,
+                trial_name="{}_assimilate_test_".format(room_names[idx]),
+                use_agent_space=True
+            )
         for y in range(len(initiation_state_files)):
             idy = order[y]
             experiment.run_trial(
                 load_init_states(initiation_state_files[idy]),
                 terminations[idy],
-                50,
+                500,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
                 use_agent_space=True

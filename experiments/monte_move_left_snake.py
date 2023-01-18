@@ -99,9 +99,8 @@ terminations = [
 ]
 
 room_names = [
-    "room9_left", # 0
-    "room9_right", # 1
-    "room11_left", # 2
+    "room9", # 0
+    "room11_left", 
     "room11_right",
     "room22",
     "room2",
@@ -160,19 +159,19 @@ if __name__ == "__main__":
 
     experiment.save()
 
-    # experiment.bootstrap_from_room(
-    #     load_init_states(initiation_state_files[0]),
-    #     terminations[0],
-    #     50,
-    #     use_agent_space=True
-    # )
+    experiment.bootstrap_from_room(
+        load_init_states(initiation_state_files[0]),
+        terminations[0],
+        100,
+        use_agent_space=True
+    )
 
     for y in range(len(initiation_state_files)):
         idx = order[y]
         experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            3,
+            100,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
             use_agent_space=True
@@ -182,20 +181,28 @@ if __name__ == "__main__":
 
     for x in range(1, len(initiation_state_files)):
         idx = order[x]
-        experiment.run_trial(
+        instantiation_instances = experiment.run_trial(
             load_init_states(initiation_state_files[idx]),
             terminations[idx],
-            100,
+            2000,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
         )
+        experiment.test_assimilate(
+                load_init_states(initiation_state_files[0]),
+                terminations[0],
+                instantiation_instances,
+                500,
+                trial_name="{}_assimilate_test_".format(room_names[idx]),
+                use_agent_space=True
+            )
         for y in range(len(initiation_state_files)):
             idy = order[y]
             experiment.run_trial(
                 load_init_states(initiation_state_files[idy]),
                 terminations[idy],
-                50,
+                500,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
                 use_agent_space=True

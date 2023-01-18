@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from bonus_based_exploration.noisy_networks import noisy_dqn_agent
+from portable.agent.bonus_based_exploration.noisy_networks import noisy_dqn_agent
 
 from dopamine.agents.rainbow import rainbow_agent as base_rainbow_agent
 import gin

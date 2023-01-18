@@ -20,8 +20,8 @@ from __future__ import print_function
 
 import os
 
-from bonus_based_exploration.intrinsic_motivation import base_intrinsic_agent
-from bonus_based_exploration.intrinsic_motivation import intrinsic_rewards
+from portable.agent.bonus_based_exploration.intrinsic_motivation import base_intrinsic_agent
+from portable.agent.bonus_based_exploration.intrinsic_motivation import intrinsic_rewards
 
 from dopamine.agents.dqn import dqn_agent as base_dqn_agent
 import gin

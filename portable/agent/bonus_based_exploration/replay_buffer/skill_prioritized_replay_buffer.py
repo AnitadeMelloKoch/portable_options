@@ -2,7 +2,7 @@ from dopamine.replay_memory import prioritized_replay_buffer
 from dopamine.replay_memory import circular_replay_buffer
 from dopamine.replay_memory import sum_tree
 from dopamine.replay_memory.circular_replay_buffer import ReplayElement
-from bonus_based_exploration.replay_buffer import skill_circular_replay_buffer
+from portable.agent.bonus_based_exploration.replay_buffer import skill_circular_replay_buffer
 
 import numpy as np
 import collections
