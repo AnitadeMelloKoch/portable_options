@@ -325,7 +325,7 @@ class Experiment():
         d = pd.DataFrame(
             [
                 {
-                    "normalized_distance": results,
+                    "normalized_distance": np.mean(results),
                     "start_position": start_poses,
                     "end_position": end_poses,
                     "true_terminations": true_terminationses,
@@ -461,7 +461,7 @@ class Experiment():
             d = pd.DataFrame(
                 [
                     {
-                        "normalized_distance": results,
+                        "normalized_distance": np.mean(results),
                         "start_position": start_poses,
                         "end_position": end_poses,
                         "true_terminations": true_terminationses,
