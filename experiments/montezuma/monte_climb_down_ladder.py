@@ -25,15 +25,15 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
             distance += sum(abs(val1-val2) for val1, val2 in zip((bot[0], bot[1]),(bot[0],top_of_room)))
         return distance
 
-    original_distance = []
+    true_distance = []
     completed_distance = []
     for term in terminations:
-        original_distance.append(manhatten(start_pos, term))
-        completed_distance.append(manhatten(final_pos, term))
-    original_distance = np.mean(original_distance)+1e-5
-    completed_distance = np.mean(completed_distance)+1e-5
+        true_distance.append(manhatten(start_pos, term))
+        completed_distance.append(manhatten(start_pos, final_pos))
+    true_distance = np.min(true_distance)+1e-5
+    completed_distance = np.min(completed_distance)+1e-5
 
-    return 1 - (completed_distance/original_distance)
+    return completed_distance/true_distance
 
 
 def check_termination_correct(final_pos, terminations, env):
@@ -274,51 +274,63 @@ if __name__ == "__main__":
 
     experiment.save()
 
-    experiment.bootstrap_from_room(
-        load_init_states(initiation_state_files[0]),
-        terminations[0],
-        50,
-        use_agent_space=True
-    )
-
-    for y in range(len(initiation_state_files)):
-        idx = order[y]
-        experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
-            50,
-            eval=True,
-            trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
-            use_agent_space=True
-        )
-
-    experiment.save(additional_path=room_names[0])
-
-    # # experiment.load(room_names[7])
-
-    for x in range(1, len(initiation_state_files)):
-        idx = order[x]
-        experiment.run_trial(
-            load_init_states(initiation_state_files[idx]),
-            terminations[idx],
+    def run():
+        experiment.bootstrap_from_room(
+            load_init_states(initiation_state_files[0]),
+            terminations[0],
             100,
-            eval=False,
-            trial_name="{}_train".format(room_names[idx]),
             use_agent_space=True
         )
+
         for y in range(len(initiation_state_files)):
-            idy = order[y]
+            idx = order[y]
             experiment.run_trial(
-                load_init_states(initiation_state_files[idy]),
-                terminations[idy],
-                50,
+                load_init_states(initiation_state_files[idx]),
+                terminations[idx],
+                100,
                 eval=True,
-                trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
+                trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
                 use_agent_space=True
             )
-        
-        experiment.save(additional_path=room_names[idx])
 
-    # experiment.load(additional_path=room_names[3])
-    # experiment.plot(room_names)
+        experiment.save()
+
+        for x in range(1, len(initiation_state_files)):
+            idx = order[x]
+            instantiation_instances = experiment.run_trial(
+                load_init_states(initiation_state_files[idx]),
+                terminations[idx],
+                2000,
+                eval=False,
+                trial_name="{}_train".format(room_names[idx]),
+                use_agent_space=True
+            )
+            experiment.test_assimilate(
+                load_init_states(initiation_state_files[0]),
+                terminations[0],
+                instantiation_instances,
+                500,
+                trial_name="{}_assimilate_test_".format(room_names[idx]),
+                use_agent_space=True
+            )
+
+            for y in range(len(initiation_state_files)):
+                idy = order[y]
+                experiment.run_trial(
+                    load_init_states(initiation_state_files[idy]),
+                    terminations[idy],
+                    500,
+                    eval=True,
+                    trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
+                    use_agent_space=True
+                )
+            
+            experiment.save()
     
+    def attention_test():
+        experiment.test_classifiers(load_init_states(
+            initiation_state_files[0]+initiation_state_files[1])
+            ,[])
+
+    run()
+    # attention_test()

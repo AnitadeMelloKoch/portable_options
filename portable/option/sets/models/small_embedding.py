@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from portable.option.ensemble.distance_weighted_sampling import DistanceWeightedSampling
+from portable.option.ensemble import DistanceWeightedSampling
 
 class SmallEmbedding(nn.Module):
 
@@ -40,7 +40,7 @@ class SmallEmbedding(nn.Module):
 
         return x
 
-    def forward(self, x, sampling, return_attention_mask=False):
+    def forward(self, x, sampling=False, return_attention_mask=False):
         spacial_features = self.spatial_feature_extractor(x)
         attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
 
@@ -53,7 +53,7 @@ class SmallEmbedding(nn.Module):
 
         embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
-        if sampling:
+        if sampling is True:
             embedding = torch.flatten(embedding, 1)
             return self.sampled(embedding) if not return_attention_mask else (self.sampled(embedding), attentions)
         else:

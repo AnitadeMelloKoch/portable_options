@@ -38,12 +38,11 @@ class Attention(nn.Module):
     def global_feature_extractor(self, x):
         x = F.relu(self.conv2(x))
         x = self.pool2(x)
-        return x
 
-    def compact_global_features(self, x):
         x = torch.flatten(x, 1)
         x = self.linear(x)
         x = F.normalize(x)
+
         return x
 
     def forward(self, x, return_attention_mask=False):
@@ -58,7 +57,6 @@ class Attention(nn.Module):
             attention_min, _ = attention.min(dim=1, keepdim=True)
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
-        global_features = [self.global_feature_extractor(attentions[i] * spacial_features) for i in range(self.num_attention_modules)]
-        embedding = torch.cat([self.compact_global_features(f).unsqueeze(1) for f in global_features], dim=1)  # (N, num_modules, embedding_size)
+        embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
         return embedding if not return_attention_mask else (embedding, attentions)
