@@ -452,8 +452,8 @@ class Experiment():
                     self.option.update_option(
                         instance,
                         200,
-                        10,
-                        150
+                        20,
+                        80
                     )
             logging.info("Instance {} succeeded: {} average performance: {}"
                 .format(instance_idx, completed, np.mean(results)))

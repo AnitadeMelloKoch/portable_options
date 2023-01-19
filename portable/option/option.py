@@ -61,7 +61,7 @@ class Option():
             min_interactions=100,
             min_success_rate=0.9,
             timeout=50,
-            min_option_length=3,
+            min_option_length=5,
             original_initiation_function=lambda x:False,
 
             log=True):
@@ -492,7 +492,8 @@ class Option():
         )
 
         # train policy and classifiers
-        self.policy.train(policy_epochs)
+        # self.policy.train(policy_epochs)
+        self.policy = markov_option.policy
         self.initiation.train(
             embedding_epochs,
             classifier_epochs
