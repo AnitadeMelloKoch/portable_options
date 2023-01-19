@@ -47,6 +47,7 @@ class TrainRunnerForOptions(TrainRunner):
         self.decision_count = 0
         # self.num_episodes = 0
         self.sum_returns = 0.
+        self.episode = 0
         # self.checkpoint_number = 0
         # self.video_generator = VideoGenerator(base_dir + '/videos/')
 
@@ -73,6 +74,9 @@ class TrainRunnerForOptions(TrainRunner):
 
         return super()._checkpoint_experiment(iteration)
 
+    def step(self, reward, state, action, mask):
+        return self._run_one_step(state, reward, action, mask)
+
     def _run_one_step(self, trajectory, reward, action, mask):
         """Executes a single step in the environment.
         Args:
@@ -94,8 +98,10 @@ class TrainRunnerForOptions(TrainRunner):
 
         if self._clip_rewards:
             reward = np.clip(reward, -1, 1)
-        
         return self._agent.step(reward, trajectory, action, mask)
+
+    def select_action(self, mask):
+        return self._agent.select_action(mask)
 
     def _run_one_phase(self, min_steps, statistics, run_mode_str):
         """Runs the agent/environment loop until a desired number of steps.

@@ -2,12 +2,13 @@
 # which was False (not using sticky actions) in the original paper.
 import dopamine.discrete_domains.atari_lib
 import dopamine.replay_memory.prioritized_replay_buffer
-import bonus_based_exploration.intrinsic_motivation.intrinsic_rainbow_agent_for_skills
-import bonus_based_exploration.intrinsic_motivation.intrinsic_rewards
-import bonus_based_exploration.run_experiment
+import portable.agent.bonus_based_exploration.intrinsic_motivation.intrinsic_rainbow_agent_for_options
+import portable.agent.bonus_based_exploration.intrinsic_motivation.intrinsic_rewards
+import portable.agent.bonus_based_exploration.run_experiment
 import gin.tf.external_configurables
 
-create_exploration_agent.agent_name = 'rainbow_rnd_for_skills'
+create_exploration_agent.agent_name = 'rainbow_rnd_skill'
+create_exploration_agent.action_num = 40
 
 RNDRainbowAgentForSkills.num_atoms = 51
 RNDRainbowAgentForSkills.vmax = 10.
@@ -48,6 +49,3 @@ Runner.max_steps_per_episode = 27000  # agent steps
 # RNDAgent.training_episodes = 400 # agent episodes
 WrappedPrioritizedSkillReplayBuffer.replay_capacity = 400000
 WrappedPrioritizedSkillReplayBuffer.batch_size = 32
-
-monte_with_skills.frame_stack = 1
-monte_with_skills.episode_life=False

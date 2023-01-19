@@ -35,7 +35,6 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
     def __init__(self,
                  sess,
                  num_actions,
-                 available_actions,
                  batch_size=32,
                  num_atoms=51,
                  vmax=10.,
@@ -90,7 +89,6 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
     """
         self._clip_reward = clip_reward
         self.mask_shape = (num_actions, )
-        self.available_actions = available_actions
         self.intrinsic_model = intrinsic_rewards.RNDIntrinsicReward(sess=sess,
                                                                     tf_device=tf_device,
                                                                     summary_writer=summary_writer)
@@ -344,5 +342,6 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
         Args:
           reward: float, the last reward from the environment.
         """
+
         if not self.eval_mode:
           self._store_transition(self.state, action, reward, True, mask)

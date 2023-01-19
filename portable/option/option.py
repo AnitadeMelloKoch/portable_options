@@ -115,6 +115,8 @@ class Option():
         self.markov_min_success_rate = min_success_rate
         self.min_option_length = min_option_length
         self.identify_original_initiation = original_initiation_function
+
+        self.original_markov_initiation = None
         
         self.use_log = log
 

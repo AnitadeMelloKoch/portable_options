@@ -32,6 +32,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self.true_termination = []
         self._check_termination = check_true_termination
 
+        self.jumped_previously = False
+
     def reset(self):
         self.env.reset()
         rand_idx = random.randint(0, len(self.init_states)-1)
@@ -43,6 +45,7 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self.num_lives = self.get_num_lives(self.get_current_ram())
         info = self.get_current_info(info={})
         self._elapsed_steps = 0
+        self.jumped_previously = False
 
         player_x, player_y, _ = self.get_current_position()
         for _ in range(4):
@@ -61,6 +64,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
 
     def step(self, action):
         obs, reward, done, info = super().step(action)
+        if action in [1,10,11,12,14,15]:
+            self.jumped_previously = True
         # remove environment reward
         # we only want to reward the agent for doing the option we are trying to train and nothing else
         reward = 0

@@ -10,7 +10,9 @@ import torch
 import random
 from portable.option import Option
 import pandas as pd
+import gin
 
+@gin.configurable
 class RainbowExperiment():
 
     def __init__(self,
@@ -24,8 +26,6 @@ class RainbowExperiment():
                  termination_vote_function,
                  policy_phi,
                  experiment_env_function,
-                 observation_shape=(56,40),
-                 stack_num=4,
                  device_type="cpu",
                  train_initiation=True,
                  options_initiation_positive_files=[[]],
@@ -41,6 +41,7 @@ class RainbowExperiment():
                  train_termination_classifier_epochs=50,
                  train_policy=True,
                  policy_bootstrap_envs=[],
+                 true_init_functions=[],
                  train_policy_max_steps=10000,
                  train_policy_success_rate=0.9,
                  ):
@@ -61,14 +62,11 @@ class RainbowExperiment():
         os.makedirs(self.plot_dir, exist_ok=True)
         os.makedirs(self.save_dir, exist_ok=True)
         self.action_num = action_num
-        self.observation_shape = observation_shape
-        self.stack_num = stack_num
-        self.state_shape = (1,) + (self.stack_num,) + self.observation_shape
 
         self.env = experiment_env_function(self.seed)
         self.eval = False
 
-        log_file = os.path.join(self.log_dir, "{}.log".format(datetime))
+        log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(
             filename=log_file,
             format='%(asctime)s %(levelname)s: %(message)s',
@@ -92,14 +90,18 @@ class RainbowExperiment():
 
         self.primitive_action_num = primitive_action_num
 
+        self.init_vote_function = get_vote_function(initiation_vote_function)
+        self.term_vote_function = get_vote_function(termination_vote_function)
+        self.policy_phi = policy_phi
         self.options = []
-        for _ in range(starting_action_num):
+        for idx in range(starting_action_num):
             self.options.append(
                 Option(
                     device=self.device,
-                    initiation_vote_function=get_vote_function(initiation_vote_function),
-                    termination_vote_function=get_vote_function(termination_vote_function),
-                    policy_phi=policy_phi
+                    initiation_vote_function=self.init_vote_function,
+                    termination_vote_function=self.term_vote_function,
+                    policy_phi=self.policy_phi,
+                    original_initiation_function=true_init_functions[idx]
                 )
             )
 
@@ -130,6 +132,8 @@ class RainbowExperiment():
                 train_policy_max_steps,
                 train_policy_success_rate
             )
+
+        self.save()
                 
 
     def _train_initiation(self,
@@ -169,8 +173,6 @@ class RainbowExperiment():
                 positive_files[idx],
                 negative_files[idx],
                 priority_negative_files[idx],
-                embedding_epochs,
-                classifier_epochs
             )
             self.options[idx].termination.train(
                 embedding_epochs,
@@ -218,7 +220,7 @@ class RainbowExperiment():
         mask = np.zeros(self.action_num)
         for idx in range(self.primitive_action_num):
             mask[idx] = 1
-        for option, idx in enumerate(self.options):
+        for idx, option in enumerate(self.options):
             global_vote, markov_vote = option.can_initiate(
                 info["stacked_agent_state"],
                 (info["player_x"], info["player_y"])
@@ -232,7 +234,7 @@ class RainbowExperiment():
     def initialize_episode(self):
         state, info = self.env.reset()
         mask = self.get_available_actions(info)
-        action = self.agent.initialize_episode(state, mask)
+        action = self.agent.initialize_episode(info["stacked_state"].reshape((84,84,4)).numpy(), mask)
         return state, info, action, mask
 
     def execute_action(self, action, state, info):
@@ -243,12 +245,56 @@ class RainbowExperiment():
             option_idx = action - self.primitive_action_num
             if option_idx > len(self.options):
                 raise Exception('Attempted action that does not exist')
-            state, reward, done, info, steps = self.option[option_idx].run(
-                self.env, 
-                state, 
-                info, 
-                self.eval
-            )
+            well_trained_instances = []
+            position = info["position"]
+            for idx, instance in enumerate(self.options[option_idx].markov_instantiations):
+                if instance.is_well_trained():
+                    well_trained_instances.append(idx)
+            if len(well_trained_instances) > 0 and self.options[option_idx].identify_original_initiation(position):
+                logging.info("[experiment:execute_action] testing markov instance for assimilation")
+                test_idx = random.choice(well_trained_instances)
+                self.options[option_idx].markov_instantiations[test_idx].assimilate_run(
+                    self.env,
+                    state,
+                    info
+                )
+                can_assimilate = self.options[option_idx].markov_instantiations[test_idx].can_assimilate()
+                if can_assimilate is True:
+                    logging.info("[experiment:execute_action] markov instance can be assimilated")
+                    self.options[option_idx].update_option(
+                        self.options[option_idx].markov_instantiations[test_idx],
+                        1000,
+                        20,
+                        80
+                    )
+                    del self.options[option_idx].markov_instantiations[test_idx]
+                elif can_assimilate is False:
+                    logging.info("[experiment:execute_action] markov instance cannot be assimilated and is being created as a new option")
+                    if self.primitive_action_num + len(self.options) < self.action_num:
+                        new_option = Option(
+                            device=self.device,
+                            initiation_vote_function=self.init_vote_function,
+                            termination_vote_function=self.term_vote_function,
+                            policy_phi=self.policy_phi
+                        )
+                        new_option.original_markov_initiation = self.options[option_idx].markov_instantiations[test_idx].initiation
+                        new_option.identify_original_initiation = new_option.original_markov_initiation.predict
+                        new_option.update_option(
+                            self.options[option_idx].markov_instantiations[test_idx],
+                            1000,
+                            20,
+                            150
+                        )
+                        self.options.append(new_option)
+                    del self.options[option_idx].markov_instantiations[test_idx]
+            else:
+                logging.info("[experiment:execute_action] running option as normal")
+                state, reward, done, info, steps = self.options[option_idx].run(
+                    self.env, 
+                    state, 
+                    info, 
+                    self.eval
+                )
 
         return state, reward, done, info, steps
 
@@ -285,7 +331,7 @@ class RainbowExperiment():
                 break
 
             # rainbow agent record step
-            self.agent.step(reward, state, action, mask)
+            self.agent.step(reward, info["stacked_state"].reshape((84,84,4)).numpy(), action, mask)
             mask = self.get_available_actions(info)
             action = self.agent.select_action(mask)
             actions_taken += 1
