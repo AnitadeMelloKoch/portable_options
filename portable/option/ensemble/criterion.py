@@ -8,7 +8,11 @@ def L_divergence(feats):
     """
     feats is of shape (n_modules, n_features)
     """
+
     n_modules, _ = feats.shape
+    if n_modules == 1:
+        return 0
+
     feat_1 = feats.repeat(n_modules, 1)
     feat_2 = torch.repeat_interleave(feats, torch.tensor([n_modules]*n_modules, device=feats.device), dim=0)
 
