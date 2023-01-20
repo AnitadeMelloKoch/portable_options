@@ -134,7 +134,10 @@ class EnsembleClassifier():
                 loss.backward()
                 self.embedding_optimizer.step()
 
-                loss_div += l_div.item()
+                if self.num_modules > 1:
+                    loss_div += l_div.item()
+                else:
+                    loss_div = 0
                 loss_homo += l_homo.item()
                 loss_heter += l_heter.item()
 
@@ -144,8 +147,8 @@ class EnsembleClassifier():
             loss_heter /= counter+1
             loss_div /= counter+1
 
-            logger.info('Epoch {}: \tdiv:{:.4f}\thomo:{:.4f}\theter:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
-            print('Epoch {}: \tdiv:{:.4f}\thomo:{:.4f}\theter:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
+            logger.info('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
+            print('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
 
     def train_classifiers(self, dataset, epochs):
         self.embedding.eval()

@@ -92,7 +92,6 @@ def loss_function(tensor, batch_k):
             for j in range((group_index + 1)*batch_k, batch_size):
                 loss_heter += L_metric(anchor, tensor[j:j + 1, ...])
                 count_heter += 1
-    
     return loss_div/batch_size, loss_homo/count_homo, loss_heter/count_heter
 
 def criterion(anchors, positives, negatives, weights):
@@ -110,5 +109,5 @@ def criterion(anchors, positives, negatives, weights):
 
     for i in range(anchors.shape[0]):
         loss_div += (L_divergence(weighted_anchors[i, ...]) + L_divergence(weighted_positives[i, ...]) + L_divergence(weighted_negatives[i, ...])) / 3
-    
+
     return loss_div / anchors.shape[0], loss_homo, loss_heter
