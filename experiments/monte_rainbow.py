@@ -48,10 +48,9 @@ def check_termination_correct_from_jump_right(final_pos, terminations, env):
     # TERMINATIONS HERE IS THE STARTING POSITION
     info = env.get_current_info({})
 
-    for term in terminations:
-        if term[2] == final_pos[2]:
-            if env.jumped_previously is True and info["falling"] is 0 and final_pos[0] > terminations[0]:
-                return True
+    if terminations[2] == final_pos[2]:
+        if env.jumped_previously is True and info["falling"] is 0 and final_pos[0] > terminations[0]:
+            return True
 
     return False
 
@@ -59,10 +58,9 @@ def check_termination_correct_from_jump_left(final_pos, terminations, env):
     # TERMINATIONS HERE IS THE STARTING POSITION
     info = env.get_current_info({})
 
-    for term in terminations:
-        if term[2] == final_pos[2]:
-            if env.jumped_previously is True and info["falling"] is 0 and final_pos[0] < terminations[0]:
-                return True
+    if terminations[2] == final_pos[2]:
+        if env.jumped_previously is True and info["falling"] is 0 and final_pos[0] < terminations[0]:
+            return True
 
     return False
 
@@ -70,11 +68,10 @@ def check_termination_correct_from_jump_up(final_pos, terminations, env):
     # TERMINATIONS HERE IS THE STARTING POSITION
     info = env.get_current_info({})
 
-    for term in terminations:
-        if term[2] == final_pos[2]:
-            if env.jumped_previously is True and info["falling"] is 0 and \
-                 final_pos[0] > (terminations[0]-4) and final_pos[0] < (terminations[0]+4):
-                return True
+    if terminations[2] == final_pos[2]:
+        if env.jumped_previously is True and info["falling"] is 0 and \
+                final_pos[0] > (terminations[0]-4) and final_pos[0] < (terminations[0]+4):
+            return True
 
     return False
 
@@ -555,4 +552,4 @@ if __name__ == "__main__":
         true_init_functions=true_init_functions
     )
 
-    experiment.run_trial(250000)
+    experiment.run_trial(1000000)

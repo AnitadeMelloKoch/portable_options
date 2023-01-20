@@ -369,6 +369,8 @@ class RainbowExperiment():
             )
             self.trial_data.append(d)
             episode += 1
+
+            total_steps += episode_action_num
         
         self.save()
 
