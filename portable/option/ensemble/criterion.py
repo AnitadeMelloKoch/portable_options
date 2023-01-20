@@ -107,7 +107,6 @@ def criterion(anchors, positives, negatives, weights):
     loss_heter = L_metric(weighted_anchors, weighted_negatives, False)
     loss_div = 0
 
-    for i in range(anchors.shape[0]):
-        loss_div += (L_divergence(weighted_anchors[i, ...]) + L_divergence(weighted_positives[i, ...]) + L_divergence(weighted_negatives[i, ...])) / 3
+    loss_div = batched_L_divergence(anchors, weights) + batched_L_divergence(positives, weights) + batched_L_divergence(negatives, weights) / 3
 
     return loss_div / anchors.shape[0], loss_homo, loss_heter
