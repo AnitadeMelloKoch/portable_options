@@ -225,7 +225,7 @@ class RainbowExperiment():
                 info["stacked_agent_state"],
                 (info["player_x"], info["player_y"])
             )
-            if global_vote is True or markov_vote is True:
+            if global_vote is 1 or markov_vote is True:
                 mask[self.primitive_action_num + idx] = 1
         
         return mask
@@ -234,7 +234,7 @@ class RainbowExperiment():
     def initialize_episode(self):
         state, info = self.env.reset()
         mask = self.get_available_actions(info)
-        action = self.agent.initialize_episode(info["stacked_state"].reshape((84,84,4)).numpy(), mask)
+        action = self.agent.initialize_episode(info["stacked_state"].reshape((1,84,84,4)).numpy(), mask)
         return state, info, action, mask
 
     def execute_action(self, action, state, info):
@@ -305,10 +305,11 @@ class RainbowExperiment():
         state, info, action, mask = self.initialize_episode()
         episode_reward = 0
         total_steps = 0
-        actions_taken = 0
+        actions_taken = 1
 
 
         while True:
+            # print(self.agent._agent.get_q_values())
             state, reward, done, info, steps = self.execute_action(
                 action,
                 state,
@@ -331,7 +332,7 @@ class RainbowExperiment():
                 break
 
             # rainbow agent record step
-            self.agent.step(reward, info["stacked_state"].reshape((84,84,4)).numpy(), action, mask)
+            self.agent.step(reward, info["stacked_state"].reshape((1,84,84,4)).numpy(), action, mask)
             mask = self.get_available_actions(info)
             action = self.agent.select_action(mask)
             actions_taken += 1
