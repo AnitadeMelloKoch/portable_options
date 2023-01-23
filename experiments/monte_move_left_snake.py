@@ -41,7 +41,7 @@ termination_priority_negative_files = [
 ]
 
 def phi(x):
-    return np.asarray(x, dtype=np.float32)/255
+    return np.asarray(x, dtype=np.float32)
 
 def make_env(seed):
     env = atari_wrappers.wrap_deepmind(

@@ -2,6 +2,7 @@ from collections import deque
 from enum import IntEnum
 
 import cv2
+import skimage
 import gym
 import torch
 import numpy as np
@@ -110,7 +111,7 @@ class MonteAgentWrapper(gym.Wrapper):
     def agent_space(self):
         # get single agent space frame
         obs = self.get_pixels_around_player()
-        obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
+        obs = color.rgb2gray(obs)
         obs = np.expand_dims(obs, axis=0)
         
         return obs  # add channel dimension
