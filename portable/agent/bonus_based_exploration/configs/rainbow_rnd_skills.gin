@@ -14,9 +14,9 @@ RNDRainbowAgentForSkills.num_atoms = 51
 RNDRainbowAgentForSkills.vmax = 10.
 RNDRainbowAgentForSkills.gamma = 0.99
 RNDRainbowAgentForSkills.update_horizon = 3
-RNDRainbowAgentForSkills.min_replay_history = 20000  # agent steps
+RNDRainbowAgentForSkills.min_replay_history = 10000  # agent steps
 RNDRainbowAgentForSkills.update_period = 4
-RNDRainbowAgentForSkills.target_update_period = 8000  # agent steps
+RNDRainbowAgentForSkills.target_update_period = 4000  # agent steps
 RNDRainbowAgentForSkills.epsilon_train = 0.01
 RNDRainbowAgentForSkills.epsilon_eval = 0.001
 RNDRainbowAgentForSkills.epsilon_decay_period = 250000  # agent steps
@@ -27,7 +27,7 @@ RNDRainbowAgentForSkills.summary_writing_frequency = 50 # log step
 RNDRainbowAgentForSkills.batch_size = 32
 
 # Note these parameters are different from C51's.
-agent/tf.train.AdamOptimizer.learning_rate = 0.0000625
+agent/tf.train.AdamOptimizer.learning_rate = 0.00001
 agent/tf.train.AdamOptimizer.epsilon = 0.00015
 
 # Parameters for the intrinsic motivation method
