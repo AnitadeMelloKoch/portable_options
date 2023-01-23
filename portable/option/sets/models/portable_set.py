@@ -190,6 +190,11 @@ class EnsembleClassifier():
     def get_votes(self, x, return_attention=False):
         self.set_classifiers_eval()
         self.embedding.eval()
+        
+        max_x = torch.max(x)
+        if max_x >1:
+            x /= 255
+
         x = x.to(self.device)
 
         embeddings = self.embedding(x, return_attention_mask=False).detach()

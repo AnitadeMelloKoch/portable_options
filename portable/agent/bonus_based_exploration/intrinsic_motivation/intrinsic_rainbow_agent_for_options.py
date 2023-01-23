@@ -177,6 +177,7 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
             inf = np.tile([[-np.inf]],
                           (self.state.shape[0], self.num_actions))
 
+
             return self._sess.run(self._qs_masked_max, {self.batch_ph: self.state,
                                                         self.mask_ph: mask,
                                                         self.inf_ph: inf})
