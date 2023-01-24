@@ -1,0 +1,22 @@
+import portable.option.option
+import experiments.experiment_components
+
+ClassifierExperiment.experiment_name = "climb_down_ladder_classifier"
+ClassifierExperiment.device_type = "cuda"
+ClassifierExperiment.train_initiation_classifier_epochs=150
+ClassifierExperiment.train_initiation_embedding_epochs=20
+ClassifierExperiment.train_termination_classifier_epochs=150
+ClassifierExperiment.train_termination_embedding_epochs=20
+
+Option.prioritized_replay_anneal_steps = 50000
+Option.policy_warmup_steps = 1024
+Option.q_target_update_interval = 10
+Option.policy_buffer_length = 100000
+Option.timeout = 500
+Option.min_interactions = 100
+Option.initiation_embedding_learning_rate = 1e-4
+Option.termination_embedding_learning_rate = 1e-4
+Option.initiation_beta_distribution_alpha = 100
+Option.initiation_beta_distribution_beta = 10
+Option.termination_beta_distribution_alpha = 100
+Option.termination_beta_distribution_beta = 10

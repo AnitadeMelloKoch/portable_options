@@ -399,8 +399,10 @@ class Option():
         #       hit a termination
         # max_steps: maximum number of steps the policy can take to train
         step_number = 0
+        steps = []
         episode_number = 0
         total_reward = 0
+        rewards = []
         success_queue_size = 500
         success_rates = deque(maxlen=success_queue_size)
         self.log("[option] Bootstrapping option policy...")
@@ -422,13 +424,15 @@ class Option():
             if done or info['needs_reset']:
                 # check if env sent done signal and agent didn't die
                 success_rates.append(done and not info['dead'])
+                rewards.append(done and not info['dead'])
+                steps.append(step_number)
                 well_trained = len(success_rates) == success_queue_size \
                     and np.mean(success_rates) >= success_rate_for_well_trained
 
                 if well_trained:
                     self.log('[option bootstrap] Policy well trained in {} steps and {} episodes. Success rate {}'.format(step_number, episode_number, np.mean(success_rates)))
                     print('[option] Policy well trained in {} steps and {} episodes. Success rate {}'.format(step_number, episode_number, np.mean(success_rates)))
-                    return
+                    return step_number, total_reward, steps, rewards
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
@@ -438,6 +442,8 @@ class Option():
 
         self.log("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
         print("[option] Policy did not reach well trained threshold. Success rate {}".format(np.mean(success_rates)))
+        return step_number, total_reward, steps, rewards
+
 
     def initiation_update_confidence(self, was_successful, votes):
         self.initiation.update_confidence(was_successful, votes)
