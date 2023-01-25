@@ -212,6 +212,7 @@ class ClassifierExperiment():
         )
 
     def save(self):
+        self.option.save(self.save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
             dill.dump(self.trial_data, f)
