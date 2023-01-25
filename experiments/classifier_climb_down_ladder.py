@@ -3,7 +3,7 @@ from experiments import ClassifierExperiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from portable.environment import MonteAgentWrapper, MonteBootstrapWrapper
 from portable.utils import load_init_states
 import argparse
 
@@ -71,6 +71,122 @@ if __name__ == "__main__":
         options_termination_priority_negative_files=termination_priority_negative_files
     )
 
-    experiment.to_right_room(
-        make_env(args.seed)
+    # experiment.to_right_room(
+    #     make_env(args.seed)
+    # )
+
+    bootstrap_env = atari_wrappers.wrap_deepmind(
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
+        episode_life=True,
+        clip_rewards=True,
+        frame_stack=False
+    )
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room0/ladder/top_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_0(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room2/ladder/top_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_2(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room3/ladder/top_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_3(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room4/ladder/bottom_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_4(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room5/ladder/top_3.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_5(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room6/ladder/bottom_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_6(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room7/ladder/top_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_7(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room9/ladder/bottom_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_9(
+    #     bootstrap_env
+    # )
+
+    # bootstrap_env = MonteBootstrapWrapper(
+    #     bootstrap_env,
+    #     load_init_states(['resources/monte_env_states/room10/ladder/bottom_0.pkl']),
+    #     [(77, 237,4), (76, 235,4), (80, 235, 4)],
+    #     lambda x,y,z: False,
+    #     agent_space=False
+    # )
+    # experiment.room_10(
+    #     bootstrap_env
+    # )
+
+    bootstrap_env = MonteBootstrapWrapper(
+        bootstrap_env,
+        load_init_states(['resources/monte_env_states/room11/ladder/bottom_0.pkl']),
+        [(77, 237,4), (76, 235,4), (80, 235, 4)],
+        lambda x,y,z: False,
+        agent_space=False
+    )
+    experiment.room_11(
+        bootstrap_env
     )

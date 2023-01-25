@@ -148,21 +148,21 @@ class ClassifierExperiment():
         self.trial_data["initiation_votes"] = []
         self.trial_data["termination_votes"] = []
 
-        self._train_initiation(
-            options_initiation_positive_files,
-            options_initiation_negative_files,
-            options_initiation_priority_negative_files,
-            train_initiation_embedding_epochs,
-            train_initiation_classifier_epochs
-        )
+        # self._train_initiation(
+        #     options_initiation_positive_files,
+        #     options_initiation_negative_files,
+        #     options_initiation_priority_negative_files,
+        #     train_initiation_embedding_epochs,
+        #     train_initiation_classifier_epochs
+        # )
 
-        self._train_termination(
-            options_termination_positive_files,
-            options_termination_negative_files,
-            options_termination_priority_negative_files,
-            train_termination_embedding_epochs,
-            train_termination_classifier_epochs
-        )
+        # self._train_termination(
+        #     options_termination_positive_files,
+        #     options_termination_negative_files,
+        #     options_termination_priority_negative_files,
+        #     train_termination_embedding_epochs,
+        #     train_termination_classifier_epochs
+        # )
 
     def _train_initiation(self,
                           positive_files,
@@ -224,8 +224,8 @@ class ClassifierExperiment():
 
     def perform_action(self, action, step_num, env, info):
         for _ in range(step_num):
-            # fig = plt.figure(num=1, clear=True)
-            # ax = fig.add_subplot()
+            fig = plt.figure(num=1, clear=True)
+            ax = fig.add_subplot()
             initiation_vote = self.option.initiation.vote(info["stacked_agent_state"])
             self.trial_data["initiation_votes"].append(np.sum(self.option.initiation.votes))
             termination_vote = self.option.termination.vote(info["stacked_agent_state"])
@@ -237,10 +237,10 @@ class ClassifierExperiment():
 
             obs, reward, done, info = env.step(action)
 
-            # screen = env.render('rgb_array')
-            # ax.imshow(screen)
-            # plt.show(block=False)
-            # plt.pause(3)
+            screen = env.render('rgb_array')
+            ax.imshow(screen)
+            plt.show(block=False)
+            plt.pause(0.1)
 
         return info
 
@@ -308,74 +308,266 @@ class ClassifierExperiment():
         info = self.perform_action(actions.NOOP, 6, env, info)
         info = self.perform_action(actions.UP, 6, env, info)
         info = self.perform_action(actions.DOWN, 3, env, info)
-        info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.RIGHT, 6, env, info)
-        info = self.perform_action(actions.LEFT, 6, env, info)
         info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
         info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.DOWN, 3, env, info)
-        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.LEFT, 2, env, info)
-        info = self.perform_action(actions.UP, 10, env, info)
-        info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 12, env, info)
-        info = self.perform_action(actions.DOWN, 1, env, info)
+        info = self.perform_action(actions.LEFT, 3, env, info)
+        info = self.perform_action(actions.RIGHT, 12, env, info)
         info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
         info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.RIGHT, 1, env, info)
+        info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 6, env, info)
         info = self.perform_action(actions.DOWN, 10, env, info)
-        info = self.perform_action(actions.LEFT, 7, env, info)
-        info = self.perform_action(actions.NOOP, 4, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.LEFT, 1, env, info)
-        info = self.perform_action(actions.NOOP, 3, env, info)
-        info = self.perform_action(actions.NOOP, 5, env, info)
-        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 9, env, info)
         info = self.perform_action(actions.LEFT, 8, env, info)
-        info = self.perform_action(actions.UP, 10, env, info)
-        info = self.perform_action(actions.LEFT, 2, env, info)
-        info = self.perform_action(actions.UP_FIRE, 1, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
         info = self.perform_action(actions.NOOP, 10, env, info)
-        info = self.perform_action(actions.RIGHT, 2, env, info)
-        info = self.perform_action(actions.DOWN, 10, env, info)
-        info = self.perform_action(actions.RIGHT, 13, env, info)
-        info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 9, env, info)
-        info = self.perform_action(actions.RIGHT, 10, env, info)
+        info = self.perform_action(actions.LEFT, 15, env, info)
         info = self.perform_action(actions.UP, 10, env, info)
-        info = self.perform_action(actions.LEFT, 2, env, info)
-        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.DOWN, 3, env, info)
-        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 6, env, info)
-        info = self.perform_action(actions.LEFT, 2, env, info)
-        info = self.perform_action(actions.UP, 10, env, info)
-        info = self.perform_action(actions.RIGHT, 2, env, info)
-        info = self.perform_action(actions.RIGHT_FIRE, 1, env, info)
-        info = self.perform_action(actions.NOOP, 9, env, info)
-        info = self.perform_action(actions.RIGHT, 50, env, info)
-        info = self.perform_action(actions.LEFT, 19, env, info)
-        info = self.perform_action(actions.DOWN, 40, env, info)
-        info = self.perform_action(actions.LEFT, 30, env, info)
-        info = self.perform_action(actions.RIGHT, 60, env, info)
-
-        self.plot(base_img)
+        info = self.perform_action(actions.LEFT, 4, env, info)
+        info = self.perform_action(actions.RIGHT, 4, env, info)
+        
+        # self.plot(base_img)
 
         self.save()
+
+    def room_0(self, env):
+
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.RIGHT, 6, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.RIGHT, 8, env, info)
+        info = self.perform_action(actions.NOOP, 25, env, info)
+        info = self.perform_action(actions.RIGHT, 4, env, info)
+        info = self.perform_action(actions.NOOP, 30, env, info)
+        info = self.perform_action(actions.LEFT, 4, env, info)
+        info = self.perform_action(actions.NOOP, 28, env, info)
+        info = self.perform_action(actions.LEFT, 20, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 6, env, info)
+        info = self.perform_action(actions.NOOP, 25, env, info)
+        info = self.perform_action(actions.LEFT, 10, env, info)
+
+
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_2(self, env):
+
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.DOWN, 19, env, info)
+        info = self.perform_action(actions.UP, 20, env, info)
+        info = self.perform_action(actions.RIGHT, 20, env, info)
+        info = self.perform_action(actions.LEFT, 30, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_3(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.DOWN, 17, env, info)
+        info = self.perform_action(actions.UP, 18, env, info)
+        info = self.perform_action(actions.LEFT, 20, env, info)
+        info = self.perform_action(actions.RIGHT, 35, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_4(self, env):
+
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.UP, 3, env, info)
+        info = self.perform_action(actions.NOOP, 5, env, info)
+        info = self.perform_action(actions.DOWN, 25, env, info)
+        info = self.perform_action(actions.UP, 23, env, info)
+        info = self.perform_action(actions.RIGHT, 15, env, info)
+        info = self.perform_action(actions.LEFT, 21, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 6, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_5(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.LEFT, 10, env, info)
+        info = self.perform_action(actions.RIGHT, 20, env, info)
+        info = self.perform_action(actions.LEFT, 4, env, info)
+        info = self.perform_action(actions.UP_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.UP, 10, env, info)
+        info = self.perform_action(actions.DOWN, 5, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 2, env, info)
+        info = self.perform_action(actions.NOOP, 58, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 8, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_6(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.UP, 3, env, info)
+        info = self.perform_action(actions.DOWN, 3, env, info)
+        info = self.perform_action(actions.LEFT, 10, env, info)
+        info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_7(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.LEFT, 7, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 8, env, info)
+        info = self.perform_action(actions.NOOP, 28, env, info)
+        info = self.perform_action(actions.LEFT, 3, env, info)
+        info = self.perform_action(actions.NOOP, 28, env, info)
+        info = self.perform_action(actions.RIGHT, 3, env, info)
+        info = self.perform_action(actions.NOOP, 24, env, info)
+        info = self.perform_action(actions.RIGHT, 20, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 5, env, info)
+        info = self.perform_action(actions.DOWN, 18, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_9(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.UP, 4, env, info)
+        info = self.perform_action(actions.DOWN, 5, env, info)
+        info = self.perform_action(actions.RIGHT, 20, env, info)
+        info = self.perform_action(actions.LEFT, 22, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        info = self.perform_action(actions.LEFT, 3, env, info)
+        info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
+        info = self.perform_action(actions.NOOP, 10, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_10(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.UP, 3, env, info)
+        info = self.perform_action(actions.DOWN, 3, env, info)
+        info = self.perform_action(actions.NOOP, 17, env, info)
+        info = self.perform_action(actions.LEFT, 8, env, info)
+        info = self.perform_action(actions.RIGHT, 15, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    def room_11(self, env):
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+
+        info = self.perform_action(actions.LEFT, 5, env, info)
+        info = self.perform_action(actions.RIGHT, 10, env, info)
+        info = self.perform_action(actions.LEFT, 5, env, info)
+        info = self.perform_action(actions.UP, 3, env, info)
+        info = self.perform_action(actions.DOWN, 25, env, info)
+        
+        # self.plot(base_img)
+
+        self.save()
+
+    # def room_13(self, env):
+    #     obs, info = env.reset()
+
+    #     base_img = env.render('rgb_array')
+
+    #     info = self.perform_action(actions.LEFT, 10, env, info)
+    #     info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+    #     # self.plot(base_img)
+
+    #     self.save()
+
+    # def room_14(self, env):
+    #     obs, info = env.reset()
+
+    #     base_img = env.render('rgb_array')
+
+    #     info = self.perform_action(actions.LEFT, 10, env, info)
+    #     info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+    #     # self.plot(base_img)
+
+    #     self.save()
+
+    # def room_19(self, env):
+    #     obs, info = env.reset()
+
+    #     base_img = env.render('rgb_array')
+
+    #     info = self.perform_action(actions.LEFT, 10, env, info)
+    #     info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+    #     # self.plot(base_img)
+
+    #     self.save()
+
+    # def room_21(self, env):
+    #     obs, info = env.reset()
+
+    #     base_img = env.render('rgb_array')
+
+    #     info = self.perform_action(actions.LEFT, 10, env, info)
+    #     info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+    #     # self.plot(base_img)
+
+    #     self.save()
+
+    # def room_22(self, env):
+    #     obs, info = env.reset()
+
+    #     base_img = env.render('rgb_array')
+
+    #     info = self.perform_action(actions.LEFT, 10, env, info)
+    #     info = self.perform_action(actions.RIGHT, 20, env, info)
+        
+    #     # self.plot(base_img)
+
+    #     self.save()
