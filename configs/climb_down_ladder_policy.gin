@@ -17,3 +17,7 @@ Option.initiation_beta_distribution_alpha = 100
 Option.initiation_beta_distribution_beta = 10
 Option.termination_beta_distribution_alpha = 100
 Option.termination_beta_distribution_beta = 10
+
+Option.initiation_attention_module_num = 1
+Option.termination_attention_module_num = 1
+Option.policy_attention_module_num = 1
