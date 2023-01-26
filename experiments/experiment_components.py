@@ -218,6 +218,7 @@ class ClassifierExperiment():
             dill.dump(self.trial_data, f)
 
     def load(self):
+        self.option.load(self.save_dir)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         if os.path.exists(file_name):
             with lzma.open(file_name, 'rb') as f:
@@ -225,8 +226,8 @@ class ClassifierExperiment():
 
     def perform_action(self, action, step_num, env, info):
         for _ in range(step_num):
-            fig = plt.figure(num=1, clear=True)
-            ax = fig.add_subplot()
+            # fig = plt.figure(num=1, clear=True)
+            # ax = fig.add_subplot()
             initiation_vote = self.option.initiation.vote(info["stacked_agent_state"])
             self.trial_data["initiation_votes"].append(np.sum(self.option.initiation.votes))
             termination_vote = self.option.termination.vote(info["stacked_agent_state"])
@@ -238,10 +239,10 @@ class ClassifierExperiment():
 
             obs, reward, done, info = env.step(action)
 
-            screen = env.render('rgb_array')
-            ax.imshow(screen)
-            plt.show(block=False)
-            plt.pause(0.1)
+            # screen = env.render('rgb_array')
+            # ax.imshow(screen)
+            # plt.show(block=False)
+            # plt.pause(0.1)
 
         return info
 
@@ -276,6 +277,14 @@ class ClassifierExperiment():
         term.colorbar(im, ax=term_ax)
         term.savefig(os.path.join(self.plot_dir, "term_votes_room_{}.png".format(self.trial_data["room"][0])), bbox_inches='tight')
 
+        self.trial_data = {}
+
+        self.trial_data["x"] = []
+        self.trial_data["y"] = []
+        self.trial_data["room"] = []
+        self.trial_data["initiation_votes"] = []
+        self.trial_data["termination_votes"] = []
+
 
 
     def to_right_room(self,
@@ -284,6 +293,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room1.npy', base_img)
 
         info = info = self.perform_action(actions.LEFT, 2, env, info)
         info = self.perform_action(actions.RIGHT, 4, env, info)
@@ -326,7 +336,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.LEFT, 4, env, info)
         info = self.perform_action(actions.RIGHT, 4, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -335,6 +345,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room0.npy', base_img)
 
         info = self.perform_action(actions.RIGHT, 6, env, info)
         info = self.perform_action(actions.NOOP, 10, env, info)
@@ -355,18 +366,33 @@ class ClassifierExperiment():
 
         self.save()
 
+    def room_0_ladder(self, env):
+
+        obs, info = env.reset()
+
+        base_img = env.render('rgb_array')
+        np.save('room0.npy', base_img)
+
+        info = self.perform_action(actions.DOWN, 12, env, info)
+        info = self.perform_action(actions.UP, 13, env, info)
+
+        self.plot(base_img)
+
+        self.save()
+
     def room_2(self, env):
 
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room2.npy', base_img)
 
         info = self.perform_action(actions.DOWN, 19, env, info)
         info = self.perform_action(actions.UP, 20, env, info)
         info = self.perform_action(actions.RIGHT, 20, env, info)
         info = self.perform_action(actions.LEFT, 30, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -374,13 +400,14 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room3.npy', base_img)
 
         info = self.perform_action(actions.DOWN, 17, env, info)
         info = self.perform_action(actions.UP, 18, env, info)
         info = self.perform_action(actions.LEFT, 20, env, info)
         info = self.perform_action(actions.RIGHT, 35, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -389,6 +416,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room4.npy', base_img)
 
         info = self.perform_action(actions.UP, 3, env, info)
         info = self.perform_action(actions.NOOP, 5, env, info)
@@ -400,7 +428,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.NOOP, 10, env, info)
         info = self.perform_action(actions.LEFT, 6, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -408,6 +436,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room5.npy', base_img)
 
         info = self.perform_action(actions.LEFT, 10, env, info)
         info = self.perform_action(actions.RIGHT, 20, env, info)
@@ -424,7 +453,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.NOOP, 10, env, info)
         info = self.perform_action(actions.LEFT, 8, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -432,13 +461,14 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room6.npy', base_img)
 
         info = self.perform_action(actions.UP, 3, env, info)
         info = self.perform_action(actions.DOWN, 3, env, info)
         info = self.perform_action(actions.LEFT, 10, env, info)
         info = self.perform_action(actions.RIGHT, 20, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -446,6 +476,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room7.npy', base_img)
 
         info = self.perform_action(actions.LEFT, 7, env, info)
         info = self.perform_action(actions.NOOP, 10, env, info)
@@ -460,7 +491,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.LEFT, 5, env, info)
         info = self.perform_action(actions.DOWN, 18, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -468,6 +499,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room9.npy', base_img)
 
         info = self.perform_action(actions.UP, 4, env, info)
         info = self.perform_action(actions.DOWN, 5, env, info)
@@ -479,7 +511,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.LEFT_FIRE, 1, env, info)
         info = self.perform_action(actions.NOOP, 10, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -487,6 +519,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room10.npy', base_img)
 
         info = self.perform_action(actions.UP, 3, env, info)
         info = self.perform_action(actions.DOWN, 3, env, info)
@@ -494,7 +527,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.LEFT, 8, env, info)
         info = self.perform_action(actions.RIGHT, 15, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 
@@ -502,6 +535,7 @@ class ClassifierExperiment():
         obs, info = env.reset()
 
         base_img = env.render('rgb_array')
+        np.save('room11.npy', base_img)
 
         info = self.perform_action(actions.LEFT, 5, env, info)
         info = self.perform_action(actions.RIGHT, 10, env, info)
@@ -509,7 +543,7 @@ class ClassifierExperiment():
         info = self.perform_action(actions.UP, 3, env, info)
         info = self.perform_action(actions.DOWN, 25, env, info)
         
-        # self.plot(base_img)
+        self.plot(base_img)
 
         self.save()
 

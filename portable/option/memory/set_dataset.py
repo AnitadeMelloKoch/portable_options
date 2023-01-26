@@ -3,6 +3,7 @@ import numpy as np
 import math
 import os
 import pickle
+from portable.utils import plot_state
 
 class SetDataset():
     def __init__(
@@ -194,12 +195,14 @@ class SetDataset():
                 self.data_batchsize // 2,
                 self.shuffled_indices_false
             )
+            # print(torch.max(normal_false[0]))
             priority_false = self._get_minibatch(
                 self.priority_false_index(),
                 self.priority_false_data,
                 self.data_batchsize - self.data_batchsize//2,
                 self.shuffled_indices_false_priority
             )
+            # print(torch.max(priority_false[0]))
             false_batch = self.concatenate(normal_false, priority_false)
         else:
             false_batch = self._get_minibatch(
@@ -212,6 +215,8 @@ class SetDataset():
             self.true_data,
             self.data_batchsize,
             self.shuffled_indices_true)
+        # print(torch.max(true_batch[0]))
+
         labels = [0]*len(false_batch) + [1]*len(true_batch)
         labels = torch.from_numpy(np.array(labels))
 
