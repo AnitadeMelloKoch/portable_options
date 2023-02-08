@@ -285,7 +285,7 @@ class Option():
                     info['option_timed_out'] = False
                     positions.append(position)
                     agent_space_states.append(agent_state)
-                    self._option_fail()
+                    self._option_fail(agent_space_states)
                     return next_state, total_reward, done, info, steps
                 if done and not should_terminate:
                     # episode ended but we didn't detect a termination state. Count as failure
@@ -293,7 +293,7 @@ class Option():
                     info['option_timed_out'] = False
                     positions.append(position)
                     agent_space_states.append(agent_state)
-                    self._option_fail()
+                    self._option_fail(agent_space_states)
 
                     return next_state, total_reward, done, info, steps
                 # environment needs reset
@@ -319,7 +319,7 @@ class Option():
         # allowed execution time ran out => fail
         positions.append(position)
         agent_space_states.append(agent_state)
-        self._option_fail()
+        self._option_fail(agent_space_states)
         self.log("[option] Option timed out. Returning\n\t {}".format(info['position']))
         info['option_timed_out'] = True
 
@@ -476,9 +476,11 @@ class Option():
             termination_votes
         )
 
-    def _option_fail(self):
+    def _option_fail(self,
+                     agent_space_states):
         # option failed so do not create a new instanmce and downvote initiation sets that triggered
         self.initiation.update_confidence(was_successful=False, votes=self.initiation.votes)
+        self.initiation.add_data(negative_data=agent_space_states)
         
     def update_option(self, 
                       markov_option,
