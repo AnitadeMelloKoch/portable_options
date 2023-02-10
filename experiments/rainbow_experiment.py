@@ -11,6 +11,7 @@ import random
 from portable.option import Option
 import pandas as pd
 import gin
+import matplotlib.pyplot as plt
 
 @gin.configurable
 class RainbowExperiment():
@@ -26,6 +27,7 @@ class RainbowExperiment():
                  termination_vote_function,
                  policy_phi,
                  experiment_env_function,
+                 make_plots=True,
                  device_type="cpu",
                  train_initiation=True,
                  options_initiation_positive_files=[[]],
@@ -62,6 +64,13 @@ class RainbowExperiment():
         os.makedirs(self.plot_dir, exist_ok=True)
         os.makedirs(self.save_dir, exist_ok=True)
         self.action_num = action_num
+
+        self.plot = make_plots
+
+        self.x = []
+        self.y = []
+        self.room = []
+        self.actions = []
 
         self.env = experiment_env_function(self.seed)
         self.eval = False
@@ -235,9 +244,22 @@ class RainbowExperiment():
         state, info = self.env.reset()
         mask = self.get_available_actions(info)
         action = self.agent.initialize_episode(info["stacked_state"].reshape((1,84,84,4)).numpy(), mask)
+
+        self.x = []
+        self.y = []
+        self.room = []
+        self.actions = []
+
         return state, info, action, mask
 
     def execute_action(self, action, state, info):
+
+        self.actions.append(action)
+        x, y, room = info["position"]
+        self.x.append(x)
+        self.y.append(y)
+        self.room.append(room)
+
         if action < self.primitive_action_num:
             state, reward, done, info = self.env.step(action)
             steps = 1
@@ -348,20 +370,62 @@ class RainbowExperiment():
             actions_taken
         ))
 
+        self.plot_episode
+
         return episode_reward, total_steps, actions_taken
+
+    def plot_episode(self):
+        
+        self.x = np.array(self.x)
+        self.y = np.array(self.y)
+        self.room = np.array(self.room)
+        self.actions = np.array(self.actions)
+
+        unique_rooms = np.unique(self.room)
+
+        for room in unique_rooms:
+            room_mask = self.room == room
+            fig = plt.figure(num=1, clear=True)
+            ax = fig.add_subplot()
+            ax.scatter(self.x[room_mask], self.y[room_mask], marker='x')
+
+            plot_name = os.path.join(self.plot_dir, self.episode)
+            os.makedirs(plot_name, exist_ok=True)
+            plot_name = os.path.join(plot_name, 'room_{}.png'.format(room))
+            fig.savefig(plot_name, bbox_inches='tight')
+        
+        unique_actions = np.unique(self.actions)
+
+        for action in unique_actions:
+            action_mask = self.actions == action
+            action_rooms = self.room[action_mask]
+            action_x = self.x[action_mask]
+            action_y = self.y[action_mask]
+            for room in np.unique(action_rooms):
+                room_mask = action_rooms == room
+
+                fig = plt.figure(num=1, clear=True)
+                ax = fig.add_subplot()
+                ax.scatter(action_x[room_mask], action_y[room_mask], marker='x')
+
+                plot_name = os.path.join(self.plot_dir, self.episode, action)
+                os.makedirs(plot_name, exist_ok=True)
+                plot_name = os.path.join(self.plot_dir, self.episode, action, 'room_{}.png'.format(room))
+                fig.savefig(plot_name, bbox_inches='tight')
 
     def run_trial(self, max_steps):
         total_steps = 0
-        episode = 0
+        self.episode = 0
         while total_steps < max_steps:
             episode_rewards, episode_steps, episode_action_num = self.run_episode(
                 eval=False
             )
-            logging.info("[experiment] Episode {}".format(episode))
+            logging.info("[experiment] Episode {}".format(self.episode))
+            print("[experiment] Episode {}".format(self.episode))
             d = pd.DataFrame(
                 [
                     {
-                        "episode_num": episode,
+                        "episode_num": self.episode,
                         "reward": episode_rewards,
                         "steps": episode_steps,
                         "actions_taken": episode_action_num
@@ -369,9 +433,11 @@ class RainbowExperiment():
                 ]
             )
             self.trial_data.append(d)
-            episode += 1
+            self.episode += 1
 
             total_steps += episode_action_num
+            logging.info("Actions taken: {}".format(total_steps))
+            print("Actions taken: {}".format(total_steps))
         
         self.save()
 
