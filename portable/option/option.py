@@ -110,6 +110,7 @@ class Option():
 
         self.markov_termination_epsilon = markov_termination_epsilon
         self.markov_instantiations = []
+        self.initiations = []
         self.option_timeout = timeout
         self.markov_min_interactions = min_interactions
         self.markov_min_success_rate = min_success_rate
@@ -174,6 +175,10 @@ class Option():
             initiation_votes,
             termination_votes
         ):
+        if positions[0] in self.initiations:
+            self.log("[option] instance has been created before. Not creating instance.")
+            return
+        
         # create new instance of option
         self.markov_instantiations.append(
             PositionMarkovOption(
@@ -193,6 +198,8 @@ class Option():
                 use_log=self.use_log
             )
         )
+        
+        self.initiation.append(positions[0])
 
         self.log("[option] New instantiation created")
 
