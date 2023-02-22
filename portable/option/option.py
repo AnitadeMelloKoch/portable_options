@@ -416,6 +416,7 @@ class Option():
 
         state, info = bootstrap_env.reset()
 
+
         while step_number < max_steps:
             # action selection
             action = self.policy.act(state)
@@ -443,6 +444,11 @@ class Option():
 
                 episode_number += 1
                 state, info = bootstrap_env.reset()
+        
+                pos = info["position"]
+                if pos not in self.initiations:
+                    self.initiations.append(pos)
+        
                 if (episode_number - 1) % 50 == 0:
                     self.log("[option bootstrap] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
                     print("[option] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))
