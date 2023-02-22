@@ -199,7 +199,7 @@ class Option():
             )
         )
         
-        self.initiation.append(positions[0])
+        self.initiations.append(positions[0])
 
         self.log("[option] New instantiation created")
 

@@ -201,6 +201,41 @@ class RainbowExperiment():
                 success_rate_for_well_trained
             )
 
+    def bootstrap_from_room(self,
+                            starting_action_num,
+                            bootstrap_envs,
+                            number_episodes=20):
+        assert starting_action_num == len(bootstrap_envs)
+        for idx in range(starting_action_num):
+            env = bootstrap_envs[idx]
+            for ep in range(number_episodes):
+                state, info = env.reset()
+                result = self.options[idx].run(
+                    env,
+                    state,
+                    info,
+                    eval=True
+                )
+
+                if result is not None:
+                    _, reward, done, _, _ = result
+                    if reward == 1 and done is True:
+                        self.options[idx].initiation_update_confidence(
+                            was_successful=True,
+                            votes=self.options[idx].initiation.votes
+                        )
+                    else:
+                        self.options[idx].initiation_update_confidence(
+                            was_successful=False,
+                            votes=self.options[idx].initiation.votes
+                        )
+                else:
+                    self.options[idx].initiation_update_confidence(
+                        was_successful=True,
+                        votes=self.options[idx].initiation.votes
+                    )
+
+
     def save(self):
         base_option_path = os.path.join(self.save_dir, 'options')
 
@@ -417,6 +452,7 @@ class RainbowExperiment():
         total_steps = 0
         self.episode = 0
         while total_steps < max_steps:
+            self.save()
             episode_rewards, episode_steps, episode_action_num = self.run_episode(
                 eval=False
             )
@@ -439,7 +475,6 @@ class RainbowExperiment():
             logging.info("Actions taken: {}".format(total_steps))
             print("Actions taken: {}".format(total_steps))
         
-        self.save()
 
 
 
