@@ -72,10 +72,10 @@ class PositionMarkovOption(MarkovOption):
         self.policy.save(policy_path)
         self.initiation.save(initiation_path)
 
-        with open(os.path.join(termination_path, 'terminations.pkl')) as f:
+        with open(os.path.join(termination_path, 'terminations.pkl'), "wb") as f:
             pickle.dump(self.termination, f)
         
-        np.save(self.epsilon, os.path.join(termination_path, 'epsilon.npy'))
+        np.save(os.path.join(termination_path, 'epsilon.npy'), self.epsilon)
 
     def load(self, path: str):
         policy_path, initiation_path, termination_path = self._get_save_paths(path)

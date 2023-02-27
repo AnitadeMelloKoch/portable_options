@@ -146,7 +146,7 @@ class Option():
         self.initiation.save(initiation_path)
         self.termination.save(termination_path)
 
-        for idx, instance in self.markov_instantiations:
+        for idx, instance in enumerate(self.markov_instantiations):
             save_path = os.path.join(markov_path, str(idx))
             instance.save(save_path)
 
