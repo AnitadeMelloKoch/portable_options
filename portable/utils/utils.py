@@ -90,7 +90,7 @@ def load_hyperparams(filepath):
                 params[name] = locate(dtype)(value)
     return params
 
-def plot_state(state, plot_name):
+def plot_state(state, plot_name="", return_fig=False):
     fig = plt.figure(num=1, clear=True)
     gs = fig.add_gridspec(nrows=1, ncols=4)
 
@@ -99,6 +99,9 @@ def plot_state(state, plot_name):
         ax.imshow(state[x], cmap='gray')
         ax.axis('off')
 
+    if return_fig:
+        return fig, ax
+    
     fig.savefig(plot_name, bbox_inches='tight')
     plt.close('all')
 

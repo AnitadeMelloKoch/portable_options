@@ -82,6 +82,10 @@ def get_percent_completed_enemy(start_pos, final_pos, terminations, env):
 def check_termination_correct_enemy(final_pos, terminations, env):
     if terminations[2] != final_pos[2]:
         return 0
+    
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
 
     room = terminations[2]
     ground_y = terminations[1]

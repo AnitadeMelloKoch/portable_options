@@ -29,6 +29,11 @@ def check_termination_correct_from_position(final_pos, terminations, env):
 def check_right_skull(final_pos, terminations, env):
     if terminations[2] != final_pos[2]:
         return 0
+    
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
+
     room = terminations[2]
     ground_y = terminations[1]
     ram = env.unwrapped.ale.getRAM()
@@ -64,17 +69,6 @@ def check_termination_correct_from_jump_left(final_pos, terminations, env):
 
     return False
 
-def check_termination_correct_from_jump_up(final_pos, terminations, env): 
-    # TERMINATIONS HERE IS THE STARTING POSITION
-    info = env.get_current_info({})
-
-    if terminations[2] == final_pos[2]:
-        if env.jumped_previously is True and info["falling"] is 0 and \
-                final_pos[0] > (terminations[0]-4) and final_pos[0] < (terminations[0]+4):
-            return True
-
-    return False
-
 def true_initiation_climb_down_ladder(position):
     if position[2] != 1:
         return False
@@ -97,14 +91,6 @@ def true_initiation_climb_up_ladder(position):
             return True
     return False
 
-def true_initiation_rope(position):
-    if position[2] != 1:
-        return False
-    if position[0] == 109:
-        if position[1] > 180 and position[1] < 214:
-            return True
-    return False
-
 def true_initiation_jump_left(position):
     if position in [(69, 235, 1),
         (104, 235, 1),
@@ -123,11 +109,6 @@ def true_initiation_jump_right(position):
         return True
     return False
 
-def true_initiation_jump_up(position):
-    if position == (17, 192, 1):
-        return True
-    return False
-
 def true_initiation_jump_skull(position):
     # not amazing but close enough?
     if position[2] != 1:
@@ -138,11 +119,8 @@ def true_initiation_jump_skull(position):
 true_init_functions = [
     true_initiation_climb_down_ladder,
     true_initiation_climb_up_ladder,
-    true_initiation_rope,
-    true_initiation_rope,
     true_initiation_jump_left,
     true_initiation_jump_right,
-    true_initiation_jump_up,
     true_initiation_jump_skull,
     true_initiation_jump_skull
 ]
@@ -172,12 +150,10 @@ def make_env(seed):
 # options
 # climb down ladder
 # climb up ladder
-# climb down rope
-# climb up rope
 # jump left
 # jump right
-# jump up
-# skull
+# skull left
+# skull right
 
 initiation_positive_files = [
     [
@@ -185,21 +161,13 @@ initiation_positive_files = [
     ],[
         'resources/monte_images/climb_up_ladder_initiation_positive.npy'
     ],[
-        'resources/monte_images/climb_down_rope_initiation_positive.npy'
-    ],[
-        'resources/monte_images/climb_up_rope_initiation_positive.npy'
-    ],[
         'resources/monte_images/jump_left_initiation_positive.npy'
     ],[
         'resources/monte_images/jump_right_initiation_positive.npy'
     ],[
-        'resources/monte_images/jump_up_initiation_positive.npy'
+        'resources/monte_images/rolling_skull_move_left_initiation_positive.npy',
     ],[
-        'resources/monte_images/rolling_skull_1_initiation_positive.npy',
-        'resources/monte_images/rolling_skull_2_initiation_positive.npy'
-    ],[
-        'resources/monte_images/rolling_skull_1_termination_positive.npy',
-        'resources/monte_images/rolling_skull_2_termination_positive.npy'
+        'resources/monte_images/rolling_skull_move_right_initiation_positive.npy'
     ]
 ]
 
@@ -209,95 +177,59 @@ initiation_negative_files = [
     ],[
         'resources/monte_images/climb_up_ladder_initiation_negative.npy'
     ],[
-        'resources/monte_images/climb_down_rope_initiation_negative.npy'
-    ],[
-        'resources/monte_images/climb_up_rope_initiation_negative.npy'
-    ],[
         'resources/monte_images/jump_left_initiation_negative.npy'
     ],[
         'resources/monte_images/jump_right_initiation_negative.npy'
     ],[
-        'resources/monte_images/jump_up_initiation_negative.npy'
+        'resources/monte_images/rolling_skull_move_left_initiation_negative.npy'
     ],[
-        'resources/monte_images/rolling_skull_1_initiation_negative.npy',
-        'resources/monte_images/rolling_skull_2_initiation_negative.npy',
-        'resources/monte_images/jump_left_initiation_negative.npy',
-    ],[
-        'resources/monte_images/rolling_skull_1_termination_negative.npy',
-        'resources/monte_images/jump_left_initiation_negative.npy',
-        'resources/monte_images/rolling_skull_2_termination_negative.npy',
+        'resources/monte_images/rolling_skull_move_right_initiation_negative.npy'
     ]
 ]
 
 initiation_priority_negative_files = [
     [
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy',
-        'resources/monte_images/climb_down_ladder_1_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_2_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_3_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_4_termination_positive.npy',
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
+        'resources/monte_images/climb_down_ladder_termination_positive.npy'
     ],[
         'resources/monte_images/climb_up_ladder_termination_positive.npy',
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy',
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
     ],[
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy',
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
     ],[
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy',
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
     ],[
-        'resources/monte_images/death.npy',
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
     ],[
-        'resources/monte_images/death.npy',
-    ],[
-        'resources/monte_images/death.npy',
-    ],[
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy'
-    ],[
-        'resources/monte_images/death.npy',
-        'resources/monte_images/falling_1.npy',
-        'resources/monte_images/falling_2.npy',
-        'resources/monte_images/falling_3.npy'
+        'resources/monte_images/death_1.npy',
+        'resources/monte_images/death_2.npy',
+        'resources/monte_images/death_3.npy',
     ]
 ]
 
 termination_positive_files = [
     [
-        'resources/monte_images/climb_down_ladder_1_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_2_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_3_termination_positive.npy',
-        'resources/monte_images/climb_down_ladder_4_termination_positive.npy',
+        'resources/monte_images/climb_down_ladder_termination_positive.npy'
     ],[
         'resources/monte_images/climb_up_ladder_termination_positive.npy'
-    ],[
-        'resources/monte_images/climb_down_rope_termination_positive.npy'
-    ],[
-        'resources/monte_images/climb_up_rope_termination_positive.npy'
     ],[
         'resources/monte_images/jump_left_termination_positive.npy'
     ],[
         'resources/monte_images/jump_right_termination_positive.npy'
     ],[
-        'resources/monte_images/jump_up_termination_positive.npy'
+        'resources/monte_images/rolling_skull_move_left_termination_positive.npy'
     ],[
-        'resources/monte_images/rolling_skull_1_termination_positive.npy',
-        'resources/monte_images/rolling_skull_2_termination_positive.npy'
-    ],[
-        'resources/monte_images/rolling_skull_1_initiation_positive.npy',
-        'resources/monte_images/rolling_skull_2_initiation_positive.npy'
+        'resources/monte_images/rolling_skull_move_right_termination_positive.npy'
     ]
 ]
 
@@ -307,21 +239,13 @@ termination_negative_files = [
     ],[
         'resources/monte_images/climb_up_ladder_termination_negative.npy'
     ],[
-        'resources/monte_images/climb_down_rope_termination_negative.npy'
-    ],[
-        'resources/monte_images/climb_up_rope_termination_negative.npy'
-    ],[
         'resources/monte_images/jump_left_termination_negative.npy'
     ],[
         'resources/monte_images/jump_right_termination_negative.npy'
     ],[
-        'resources/monte_images/jump_up_termination_negative.npy'
+        'resources/monte_images/rolling_skull_move_left_termination_negative.npy'
     ],[
-        'resources/monte_images/rolling_skull_1_termination_negative.npy',
-        'resources/monte_images/rolling_skull_2_termination_negative.npy',
-    ],[
-        'resources/monte_images/rolling_skull_1_initiation_negative.npy',
-        'resources/monte_images/rolling_skull_2_initiation_negative.npy',
+        'resources/monte_images/rolling_skull_move_right_initiation_negative.npy'
     ]
 ]
 
@@ -331,24 +255,21 @@ termination_priority_negative_files = [
     ],[
         'resources/monte_images/climb_up_ladder_initiation_positive.npy'
     ],[
-    ],[
-    ],[
         'resources/monte_images/jump_left_initiation_positive.npy'
     ],[
         'resources/monte_images/jump_right_initiation_positive.npy'
     ],[
-        'resources/monte_images/jump_up_initiation_positive.npy'
+        'resources/monte_images/rolling_skull_move_left_initiation_positive.npy'
     ],[
-        'resources/monte_images/rolling_skull_1_initiation_positive.npy',
-        'resources/monte_images/rolling_skull_2_initiation_positive.npy'
-    ],[]
+        'resources/monte_images/rolling_skull_move_right_initiation_positive.npy'
+    ]
 ]
 
 environment_rams = [
     [
         'resources/monte_env_states/room1/ladder/left_top_0.pkl',
         'resources/monte_env_states/room1/ladder/left_top_1.pkl',
-        'resources/monte_env_states/room1/ladder/left_top_0.pkl',
+        'resources/monte_env_states/room1/ladder/left_top_2.pkl',
         'resources/monte_env_states/room1/ladder/middle_top_0.pkl',
         'resources/monte_env_states/room1/ladder/middle_top_1.pkl',
         'resources/monte_env_states/room1/ladder/middle_top_2.pkl',
@@ -368,18 +289,6 @@ environment_rams = [
         'resources/monte_env_states/room1/ladder/right_bottom_1.pkl',
         'resources/monte_env_states/room1/ladder/right_bottom_2.pkl',
     ],[
-        'resources/monte_env_states/room1/rope/rope_mid_1.pkl',
-        'resources/monte_env_states/room1/rope/rope_mid_2.pkl',
-        'resources/monte_env_states/room1/rope/rope_top_1.pkl',
-        'resources/monte_env_states/room1/rope/rope_top_2.pkl',
-    ],[
-        'resources/monte_env_states/room1/rope/rope_bot_1.pkl',
-        'resources/monte_env_states/room1/rope/rope_bot_2.pkl',
-        'resources/monte_env_states/room1/rope/rope_mid_1.pkl',
-        'resources/monte_env_states/room1/rope/rope_mid_2.pkl',
-        'resources/monte_env_states/room1/rope/rope_mid_2.pkl',
-        'resources/monte_env_states/room1/rope/rope_top_1.pkl',
-    ],[
         'resources/monte_env_states/room1/platforms/middle_ladder_top_left.pkl',
         'resources/monte_env_states/room1/platforms/right_top_platform_left.pkl',
         'resources/monte_env_states/room1/platforms/middle_right_platform_left.pkl',
@@ -392,15 +301,11 @@ environment_rams = [
         'resources/monte_env_states/room1/rope/rope_mid_2.pkl',
         'resources/monte_env_states/room1/rope/rope_top_1.pkl',
     ],[
-        'resources/monte_env_states/room1/platforms/under_key_1.pkl',
-        'resources/monte_env_states/room1/platforms/under_key_2.pkl',
-        'resources/monte_env_states/room1/platforms/under_key_3.pkl',
+        'resources/monte_env_states/room1/enemy/skull_right_0.pkl',
+        'resources/monte_env_states/room1/enemy/skull_right_1.pkl',
     ],[
-        'resources/monte_env_states/room1/enemy/right_of_skull_0.pkl',
-        'resources/monte_env_states/room1/enemy/right_of_skull_1.pkl',
-    ],[
-        'resources/monte_env_states/room1/enemy/left_of_skull_0.pkl',
-        'resources/monte_env_states/room1/enemy/left_of_skull_1.pkl'
+        'resources/monte_env_states/room1/enemy/skull_left_0.pkl',
+        'resources/monte_env_states/room1/enemy/skull_left_1.pkl'
     ]
 ]
 
@@ -428,18 +333,6 @@ terminations = [
         [(129,192,1)],
         [(129,192,1)]
     ],[
-        [(109, 189, 1)],
-        [(109, 189, 1)],
-        [(109, 189, 1)],
-        [(109, 189, 1)]
-    ],[
-        [(109, 209, 1)],
-        [(109, 209, 1)],
-        [(109, 209, 1)],
-        [(109, 209, 1)],
-        [(109, 209, 1)],
-        [(109, 209, 1)]
-    ],[
         (69, 235, 1),
         (104, 235, 1),
         (130, 192, 1),
@@ -451,10 +344,6 @@ terminations = [
         (85, 235, 1),
         (109, 201, 1),
         (109, 209, 1)
-    ],[
-        (17, 192, 1),
-        (17, 192, 1),
-        (17, 192, 1)
     ],[
         (0, 148, 1),
         (0, 148, 1),
@@ -481,42 +370,24 @@ bootstrap_envs = [
         make_bootstrap_env(),
         load_init_states(environment_rams[2]),
         terminations[2],
-        check_termination_correct_from_position,
+        check_termination_correct_from_jump_left,
         agent_space=True
     ),MonteBootstrapWrapper(
         make_bootstrap_env(),
         load_init_states(environment_rams[3]),
         terminations[3],
-        check_termination_correct_from_position,
+        check_termination_correct_from_jump_right,
         agent_space=True
     ),MonteBootstrapWrapper(
         make_bootstrap_env(),
         load_init_states(environment_rams[4]),
         terminations[4],
-        check_termination_correct_from_jump_left,
+        check_termination_correct_enemy,
         agent_space=True
     ),MonteBootstrapWrapper(
         make_bootstrap_env(),
         load_init_states(environment_rams[5]),
         terminations[5],
-        check_termination_correct_from_jump_right,
-        agent_space=True
-    ),MonteBootstrapWrapper(
-        make_bootstrap_env(),
-        load_init_states(environment_rams[6]),
-        terminations[6],
-        check_termination_correct_from_jump_up,
-        agent_space=True
-    ),MonteBootstrapWrapper(
-        make_bootstrap_env(),
-        load_init_states(environment_rams[7]),
-        terminations[7],
-        check_termination_correct_enemy,
-        agent_space=True
-    ),MonteBootstrapWrapper(
-        make_bootstrap_env(),
-        load_init_states(environment_rams[8]),
-        terminations[8],
         check_right_skull,
         agent_space=True
     )

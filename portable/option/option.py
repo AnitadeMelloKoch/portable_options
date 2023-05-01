@@ -6,6 +6,7 @@ import numpy as np
 import gin
 import random
 from portable.option.policy.agents import evaluating
+from operator import countOf
 
 from portable.option.sets import Set
 from portable.option.markov import PositionMarkovOption
@@ -110,7 +111,7 @@ class Option():
 
         self.markov_termination_epsilon = markov_termination_epsilon
         self.markov_instantiations = []
-        self.initiations = []
+        self.attempted_initiations = []
         self.option_timeout = timeout
         self.markov_min_interactions = min_interactions
         self.markov_min_success_rate = min_success_rate
@@ -167,6 +168,14 @@ class Option():
 
         self.log("[option] Loading option from path: {}".format(path))
 
+    @staticmethod
+    def intersection(list_a, list_b):
+        return [i for i in list_a if countOf(list_b,i) > 0]
+
+    @staticmethod
+    def disjunctive_union(list_a, list_b):
+        return [i for i in list_a if countOf(list_b,i) == 0]
+    
     def create_instance(self,
             images,
             positions,
@@ -175,7 +184,10 @@ class Option():
             initiation_votes,
             termination_votes
         ):
-        if positions[0] in self.initiations:
+
+        common_positions = self.intersection(positions, self.attempted_initiations)
+
+        if len(common_positions) > 0.5*len(positions):
             self.log("[option] instance has been created before. Not creating instance.")
             return
         
@@ -199,14 +211,17 @@ class Option():
             )
         )
         
-        self.initiations.append(positions[0])
+        self.attempted_initiations += self.disjunctive_union(positions, self.attempted_initiations)
 
         self.log("[option] New instantiation created")
 
     def can_initiate(self, agent_space_state, markov_space_state):
         # check if option can initiate
         self.log("[option] Checking initiation")
-        vote_global = self.initiation.vote(agent_space_state)
+        if markov_space_state in self.attempted_initiations:
+            vote_global = 0
+        else:
+            vote_global = self.initiation.vote(agent_space_state)
         vote_markov = False
         self.markov_idx = None
         for idx in range(len(self.markov_instantiations)):
@@ -222,7 +237,8 @@ class Option():
             state, 
             info,
             eval):
-        agent_state = info["stacked_agent_state"]
+        # agent_state = info["stacked_agent_state"]
+        agent_state = state
         position = (info["player_x"], info["player_y"])
         global_vote, markov_vote = self.can_initiate(agent_state, position)
 
@@ -246,7 +262,8 @@ class Option():
         steps = 0
         total_reward = 0
         agent_space_states = []
-        agent_state = info["stacked_agent_state"]
+        # agent_state = info["stacked_agent_state"]
+        agent_state = state
         positions = []
         position = (info["player_x"], info["player_y"])
 
@@ -266,13 +283,14 @@ class Option():
             # ax.axis('off')
             # time.sleep(0.5)
             # plt.show(block=False)
-            agent_state = info["stacked_agent_state"]
+            # agent_state = info["stacked_agent_state"]
+            agent_state = next_state
             position = (info['player_x'], info['player_y'])
             steps += 1
             total_reward += reward
 
             self.log("[portable option:run] checking termination")
-            should_terminate = self.termination.vote(agent_state)
+            should_terminate = self.termination.vote(next_state)
             if steps < self.min_option_length:
                 should_terminate = False
             
@@ -291,7 +309,7 @@ class Option():
                     self.log('[portable option:run] Agent died. Option failed.')
                     info['option_timed_out'] = False
                     positions.append(position)
-                    agent_space_states.append(agent_state)
+                    agent_space_states.append(next_state)
                     self._option_fail(agent_space_states)
                     return next_state, total_reward, done, info, steps
                 if done and not should_terminate:
@@ -299,7 +317,7 @@ class Option():
                     self.log('[portable option:run] Episode ended and we are still executing option. Considered a fail')
                     info['option_timed_out'] = False
                     positions.append(position)
-                    agent_space_states.append(agent_state)
+                    agent_space_states.append(next_state)
                     self._option_fail(agent_space_states)
 
                     return next_state, total_reward, done, info, steps
@@ -316,7 +334,7 @@ class Option():
                         positions,
                         agent_space_states,
                         position,
-                        agent_state
+                        next_state
                     )
                     return next_state, total_reward, done, info, steps
                 
@@ -325,7 +343,7 @@ class Option():
         # we didn't find a valid termination for the option before the 
         # allowed execution time ran out => fail
         positions.append(position)
-        agent_space_states.append(agent_state)
+        agent_space_states.append(next_state)
         self._option_fail(agent_space_states)
         self.log("[option] Option timed out. Returning\n\t {}".format(info['position']))
         info['option_timed_out'] = True
@@ -353,21 +371,19 @@ class Option():
                 # # time.sleep(0.5)
                 # plt.show(block=False)
                 # input(info["position"])
-                agent_state = info["stacked_agent_state"]
+                # agent_state = info["stacked_agent_state"]
+                agent_state = state
                 steps += 1
                 # environment reward for use outside option
                 total_reward += reward
 
                 self.log("[portable option:eval] checking termination")
-                should_terminate = self.termination.vote(agent_state)
+                should_terminate = self.termination.vote(next_state)
                 if steps < self.min_option_length:
                     should_terminate = False
 
                 # get option reward for policy
-                if should_terminate:
-                    reward = 1
-                else:
-                    reward = 0
+                reward = 1 if should_terminate else 0
 
                 self.policy.observe(state, action, reward, next_state, done or should_terminate)
 
@@ -446,8 +462,8 @@ class Option():
                 state, info = bootstrap_env.reset()
         
                 pos = info["position"]
-                if pos not in self.initiations:
-                    self.initiations.append(pos)
+                if pos not in self.attempted_initiations:
+                    self.attempted_initiations.append(pos)
         
                 if (episode_number - 1) % 50 == 0:
                     self.log("[option bootstrap] Completed Episode {} steps {} success rate {}".format(episode_number-1, step_number, np.mean(success_rates)))

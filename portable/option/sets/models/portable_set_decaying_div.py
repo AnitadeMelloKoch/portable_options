@@ -11,17 +11,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class EnsembleClassifier():
+class EnsembleClassifierDecayingDiv():
 
     def __init__(self, 
         device,
         embedding_output_size=64, 
-        embedding_learning_rate=1e-4,
-        classifier_learning_rate=1e-2,
-        num_modules=8, 
+        learning_rate=1e-4,
+        num_modules=8,
         num_output_classes=2,
         batch_k=8,
         normalize=False,
+        margin=1,
         
         beta_distribution_alpha=30,
         beta_distribution_beta=5):
@@ -29,6 +29,7 @@ class EnsembleClassifier():
         self.num_modules = num_modules
         self.num_output_classes = num_output_classes
         self.device = device
+        self.margin = margin
 
         self.embedding = SmallEmbedding(embedding_size=embedding_output_size, 
                                    num_attention_modules=self.num_modules,
@@ -37,17 +38,23 @@ class EnsembleClassifier():
         self.classifiers = nn.ModuleList([
             MLP(embedding_output_size, self.num_output_classes) for _ in range(
                 self.num_modules)]).to(self.device)
-
-        self.classifier_optimizers = []
+        
+        self.optimizers = []
         for i in range(self.num_modules):
-            optimizer = optim.Adam(self.classifiers[i].parameters(), classifier_learning_rate)
-            self.classifier_optimizers.append(optimizer)
-        self.embedding_optimizer = optim.SGD(
-            list(self.embedding.parameters()),
-            embedding_learning_rate,
-            momentum=0.95,
-            weight_decay=1e-4
-        )
+            if i == 0:
+                optimizer = optim.Adam(
+                    list(self.embedding.global_feature_extractor_layers.parameters())+
+                    list(self.embedding.spacial_feature_extractor_layers.parameters())+
+                    list(self.embedding.attention_modules[i].parameters())+
+                    list(self.classifiers[i].parameters()),
+                    learning_rate
+                )
+            else:
+                optimizer = optim.Adam(
+                    list(self.embedding.attention_modules[i].parameters()) +
+                    list(self.classifiers[i].parameters()),
+                    learning_rate)
+            self.optimizers.append(optimizer)
 
         self.avg_loss = np.zeros(num_modules)
         self.classifier_loss = nn.CrossEntropyLoss()
@@ -101,98 +108,73 @@ class EnsembleClassifier():
 
     def train(self, 
               dataset, 
-              embedding_epochs, 
-              classifier_epochs):
-        self.train_embedding(dataset, embedding_epochs)
-        self.train_classifiers(dataset, classifier_epochs)
-
-    def train_embedding(self, dataset, epochs):
-        self.set_classifiers_eval()
-        self.embedding.train()
-
-        for epoch in range(epochs):
-            loss_div, loss_homo, loss_heter = 0,0,0
-            counter = 0
-            num_batches = dataset.num_batches
-            dataset.shuffle()
-            for _ in range(num_batches):
-                x, _ = dataset.get_batch(shuffle_batch=False)
-                max_x = torch.max(x)
-                if max_x >1:
-                    x /= 255
-                x = x.to(self.device)
-
-                _, anchors, positive, negative, _ = self.embedding(x, sampling=True)
-                if anchors.size()[0] == 0:
-                    continue
-                
-                anchors = anchors.view(anchors.size(0), self.num_modules, -1)
-                positive = positive.view(positive.size(0), self.num_modules, -1)
-                negative = negative.view(negative.size(0), self.num_modules, -1)
-
-                l_div, l_homo, l_heter = criterion.criterion(anchors, positive, negative, self.confidences.weights())
-                loss = l_div + l_homo + l_heter
-
-                self.embedding_optimizer.zero_grad()
-                loss.backward()
-                self.embedding_optimizer.step()
-
-                if self.num_modules > 1:
-                    loss_div += l_div.item()
-                else:
-                    loss_div = 0
-                loss_homo += l_homo.item()
-                loss_heter += l_heter.item()
-
-                counter += 1
-
-            loss_homo /= counter+1
-            loss_heter /= counter+1
-            loss_div /= counter+1
-
-            logger.info('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
-            print('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
-
-    def train_classifiers(self, dataset, epochs):
-        self.embedding.eval()
+              epochs):
+        
         self.set_classifiers_train()
-
+        self.embedding.train()
+        num_batches = dataset.num_batches
         for epoch in range(epochs):
-            avg_loss = np.zeros(self.num_modules)
-            avg_accuracy = np.zeros(self.num_modules)
-            count = 0
-            num_batches = dataset.num_batches
-            dataset.shuffle()
+            loss_trackers = np.zeros(self.num_modules)
+            class_accuracy = np.zeros(self.num_modules)
+            div_loss_trackers = np.zeros(self.num_modules)
             for _ in range(num_batches):
-                x, y = dataset.get_batch()
+                x, y = dataset.get_batch(shuffle_batch=True)
                 max_x = torch.max(x)
-                if max_x >1:
+                if max_x > 1:
                     x /= 255
                 x = x.to(self.device)
                 y = y.to(self.device)
-
-                embeddings = self.embedding(x)
+                # embeddings = self.embedding(x)
                 for idx in range(self.num_modules):
-                    attention_x = embeddings[:,idx,:]
-                    pred_y = self.classifiers[idx](attention_x)
-                    loss = self.classifier_loss(pred_y, y)
-                    self.classifier_optimizers[idx].zero_grad()
-                    loss.backward(retain_graph=True)
-                    self.classifier_optimizers[idx].step()
-                    avg_loss[idx] += loss.item()
-                    pred_classes = torch.argmax(pred_y, dim=1).detach()
-                    avg_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
-                count += 1
-            avg_loss = avg_loss/count
-            avg_accuracy = avg_accuracy/count
-
-            logger.info("Epoch {}:".format(epoch))
-            print("Epoch {}:".format(epoch))
+                    # print("idx: {}".format(idx))
+                    if idx == 0:
+                        # loss for all layers
+                        embeddings = self.embedding(x)
+                        attention_x = embeddings[:,idx,:]
+                        pred_y = self.classifiers[idx](attention_x)
+                        l_class = self.classifier_loss(pred_y, y)
+                        loss_trackers[idx] += l_class.item()
+                        pred_classes = torch.argmax(pred_y, dim=1).detach()
+                        class_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
+                        self.optimizers[idx].zero_grad()
+                        l_class.backward()
+                        self.optimizers[idx].step()
+                    else:
+                        # loss for just attention modules
+                        embeddings = self.embedding(x)
+                        attention_x = embeddings[:,idx,:]
+                        pred_y = self.classifiers[idx](attention_x)
+                        l_class = self.classifier_loss(pred_y, y)
+                        pred_classes = torch.argmax(pred_y, dim=1).detach()
+                        class_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
+                        l_div = criterion.batched_L_divergence(embeddings[:,:idx+1,:],
+                                                               torch.from_numpy(np.ones(self.num_modules)).to(self.device),
+                                                               margin=self.margin)
+                        div_loss_trackers[idx] += l_div.item()
+                        loss = l_class + l_div
+                        self.optimizers[idx].zero_grad()
+                        loss.backward(retain_graph=True)
+                        self.optimizers[idx].step()
+                        loss_trackers[idx] += loss.item()
+                
+            loss_trackers /= num_batches
+            class_accuracy /= num_batches
+            div_loss_trackers /= num_batches
+            
+            logger.info("Epoch {}".format(epoch))
+            print("Epoch {}".format(epoch))
             for idx in range(self.num_modules):
-                logger.info("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
-                print("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
+                logger.info("\tModule {}: div loss {:.4f} loss {:.4f} accuracy {:.4f}".format(idx,
+                                                                        div_loss_trackers[idx],
+                                                                        loss_trackers[idx],
+                                                                        class_accuracy[idx]))
+                print("\tModule {}: div loss {:.4f} loss {:.4f} accuracy {:.4f}".format(idx,
+                                                                        div_loss_trackers[idx],
+                                                                        loss_trackers[idx],
+                                                                        class_accuracy[idx]))
+            
 
-
+    
     def get_votes(self, x, return_attention=False):
         self.set_classifiers_eval()
         self.embedding.eval()

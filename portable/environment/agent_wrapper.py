@@ -43,7 +43,7 @@ class MonteAgentWrapper(gym.Wrapper):
         self.use_agent_space = agent_space
         self.env.unwrapped.stacked_agent_position = deque([], maxlen=4)
         self.use_stacked_obs = stack_observations
-        self.stacked_agent_state = torch.zeros((4, 56, 40))
+        self.stacked_agent_state = torch.zeros((4, 56, 44))
         self.stacked_state = torch.zeros((4, 84, 84))
 
     def update_state(self, obs, state):
@@ -54,7 +54,7 @@ class MonteAgentWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         s0 = self.env.reset(**kwargs)
-        self.stacked_agent_state = torch.zeros((4, 56, 40))
+        self.stacked_agent_state = torch.zeros((4, 56, 44))
         self.stacked_state = torch.zeros((4, 84, 84))
         self.update_state(s0, self.stacked_state)
         self.update_state(self.agent_space(), self.stacked_agent_state)
@@ -201,7 +201,7 @@ class MonteAgentWrapper(gym.Wrapper):
 
         return img_rgb
 
-    def get_pixels_around_player(self, width=20, height=24, trim_direction=actions.INVALID):
+    def get_pixels_around_player(self, width=22, height=24, trim_direction=actions.INVALID):
         """
         Extract a window of size (width, height) around the player.
         Args:
@@ -217,7 +217,7 @@ class MonteAgentWrapper(gym.Wrapper):
         player_position = self.get_current_position()
         start_y, end_y = (value_to_index(player_position[1]) - height,
                           value_to_index(player_position[1]) + height)
-        start_x, end_x = max(0, player_position[0] - width), player_position[0] + width
+        start_x, end_x = max(0, player_position[0]+3 - width), player_position[0]+3 + width
         start_y += 0
         end_y += 8
         if trim_direction == actions.RIGHT:
@@ -228,63 +228,13 @@ class MonteAgentWrapper(gym.Wrapper):
             end_x -= 7
         image_window = image[start_y:end_y, start_x:end_x, :]
 
-        if player_position[0] - width < 0:
-            image_window = np.pad(image_window, ((0,0), (width - player_position[0], 0), (0,0)))
+        if ((player_position[0]+3) - width) < 0:
+            image_window = np.pad(image_window, ((0,0), (abs((player_position[0]+3) - width), 0), (0,0)))
 
         if image_window.shape[1] != (2*width):
             image_window = np.pad(image_window, ((0,0), (0, (2*width) - image_window.shape[1]), (0,0)))
-
+        
         return image_window
-
-
-def crop_agent_space(image, player_position, width=20, height=24, trim_direction=actions.INVALID):
-    """
-    crop the agent space out from an observation
-    This is basically the get_pixels_around_player function, but it doesn't belong to that wrapper class
-    """
-    assert image.shape == (210, 160, 3), image.shape
-    # make agent space
-    if trim_direction != actions.INVALID:
-        width -= 6
-    value_to_index = lambda y: int(-1.01144971 * y + 309.86119429)
-    start_y, end_y = (value_to_index(player_position[1]) - height,
-                        value_to_index(player_position[1]) + height)
-    start_x, end_x = max(0, player_position[0] - width), player_position[0] + width
-    start_y += 0
-    end_y += 8
-    if trim_direction == actions.RIGHT:
-        start_x += 13
-        end_x += 13
-    elif trim_direction == actions.LEFT:
-        start_x -= 7
-        end_x -= 7
-    image_window = image[start_y:end_y, start_x:end_x, :]
-
-    if player_position[0] - width < 0:
-        image_window = np.pad(image_window, ((0,0), (width - player_position[0], 0), (0,0)))
-
-    if image_window.shape[1] != (2*width):
-        image_window = np.pad(image_window, ((0,0), (0, (2*width) - image_window.shape[1]), (0,0)))
-
-    return image_window
-
-
-def build_agent_space_image_stack(env):
-    """
-    access the stacked original images from env.unwrapped
-    return a (1, 4, 56, 40) array
-    """
-    agent_space_state = np.zeros((1, 4, 56, 40))
-    for i, frame in enumerate(env.unwrapped.original_stacked_frames):
-        player_pos = env.unwrapped.stacked_agent_position[i]
-        obs = crop_agent_space(frame, player_pos)
-        assert obs.shape == (56, 40, 3)
-        obs = color.rgb2gray(obs)  # also concerts to floats
-        obs = np.expand_dims(obs, axis=0)  # add channel dimension, (1, 56, 40)
-        agent_space_state[:, i, :, :] = obs
-    tensor_state = torch.from_numpy(np.array(agent_space_state)).float()
-    assert tensor_state.shape == (1, 4, 56, 40), tensor_state.shape  # make sure it's agent space observation
-    return tensor_state
 
 
 class ReshapeFrame(gym.ObservationWrapper):

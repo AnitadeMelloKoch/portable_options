@@ -16,15 +16,15 @@ class EnsembleClassifier():
     def __init__(self, 
         device,
         embedding_output_size=64, 
-        embedding_learning_rate=1e-4,
-        classifier_learning_rate=1e-2,
+        learning_rate=1e-4,
         num_modules=8, 
         num_output_classes=2,
         batch_k=8,
         normalize=False,
         
         beta_distribution_alpha=30,
-        beta_distribution_beta=5):
+        beta_distribution_beta=5,
+        margin=1):
         
         self.num_modules = num_modules
         self.num_output_classes = num_output_classes
@@ -37,16 +37,10 @@ class EnsembleClassifier():
         self.classifiers = nn.ModuleList([
             MLP(embedding_output_size, self.num_output_classes) for _ in range(
                 self.num_modules)]).to(self.device)
-
-        self.classifier_optimizers = []
-        for i in range(self.num_modules):
-            optimizer = optim.Adam(self.classifiers[i].parameters(), classifier_learning_rate)
-            self.classifier_optimizers.append(optimizer)
-        self.embedding_optimizer = optim.SGD(
-            list(self.embedding.parameters()),
-            embedding_learning_rate,
-            momentum=0.95,
-            weight_decay=1e-4
+        
+        self.optimizer = optim.Adam(
+            list(self.embedding.parameters()) + list(self.classifiers.parameters()),
+            learning_rate
         )
 
         self.avg_loss = np.zeros(num_modules)
@@ -58,6 +52,7 @@ class EnsembleClassifier():
             self.num_modules,
             device
         )
+        self.margin = margin
 
     def save(self, path):
 
@@ -101,97 +96,62 @@ class EnsembleClassifier():
 
     def train(self, 
               dataset, 
-              embedding_epochs, 
-              classifier_epochs):
-        self.train_embedding(dataset, embedding_epochs)
-        self.train_classifiers(dataset, classifier_epochs)
-
-    def train_embedding(self, dataset, epochs):
-        self.set_classifiers_eval()
-        self.embedding.train()
-
-        for epoch in range(epochs):
-            loss_div, loss_homo, loss_heter = 0,0,0
-            counter = 0
-            num_batches = dataset.num_batches
-            dataset.shuffle()
-            for _ in range(num_batches):
-                x, _ = dataset.get_batch(shuffle_batch=False)
-                max_x = torch.max(x)
-                if max_x >1:
-                    x /= 255
-                x = x.to(self.device)
-
-                _, anchors, positive, negative, _ = self.embedding(x, sampling=True)
-                if anchors.size()[0] == 0:
-                    continue
-                
-                anchors = anchors.view(anchors.size(0), self.num_modules, -1)
-                positive = positive.view(positive.size(0), self.num_modules, -1)
-                negative = negative.view(negative.size(0), self.num_modules, -1)
-
-                l_div, l_homo, l_heter = criterion.criterion(anchors, positive, negative, self.confidences.weights())
-                loss = l_div + l_homo + l_heter
-
-                self.embedding_optimizer.zero_grad()
-                loss.backward()
-                self.embedding_optimizer.step()
-
-                if self.num_modules > 1:
-                    loss_div += l_div.item()
-                else:
-                    loss_div = 0
-                loss_homo += l_homo.item()
-                loss_heter += l_heter.item()
-
-                counter += 1
-
-            loss_homo /= counter+1
-            loss_heter /= counter+1
-            loss_div /= counter+1
-
-            logger.info('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
-            print('Epoch {}: \thomo:{:.4f}\theter:{:.4f}\tdiv:{:.4f}'.format(epoch, loss_homo, loss_heter, loss_div))
-
-    def train_classifiers(self, dataset, epochs):
-        self.embedding.eval()
+              epochs):
+        
         self.set_classifiers_train()
-
+        self.embedding.train()
+        
         for epoch in range(epochs):
-            avg_loss = np.zeros(self.num_modules)
-            avg_accuracy = np.zeros(self.num_modules)
-            count = 0
+            class_loss = 0
+            class_loss_record = np.zeros(self.num_modules)
+            class_acc = np.zeros(self.num_modules)
+            div_loss = 0
+            loss_record = 0
+            
             num_batches = dataset.num_batches
             dataset.shuffle()
             for _ in range(num_batches):
-                x, y = dataset.get_batch()
+                loss = 0
+                x, y = dataset.get_batch(shuffle_batch=True)
                 max_x = torch.max(x)
                 if max_x >1:
                     x /= 255
                 x = x.to(self.device)
                 y = y.to(self.device)
-
+                
                 embeddings = self.embedding(x)
+                l_div = criterion.batched_L_divergence(embeddings, self.confidences.weights(), self.margin)
+                loss += l_div
+                # print('l_div:', l_div)
+                l_class = 0
                 for idx in range(self.num_modules):
-                    attention_x = embeddings[:,idx,:]
+                    attention_x = embeddings[:, idx, :]
                     pred_y = self.classifiers[idx](attention_x)
-                    loss = self.classifier_loss(pred_y, y)
-                    self.classifier_optimizers[idx].zero_grad()
-                    loss.backward(retain_graph=True)
-                    self.classifier_optimizers[idx].step()
-                    avg_loss[idx] += loss.item()
+                    cl_loss = self.classifier_loss(pred_y, y)
+                    l_class += cl_loss
+                    class_loss_record[idx] += cl_loss.item()
+                    class_loss += cl_loss
                     pred_classes = torch.argmax(pred_y, dim=1).detach()
-                    avg_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
-                count += 1
-            avg_loss = avg_loss/count
-            avg_accuracy = avg_accuracy/count
-
-            logger.info("Epoch {}:".format(epoch))
-            print("Epoch {}:".format(epoch))
+                    class_acc[idx] += (torch.sum(pred_classes==y).item()/len(x))
+                
+                # print('l_class:', l_class/self.num_modules)
+                loss += l_class
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+                loss_record += loss.item()
+                div_loss += l_div.item()
+            
+            div_loss /= num_batches
+            class_loss_record /= num_batches
+            class_acc /= num_batches
+            loss_record /= num_batches
+            
+            logger.info("Epoch {}: Total loss = {} divergence loss = {}".format(epoch, loss_record, div_loss))
+            print("Epoch {}: Total loss = {} divergence loss = {}".format(epoch, loss_record, div_loss))
             for idx in range(self.num_modules):
-                logger.info("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
-                print("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, avg_loss[idx], avg_accuracy[idx]))
-
+                logger.info("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, class_loss_record[idx], class_acc[idx]))
+                print("\tClassifier {}: loss {:.4f} accuracy {:.4f}".format(idx, class_loss_record[idx], class_acc[idx]))
 
     def get_votes(self, x, return_attention=False):
         self.set_classifiers_eval()

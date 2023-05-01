@@ -182,59 +182,59 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
                                                         self.mask_ph: mask,
                                                         self.inf_ph: inf})
 
-    def _build_target_distribution(self):
-        """Builds the C51 target distribution as per Bellemare et al. (2017).
-        First, we compute the support of the Bellman target, r + gamma Z'. Where Z'
-        is the support of the next state distribution:
-          * Evenly spaced in [-vmax, vmax] if the current state is nonterminal;
-          * 0 otherwise (duplicated num_atoms times).
-        Second, we compute the next-state probabilities, corresponding to the action
-        with highest expected value.
-        Finally we project the Bellman target (support + probabilities) onto the
-        original support.
-        Returns:
-          target_distribution: tf.tensor, the target distribution from the replay.
-        """
-        batch_size = self._replay.batch_size
+    # def _build_target_distribution(self):
+    #     """Builds the C51 target distribution as per Bellemare et al. (2017).
+    #     First, we compute the support of the Bellman target, r + gamma Z'. Where Z'
+    #     is the support of the next state distribution:
+    #       * Evenly spaced in [-vmax, vmax] if the current state is nonterminal;
+    #       * 0 otherwise (duplicated num_atoms times).
+    #     Second, we compute the next-state probabilities, corresponding to the action
+    #     with highest expected value.
+    #     Finally we project the Bellman target (support + probabilities) onto the
+    #     original support.
+    #     Returns:
+    #       target_distribution: tf.tensor, the target distribution from the replay.
+    #     """
+    #     batch_size = self._replay.batch_size
 
-        # size of rewards: batch_size x 1
-        rewards = self._replay.rewards[:, None]
+    #     # size of rewards: batch_size x 1
+    #     rewards = self._replay.rewards[:, None]
 
-        # size of tiled_support: batch_size x num_atoms
-        tiled_support = tf.tile(self._support, [batch_size])
-        tiled_support = tf.reshape(tiled_support, [batch_size, self._num_atoms])
+    #     # size of tiled_support: batch_size x num_atoms
+    #     tiled_support = tf.tile(self._support, [batch_size])
+    #     tiled_support = tf.reshape(tiled_support, [batch_size, self._num_atoms])
 
-        # size of target_support: batch_size x num_atoms
+    #     # size of target_support: batch_size x num_atoms
 
-        is_terminal_multiplier = 1. - tf.cast(self._replay.terminals, tf.float32)
-        # Incorporate terminal state to discount factor.
-        # size of gamma_with_terminal: batch_size x 1
-        gamma_with_terminal = self.cumulative_gamma * is_terminal_multiplier
-        gamma_with_terminal = gamma_with_terminal[:, None]
+    #     is_terminal_multiplier = 1. - tf.cast(self._replay.terminals, tf.float32)
+    #     # Incorporate terminal state to discount factor.
+    #     # size of gamma_with_terminal: batch_size x 1
+    #     gamma_with_terminal = self.cumulative_gamma * is_terminal_multiplier
+    #     gamma_with_terminal = gamma_with_terminal[:, None]
 
-        target_support = rewards + gamma_with_terminal * tiled_support
+    #     target_support = rewards + gamma_with_terminal * tiled_support
 
-        # mask target q values
-        mask = self._replay.transition["mask"]
-        inf = tf.tile(
-          tf.convert_to_tensor([[-np.inf]]),
-          tf.convert_to_tensor([batch_size, self.num_actions])
-        )
-        next_qt = tf.where(mask, self._replay_next_target_net_outputs.q_values, inf)
-        next_qt_argmax = tf.argmax(next_qt, axis=1)[:, None]
+    #     # mask target q values
+    #     mask = self._replay.transition["mask"]
+    #     inf = tf.tile(
+    #       tf.convert_to_tensor([[-np.inf]]),
+    #       tf.convert_to_tensor([batch_size, self.num_actions])
+    #     )
+    #     next_qt = tf.where(mask, self._replay_next_target_net_outputs.q_values, inf)
+    #     next_qt_argmax = tf.argmax(next_qt, axis=1)[:, None]
 
-        batch_indices = tf.range(tf.cast(batch_size, tf.int64))[:, None]
-        # size of next_qt_argmax: batch_size x 2
-        batch_indexed_next_qt_argmax = tf.concat(
-            [batch_indices, next_qt_argmax], axis=1)
+    #     batch_indices = tf.range(tf.cast(batch_size, tf.int64))[:, None]
+    #     # size of next_qt_argmax: batch_size x 2
+    #     batch_indexed_next_qt_argmax = tf.concat(
+    #         [batch_indices, next_qt_argmax], axis=1)
 
-        # size of next_probabilities: batch_size x num_atoms
-        next_probabilities = tf.gather_nd(
-            self._replay_next_target_net_outputs.probabilities,
-            batch_indexed_next_qt_argmax)
+    #     # size of next_probabilities: batch_size x num_atoms
+    #     next_probabilities = tf.gather_nd(
+    #         self._replay_next_target_net_outputs.probabilities,
+    #         batch_indexed_next_qt_argmax)
 
-        return base_rainbow_agent.project_distribution(target_support, next_probabilities,
-                                    self._support)
+    #     return base_rainbow_agent.project_distribution(target_support, next_probabilities,
+    #                                 self._support)
 
 
     def _store_transition(self,
@@ -266,6 +266,18 @@ class RNDRainbowAgentForSkills(base_rainbow_agent.RainbowAgent, intrinsic_dqn_ag
                 priority = self._replay.memory.sum_tree.max_recorded_priority
 
         if not self.eval_mode:
+            if random.uniform(0, 1) < 0.3:
+                mask = mask.astype(bool)
+                impossible_actions = np.arange(len(mask))[~mask]
+                self._replay.add(
+                    np.squeeze(last_state),
+                    np.random.choice(impossible_actions, 1)[0],
+                    0,        # reward for selecting wrong action
+                    False,
+                    mask,
+                    priority
+                )
+                
             # state is batched with size 1 but replay buffer does not expect batch so squeeze 
             self._replay.add(np.squeeze(last_state), action, reward, is_terminal, mask, priority)
 
