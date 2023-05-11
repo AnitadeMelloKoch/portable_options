@@ -41,75 +41,49 @@ class SmallEmbedding(nn.Module):
 
         self.linear = nn.LazyLinear(self.out_dim)
 
-    # def build_spacial_layers(self):
-    #     layers = []
-        
-    #     layers.append(nn.Conv2d(in_channels=self.stack_size, 
-    #                             out_channels=32, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1),
-    #                             padding='same'))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.Conv2d(in_channels=32, 
-    #                             out_channels=32, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1), 
-    #                             padding="same"))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.MaxPool2d(2))
-        
-    #     layers.append(nn.Conv2d(in_channels=32, 
-    #                             out_channels=64, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1),
-    #                             padding='same'))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.Conv2d(in_channels=64, 
-    #                             out_channels=self.attention_depth, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1), 
-    #                             padding="same"))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.MaxPool2d(2))
-        
-    #     return nn.ModuleList(layers)
-
     def build_spacial_layers(self):
         layers = []
         
         layers.append(nn.Conv2d(in_channels=self.stack_size, 
-                                out_channels=self.attention_depth, 
+                                out_channels=32, 
                                 kernel_size=(3,3), 
                                 stride=(1,1),
                                 padding='same'))
+        layers.append(nn.ReLU())
+        layers.append(nn.Conv2d(in_channels=32, 
+                                out_channels=32, 
+                                kernel_size=(3,3), 
+                                stride=(1,1), 
+                                padding="same"))
+        layers.append(nn.ReLU())
+        layers.append(nn.MaxPool2d(2))
+        
+        layers.append(nn.Conv2d(in_channels=32, 
+                                out_channels=64, 
+                                kernel_size=(3,3), 
+                                stride=(1,1),
+                                padding='same'))
+        layers.append(nn.ReLU())
+        layers.append(nn.Conv2d(in_channels=64, 
+                                out_channels=self.attention_depth, 
+                                kernel_size=(3,3), 
+                                stride=(1,1), 
+                                padding="same"))
         layers.append(nn.ReLU())
         layers.append(nn.MaxPool2d(2))
         
         return nn.ModuleList(layers)
 
-    # def build_global_layers(self):
-    #     layers = []
-        
-    #     layers.append(nn.Conv2d(in_channels=self.attention_depth, 
-    #                             out_channels=128, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1), 
-    #                             padding="same"))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.Conv2d(in_channels=128, 
-    #                             out_channels=128, 
-    #                             kernel_size=(3,3), 
-    #                             stride=(1,1), 
-    #                             padding="same"))
-    #     layers.append(nn.ReLU())
-    #     layers.append(nn.MaxPool2d(2))
-        
-    #     return nn.ModuleList(layers)
-
     def build_global_layers(self):
         layers = []
         
         layers.append(nn.Conv2d(in_channels=self.attention_depth, 
+                                out_channels=128, 
+                                kernel_size=(3,3), 
+                                stride=(1,1), 
+                                padding="same"))
+        layers.append(nn.ReLU())
+        layers.append(nn.Conv2d(in_channels=128, 
                                 out_channels=128, 
                                 kernel_size=(3,3), 
                                 stride=(1,1), 
@@ -167,3 +141,6 @@ class SmallEmbedding(nn.Module):
         embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
 
         return embedding
+    
+    def compute_l1_loss(self, w):
+        return torch.abs(w).sum()

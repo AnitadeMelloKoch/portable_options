@@ -13,6 +13,10 @@ from portable.utils.utils import load_gin_configs
 def get_percent_completed(start_pos, final_pos, terminations, env):
     top_of_room = 253
     bottom_of_room = 135
+    
+    info = env.get_current_info({})
+    if info["dead"]:
+        return 0
 
     def manhatten(top,bot):
         distance = 0
@@ -38,6 +42,9 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
 
 def check_termination_correct(final_pos, terminations, env):
     epsilon = 2
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
     def in_epsilon_square(current_position, final_position):
         if current_position[0] <= (final_position[0] + epsilon) and \
             current_position[0] >= (final_position[0] - epsilon) and \

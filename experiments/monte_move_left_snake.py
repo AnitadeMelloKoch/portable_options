@@ -11,31 +11,27 @@ from experiments import check_termination_correct_enemy, get_percent_completed_e
 from portable.utils.utils import load_gin_configs
 
 initiation_positive_files = [
-    'resources/monte_images/snake_1_initiation_positive.npy',
-    'resources/monte_images/snake_2_initiation_positive.npy'
+    'resources/monte_images/room9_move_left_snake_initiation_positive',
+    'resources/monte_images/room9_move_left_snake_initiation_1_positive',
 ]
 initiation_negative_files = [
-    'resources/monte_images/snake_1_initiation_negative.npy',
-    'resources/monte_images/snake_2_initiation_negative.npy',
-    'resources/monte_images/jump_left_initiation_negative.npy',
-    
+    'resources/monte_images/room9_move_left_snake_initiation_negative',
+    'resources/monte_images/room9_move_left_snake_initiation_1_negative',
 ]
 initiation_priority_negative_files = [
-    'resources/monte_images/death.npy',
-    'resources/monte_images/falling_1.npy',
-    'resources/monte_images/falling_2.npy',
-    'resources/monte_images/falling_3.npy'
+    'resources/monte_images/screen_death_1.npy',
+    'resources/monte_images/screen_death_2.npy',
+    'resources/monte_images/screen_death_3.npy',
+    'resources/monte_images/screen_death_4.npy',
+    'resources/monte_images/screen_death_5.npy'
 ]
 
 termination_positive_files = [
-    'resources/monte_images/snake_1_termination_positive.npy',
-    'resources/monte_images/snake_2_termination_positive.npy'
+    'resources/monte_images/room9_move_left_snake_termination_positive',
 ]
 termination_negative_files = [
-    'resources/monte_images/snake_1_termination_negative.npy',
-    'resources/monte_images/snake_2_termination_negative.npy',
-    'resources/monte_images/jump_left_termination_negative.npy',
-
+    'resources/monte_images/room9_move_left_snake_termination_1_negative',
+    'resources/monte_images/room9_move_left_snake_termination_negative',
 ]
 termination_priority_negative_files = [
 ]
@@ -52,21 +48,21 @@ def make_env(seed):
     )
     env.seed(seed)
 
-    return MonteAgentWrapper(env, agent_space=True)
+    return MonteAgentWrapper(env, agent_space=False)
 
 initiation_state_files = [
     [
         'resources/monte_env_states/room9/enemy/right_of_left_snake.pkl',
         'resources/monte_env_states/room9/enemy/right_of_right_snake.pkl',
     ],[
-        'resources/monte_env_states/room11/enemy/right_of_left_snake.pkl',
-    ],[
         'resources/monte_env_states/room11/enemy/right_of_right_snake.pkl',
+        'resources/monte_env_states/room11/enemy/right_of_right_snake_2.pkl',
+        'resources/monte_env_states/room11/enemy/right_of_right_snake_3.pkl',
     ],[
         'resources/monte_env_states/room22/enemy/right_snake.pkl',
     ],[
-        'resources/monte_env_states/room2/enemy/right_of_skull_0.pkl',
-        'resources/monte_env_states/room2/enemy/right_of_skull_1.pkl',
+        'resources/monte_env_states/room2/enemy/right_skull_0.pkl',
+        'resources/monte_env_states/room2/enemy/right_skull_1.pkl',
     ],[
         'resources/monte_env_states/room4/enemy/right_of_spider_0.pkl',
         'resources/monte_env_states/room4/enemy/right_of_spider_1.pkl',
@@ -81,8 +77,8 @@ terminations = [
         (11, 235, 9),
         (42, 235, 9),
     ],[
-        (35, 235, 11),
-    ],[
+        (97, 235, 11),
+        (97, 235, 11),
         (97, 235, 11),
     ],[
         (25, 235, 22)
@@ -123,7 +119,7 @@ bootstrap_env = MonteBootstrapWrapper(
     load_init_states(initiation_state_files[0]),
     terminations[0],
     check_termination_correct_enemy,
-    agent_space=True
+    agent_space=False
 )
 
 if __name__ == "__main__":
@@ -163,7 +159,7 @@ if __name__ == "__main__":
         load_init_states(initiation_state_files[0]),
         terminations[0],
         100,
-        use_agent_space=True
+        use_agent_space=False
     )
 
     for y in range(len(initiation_state_files)):
@@ -174,7 +170,7 @@ if __name__ == "__main__":
             100,
             eval=True,
             trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
-            use_agent_space=True
+            use_agent_space=False
         )
 
     experiment.save()
@@ -187,7 +183,7 @@ if __name__ == "__main__":
             2000,
             eval=False,
             trial_name="{}_train".format(room_names[idx]),
-            use_agent_space=True
+            use_agent_space=False
         )
         experiment.test_assimilate(
                 load_init_states(initiation_state_files[0]),
@@ -195,7 +191,7 @@ if __name__ == "__main__":
                 instantiation_instances,
                 500,
                 trial_name="{}_assimilate_test_".format(room_names[idx]),
-                use_agent_space=True
+                use_agent_space=False
             )
         for y in range(len(initiation_state_files)):
             idy = order[y]
@@ -205,11 +201,7 @@ if __name__ == "__main__":
                 500,
                 eval=True,
                 trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
-                use_agent_space=True
+                use_agent_space=False
             )
         
         experiment.save()
-
-    
-    
-

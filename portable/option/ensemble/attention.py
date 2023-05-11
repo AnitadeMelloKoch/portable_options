@@ -60,3 +60,17 @@ class Attention(nn.Module):
         embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
         return embedding if not return_attention_mask else (embedding, attentions)
+
+    def forward_one_attention(self, x, attention_idx):
+        spacial_features = self.spatial_feature_extractor(x)
+        attention = self.attention_modules[attention_idx](spacial_features)
+
+        N, D, H, W = attention.size()
+        attention = attention.view(-1, H*W)
+        attention_max, _ = attention.max(dim=1, keepdim=True)
+        attention_min, _ = attention.min(dim=1, keepdim=True)
+        attention = ((attention-attention_min)/(attention_max-attention_min+1e-8)).view(N,D,H,W)
+
+        embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
+
+        return embedding

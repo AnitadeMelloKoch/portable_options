@@ -20,10 +20,11 @@ initiation_negative_files = [
     
 ]
 initiation_priority_negative_files = [
-    'resources/monte_images/death.npy',
-    'resources/monte_images/falling_1.npy',
-    'resources/monte_images/falling_2.npy',
-    'resources/monte_images/falling_3.npy'
+    'resources/monte_images/screen_death_1.npy',
+    'resources/monte_images/screen_death_2.npy',
+    'resources/monte_images/screen_death_3.npy',
+    'resources/monte_images/screen_death_4.npy',
+    'resources/monte_images/screen_death_5.npy'
 ]
 
 termination_positive_files = [

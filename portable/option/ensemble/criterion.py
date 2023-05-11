@@ -22,7 +22,7 @@ def L_divergence(feats):
 
     return loss.mean()
 
-def batched_L_divergence(batch_feats, weights, margin):
+def batched_L_divergence(batch_feats, weights, margin=1):
     """
     batch_feats is of shape (batch_size, n_modules, n_features)
     """
@@ -41,7 +41,7 @@ def batched_L_divergence(batch_feats, weights, margin):
 
     every_tuple_features = batch_feats[:, every_tuple, :]  # (batch_size, num_tuple, 2, dim)
     every_tuple_difference = every_tuple_features.diff(dim=2).squeeze(2)  # (batch_size, num_tuple, dim)
-    loss = torch.clamp(margin - torch.sum(every_tuple_difference.pow(2), dim=-1), min=0)  # (batch_size, num_tuple)
+    loss = torch.clamp(margin - torch.mean(every_tuple_difference.pow(2), dim=-1), min=0)  # (batch_size, num_tuple)
     loss = every_tuple_weights*loss
     mean_loss = loss.sum(-1).mean()
     # print(loss)

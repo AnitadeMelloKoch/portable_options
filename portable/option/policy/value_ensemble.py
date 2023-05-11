@@ -183,6 +183,13 @@ class ValueEnsemble():
             return selected_action, actions, q_values, all_q_values
         return selected_action
 
+    def get_single_module(self, state, module):
+        self.embedding.eval()
+        self.q_networks.eval()
+        
+        embeddings = self.embedding(state, return_attention_mask=False)
+            
+
     def get_attention(self, x):
         self.embedding.eval()
         x = x.to(self.device)
