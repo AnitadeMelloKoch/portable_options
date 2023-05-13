@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torch
 
-from portable.option.sets.models import EnsembleClassifier
+from portable.option.sets.models.portable_set_decaying_div import EnsembleClassifierDecayingDiv
 from evaluation.model_wrappers import EnsembleClassifierWrapper
 from ..evaluators.utils import concatenate
 from captum.attr import IntegratedGradients, NoiseTunnel
@@ -21,7 +21,7 @@ class AttentionEvaluatorClassifier():
         self.device = torch.device("cuda")
 
         self.classifier_save_path = classifier_save_path
-        self.classifier = EnsembleClassifier(
+        self.classifier = EnsembleClassifierDecayingDiv(
             device=self.device,
             num_modules=num_modules
         )
@@ -108,9 +108,9 @@ class AttentionEvaluatorClassifier():
             for ig in integrated_gradients:
                 image_attr.append(ig.attribute(
                     single_image,
-                    nt_samples=50,
+                    nt_samples=10,
                     target=target,
-                    n_steps=50
+                    n_steps=10
                 ))
             attributions.append(image_attr)
 

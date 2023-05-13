@@ -5,7 +5,8 @@ import portable.option.ensemble.criterion as criterion
 import numpy as np
 import os
 
-from portable.option.sets.models import MLP, SmallEmbedding
+from portable.option.sets.models.small_embedding_decaying_div import SmallEmbedding
+from portable.option.sets.models import MLP
 from portable.option.sets.utils import BayesianWeighting
 import logging
 
@@ -22,6 +23,7 @@ class EnsembleClassifierDecayingDiv():
         batch_k=8,
         normalize=False,
         margin=1,
+        lambda_l1_loss=0.2,
         
         beta_distribution_alpha=30,
         beta_distribution_beta=5):
@@ -39,21 +41,37 @@ class EnsembleClassifierDecayingDiv():
             MLP(embedding_output_size, self.num_output_classes) for _ in range(
                 self.num_modules)]).to(self.device)
         
+        self.lambda1 = lambda_l1_loss
+        self.l1_loss_params = []
+        
         self.optimizers = []
         for i in range(self.num_modules):
             if i == 0:
-                optimizer = optim.Adam(
+                optimizer = optim.SGD(
                     list(self.embedding.global_feature_extractor_layers.parameters())+
                     list(self.embedding.spacial_feature_extractor_layers.parameters())+
                     list(self.embedding.attention_modules[i].parameters())+
                     list(self.classifiers[i].parameters()),
-                    learning_rate
+                    learning_rate,
+                    momentum=0.95,
+                    weight_decay=1e-4
+                )
+                self.l1_loss_params.append(
+                    torch.cat([x.view(-1) for x in
+                        self.embedding.attention_modules[i].parameters()])
                 )
             else:
-                optimizer = optim.Adam(
+                optimizer = optim.SGD(
                     list(self.embedding.attention_modules[i].parameters()) +
                     list(self.classifiers[i].parameters()),
-                    learning_rate)
+                    learning_rate,
+                    momentum=0.95,
+                    weight_decay=1e-4
+                )
+                self.l1_loss_params.append(
+                    torch.cat([x.view(-1) for x in
+                        self.embedding.attention_modules[i].parameters()])
+                )
             self.optimizers.append(optimizer)
 
         self.avg_loss = np.zeros(num_modules)
@@ -126,24 +144,25 @@ class EnsembleClassifierDecayingDiv():
                 y = y.to(self.device)
                 # embeddings = self.embedding(x)
                 for idx in range(self.num_modules):
-                    # print("idx: {}".format(idx))
                     if idx == 0:
                         # loss for all layers
                         embeddings = self.embedding(x)
                         attention_x = embeddings[:,idx,:]
                         pred_y = self.classifiers[idx](attention_x)
                         l_class = self.classifier_loss(pred_y, y)
-                        loss_trackers[idx] += l_class.item()
                         pred_classes = torch.argmax(pred_y, dim=1).detach()
                         class_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
+                        l1_reg = self.lambda1 * self.embedding.compute_l1_loss(self.l1_loss_params[idx])
+                        loss = l_class + l1_reg
                         self.optimizers[idx].zero_grad()
-                        l_class.backward()
+                        loss.backward()
                         self.optimizers[idx].step()
+                        loss_trackers[idx] += loss.item()
                     else:
                         # loss for just attention modules
                         embeddings = self.embedding(x)
                         attention_x = embeddings[:,idx,:]
-                        pred_y = self.classifiers[idx](attention_x)
+                        pred_y= self.classifiers[idx](attention_x)
                         l_class = self.classifier_loss(pred_y, y)
                         pred_classes = torch.argmax(pred_y, dim=1).detach()
                         class_accuracy[idx] += (torch.sum(pred_classes==y).item()/len(x))
@@ -151,7 +170,8 @@ class EnsembleClassifierDecayingDiv():
                                                                torch.from_numpy(np.ones(self.num_modules)).to(self.device),
                                                                margin=self.margin)
                         div_loss_trackers[idx] += l_div.item()
-                        loss = l_class + l_div
+                        l1_reg = self.lambda1 * self.embedding.compute_l1_loss(self.l1_loss_params[idx])
+                        loss = l_class + l_div + l1_reg
                         self.optimizers[idx].zero_grad()
                         loss.backward(retain_graph=True)
                         self.optimizers[idx].step()

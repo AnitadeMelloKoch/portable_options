@@ -1,0 +1,7 @@
+import experiments.minigrid.doorkey.core.minigrid_experiment
+
+MinigridExperiment.experiment_name = "key_door_base_rl"
+MinigridExperiment.training_seed = 100
+MinigridExperiment.num_levels = 16
+MinigridExperiment.device_type = "cuda"
+MinigridExperiment.train_options = False

@@ -1,4 +1,3 @@
-import argparse
 import logging
 import datetime
 import os

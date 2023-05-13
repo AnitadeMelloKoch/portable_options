@@ -18,6 +18,7 @@ class Set():
             beta_distribution_alpha=30,
             beta_distribution_beta=5,
             margin=1,
+            lambda_l1_loss=0.2,
 
             dataset_max_size=100000,
             dataset_batch_size=16
@@ -30,7 +31,8 @@ class Set():
             batch_k=dataset_batch_size//2,
             beta_distribution_alpha=beta_distribution_alpha,
             beta_distribution_beta=beta_distribution_beta,
-            margin=margin
+            margin=margin,
+            lambda_l1_loss=lambda_l1_loss
         )
 
         self.vote_function = vote_function
