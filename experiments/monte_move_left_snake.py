@@ -11,12 +11,12 @@ from experiments import check_termination_correct_enemy, get_percent_completed_e
 from portable.utils.utils import load_gin_configs
 
 initiation_positive_files = [
-    'resources/monte_images/room9_move_left_snake_initiation_positive',
-    'resources/monte_images/room9_move_left_snake_initiation_1_positive',
+    'resources/monte_images/room9_move_left_snake_initiation_positive.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_1_positive.npy',
 ]
 initiation_negative_files = [
-    'resources/monte_images/room9_move_left_snake_initiation_negative',
-    'resources/monte_images/room9_move_left_snake_initiation_1_negative',
+    'resources/monte_images/room9_move_left_snake_initiation_negative.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_1_negative.npy',
 ]
 initiation_priority_negative_files = [
     'resources/monte_images/screen_death_1.npy',
@@ -27,11 +27,11 @@ initiation_priority_negative_files = [
 ]
 
 termination_positive_files = [
-    'resources/monte_images/room9_move_left_snake_termination_positive',
+    'resources/monte_images/room9_move_left_snake_termination_positive.npy',
 ]
 termination_negative_files = [
-    'resources/monte_images/room9_move_left_snake_termination_1_negative',
-    'resources/monte_images/room9_move_left_snake_termination_negative',
+    'resources/monte_images/room9_move_left_snake_termination_1_negative.npy',
+    'resources/monte_images/room9_move_left_snake_termination_negative.npy',
 ]
 termination_priority_negative_files = [
 ]

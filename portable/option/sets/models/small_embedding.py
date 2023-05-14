@@ -45,30 +45,10 @@ class SmallEmbedding(nn.Module):
         layers = []
         
         layers.append(nn.Conv2d(in_channels=self.stack_size, 
-                                out_channels=32, 
-                                kernel_size=(3,3), 
-                                stride=(1,1),
-                                padding='same'))
-        layers.append(nn.ReLU())
-        layers.append(nn.Conv2d(in_channels=32, 
-                                out_channels=32, 
-                                kernel_size=(3,3), 
-                                stride=(1,1), 
-                                padding="same"))
-        layers.append(nn.ReLU())
-        layers.append(nn.MaxPool2d(2))
-        
-        layers.append(nn.Conv2d(in_channels=32, 
-                                out_channels=64, 
-                                kernel_size=(3,3), 
-                                stride=(1,1),
-                                padding='same'))
-        layers.append(nn.ReLU())
-        layers.append(nn.Conv2d(in_channels=64, 
                                 out_channels=self.attention_depth, 
                                 kernel_size=(3,3), 
-                                stride=(1,1), 
-                                padding="same"))
+                                stride=(1,1),
+                                padding='same'))
         layers.append(nn.ReLU())
         layers.append(nn.MaxPool2d(2))
         
@@ -78,12 +58,6 @@ class SmallEmbedding(nn.Module):
         layers = []
         
         layers.append(nn.Conv2d(in_channels=self.attention_depth, 
-                                out_channels=128, 
-                                kernel_size=(3,3), 
-                                stride=(1,1), 
-                                padding="same"))
-        layers.append(nn.ReLU())
-        layers.append(nn.Conv2d(in_channels=128, 
                                 out_channels=128, 
                                 kernel_size=(3,3), 
                                 stride=(1,1), 
