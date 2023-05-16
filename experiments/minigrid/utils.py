@@ -20,14 +20,14 @@ class actions(IntEnum):
 class MinigridInfoWrapper(Wrapper):
     """Include extra information in the info dict for debugging/visualizations."""
 
-    def __init__(self, env):
+    def __init__(self, env, seed=None):
         super().__init__(env)
         self._timestep = 0
 
         # Store the test-time start state when the environment is constructed
         # self.official_start_obs, self.official_start_info = self.reset()
+        self.env_seed = seed
         self.official_start_obs, self.official_start_info = self.reset()
-        
 
     def reset(self):
         obs, info = self.env.reset()
@@ -38,8 +38,8 @@ class MinigridInfoWrapper(Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action)
         self._timestep += 1
         info = self._modify_info_dict(info, terminated, truncated)
-        # done = terminated or truncated
-        return obs, reward, terminated, truncated, info
+        done = terminated or truncated
+        return obs, reward, done, info
 
     def _modify_info_dict(self, info, terminated=False, truncated=False):
         info['player_pos'] = tuple(self.env.agent_pos)
@@ -53,6 +53,7 @@ class MinigridInfoWrapper(Wrapper):
         if info['has_key']:
             assert self.unwrapped.carrying.type == 'key', self.env.unwrapped.carrying
         info['door_open'] = determine_is_door_open(self)
+        info['seed'] = self.env_seed
         return info
 
 
@@ -118,16 +119,11 @@ class ScaledStateBonus(StateBonus):
     
 
 class RandomStartWrapper(Wrapper):
-    def __init__(self, env, start_loc_file='start_locations_4rooms.pkl'):
-        """Randomly samples the starting location for the agent. We have to use the
-        ReseedWrapper() because otherwiswe the layout can change between episodes.
-        But when we use that wrapper, it also makes random init selection impossible.
-        As a hack, I stored some randomly generated (non-collision) locations to a
-        file and that is the one we load here.
-        """
+    def __init__(self, env, start_locs=[]):
+        
         super().__init__(env)
         self.n_episodes = 0
-        self.start_locations = pickle.load(open(start_loc_file, 'rb'))
+        self.start_locations = start_locs
 
         # TODO(ab): This assumes that the 2nd-to-last action is unused in the env
         # Not using the last action because that terminates the episode!
@@ -142,7 +138,7 @@ class RandomStartWrapper(Wrapper):
     def reset_to(self, rand_pos):
         new_pos = self.env.place_agent(
         top=rand_pos,
-        size=(3, 3)
+        size=(1, 1)
         )
 
         # Apply the no-op to get the observation image
@@ -184,6 +180,7 @@ def environment_builder(
     seed=42,
     random_reset=False,
     max_steps=None,
+    random_starts=[]
     ):
     if max_steps is not None and max_steps > 0:
         env = gym.make(level_name, max_steps=max_steps,
@@ -196,50 +193,18 @@ def environment_builder(
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    # env = ResizeObsWrapper(env)
-    # env = TransposeObsWrapper(env)
+    env = ResizeObsWrapper(env)
+    env = TransposeObsWrapper(env)
     if grayscale:
         env = GrayscaleWrapper(env)
     if add_count_based_bonus:
         env = ScaledStateBonus(env, exploration_reward_scale)
-    env = MinigridInfoWrapper(env)
+    env = MinigridInfoWrapper(env, seed)
     if random_reset:
         assert exploration_reward_scale == 0, exploration_reward_scale
-        env = RandomStartWrapper(env)
+        assert len(random_starts) > 0
+        env = RandomStartWrapper(env, random_starts)
     return env
-
-# def environment_builder(
-#     level_name='MiniGrid-Empty-8x8-v0',
-#     reward_fn='sparse',
-#     grayscale=True,
-#     add_count_based_bonus=True,
-#     exploration_reward_scale=0,
-#     seed=42,
-#     random_reset=False,
-#     max_steps=None,
-#     ):
-#     if max_steps is not None and max_steps > 0:
-#         env = gym.make(level_name, max_steps=max_steps,
-#                        render_mode="rgb_array")  #, goal_pos=(11, 11))
-#     else:
-#         env = gym.make(level_name,
-#                        render_mode="rgb_array")
-#     env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
-#     env = RGBImgObsWrapper(env) # Get pixel observations
-#     env = ImgObsWrapper(env) # Get rid of the 'mission' field
-#     if reward_fn == 'sparse':
-#         env = SparseRewardWrapper(env)
-#     env = ResizeObsWrapper(env)
-#     env = TransposeObsWrapper(env)
-#     if grayscale:
-#         env = GrayscaleWrapper(env)
-#     if add_count_based_bonus:
-#         env = ScaledStateBonus(env, exploration_reward_scale)
-#     env = MinigridInfoWrapper(env)
-#     if random_reset:
-#         assert exploration_reward_scale == 0, exploration_reward_scale
-#         env = RandomStartWrapper(env)
-#     return env
 
 def process_data(array):
     d = collections.OrderedDict()

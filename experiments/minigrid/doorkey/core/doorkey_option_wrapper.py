@@ -1,7 +1,6 @@
 from gymnasium.core import Wrapper
 from experiments.minigrid.utils import actions
 from enum import IntEnum
-from minigrid.core.constants import OBJECT_TO_IDX
 import matplotlib.pyplot as plt
 
 class directions(IntEnum):
@@ -114,12 +113,14 @@ class DoorKeyEnvOptionWrapper(Wrapper):
             if done:
                 return obs, reward, done, info
         
+        obs, reward, done, info = self.env.step(actions.PICKUP)
+        
         return obs, reward, done, info
     
     def _go_key(self):
         if self.env.unwrapped.carrying:
             ## If option not available execute a NO-OP
-            return self.env.step(actions.DONE)
+            return self.env.step(actions.PICKUP)
             
         obs, reward, done, info = self._move(self.key_pos[0], self.key_pos[1])
         
@@ -131,9 +132,14 @@ class DoorKeyEnvOptionWrapper(Wrapper):
         return obs, reward, done, info
     
     def _go_goal(self):
-        if not self.env.unwrapped.grid.get(self.door_pos[0], self.door_pos[1]).is_open():
+        if not self.env.unwrapped.grid.get(self.door_pos[0], self.door_pos[1]).is_open:
             # if option not available execute a NO-OP
-            return self.env.step(actions.DONE)
+            return self.env.step(actions.PICKUP)
+        player_x = self.env.agent_pos[0]
+        player_y = self.env.agent_pos[1]
+        if player_x < self.door_pos[0]:
+            obs, reward, done, info = self._move(self.door_pos[0], self.door_pos[1])
+            
         obs, reward, done, info = self._move(self.goal_pos[0], self.goal_pos[1])
         
         return obs, reward, done, info

@@ -4,6 +4,7 @@ import os
 import numpy as np 
 from experiments.minigrid.utils import environment_builder
 import argparse 
+from experiments.minigrid.doorkey.core.doorkey_option_wrapper import DoorKeyEnvOptionWrapper
 
 from portable.utils.utils import load_gin_configs
 import torch
@@ -44,19 +45,15 @@ if __name__ == "__main__":
         return Rainbow(n_actions, **kwargs)
     
     def create_env(seed):
-        return environment_builder('MiniGrid-DoorKey-5x5-v0', 
+        return DoorKeyEnvOptionWrapper(environment_builder('MiniGrid-DoorKey-8x8-v0', 
                                    seed=seed,
-                                   grayscale=False)
+                                   grayscale=False))
     
     experiment = MinigridExperiment(base_dir=args.base_dir,
                             random_seed=args.seed,
                             create_env_function=create_env,
                             create_agent_function=create_agent,
-                            action_space=7
+                            action_space=10
                             )
     
     experiment.train_test_envs()
-    
-    
-
-

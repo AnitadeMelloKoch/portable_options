@@ -18,12 +18,14 @@ class Set():
             embedding_output_size=64,
             beta_distribution_alpha=30,
             beta_distribution_beta=5,
+            stack_size=4,
 
             dataset_max_size=100000,
             dataset_batch_size=16
         ):
         self.classifier = EnsembleClassifier(
             device=device,
+            stack_size=stack_size,
             embedding_learning_rate=embedding_learning_rate,
             classifier_learning_rate=classifier_learning_rate,
             num_modules=attention_module_num,

@@ -26,6 +26,7 @@ class EnsembleAgent(Agent):
                 batch_size,
                 phi,
                 prioritized_replay_anneal_steps,
+                stack_size=4,
                 buffer_length=100000,
                 update_interval=4,
                 q_target_update_interval=40,
@@ -64,6 +65,7 @@ class EnsembleAgent(Agent):
         
         # ensemble
         self.value_ensemble = ValueEnsemble(
+            stack_size=stack_size,
             device=device,
             embedding_output_size=embedding_output_size,
             learning_rate=learning_rate,

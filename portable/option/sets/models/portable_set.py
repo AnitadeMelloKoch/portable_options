@@ -22,6 +22,7 @@ class EnsembleClassifier():
         num_output_classes=2,
         batch_k=8,
         normalize=False,
+        stack_size=4,
         
         beta_distribution_alpha=30,
         beta_distribution_beta=5):
@@ -31,6 +32,7 @@ class EnsembleClassifier():
         self.device = device
 
         self.embedding = SmallEmbedding(embedding_size=embedding_output_size, 
+                                   stack_size=stack_size,
                                    num_attention_modules=self.num_modules,
                                    batch_k=batch_k,
                                    normalize=normalize).to(self.device)
