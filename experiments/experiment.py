@@ -9,11 +9,11 @@ import lzma
 import dill
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from portable.option import Option
-from portable.utils import set_player_ram
+from portable.utils import set_player_ram, plot_attentions, plot_state
 from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
-from portable.option.policy.agents.abstract_agent import evaluating
 
 @gin.configurable
 class Experiment():
@@ -33,16 +33,14 @@ class Experiment():
         initiation_positive_files=[],
         initiation_negative_files=[],
         initiation_priority_negative_files=[],
-        train_initiation_embedding_epoch_per_cycle=10,
-        train_initiation_classifier_epoch_per_cycle=10,
-        train_initiation_cycles=1,
+        train_initiation_embedding_epochs=100,
+        train_initiation_classifier_epochs=100,
         train_termination=True,
         termination_positive_files=[],
         termination_negative_files=[],
         termination_priority_negative_files=[],
-        train_termination_embedding_epoch_per_cycle=10,
-        train_termination_classifier_epoch_per_cycle=10,
-        train_termination_cycles=1,
+        train_termination_embedding_epochs=100,
+        train_termination_classifier_epochs=100,
         train_policy=True,
         policy_bootstrap_env=None,
         train_policy_max_steps=10000,
@@ -68,8 +66,10 @@ class Experiment():
         self.name = experiment_name
         self.base_dir = os.path.join(base_dir, self.name, str(self.seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
+        self.plot_dir = os.path.join(self.base_dir, 'plots')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
 
         self.env = experiment_env_function(self.seed)
 
@@ -88,41 +88,41 @@ class Experiment():
         
         self.load()
 
-        if train_initiation:
+        if train_initiation is True:
             self._train_initiation(
                 initiation_positive_files,
                 initiation_negative_files,
                 initiation_priority_negative_files,
-                train_initiation_embedding_epoch_per_cycle,
-                train_initiation_classifier_epoch_per_cycle,
-                train_initiation_cycles
+                train_initiation_embedding_epochs,
+                train_initiation_classifier_epochs,
             )
         
-        if train_termination:
+        if train_termination is True:
             self._train_termination(
                 termination_positive_files,
                 termination_negative_files,
                 termination_priority_negative_files,
-                train_termination_embedding_epoch_per_cycle,
-                train_termination_classifier_epoch_per_cycle,
-                train_termination_cycles
+                train_termination_embedding_epochs,
+                train_termination_classifier_epochs,
             )
 
-        if train_policy:
+        if train_policy is True:
             self._train_policy(
                 policy_bootstrap_env,
                 train_policy_max_steps,
                 train_policy_success_rate
             )
 
-        self.trial_data = {
-            "name": [],
-            "performance": [],
-            "start_pos": [],
-            "end_pos": [],
-            "true_terminations": [],
-            "completed": [],
-        }
+        self.trial_data = pd.DataFrame([], 
+            columns=[
+                "normalized_distance",
+                "start_position",
+                "end_position",
+                "true_terminations",
+                "completed",
+                "dead",
+                "steps"], index=pd.Index([], name='name')
+        )
 
 
     def _train_initiation(
@@ -130,9 +130,8 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles):
+            embedding_epochs,
+            classifier_epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the initiation set.')
@@ -140,16 +139,14 @@ class Experiment():
         if len(negative_files) == 0:
             logging.warning('[experiment] No negative files were given for the initiation set.')
 
-        self.option.add_data_from_files_initiation(
+        self.option.initiation.add_data_from_files(
             positive_files,
             negative_files,
             priority_negative_files
         )
-        self.option.train_initiation(
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles,
-            shuffle_data=True
+        self.option.initiation.train(
+            embedding_epochs,
+            classifier_epochs
         )
 
     def _train_termination(
@@ -157,9 +154,8 @@ class Experiment():
             positive_files,
             negative_files,
             priority_negative_files,
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles):
+            embedding_epochs,
+            classifier_epochs):
 
         if len(positive_files) == 0:
             logging.warning('[experiment] No positive files were given for the termination set.')
@@ -167,16 +163,14 @@ class Experiment():
         if len(negative_files) == 0:
             logging.warning('[experiment] No negative files were given for the termination set.')
 
-        self.option.add_data_from_files_termination(
+        self.option.termination.add_data_from_files(
             positive_files,
             negative_files,
             priority_negative_files
         )
-        self.option.train_termination(
-            embedding_epochs_per_cycle,
-            classifier_epochs_per_cycle,
-            number_cycles,
-            shuffle_data=True
+        self.option.termination.train(
+            embedding_epochs,
+            classifier_epochs
         )
 
     def _train_policy(
@@ -195,7 +189,7 @@ class Experiment():
             save_dir = os.path.join(self.save_dir, additional_path)
         else:
             save_dir = self.save_dir
-        # self.option.save(save_dir)
+        self.option.save(save_dir)
         os.makedirs(self.save_dir, exist_ok=True)
         file_name = os.path.join(self.save_dir, 'trial_data.pkl')
         with lzma.open(file_name, 'wb') as f:
@@ -227,22 +221,28 @@ class Experiment():
             self, 
             possible_inits,
             true_terminations,
-            number_episodes_in_trial,
+            max_episodes_in_trial,
             eval, 
-            trial_name="",
+            trial_name,
             use_agent_space=False):
         assert isinstance(possible_inits, list)
-        logging.info("[experiment] Starting trial {}".format(trial_name))
-        print("[experiment] Starting trial {}".format(trial_name))
+        logging.info("[experiment:run_trial] Starting trial {}".format(trial_name))
+        print("[experiment:run_trial] Starting trial {}".format(trial_name))
 
         results = []
         start_poses = []
         end_poses = []
         true_terminationses = []
         completeds = []
+        deads = []
+        stepses = []
+        instantiation_instances = set()
 
-        for x in range(number_episodes_in_trial):
-            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
+        episode_count = 0
+        instance_well_trained = False
+
+        while episode_count < max_episodes_in_trial and (not instance_well_trained):
+            logging.info("Episode {}/{}".format(episode_count, max_episodes_in_trial))
             completed = False
             
             rand_idx = random.randint(0, len(possible_inits)-1)
@@ -256,41 +256,45 @@ class Experiment():
 
             agent_state = rand_state["agent_state"]
             start_pos = rand_state["position"]
+            # print(rand_state["position"])
             info = self.env.get_current_info({})
             attempt = 0
             timedout = 0
             must_break = False
             while (attempt < self.max_option_tries) and (timedout < 3) and (not must_break):
-            # for y in range(self.max_option_tries):
                 attempt += 1
                 logging.info("Attempt {}/{}".format(attempt, self.max_option_tries))
-                can_initiate = self.option.can_initiate(agent_state, (info["player_x"],info["player_y"]))
 
-                if not can_initiate:
-                    results.append(0)
+                option_result = self.option.run(
+                    self.env,
+                    state,
+                    info,
+                    eval
+                )
+
+                if self.option.markov_idx is not None:
+                    instantiation_instances.add(self.option.markov_idx)
+
+                if option_result is None:
+                    logging.info("[experiment:run_trial] Option did not initiate")
+                    result = 0
                     must_break = True
+                    position = info["position"]
+                    completed = False
+                    steps = 0
+
                 else:
-                    if eval:
-                        _, _, _, info, _ = self.option.evaluate(
-                            self.env,
-                            state,
-                            info
-                        )
-                    else:
-                        _, _, _, info, _ = self.option.run(
-                            self.env,
-                            state,
-                            info,
-                            [0],
-                            0
-                        )
+                    _, _, done, info, steps = option_result
 
                     if info["needs_reset"]:
+                        logging.info("[experiment:run_trial] Environment needs reset")
                         must_break = True
-
-                    if info['option_timed_out']:
-                        logging.info("[experiment] option timed out {} times".format(timedout))
+                    if info["option_timed_out"]:
                         timedout += 1
+                        logging.info("[experiment:run_trial] Option timed out ({}/{})".format(timedout, 3))
+
+                    if done:
+                        must_break = True
 
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
@@ -298,36 +302,188 @@ class Experiment():
                     completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
                     if completed:
                         must_break = True
-            if completed:
-                result = 1
-            else:
-                result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
+
+            episode_count += 1
+            instance_well_trained = all([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
+            
+            # print(position)
+            result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
+            if info["dead"]:
+                result = 0
+            # print('result',result)
+            # input("press any button to continue")
             results.append(result)
             start_poses.append(start_pos)
             end_poses.append(position)
             true_terminationses.append(true_terminations[rand_idx])
             completeds.append(completed)
-            logging.info("Result: {}".format(completed))
+            deads.append(info["dead"])
+            stepses.append(steps)
+            logging.info("Succeeded: {}".format(completed))
+
+
+        d = pd.DataFrame(
+            [
+                {
+                    "normalized_distance": np.mean(results),
+                    "start_position": start_poses,
+                    "end_position": end_poses,
+                    "true_terminations": true_terminationses,
+                    "completed": completeds,
+                    "dead": deads,
+                    "steps": stepses
+                }
+            ], index=pd.Index(data=[trial_name], name='name')
+        )
             
-        self.trial_data["name"].append(trial_name)
-        self.trial_data["start_pos"].append(start_poses)
-        self.trial_data["end_pos"].append(end_poses)
-        self.trial_data["true_terminations"].append(true_terminationses)
-        self.trial_data["completed"].append(completeds)
+        self.trial_data = self.trial_data.append(d)
 
-        if not eval:
-            self.option.train_initiation( 5, 10)
-            self.option.train_termination( 5, 10)
-
-        logging.info("[experiment] Finished trial {} performance: {}".format(
+        logging.info("[experiment:run_trial] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
             ))
+        logging.info("[experiment:run_trial] All instances well trained: {}".format(
+            instance_well_trained))
+        if not instance_well_trained:
+            logging.info("[experiment:run_trial] instance success rates:"
+                .format([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
+            )
+
         print("[experiment] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
             ))
+        return instantiation_instances
         
+    def test_assimilate(
+        self,
+        possible_inits,
+        true_terminations,
+        instantiation_instances,
+        max_episodes_in_trial,
+        trial_name,
+        use_agent_space=False
+    ):
+        "Run assimilation phase and see if option can be reincorporated into original option"
+        assert isinstance(possible_inits, list)
+
+        if isinstance(instantiation_instances, set):
+            instantiation_instances = list(instantiation_instances)
+
+        if len(instantiation_instances) == 0:
+            logging.info("[experiment:test_assimilation] No instances to test.")
+
+        logging.info("[experiment:test_assimilation] Starting assimilation test.")
+        logging.info(instantiation_instances)
+        print("[experiment:test_assimilation] Starting assimilation test.")
+
+        results = []
+        start_poses = []
+        end_poses = []
+        true_terminationses = []
+        completeds = []
+        deads = []
+        stepses = []
+
+        episode_count = 0
+        instance_succeeded = False
+
+        for instance_idx in instantiation_instances:
+            instance = self.option.markov_instantiations[instance_idx]
+            while episode_count < max_episodes_in_trial and (not instance_succeeded):
+                logging.info("Assimilation test {}/{}".format(episode_count, max_episodes_in_trial))
+                completed = False
+                episode_count += 1
+
+                rand_idx = random.randint(0, len(possible_inits) - 1)
+                rand_state = possible_inits[rand_idx]
+                state = self._set_env_ram(
+                    rand_state["ram"],
+                    rand_state["state"],
+                    rand_state["agent_state"],
+                    use_agent_space
+                )
+                termination = true_terminations[rand_idx]
+                
+                agent_state = rand_state["agent_state"]
+                start_pos = rand_state["position"]
+                info = self.env.get_current_info({})
+
+                completed = False
+                position = info["position"]
+                dead = False
+                result = 0
+                steps = 0
+
+                if instance.can_initiate((info["player_x"], info["player_y"])):
+                    _, _, done, info, steps = instance.assimilate_run(
+                        self.env,
+                        state,
+                        info
+                    )
+
+                    position = info["position"]
+                    dead = info["dead"]
+                    completed = self._check_termination_correct(
+                        position,
+                        termination,
+                        self.env
+                    )
+
+                    if not dead:
+                        result = self._get_percent_completed(
+                            start_pos,
+                            position,
+                            termination,
+                            self.env
+                        )
+                    
+                results.append(result)
+                start_poses.append(start_pos)
+                end_poses.append(position)
+                true_terminationses.append(termination)
+                completeds.append(completed)
+                deads.append(dead)
+                stepses.append(steps)
+                instance_succeeded = instance.can_assimilate()
+                if instance_succeeded is None:
+                    instance_succeeded = False
+                if instance_succeeded is True:
+                    self.option.update_option(
+                        instance,
+                        200,
+                        20,
+                        80
+                    )
+            logging.info("Instance {} succeeded: {} average performance: {}"
+                .format(instance_idx, completed, np.mean(results)))
+            
+            d = pd.DataFrame(
+                [
+                    {
+                        "normalized_distance": np.mean(results),
+                        "start_position": start_poses,
+                        "end_position": end_poses,
+                        "true_terminations": true_terminationses,
+                        "completed": completeds,
+                        "dead": deads,
+                        "steps": stepses
+                    }
+                ], index=pd.Index(data=[trial_name+str(instance_idx)], name='name')
+            )
+
+            self.trial_data = self.trial_data.append(d)
+
+        logging.info("[experiment] Finished trial {} performance: {}".format(
+            trial_name,
+            np.mean(results)
+        ))
+        print("[experiment] Finished trial {} performance: {}".format(
+            trial_name,
+            np.mean(results)
+        ))
+        self.option.markov_instantiations = []
+
     def bootstrap_from_room(
             self,
             possible_inits,
@@ -359,21 +515,23 @@ class Experiment():
             count = 0
             timedout = 0
 
-            while (not done) and (info["needs_reset"]) and (count < 100) and (timedout < 3):
+            while (not done) and (not info["needs_reset"]) and (count < 100) and (timedout < 3):
 
                 count += 1
 
-                can_initiate = self.option.can_initiate(agent_state, info)
-
-                if not can_initiate:
-                    logging.info("Break because initiation was not triggered")
-                    break
-
-                state, _, done, info, _ = self.option.evaluate(
+                option_result = self.option.run(
                     self.env,
                     state,
-                    info
+                    info,
+                    eval=True
                 )
+
+                if option_result is None:
+                    logging.info("initiation was not triggered")
+                    self.option.initiation_update_confidence(was_successful=False, votes=self.option.initiation.votes)
+                    break
+
+                _, _, done, info, _ = option_result
 
                 if info['needs_reset']:
                     logging.info("Breaking because environment needs reset")
@@ -384,11 +542,11 @@ class Experiment():
                     timedout += 1
 
                 if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx], self.env):
-                    self.option.termination_update_confidence(was_successful=True)
+                    self.option.termination_update_confidence(was_successful=True, votes=self.option.termination.votes)
                     logging.info("Breaking because correct termination was found")
                     break
                 else:
-                    self.option.termination_update_confidence(was_successful=False)
+                    self.option.termination_update_confidence(was_successful=False, votes=self.option.termination.votes)
 
     def plot(self, names):
 
@@ -407,6 +565,54 @@ class Experiment():
 
         plt.savefig(self.log_dir + '/plot.jpg')
 
+    def test_classifiers(self, possible_inits_true, possible_inits_false):
+        assert isinstance(possible_inits_true, list)
+        assert isinstance(possible_inits_false, list)
+
+
+        for idx, instance in enumerate(possible_inits_true):
+            state = instance["agent_state"]
+            plot_name = os.path.join(self.plot_dir, "attentions_initiation_true")
+            os.makedirs(plot_name, exist_ok=True)
+            plot_state(state, plot_name+'/'+str(idx)+'.png')
+
+            print("Instance {}/{}".format(idx, len(possible_inits_true)))
+
+            votes, class_conf, confidences, attentions = self.option.initiation.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_true", "initiation", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+            votes, class_conf, confidences, attentions = self.option.termination.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_true", "termination", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+        for idx, instance in enumerate(possible_inits_false):
+            state = self._set_env_ram(
+                instance["ram"],
+                instance["state"],
+                instance["agent_state"],
+                True
+            )
+            plot_name = os.path.join(self.plot_dir, "attentions_initiation_false")
+            os.makedirs(plot_name, exist_ok=True)
+            plot_state(state, plot_name+'/'+str(idx)+'.png')
+
+            print("Instance {}/{}".format(idx, len(possible_inits_false)))
+            votes, class_conf, confidences, attentions = self.option.initiation.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_false", "initiation", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
+
+            votes, class_conf, confidences, attentions = self.option.termination.get_attentions(state)
+            plot_dir = os.path.join(self.plot_dir, "attentions_initiation_false", "termination", str(idx))
+            os.makedirs(plot_dir, exist_ok=True)
+
+            plot_attentions(attentions, votes, class_conf, confidences, plot_dir)
 
 
 

@@ -1,0 +1,52 @@
+# Hyperparameters follow Hessel et al. (2018), except for sticky_actions,
+# which was False (not using sticky actions) in the original paper.
+import dopamine.discrete_domains.atari_lib
+import dopamine.replay_memory.prioritized_replay_buffer
+import bonus_based_exploration.intrinsic_motivation.intrinsic_rainbow_agent_for_skills
+import bonus_based_exploration.intrinsic_motivation.intrinsic_rewards
+import bonus_based_exploration.run_experiment
+import gin.tf.external_configurables
+
+create_exploration_agent.agent_name = 'rainbow_rnd_for_skills'
+
+RNDRainbowAgentForSkills.num_atoms = 51
+RNDRainbowAgentForSkills.vmax = 10.
+RNDRainbowAgentForSkills.gamma = 0.99
+RNDRainbowAgentForSkills.update_horizon = 3
+RNDRainbowAgentForSkills.min_replay_history = 20000  # agent steps
+RNDRainbowAgentForSkills.update_period = 4
+RNDRainbowAgentForSkills.target_update_period = 8000  # agent steps
+RNDRainbowAgentForSkills.epsilon_train = 0.1
+RNDRainbowAgentForSkills.epsilon_eval = 0.001
+RNDRainbowAgentForSkills.epsilon_decay_period = 250000  # agent steps
+RNDRainbowAgentForSkills.replay_scheme = 'prioritized'
+RNDRainbowAgentForSkills.tf_device = '/gpu:0'  # use '/cpu:*' for non-GPU version
+RNDRainbowAgentForSkills.optimizer = @agent/tf.train.AdamOptimizer()
+RNDRainbowAgentForSkills.summary_writing_frequency = 500 # log step
+
+# Note these parameters are different from C51's.
+agent/tf.train.AdamOptimizer.learning_rate = 0.0000625
+agent/tf.train.AdamOptimizer.epsilon = 0.00015
+
+# Parameters for the intrinsic motivation method
+RNDRainbowAgent.clip_reward = False
+RNDIntrinsicReward.reward_scale = 0.0
+RNDIntrinsicReward.optimizer = @tf.train.AdamOptimizer()
+tf.train.AdamOptimizer.learning_rate = 0.0001
+tf.train.AdamOptimizer.epsilon = 0.00001
+
+atari_lib.create_atari_environment.game_name = 'MontezumaRevenge'
+# Sticky actions with probability 0.25, as suggested by (Machado et al., 2017).
+atari_lib.create_atari_environment.sticky_actions = True
+AtariPreprocessing.terminal_on_life_loss = False
+Runner.num_iterations = 100
+Runner.training_steps = 250000  # agent steps
+Runner.evaluation_steps = 125000  # agent steps
+Runner.max_steps_per_episode = 27000  # agent steps
+
+# RNDAgent.training_episodes = 400 # agent episodes
+WrappedPrioritizedSkillReplayBuffer.replay_capacity = 400000
+WrappedPrioritizedSkillReplayBuffer.batch_size = 32
+
+monte_with_skills.frame_stack = 1
+monte_with_skills.episode_life = False

@@ -1,23 +1,28 @@
-from json import load
 import numpy as np
 from scipy.stats import beta
 import matplotlib.pyplot as plt
 import os
+import torch
 
 class BayesianWeighting():
 
     def __init__(self,
         alpha,
         beta,
-        num_heads):
+        num_heads,
+        device):
         self.alpha = alpha
         self.beta = beta
         self.num_heads = num_heads
 
-        self.weights = np.ones(self.num_heads)
+        self.weightings = np.ones(self.num_heads)
 
         self.successes = np.zeros(self.num_heads)
         self.failures = np.zeros(self.num_heads)
+
+        self.device = device
+
+        self.update_weights()
 
     def save(self, path):
         if not os.path.exists(path):
@@ -54,6 +59,12 @@ class BayesianWeighting():
 
         self.update_weights()
 
+    def weights(self, move_to_device=True):
+        if move_to_device:
+            return torch.from_numpy(self.weightings).to(self.device)
+        else:
+            return self.weightings
+
     def update_successes(self, successes):
         # e.g. if you have 4 classifiers should have input [0, 2, 1, 3]
         # where classifier 0 has succeeded 0 times
@@ -83,7 +94,7 @@ class BayesianWeighting():
         for idx in range(self.num_heads):
             posterior = beta.pdf(x, self.alpha+self.successes[idx],
                                         self.beta+self.failures[idx])
-            self.weights[idx] = x[np.argmax(posterior)]
+            self.weightings[idx] = x[np.argmax(posterior)]
 
     def plot_posterior(self, idx):
         x = np.linspace(0, 1, 1000)

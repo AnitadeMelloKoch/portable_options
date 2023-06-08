@@ -13,6 +13,7 @@ from distutils.util import strtobool
 import gin
 import dill
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def create_log_dir(dir_path, remove_existing=True, log_git=True):
@@ -133,6 +134,21 @@ def update_param(params, name, value):
     else:
         params[name] = type(params[name])(value)
 
+def plot_attentions(attentions, votes, class_conf, weightings, plot_name):
+    for x in range(len(attentions)):
+        fig = plt.figure(num=1, clear=True)
+        ax = fig.add_subplot()
+        ax.axis('off')
+        ax.set_title('Vote: {} \n Classifier Confidence: {} \n Weight: {}'.format(
+            votes[x], class_conf[x], weightings[x]
+        ))
+        fig_name = os.path.join(plot_name, 'attention_{}.png'.format(x))
+
+        layer_viz = attentions[x][0,:,:,:].detach().cpu().numpy()
+        mean_att = np.mean(layer_viz, axis=0)
+        ax.imshow(mean_att, cmap='jet')
+
+        fig.savefig(fig_name, bbox_inches='tight')
 
 class BaseTrial:
     """

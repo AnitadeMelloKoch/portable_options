@@ -2,7 +2,6 @@ import logging
 import numpy as np
 import torch
 from portable.option.memory import SetDataset
-from portable.option.sets.utils import BayesianWeighting
 from portable.option.sets.models import EnsembleClassifier
 
 logger = logging.getLogger(__name__)
@@ -13,33 +12,30 @@ class Set():
             device,
             vote_function,
 
-            beta_distribution_alpha=30,
-            beta_distribution_beta=5,
-
             attention_module_num=8,
             embedding_learning_rate=1e-4,
             classifier_learning_rate=1e-2,
             embedding_output_size=64,
+            beta_distribution_alpha=30,
+            beta_distribution_beta=5,
 
-            dataset_max_size=100000
+            dataset_max_size=100000,
+            dataset_batch_size=16
         ):
         self.classifier = EnsembleClassifier(
             device=device,
             embedding_learning_rate=embedding_learning_rate,
             classifier_learning_rate=classifier_learning_rate,
             num_modules=attention_module_num,
-            embedding_output_size=embedding_output_size
+            embedding_output_size=embedding_output_size,
+            batch_k=dataset_batch_size//2,
+            beta_distribution_alpha=beta_distribution_alpha,
+            beta_distribution_beta=beta_distribution_beta
         )
 
         self.vote_function = vote_function
 
-        self.dataset = SetDataset(max_size=dataset_max_size)
-
-        self.confidence = BayesianWeighting(
-            beta_distribution_alpha,
-            beta_distribution_beta,
-            attention_module_num
-        )
+        self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
 
         self.attention_module_num = attention_module_num
         self.votes = None
@@ -47,12 +43,10 @@ class Set():
 
     def save(self, path):
         self.classifier.save(path)
-        self.confidence.save(path)
         self.dataset.save(path)
 
     def load(self, path):
         self.classifier.load(path)
-        self.confidence.load(path)
         self.dataset.load(path)
         self.avg_loss = self.classifier.avg_loss
 
@@ -106,21 +100,14 @@ class Set():
 
     def train(
             self,
-            num_cycles=1,
-            embedding_epochs_per_cycle=10,
-            classifier_epochs_per_cycle=10,
-            shuffle_data=False):
-        for i in range(num_cycles):
-            self.classifier.train_embedding(
-                self.dataset,
-                embedding_epochs_per_cycle,
-                shuffle_data=shuffle_data
-            )
-            self.classifier.train_classifiers(
-                self.dataset,
-                classifier_epochs_per_cycle,
-                shuffle_data=shuffle_data
-            )
+            embedding_epochs,
+            classifier_epochs):
+            
+        self.classifier.train(
+            self.dataset,
+            embedding_epochs,
+            classifier_epochs
+        )
 
         self.avg_loss = self.classifier.avg_loss
 
@@ -130,26 +117,31 @@ class Set():
 
         agent_state = torch.unsqueeze(agent_state, dim=0)
 
-        votes, conf = self.classifier.get_votes(agent_state)
-        vote = self.vote_function(votes, self.confidence.weights, conf)
+        votes, conf, confidences = self.classifier.get_votes(agent_state)
+        vote = self.vote_function(votes, confidences, conf)
 
-        if vote == 1:
-            logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, self.confidence.weights, vote))
+        logger.info("[set] Classifier votes: {}  \n\tConfidences: {}, \n\tWeights: {}, \n\tFinal vote: {}".format(votes, conf, confidences, vote))
 
         self.votes = votes
 
         return vote
 
+    def get_attentions(self, agent_state):
+        agent_state = torch.unsqueeze(agent_state, dim=0)
+        votes, conf, confidences, attentions = self.classifier.get_votes(agent_state, True)
+
+        return votes, conf, confidences, attentions
+
     def update_confidence(
             self,
-            was_successful):
-        # DOUBLE CHECK THERE IS NO REFERENCE COPY NONSENSE HAPPENING HERE
-        success_count = self.votes
-        failure_count = np.ones(len(self.votes)) - self.votes
+            was_successful,
+            votes):
+        success_count = votes
+        failure_count = np.ones(len(votes)) - votes
 
         if not was_successful:
             success_count = failure_count
-            failure_count = self.votes
+            failure_count = votes
 
-        self.confidence.update_successes(success_count)
-        self.confidence.update_failures(failure_count)
+        self.classifier.update_successes(success_count)
+        self.classifier.update_failures(failure_count)

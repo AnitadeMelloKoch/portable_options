@@ -17,4 +17,4 @@ class MLP(nn.Module):
 
         x = F.relu(self.linear1(x))
         
-        return torch.sigmoid(self.linear2(x))
+        return F.softmax(self.linear2(x))

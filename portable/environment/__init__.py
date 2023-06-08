@@ -1,11 +1,3 @@
-from .atari_wrappers import *
-from .monte_forwarding_wrapper import MonteForwarding
-from .monte_object_goal_wrapper import MonteObjectGoalWrapper
-from .monte_skull_goal_wrapper import MonteSkullGoalWrapper
-from .monte_snake_goal_wrapper import MonteSnakeGoalWrapper
-from .monte_spider_goal_wrapper import MonteSpiderGoalWrapper
-from .monte_ladder_goal_wrapper import MonteLadderGoalWrapper
+# from .atari_wrappers import *
 from .agent_wrapper import MonteAgentWrapper
-from .monte_initiation_set_wrapper import MonteInitiationSetWrapper
-from .monte_termination_set_wrapper import MonteTerminationSetWrapper
 from .monte_bootstrap_wrapper import MonteBootstrapWrapper
