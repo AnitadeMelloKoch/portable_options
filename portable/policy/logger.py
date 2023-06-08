@@ -308,6 +308,9 @@ class Logger(object):
 
     # Logging API, forwarded
     # ----------------------------------------
+    def info(self, *args):
+        self.log(*args, level=INFO)
+
     def logkv(self, key, val):
         self.name2val[key] = val
 
@@ -391,9 +394,11 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=''):
     format_strs = filter(None, format_strs)
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
-    Logger.CURRENT = Logger(dir=dir, output_formats=output_formats, comm=comm)
+    logger = Logger(dir=dir, output_formats=output_formats, comm=comm)
     if output_formats:
-        log('Logging to %s'%dir)
+        logger.log('Logging to %s'%dir)
+    return logger
+
 
 def _configure_default_logger():
     configure()

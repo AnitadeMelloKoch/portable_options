@@ -1,1 +1,1 @@
-from .attention import AttentionEmbedding
+from .attention import AttentionEmbedding, ImpalaAttentionEmbedding

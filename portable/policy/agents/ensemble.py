@@ -2,18 +2,24 @@ import os
 import lzma
 import dill
 import itertools
+from collections import deque
 from contextlib import contextmanager
 
 import torch
+import torch.nn as nn
 import numpy as np
 from pfrl import replay_buffers
 from pfrl.replay_buffer import batch_experiences
 from pfrl.utils.batch_states import batch_states
 
+from portable.policy import logger
 from portable.policy.ensemble.criterion import batched_L_divergence
 from portable.policy.agents.abstract_agent import Agent, evaluating
 from portable.policy.ensemble.aggregate import choose_most_popular, choose_leader, \
-    choose_max_sum_qvals, upper_confidence_bound
+    choose_max_sum_qvals, upper_confidence_bound, exp3_bandit_algorithm, \
+    upper_confidence_bound_agent_57, upper_confidence_bound_with_window_size, \
+    upper_confidence_bound_with_gestation
+
 
 
 class EnsembleAgent(Agent):
@@ -35,7 +41,10 @@ class EnsembleAgent(Agent):
                 discount_rate=0.9,
                 num_modules=8, 
                 embedding_plot_freq=10000,
-                bandit_exploration_weight=500):
+                bandit_exploration_weight=500,
+                fix_attention_mask=False,
+                use_feature_learner=True,
+                saving_dir=None,):
         # vars
         self.device = device
         self.batch_size = batch_size
@@ -51,16 +60,32 @@ class EnsembleAgent(Agent):
         if self._using_leader():
             self.learner_accumulated_reward = np.ones(self.num_modules)  # laplace smoothing
             self.learner_selection_count = np.ones(self.num_modules)  # laplace smoothing
+        if self.action_selection_strategy == "ucb_window_size":
+            self.ucb_window_size = 90  # from the agent 57 paper
+            self.learner_accumulated_reward_queue = [deque(maxlen=self.ucb_window_size) for _ in range(self.num_modules)]
+            self.learner_selection_count_queue = [deque(maxlen=self.ucb_window_size) for _ in range(self.num_modules)]
+        if self.action_selection_strategy == 'ucb_gestation':
+            self.gestation_period = 1_000_000
+            self.gestation_bandit_reset = False
         self.embedding_plot_freq = embedding_plot_freq
         self.discount_rate = discount_rate
         self.bandit_exploration_weight = bandit_exploration_weight
+        self.fix_attention_mask = fix_attention_mask
+        self.use_feature_learner = use_feature_learner
+        self.saving_dir = saving_dir
+        if self.saving_dir is not None and self._using_leader():
+            self.logger = logger.configure(dir=self.saving_dir, format_strs=['csv'], log_suffix="_bandit_stats")
+            self.loss_logger = logger.configure(dir=self.saving_dir, format_strs=['csv', 'stdout'], log_suffix="_loss_stats")
         
         # ensemble
         self.attention_model = attention_model.to(self.device)
         self.attention_optimizer = torch.optim.Adam(self.attention_model.parameters(), lr=learning_rate)
         self.learners = learners
+        learnable_params = list(itertools.chain.from_iterable([list(learner.model.parameters()) for learner in self.learners]))
+        if not self.fix_attention_mask:
+            learnable_params = list(self.attention_model.parameters()) + learnable_params
         self.optimizer = torch.optim.Adam(
-            list(self.attention_model.parameters()) + list(itertools.chain.from_iterable([list(learner.model.parameters()) for learner in self.learners])),
+            learnable_params,
             lr=learning_rate
         )
         self.num_learners = len(learners)
@@ -101,7 +126,7 @@ class EnsembleAgent(Agent):
                 losses.append(maybe_loss)
             assert np.sum([loss is None for loss in losses]) == 0 or np.sum([loss is None for loss in losses]) == self.num_learners
 
-            # for attention model
+            # add experience to buffer and update action leader
             if self.training:
                 self._batch_observe_train(
                     batch_obs, batch_reward, batch_done, batch_reset
@@ -116,8 +141,16 @@ class EnsembleAgent(Agent):
                 learner_loss = torch.stack(losses).sum()
                 div_loss = self.update_attention(experiences=self.replay_buffer.sample(self.batch_size), compute_loss_only=True)
                 loss = learner_loss + div_loss
+                
+                # log the stats
+                self.loss_logger.logkv("step_number", self.step_number)
+                self.loss_logger.logkv('episode_number', self.episode_number)
+                self.loss_logger.logkv("learner_loss", learner_loss.item())
+                self.loss_logger.logkv("div_loss", div_loss.item())
+                self.loss_logger.dumpkvs()
 
-                self.attention_model.train()
+                if not self.fix_attention_mask:
+                    self.attention_model.train()
                 self.optimizer.zero_grad()
                 loss.backward()
                 for learner in self.learners:
@@ -127,6 +160,10 @@ class EnsembleAgent(Agent):
                 self.attention_model.eval()
     
     def _batch_observe_train(self, batch_obs, batch_reward, batch_done, batch_reset):
+        """
+        currently, this just adds experience to replay buffer and sets action leader as neccessary
+        the actual update is done in self.update_attention()
+        """
         for i in range(len(batch_obs)):
             self.step_number += 1
 
@@ -150,25 +187,59 @@ class EnsembleAgent(Agent):
             # self.replay_updater.update_if_necessary(self.step_number)
 
         # action leader
-        self.learner_accumulated_reward[self.action_leader] += batch_reward.clip(0, 1).sum()
         if batch_reset.any() or batch_done.any():
             self.episode_number += np.logical_or(batch_reset, batch_done).sum()
-            self._set_action_leader()
+            self._set_action_leader(batch_reward.clip(0, 1).sum())
+            self._update_learner_stats(batch_reward.clip(0, 1).sum())  # assume non-zero reward only at episode end
+            if self.episode_number % 20 == 0:
+                self._log_bandit_stats()
 
     def _batch_observe_eval(self, batch_obs, batch_reward, batch_done, batch_reset):
         pass
     
     def _using_leader(self):
-        return self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']
+        return self.action_selection_strategy in ['exp3_leader', 'ucb_leader', 'greedy_leader', 
+            'uniform_leader', 'ucb_57', 'ucb_window_size', 'ucb_gestation']
+
+    def _update_learner_stats(self, reward):
+        def safe_mean(x):
+            return np.mean(x) if len(x) > 0 else 0
+        
+        # if need to reset bandit counts
+        if self.action_selection_strategy == "ucb_gestation":
+            if self.step_number > self.gestation_period and not self.gestation_bandit_reset:
+                self.learner_accumulated_reward = np.ones_like(self.learner_accumulated_reward)
+                self.learner_selection_count = np.ones_like(self.learner_selection_count)
+                self.gestation_bandit_reset = True
+        
+        if self.action_selection_strategy == "ucb_window_size":
+            # udpate queue
+            for i in range(self.num_learners):
+                if i == self.action_leader:
+                    self.learner_accumulated_reward_queue[i].append(reward)
+                    self.learner_selection_count_queue[i].append(1)
+                else:
+                    self.learner_accumulated_reward_queue[i].append(0)
+                    self.learner_selection_count_queue[i].append(0)
+            # update the stats
+            for i in range(self.num_learners):
+                self.learner_accumulated_reward[i] = safe_mean(self.learner_accumulated_reward_queue[i])
+                self.learner_selection_count[i] = np.sum(self.learner_selection_count_queue[i])
+        else:
+            self.learner_accumulated_reward[self.action_leader] += np.clip(reward, a_min=None, a_max=1)
+            self.learner_selection_count[self.action_leader] += 1
 
     def _attention_embed_obs(self, batch_obs):
         obs = torch.as_tensor(batch_obs.copy(), dtype=torch.float32, device=self.device)
         embedded_obs = self.attention_model(obs)
         embedded_obs = [emb.cpu() for emb in embedded_obs]
+        if not self.use_feature_learner:
+            embedded_obs = embedded_obs * self.num_learners  # fead same feature to all learners
         return embedded_obs
     
     def observe(self, obs, action, reward, next_obs, terminal):
         """
+        DEPRECATED
         store the experience tuple into the replay buffer
         and update the agent if necessary
         """
@@ -196,9 +267,20 @@ class EnsembleAgent(Agent):
         if terminal:
             self.episode_number += 1
             if self._using_leader():
-                self._set_action_leader()
+                self._set_action_leader(reward)
+                self._log_bandit_stats()
+    
+    def _log_bandit_stats(self):
+        self.logger.logkv('episode_number', self.episode_number)
+        self.logger.logkv('time_step', self.step_number)
+        self.logger.logkv('action_leader', self.action_leader)
+        self.logger.logkv('num_learners', self.num_learners)
+        for i in range(self.num_modules):
+            self.logger.logkv(f'learner_{i}_reward', self.learner_accumulated_reward[i])
+            self.logger.logkv(f'learner_{i}_selection_count', self.learner_selection_count[i])
+        self.logger.dumpkvs()
 
-    def _set_action_leader(self):
+    def _set_action_leader(self, reward):
         """choose which learner in the ensemble gets to lead the action selection process"""
         if self.action_selection_strategy == 'uniform_leader':
             # choose a random leader
@@ -216,7 +298,36 @@ class EnsembleAgent(Agent):
                 visitation_count=self.learner_selection_count, 
                 c=self.bandit_exploration_weight
             )
-            self.learner_selection_count[self.action_leader] += 1
+        elif self.action_selection_strategy == 'ucb_gestation':
+            self.action_leader = upper_confidence_bound_with_gestation(
+                values=self.learner_accumulated_reward,
+                t=self.step_number,
+                visitation_count=self.learner_selection_count,
+                gestation_period=self.gestation_period,
+                c=self.bandit_exploration_weight,
+            )
+        elif self.action_selection_strategy == 'ucb_57':
+            self.action_leader = upper_confidence_bound_agent_57(
+                mean_rewards=self.learner_accumulated_reward / self.learner_selection_count,
+                t=self.step_number,
+                visitation_count=self.learner_selection_count,
+                beta=self.bandit_exploration_weight,
+            )
+        elif self.action_selection_strategy == 'ucb_window_size':
+            self.action_leader = upper_confidence_bound_with_window_size(
+                mean_rewards=self.learner_accumulated_reward,
+                t=self.step_number,
+                visitation_count=self.learner_selection_count,
+                beta=self.bandit_exploration_weight,
+                epsilon=0.1,
+            )
+        elif self.action_selection_strategy == 'exp3_leader':
+            # choose a leader based on the EXP3 algorithm
+            self.action_leader = exp3_bandit_algorithm(
+                reward=reward,
+                num_arms=self.num_modules,
+                gamma=0.1,  # exploration parameter, in (0, 1]
+            )
 
     def update_attention(self, experiences, compute_loss_only=False, errors_out=None):
         """
@@ -258,7 +369,7 @@ class EnsembleAgent(Agent):
             batch_states = exp_batch["state"]
             state_embeddings = self.attention_model(batch_states, plot=(self.n_updates % self.embedding_plot_freq == 0))  # num_modules x (batch_size, C, H, W)
             state_embedding_flatten = torch.cat([embedding.unsqueeze(1) for embedding in state_embeddings], dim=1)  # (batch_size, num_modules, C, H, W)
-            state_embedding_flatten = state_embedding_flatten.view(self.batch_size, self.num_modules, -1)  # (batch_size, num_modules, d)
+            state_embedding_flatten = state_embedding_flatten.view(self.batch_size, len(self.attention_model.attention_modules), -1)  # (batch_size, num_modules, d)
             div_loss = batched_L_divergence(state_embedding_flatten)
 
             if not compute_loss_only:
@@ -274,6 +385,9 @@ class EnsembleAgent(Agent):
             
             self.n_updates += 1
 
+            if self.fix_attention_mask:
+                return 0
+
             return div_loss
 
     def batch_act(self, batch_obs):
@@ -281,7 +395,7 @@ class EnsembleAgent(Agent):
             # action selection strategy
             if self.action_selection_strategy == 'vote':
                 action_selection_func = choose_most_popular
-            elif self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']:
+            elif self._using_leader():
                 action_selection_func = lambda a: choose_leader(a, leader=self.action_leader)
             else:
                 raise NotImplementedError("action selection strat not supported")
@@ -314,7 +428,7 @@ class EnsembleAgent(Agent):
         # action selection strategy
         if self.action_selection_strategy == 'vote':
             action_selection_func = lambda a, qvals: choose_most_popular(a)
-        elif self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader']:
+        elif self.action_selection_strategy in ['ucb_leader', 'greedy_leader', 'uniform_leader', 'exp3_leader']:
             action_selection_func = lambda a, qvals: choose_leader(a, leader=self.action_leader)
         elif self.action_selection_strategy == 'add_qvals':
             action_selection_func = lambda a, qvals: choose_max_sum_qvals(qvals)
@@ -368,3 +482,30 @@ class EnsembleAgent(Agent):
         if reset:
             agent.reset()
         return agent
+    
+    def load_attention_mask(self, load_dir):
+        """
+        load attention mask from a experiment saving dir
+        learner_selection_count.txt: n numbers that tell us which learner is selected how many times
+        agent.pkl: saved agent
+        """
+        # find the portable feature
+        with open(os.path.join(load_dir, 'learner_selection_count.txt'), 'r') as f:
+            learner_selection_count = np.loadtxt(f)
+        portable_feature = np.argmax(learner_selection_count)
+
+        # load the saved attention model 
+        with lzma.open(os.path.join(load_dir, 'agent.pkl'), 'rb') as f:
+            agent = dill.load(f)
+        saved_attention_model = agent.attention_model
+
+        # make all attention the portable one
+        portable_attention_mask = saved_attention_model.attention_modules[portable_feature]
+        attention_modules = nn.ModuleList(
+            [
+                portable_attention_mask for _ in range(len(saved_attention_model.attention_modules))
+            ]
+        )
+        
+        # load the attention model
+        self.attention_model.attention_modules = attention_modules

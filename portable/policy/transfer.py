@@ -10,29 +10,20 @@ import argparse
 from pathlib import Path
 from collections import deque
 
-import torch
-import torch.nn as nn
-from torch import distributions
 import numpy as np
-import pfrl
-from pfrl.nn.lmbda import Lambda
 from procgen import ProcgenEnv
-import pfrl
-from pfrl.agents import DoubleDQN
-from pfrl.utils import set_random_seed
-from pfrl.q_functions import DiscreteActionValueHead
 
 from portable.policy.vec_env import VecExtractDictObs, VecNormalize, VecChannelOrder, VecMonitor
 from portable.policy.ensemble import AttentionEmbedding
-from portable.policy.agents import PPO, EnsembleAgent, SAC, SingleSharedBias
-from portable.policy.envs import make_ant_env
-from portable.policy.models import ProcgenCNN, ImpalaCNN, PPOMLP
-from portable.policy.plot import plot_reward_curve
+from portable.policy.agents import PPO, EnsembleAgent
+from portable.policy.models import PPOMLP
 from portable.utils import BaseTrial
 from portable.policy import logger
 from portable.utils import utils
+from portable.policy.procgen_curriculum import procgen_game_curriculum
 
-class ProcgenAntTrial(BaseTrial):
+
+class ProcgenTransferTrial(BaseTrial):
     """
     trial for training procgen
     """
@@ -48,71 +39,83 @@ class ProcgenAntTrial(BaseTrial):
             parents=[self.get_common_arg_parser()]
         )
         # defaults
-        parser.set_defaults(hyperparams='procgen_ppo')
+        parser.set_defaults(hyperparams='procgen_ensemble')
+
+        # training
+        parser.add_argument('--transfer_steps', type=int, default=500_000)
+        parser.add_argument('--bandit_exploration_weight', type=float, default=500)
+        parser.add_argument('--individual_spatial_feature_extractor', '-s', action='store_true', default=False,
+                            help='use individual spatial feature extractor for each attention module')
+        parser.add_argument('--individual_global_feature_extractor', '-g', action='store_true', default=False,
+                            help='use individual global feature extractor for each attention module')
 
         # procgen environment
         parser.add_argument('--env', type=str, required=True,
                             help='name of the procgen environment')
         parser.add_argument('--distribution_mode', '-d', type=str, default='easy',
-                            choices=['easy', 'hard', 'exploration, memeory', 'extreme'],
+                            choices=['easy', 'hard', 'exploration', 'memory', 'extreme'],
                             help='distribution mode of procgen')
-        parser.add_argument('--num_envs', type=int, default=64,
+        parser.add_argument('--num_envs', type=int, default=8,
                             help='number of environments to run in parallel')
-        parser.add_argument('--num-threads', type=int, default=4)
-        parser.add_argument('--num_levels', type=int, default=200,
-                            help='number of different levels to generate during training')
         parser.add_argument('--start_level', type=int, default=0,
-                            help='seed to start level generation')
+                            help='start level of the procgen environment')
+        parser.add_argument('--num_levels', type=int, default=20,
+                            help='number of different levels to generate during training')
+        parser.add_argument('--curriculum', action='store_true', default=False,
+                            help='arrange the levels in an order of increasing difficulty. Currently only available to a few games')
         
         # agent
-        parser.add_argument('--agent', type=str, default='ppo',
-                            choices=['ppo', 'ensemble', 'dqn', 'sac'])
-        parser.add_argument('--load', '-l', type=str, default=None,
-                            help='path to load agent')
+        parser.add_argument('--agent', type=str, default='ensemble',
+                            choices=['ensemble'])
+        parser.add_argument('--fix_attention_masks', action='store_true', default=False,
+                            help='fix the attention mask and no longer train them')
+        parser.add_argument('--load', type=str, default=None,
+                            help='directory to load the saved agent and attention masks')
+        parser.add_argument('--remove_feature_learner', action='store_true', default=False,
+                            help='only use 1 attention mask to get 1 feature, but could be multiple policies')
+        parser.add_argument('--action_selection_strat', type=str, default='ucb_leader',
+                            choices=['ucb_leader', 'greedy_leader', 'uniform_leader', 
+                                     'exp3_leader', "ucb_57", "ucb_window_size", "ucb_gestation"],
+                            help='how to select the ensemble-action to take')
         
         args = self.parse_common_args(parser)
         # auto fill
         if args.experiment_name is None:
             args.experiment_name = args.env
-        if args.agent == 'ppo':
-            args.hyperparams = 'procgen_ppo'
-        elif args.agent == 'ensemble':
-            args.hyperparams = 'procgen_ensemble'
-        elif args.agent == 'dqn':
-            args.hyperparams = 'procgen_dqn'
-        elif args.agent == 'sac':
-            args.hyperparams = 'procgen_sac'
         return args
 
     def check_params_validity(self):
         """
         check whether the params entered by the user is valid
         """
-        pass
+        if self.params['fix_attention_masks']:
+            assert self.params['load'] is not None, "must load a saved agent if fix_attention_masks is True"
     
-    def make_vector_env(self, eval=False):
-        """vector environment for mujoco and procgen"""
-        if 'ant' in self.params['env']:
-            # ant mujoco env
-            venv = make_ant_env(self.params['env'], self.params['num_envs'], eval=eval)
-        else:
-            # procgen env
-            venv = ProcgenEnv(
-                num_envs=self.params['num_envs'],
-                env_name=self.params['env'],
-                num_levels=0 if eval else self.params['num_levels'],
-                start_level=0 if eval else self.params['start_level'],
-                distribution_mode=self.params['distribution_mode'],
-                num_threads=self.params['num_threads'],
-                center_agent=True,
-                rand_seed=self.params['seed'],
-            )
-            venv = VecChannelOrder(venv, channel_order='chw')
-            venv = VecExtractDictObs(venv, "rgb")
-            venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
-            venv = VecNormalize(venv=venv, ob=False)
+    def make_vector_env(self, level_index, eval=False):
+        """
+        make a procgen environment such that the training env only focus on 1 particular level
+        the testing env will sample randomly from a number of levels
+
+        NOTE: Warning: the eval environment does not guarantee sequential transition between `num_levels` levels.
+        The following level is sampled randomly, so evaluation is not deterministic, and performed on god knows
+        which levels.
+        """
+        venv = ProcgenEnv(
+            num_envs=self.params['num_envs'],
+            env_name=self.params['env'],
+            num_levels=self.params['num_levels'] if eval else 1,
+            start_level=0 if eval else level_index,
+            distribution_mode=self.params['distribution_mode'],
+            num_threads=4,
+            center_agent=True,
+            rand_seed=self.params['seed'],
+        )
+        venv = VecChannelOrder(venv, channel_order='chw')
+        venv = VecExtractDictObs(venv, "rgb")
+        venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+        venv = VecNormalize(venv=venv, ob=False)
         return venv
-    
+
     def _make_ppo_agent(self, policy, optimizer, phi=lambda x: x):
         ppo_agent = PPO(
             model=policy,
@@ -133,169 +136,49 @@ class ProcgenAntTrial(BaseTrial):
         return ppo_agent
 
     def make_agent(self, env):
-        if self.params['agent'] == 'ppo':
-            policy = ImpalaCNN(
-                input_shape=env.observation_space.shape,
-                num_outputs=env.action_space.n,
-            )
-            optimizer = torch.optim.Adam(policy.parameters(), lr=self.params['learning_rate'], eps=1e-5)
-            return self._make_ppo_agent(policy, optimizer, phi=lambda x: x.astype(np.float32) / 255)
+        assert self.params['agent'] == 'ensemble'
 
-        elif self.params['agent'] == 'ensemble':
-            attention_embedding = AttentionEmbedding(
-                embedding_size=64,
-                attention_depth=32,
-                num_attention_modules=self.params['num_policies'],
-                plot_dir=self.params['plots_dir'],
+        attention_embedding = AttentionEmbedding(
+            embedding_size=64,
+            attention_depth=32,
+            num_attention_modules=1 if self.params['remove_feature_learner'] else self.params['num_policies'],
+            use_individual_spatial_feature=self.params['individual_spatial_feature_extractor'],
+            use_individual_global_feature=self.params['individual_global_feature_extractor'],
+            plot_dir=self.params['plots_dir'],
+        )
+        def _make_policy_and_opt():
+            policy = PPOMLP(
+                output_size=env.action_space.n,
             )
-            def _make_policy_and_opt():
-                policy = PPOMLP(
-                    output_size=env.action_space.n,
-                )
-                optimizer = None
-                return policy, optimizer
-            base_learners = [
-                self._make_ppo_agent(*_make_policy_and_opt(), phi=lambda x: x) 
-                for _ in range(self.params['num_policies'])
-            ]
-            agent = EnsembleAgent(
-                attention_model=attention_embedding,
-                learning_rate=5e-4,
-                learners=base_learners,
-                device=self.params['device'],
-                warmup_steps=self.params['warmup_steps'],
-                batch_size=self.params['attention_batch_size'],
-                action_selection_strategy=self.params['action_selection_strat'],
-                phi=lambda x: x.astype(np.float32) / 255,
-                buffer_length=self.params['buffer_length'],
-                update_interval=self.params['attention_update_interval'],
-                discount_rate=self.params['gamma'],
-                num_modules=self.params['num_policies'],
-                embedding_plot_freq=self.params['embedding_plot_freq'],
-            )
-            return agent
-        
-        elif self.params['agent'] == 'dqn':
-            n_actions = env.action_space.n
-            q_func = nn.Sequential(
-                ProcgenCNN(obs_space=env.observation_space, num_outputs=n_actions),  # includes linear layer for q function
-                SingleSharedBias(),
-                DiscreteActionValueHead(),
-            )
-            explorer = pfrl.explorers.LinearDecayEpsilonGreedy(
-                1.0,
-                0.01,  # final epsilon
-                10**6,  # final_exploration_frames
-                lambda: np.random.randint(n_actions),
-            )
-            # Use the Nature paper's hyperparameters
-            opt = pfrl.optimizers.RMSpropEpsInsideSqrt(
-                q_func.parameters(),
-                lr=2.5e-4,
-                alpha=0.95,
-                momentum=0.0,
-                eps=1e-2,
-                centered=True,
-            )
-            agent = DoubleDQN(
-                q_function=q_func,
-                optimizer=opt,
-                replay_buffer=pfrl.replay_buffers.ReplayBuffer(self.params['buffer_length']),
-                gamma=self.params['gamma'],
-                explorer=explorer,
-                phi=lambda x: x.astype(np.float32) / 255,
-                gpu=-1 if self.params['device']=='cpu' else 0,
-                replay_start_size=self.params['warmup_steps'],
-                minibatch_size=self.params['batch_size'],
-                update_interval=self.params['update_interval'],
-                target_update_interval=self.params['target_update_interval'],
-                clip_delta=True,
-                n_times_update=1,
-                batch_accumulator="mean",
-            )
-            return agent
-
-        elif self.params['agent'] == 'sac':
-            action_space = env.action_space[0]  # get the first env's action space
-            obs_size = env.observation_space.shape[-1]  # get rid of the num_envs dimension
-            action_size = action_space.shape[0]  # get the only elt in the tuple
-
-            def squashed_diagonal_gaussian_head(x):
-                assert x.shape[-1] == action_size * 2
-                mean, log_scale = torch.chunk(x, 2, dim=1)
-                log_scale = torch.clamp(log_scale, -20.0, 2.0)
-                var = torch.exp(log_scale * 2)
-                base_distribution = distributions.Independent(
-                    distributions.Normal(loc=mean, scale=torch.sqrt(var)), 1
-                )
-                # cache_size=1 is required for numerical stability
-                return distributions.transformed_distribution.TransformedDistribution(
-                    base_distribution, [distributions.transforms.TanhTransform(cache_size=1)]
-                )
-
-            policy = nn.Sequential(
-                nn.Linear(obs_size, self.params['n_hidden_channels']),
-                nn.ReLU(),
-                nn.Linear(self.params['n_hidden_channels'], self.params['n_hidden_channels']),
-                nn.ReLU(),
-                nn.Linear(self.params['n_hidden_channels'], action_size * 2),
-                Lambda(squashed_diagonal_gaussian_head),
-            )
-            torch.nn.init.xavier_uniform_(policy[0].weight)
-            torch.nn.init.xavier_uniform_(policy[2].weight)
-            torch.nn.init.xavier_uniform_(policy[4].weight)
-            policy_optimizer = torch.optim.Adam(
-                policy.parameters(), lr=self.params['learning_rate'], eps=self.params['adam_eps']
-            )
-
-            def make_q_func_with_optimizer():
-                q_func = nn.Sequential(
-                    pfrl.nn.ConcatObsAndAction(),
-                    nn.Linear(obs_size + action_size, self.params['n_hidden_channels']),
-                    nn.ReLU(),
-                    nn.Linear(self.params['n_hidden_channels'], self.params['n_hidden_channels']),
-                    nn.ReLU(),
-                    nn.Linear(self.params['n_hidden_channels'], 1),
-                )
-                torch.nn.init.xavier_uniform_(q_func[1].weight)
-                torch.nn.init.xavier_uniform_(q_func[3].weight)
-                torch.nn.init.xavier_uniform_(q_func[5].weight)
-                q_func_optimizer = torch.optim.Adam(
-                    q_func.parameters(), lr=self.params['learning_rate'], eps=self.params['adam_eps']
-                )
-                return q_func, q_func_optimizer
-
-            q_func1, q_func1_optimizer = make_q_func_with_optimizer()
-            q_func2, q_func2_optimizer = make_q_func_with_optimizer()
-
-            rbuf = pfrl.replay_buffers.ReplayBuffer(10**6, num_steps=self.params['n_step_return'])
-
-            def burnin_action_func():
-                """Select random actions until model is updated one or more times."""
-                return action_space.sample()
-
-            # Hyperparameters in http://arxiv.org/abs/1802.09477
-            agent = SAC(
-                policy,
-                q_func1,
-                q_func2,
-                policy_optimizer,
-                q_func1_optimizer,
-                q_func2_optimizer,
-                rbuf,
-                gamma=self.params['discount'],
-                update_interval=self.params['update_interval'],
-                replay_start_size=self.params['replay_start_size'],
-                gpu=-1 if self.params['device']=='cpu' else 0,
-                minibatch_size=self.params['batch_size'],
-                burnin_action_func=burnin_action_func,
-                entropy_target=-action_size,
-                temperature_optimizer_lr=self.params['learning_rate'],
-            )
-            return agent
-
-        else:
-            raise NotImplementedError('Unsupported agent')
+            optimizer = None
+            return policy, optimizer
+        base_learners = [
+            self._make_ppo_agent(*_make_policy_and_opt(), phi=lambda x: x) 
+            for _ in range(self.params['num_policies'])
+        ]
+        agent = EnsembleAgent(
+            attention_model=attention_embedding,
+            learning_rate=5e-4,
+            learners=base_learners,
+            device=self.params['device'],
+            warmup_steps=self.params['warmup_steps'],
+            batch_size=self.params['attention_batch_size'],
+            action_selection_strategy=self.params['action_selection_strat'],
+            phi=lambda x: x.astype(np.float32) / 255,
+            buffer_length=self.params['buffer_length'],
+            update_interval=self.params['attention_update_interval'],
+            discount_rate=self.params['gamma'],
+            num_modules=self.params['num_policies'],
+            embedding_plot_freq=self.params['embedding_plot_freq'],
+            bandit_exploration_weight=self.params['bandit_exploration_weight'],
+            fix_attention_mask=self.params['fix_attention_masks'],
+            use_feature_learner=not self.params['remove_feature_learner'],
+            saving_dir=self.saving_dir,
+        )
+        if self.params['fix_attention_masks']:
+            load_path = os.path.join(self.params['load'], self.expanded_agent_name, str(self.params['seed']))
+            agent.load_attention_mask(load_path)
+        return agent
     
     def _expand_agent_name(self):
         agent = self.params['agent']
@@ -308,12 +191,11 @@ class ProcgenAntTrial(BaseTrial):
         return Path(self.params['results_dir'], self.params['experiment_name'], self.expanded_agent_name, str(self.params['seed']))
 
     def make_logger(self, log_dir):
-        logger.configure(dir=log_dir, format_strs=['csv', 'stdout'])
+        return logger.configure(dir=log_dir, format_strs=['csv', 'stdout'])
     
     def setup(self):
         self.check_params_validity()
-        set_random_seed(self.params['seed'])
-        torch.backends.cudnn.benchmark = True
+        self.make_deterministic(self.params['seed'])
 
         # set up saving dir
         self.saving_dir = self._set_saving_dir()
@@ -329,25 +211,39 @@ class ProcgenAntTrial(BaseTrial):
         self.logger = self.make_logger(self.saving_dir)
 
         # env
-        self.train_env = self.make_vector_env(eval=False)
-        self.eval_env = self.make_vector_env(eval=True)
+        self.train_env = self.make_vector_env(level_index=0, eval=False)
+        self.eval_env = self.make_vector_env(level_index= 0, eval=True)
 
         # agent
         self.agent = self.make_agent(self.train_env)
     
-    def train(self):
-        train_with_eval(
-            agent=self.agent,
-            train_env=self.train_env,
-            test_env=self.eval_env,
-            num_envs=self.params['num_envs'],
-            max_steps=self.params['max_steps'],
-            model_dir=self.saving_dir,
-            model_file=self.params['load'],
-            log_interval=100,
-            save_interval=self.params['save_interval'],
-        )
-        plot_reward_curve(self.saving_dir)
+    def transfer(self):
+        # whether to use curriculum
+        if self.params['curriculum']:
+            level_order = procgen_game_curriculum[self.params['env']]
+            assert self.params['start_level'] == 0
+            assert self.params['num_levels'] == len(level_order)  # level_order only designed for 20 levels
+        else:
+            level_order = range(self.params['start_level'], self.params['start_level'] + self.params['num_levels'])
+        # loop through training
+        for i, i_level in enumerate(level_order):
+            self.train_env = self.make_vector_env(level_index=i_level, eval=False)
+            train_with_eval(
+                agent=self.agent,
+                train_env=self.train_env,
+                test_env=self.eval_env,
+                num_envs=self.params['num_envs'],
+                max_steps=self.params['transfer_steps'],
+                level_index=i_level,
+                steps_offset=i * self.params['transfer_steps'],
+                log_interval=100,
+                logger=self.logger,
+            )
+            # reset the agent
+            # self.agent.reset()  # if we use this, should tune down bandit exploration
+        
+        # save agent
+        save_agent(self.agent, self.saving_dir, self.logger)
 
 
 def safe_mean(xs):
@@ -387,15 +283,12 @@ def train_with_eval(
     test_env,
     num_envs,
     max_steps,
-    model_dir,
-    model_file=None,
+    steps_offset=0,
+    level_index=0,
     log_interval=100,
-    save_interval=20_000,
+    logger=None,
 ):
-    if model_file is not None:
-        load_agent(agent, model_file, plot_dir=os.path.join(model_dir, 'plots'))
-    else:
-        logger.info('Train agent from scratch.')
+    logger.info('Train agent from scratch.')
 
     train_epinfo_buf = deque(maxlen=100)
     train_obs = train_env.reset()
@@ -437,8 +330,10 @@ def train_with_eval(
             tnow = time.perf_counter()
             fps = int((step_cnt + 1) * num_envs / (tnow - tstart))
 
+            logger.logkv('level_index', level_index)
             logger.logkv('steps', step_cnt + 1)
-            logger.logkv('total_steps', (step_cnt + 1) * num_envs)
+            logger.logkv('level_total_steps', (step_cnt + 1) * num_envs)
+            logger.logkv('total_steps', (step_cnt + 1) * num_envs + steps_offset)
             logger.logkv('steps_per_second', fps)
             logger.logkv('ep_reward_mean',
                          safe_mean([info['r'] for info in train_epinfo_buf]))
@@ -454,16 +349,9 @@ def train_with_eval(
             logger.dumpkvs()
 
             tstart = time.perf_counter()
-        
-        if (step_cnt + 1) % save_interval == 0:
-            save_agent(agent, model_dir)
-
-    # Save the final model.
-    logger.info('Training done.')
-    save_agent(agent, model_dir)
 
 
-def save_agent(agent, saving_dir):
+def save_agent(agent, saving_dir, logger):
     if type(agent) == PPO:
         model_path = os.path.join(saving_dir, 'model.pt')
         agent.model.save_to_file(model_path)
@@ -471,26 +359,10 @@ def save_agent(agent, saving_dir):
     elif type(agent) == EnsembleAgent:
         agent.save(saving_dir)
         logger.info(f"Model saved to {saving_dir}/agent.pkl")
-    elif type(agent) == SAC:
-        agent.save(saving_dir)
-        logger.info(f"Model saved to {saving_dir}")
     else:
         raise RuntimeError 
 
 
-def load_agent(agent, load_path, plot_dir=None):
-    if type(agent) == PPO:
-        agent.model.load_from_file(load_path)
-        logger.info(f"Model loaded from {load_path}")
-    elif type(agent) == EnsembleAgent:
-        EnsembleAgent.load(load_path, plot_dir=plot_dir)
-    elif type(agent) == SAC:
-        agent.load(load_path)
-        logger.info(f"Model loaded from {load_path}")
-    else:
-        raise RuntimeError
-
-
 if __name__ == '__main__':
-    trial = ProcgenAntTrial()
-    trial.train()
+    trial = ProcgenTransferTrial()
+    trial.transfer()

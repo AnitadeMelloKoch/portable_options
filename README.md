@@ -9,11 +9,13 @@ available envs: `ant_box`, `ant_bridge`, `ant_goal`. `ant_mixed` is available bu
 ## procgen experiments
 to do transfer learning, for example:
 ```bash
-python -m portable.policy.transfer --env coinrun --num_levels 20 --transfer_steps 500000 --num_policies 3 --seed 0
-```
-for plotting:
-```bash
-python -m portable.policy.plot -p -l ./results/
+python -m portable.policy.transfer -e experiment_name --num_levels 20 --transfer_steps 500000 --env ENV --num_policies 3 --seed 0
+# fix the attention masks
+python -m portable.policy.transfer -e experiment_name --num_levels 20 --transfer_steps 500000 --env ENV --num_policies 3 --seed 0 --fix_attention_masks --load ./results/saved_experiment
+# remove feature learners but keep ensemble policy
+python -m portable.policy.transfer -e experiment_name --num_levels 20 --transfer_steps 500000 --env ENV --num_policies 3 --seed 0 --remove_feature_learners
+# plotting
+python -m portable.policy.plot -f [-u] -l /results/path 
 ```
 
 ## montezuma experiments

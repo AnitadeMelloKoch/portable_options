@@ -6,83 +6,92 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def plot_reward_curve(csv_dir):
-    """
-    this is used to plot for a single agent
-    read progress.csv and plot the reward curves, save in the save dir as csv
-    """
-    csv_path = os.path.join(csv_dir, 'progress.csv')
-    df = pandas.read_csv(csv_path, comment='#')
-
-    # get rid of the NaN data points
-    max_nan_step = df.loc[df.isna().any(axis=1)]['level_total_steps'].max()
-    df = df.query(f"level_total_steps > {max_nan_step}")
-
-    steps = df['total_steps']
-    train_reward = df['ep_reward_mean']
-    eval_reward = df['eval_ep_reward_mean']
-    plt.plot(steps, train_reward, label='train')
-    plt.plot(steps, eval_reward, label='eval')
-    plt.legend()
-    plt.title('Learning Curve')
-    plt.xlabel('Steps')
-    plt.ylabel('Episodic Reward')
-    save_path = os.path.dirname(csv_path) + '/learning_curve.png'
-    plt.savefig(save_path)
-    plt.close()
-
-
-def pretty_title(game_name):
+def first_char_upper(game_name):
     """
     make the first letter upper case
     """
     return game_name[0].upper() + game_name[1:]
 
 
-def plot_eight_procgen_games(results_dir):
+def plot_procgen_games(results_dir, require_complete=True, plot_all_16_games=False):
     """
     plot the eight procgen games in one big plot
+    args:
+        require_complete: if True, raise an error if the csv file is not complete
+        plot_all_16_games: if True, will plot all 16 games, else plot the 8 games
     """
-    games = ['bigfish', 'coinrun', 'dodgeball', 'heist', 'jumper', 'leaper', 'maze', 'ninja']
-    fig, axes = plt.subplots(2, 4, sharex=True)
+    if plot_all_16_games:
+        games = ['bigfish', 'bossfight', 'caveflyer', 'chaser', 'climber', 'coinrun', 'dodgeball', 'fruitbot', 'heist', 'jumper', 'leaper', 'maze', 'miner', 'ninja', 'plunder', 'starpilot']
+        nrows = 4
+        figsize = (22, 22)
+    else:
+        games = ['bigfish', 'climber', 'dodgeball', 'heist', 'jumper', 'maze', 'miner', 'ninja']
+        nrows = 2
+        figsize = (22, 12)
+    ncols = 4
+    if ncols == 2:
+        assert not plot_all_16_games
+        figsize = (17, 20)
+    fig, axes = plt.subplots(nrows, ncols, sharex=True, figsize=figsize)
     for i, game in enumerate(games):
         experiment_dir = os.path.join(results_dir, game)
         # get data
-        rewards_mean = process_training_curve_csv_file(experiment_dir)
+        rewards_mean = process_training_curve_csv_file(experiment_dir, require_complete=require_complete)
+        # replace the name of agent Ensemble-1 with Baseline (singular)
+        if plot_all_16_games:
+            # only allow Ensembe-1 and Ensemble-7 for agent
+            rewards_mean = rewards_mean[rewards_mean['agent'].isin(['Ensemble-1', 'Ensemble-7'])]
+        rewards_mean['agent'] = rewards_mean['agent'].replace('Ensemble-1', 'Baseline (singular)')
+        # rewards_mean[rewards_mean['agent'] == 'Ensemble-1'].replace('Ensemble-1', 'Baseline (singular)', inplace=True)
         # plot
         sns.lineplot(
-            ax=axes[i // 4, i % 4],
+            ax=axes[i // ncols, i % ncols],
             data=rewards_mean,
             x='level_total_steps',
             y='ep_reward_mean',
             hue='agent',
             style='agent',
+            errorbar='se',
         )
+        big_size = 25
+        med_size = 22
+        small_size = 20
         # title 
-        axes[i // 4, i % 4].set_title(pretty_title(game))
+        axes[i // ncols, i % ncols].set_title(first_char_upper(game), fontsize=big_size)
         # ylabel
-        if i % 4 == 0:
-            axes[i // 4, i % 4].set_ylabel('Episodic Reward')
+        if i % ncols == 0:
+            axes[i // ncols, i % ncols].set_ylabel('Episodic Reward', fontsize=med_size)
         else:
-            axes[i // 4, i % 4].set_ylabel('')
+            axes[i // ncols, i % ncols].set_ylabel('')
         # xlabel
-        axes[i // 4, i % 4].set_xlabel('Steps')
+        axes[i // ncols, i % ncols].set_xlabel('Steps', fontsize=med_size)
+        # ticks
+        axes[i // ncols, i % ncols].tick_params(axis='y', which='major', labelsize=small_size)
+        if ncols == 2:
+            axes[i // ncols, i % ncols].tick_params(axis='x', which='major', labelsize=med_size)
         # shared legend
-        axes[i // 4, i % 4].legend().remove()
-        if i == 7:
-            handles, labels = axes[i // 4, i % 4].get_legend_handles_labels()
-            fig.legend(handles, labels, loc='lower center', ncol=4)
-            plt.subplots_adjust(bottom=0.15)
+        axes[i // ncols, i % ncols].legend().remove()
+        if i == ncols * nrows - 1:
+            handles, labels = axes[i // ncols, i % ncols].get_legend_handles_labels()
+            fig.legend(handles, labels, loc='lower center', ncol=4, prop={'size': big_size})
+    
+    # adjustments
+    if ncols == 4:
+        plt.subplots_adjust(wspace=0.2, hspace=0.2, right=0.96, left=0.07, bottom=0.13, top=0.90)
+    elif ncols == 2:
+        plt.subplots_adjust(wspace=0.2, hspace=0.25, right=0.96, left=0.07, bottom=0.08, top=0.92)
+    fig.suptitle('Training Curve Averaged Across Levels', fontsize=25)
 
     # save
-    save_path = os.path.join(results_dir, 'procgen_results.png')
+    file_name = 'procgen_results_all.png' if plot_all_16_games else 'procgen_results.png'
+    save_path = os.path.join(results_dir, file_name)
     fig.savefig(save_path)
     with open(os.path.join(results_dir, 'procgen_results.pkl'), 'wb') as f:
-        pickle.dump(fig, f)
+        pickle.dump((fig, axes), f)
     print(f'saved to {save_path}')
 
 
-def process_training_curve_csv_file(exp_dir):
+def process_training_curve_csv_file(exp_dir, average_across_levels=True, require_complete=True):
     """
     read from the progress.csv file and return a dataframe with the relevant information
     find all the csv files in exp_dir (all seeds, and all agents) and process all
@@ -96,39 +105,110 @@ def process_training_curve_csv_file(exp_dir):
             seed_dir = os.path.join(agent_dir, seed)
             csv_path = os.path.join(seed_dir, 'progress.csv')
             assert os.path.exists(csv_path)
-            df = pandas.read_csv(csv_path, comment='#')
-            assert df['total_steps'].max() == 10_000_000, "total steps is not complete (20 * 500k)"  # check that csv is complete
-            df = df[['level_total_steps', 'level_index', 'ep_reward_mean']].copy()
-            df['agent'] = agent
+            try:
+                df = pandas.read_csv(csv_path, comment='#')
+            except pandas.errors.EmptyDataError:
+                if require_complete:
+                    print(f"{csv_path} is empty")
+                    raise
+                else:
+                    print(f"WARNING: {csv_path} is EMPTY, but we will continue anyway")
+                    continue  # skip this seed
+            try:
+                max_steps = df['total_steps'].max()
+                assert max_steps == 10_000_000, f"total steps is not complete (20 * 500k): {csv_path}"  # check that csv is complete
+            except AssertionError:
+                if require_complete:
+                    raise
+                else:
+                    print(f"{csv_path} is not complete (at {max_steps} steps), but we will continue anyway")
+            df = df[['level_total_steps', 'level_index', 'ep_reward_mean', 'total_steps']].copy()
+            df['agent'] = first_char_upper(agent)
             df['seed'] = int(seed)
             rewards.append(df)
     rewards = pandas.concat(rewards, ignore_index=True)
-    max_nan_step = rewards.loc[rewards.isna().any(axis=1)]['level_total_steps'].max()
-    subset = rewards.query(f"level_total_steps > {max_nan_step}")
+    if rewards.isna().any(axis=1).sum() > 0:
+        max_nan_step = rewards.loc[rewards.isna().any(axis=1)]['level_total_steps'].max()
+        subset = rewards.query(f"level_total_steps > {max_nan_step}")
+    else:
+        subset = rewards
+
+    if not average_across_levels:
+        # sparsify the data because confidence interval will take a long time
+        subset = subset[subset['level_total_steps'] % 5_000 == 0]
+        return subset
+
     # average across different level_index
     rewards_mean = subset.groupby(['level_total_steps', 'agent', 'seed']).mean().reset_index()
-
     return rewards_mean
 
-def plot_transfer_exp_training_curve_across_levels(exp_dir):
+
+def plot_transfer_exp_training_curve_across_levels(exp_dir, unrolled=False, require_complete=True):
     """
     x-axis: steps in each level
     y-axis: reward, averaged across different levels
+    if plotting the unrolled curve, we will not average across the levels
     """
-    rewards_mean = process_training_curve_csv_file(exp_dir)
+    rewards_mean = process_training_curve_csv_file(exp_dir, average_across_levels=not unrolled, require_complete=require_complete)
+    rewards_mean.sort_values(by='agent', inplace=True)
+    to_plot_x = 'total_steps' if unrolled else 'level_total_steps'
     # plot
+    if unrolled:
+        plt.figure(figsize=(10, 5))
     sns.lineplot(
         data=rewards_mean,
-        x='level_total_steps',
+        x=to_plot_x,
         y='ep_reward_mean',
         hue='agent',
         style='agent',
+        errorbar='se',
     )
-    plt.title(f'Training Curve Averaged Across Levels :{exp_dir}')
+    plt_title = exp_dir.split('/')[-2]
+    plt.title(f'Training Curve Averaged Across Levels :{plt_title}')
     plt.xlabel('Steps')
     plt.ylabel('Episodic Reward')
-    save_path = os.path.dirname(exp_dir) + '/training_curve.png'
+    file_name = '/training_curve.png' if not unrolled else '/training_curve_unrolled.png'
+    save_path = os.path.dirname(exp_dir) + file_name
     plt.savefig(save_path)
+    print(f'saved to {save_path}')
+    plt.close()
+
+
+def plot_transfer_exp_all_level_curves(exp_dir, require_complete=True):
+    """
+    x-axis: steps in each level
+    y-axis: reward in a single level
+    there should be 20 lines (one for each level)
+    This is mainly used for debugging purposes
+    """
+    rewards = process_training_curve_csv_file(exp_dir, average_across_levels=False, require_complete=require_complete)
+    agents = rewards['agent'].unique()
+    agents.sort()
+    assert len(agents) == 4
+    # constraints 
+    rewards = rewards.groupby(['level_index', 'level_total_steps', 'agent']).mean().reset_index()  # average across seeds
+    rewards = rewards[rewards['level_index'] < 20]
+    
+    nrows = 2
+    ncols = 2
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(20, 14))
+    for i, agent in enumerate(agents):
+        agent_rewards = rewards[rewards['agent'] == agent]
+        # plot
+        sns.lineplot(
+            ax=axes[i // ncols, i % ncols],
+            data=agent_rewards,
+            x='level_total_steps',
+            y='ep_reward_mean',
+            hue='level_index',
+            style='agent',
+            errorbar=('ci', False),
+        )
+        axes[i // ncols, i % ncols].set_title(agent, fontsize=20)
+        # axes[i // ncols, i % ncols].set_ylim(0, 2)
+
+    save_path = os.path.dirname(exp_dir) + '/all_level_learning_curve.png'
+    fig.savefig(save_path)
     print(f'saved to {save_path}')
     plt.close()
 
@@ -163,6 +243,7 @@ def plot_transfer_exp_eval_curve(exp_dir):
         y='eval_ep_reward_mean',
         hue='agent',
         style='agent',
+        errorbar='se',
     )
     plt.title(f'Eval Reward after Trained on Level 1 - k: {exp_dir}')
     plt.xlabel('Level')
@@ -237,7 +318,8 @@ def plot_train_eval_curve(exp_dir, kind='eval'):
         x='total_steps',
         y=keyword,
         hue='agent',
-        style='agent'
+        style='agent',
+        errorbar='se',
     )
     plt.title(f'{kind} Curve')
     plt.xlabel('Steps')
@@ -291,6 +373,7 @@ def plot_all_agents_reward_data(exp_dir):
         y='reward',
         hue='agent',
         style='kind',
+        errorbar='se',
     )
     plt.title(f'Learning Curve: {exp_dir}')
     plt.xlabel('Steps')
@@ -333,6 +416,7 @@ def plot_all_agents_generalization_gap(exp_dir):
         y='reward_diff',
         hue='agent',
         style='agent',
+        errorbar='se',
     )
     plt.title(f'Generalization Gap: {exp_dir}')
     plt.xlabel('Steps')
@@ -351,7 +435,11 @@ if __name__ == "__main__":
     parser.add_argument('--evaluation', '-e', action='store_true', help='plot the evaluation curve', default=False)
     parser.add_argument('--train', '-t', action='store_true', help='plot the training curve', default=False)
     parser.add_argument('--transfer', '-f', action='store_true', help='plot the transfer curve', default=False)
+    parser.add_argument('--unrolled', '-u', action='store_true', help='the transfer curve, but do not average acorss level', default=False)
     parser.add_argument('--procgen', '-p', action='store_true', help='plot the 8 procgen games combined', default=False)
+    parser.add_argument('--all_procgen', '-a', action='store_true', help='plot all 16 procgen games', default=False)
+    parser.add_argument('--not_require_complete', '-n', action='store_true', help='do not require the csv file to be complete', default=False)
+    parser.add_argument('--debug', '-d', action='store_true', help='debug mode', default=False)
     args = parser.parse_args()
     if args.compare:
         plot_all_agents_reward_data(args.load)
@@ -362,9 +450,12 @@ if __name__ == "__main__":
     elif args.train:
         plot_train_eval_curve(args.load, kind='train')
     elif args.transfer:
-        plot_transfer_exp_eval_curve(args.load)
-        plot_transfer_exp_training_curve_across_levels(args.load)
-    elif args.procgen:
-        plot_eight_procgen_games(args.load)
+        if args.debug:
+            plot_transfer_exp_all_level_curves(args.load, require_complete=not args.not_require_complete)
+        else:
+            # plot_transfer_exp_eval_curve(args.load)
+            plot_transfer_exp_training_curve_across_levels(args.load, args.unrolled, require_complete=not args.not_require_complete)
+    elif args.procgen or args.all_procgen:
+        plot_procgen_games(args.load, require_complete=not args.not_require_complete, plot_all_16_games=args.all_procgen)
     else:
         plot_reward_curve(args.load)

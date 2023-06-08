@@ -11,8 +11,12 @@ from collections import defaultdict
 from distutils.util import strtobool
 
 import gin
+import gym
 import dill
+import torch
+import pfrl
 import matplotlib.pyplot as plt
+from pfrl.utils import set_random_seed
 import numpy as np
 
 
@@ -152,10 +156,7 @@ def plot_attentions(attentions, votes, class_conf, weightings, plot_name):
 
 class BaseTrial:
     """
-    a base class for running experiments. Specific experiments should inherit from this class. 
-
-    this is used to handle the argparse arguments and hyperparams loading and saving, as well as extra set up
-    that has to be done before experiments (such as random seeding)
+    a base class for running experiments
     """
     def __init__(self):
         pass
@@ -176,15 +177,13 @@ class BaseTrial:
         # environments
         parser.add_argument("--environment", type=str,
                             help="name of the gym environment")
-        parser.add_argument("--use_deepmind_wrappers", action='store_true', default=True,
-                            help="use the deepmind wrappers")
         parser.add_argument("--seed", type=int, default=0,
                             help="Random seed")
         # hyperparams
         parser.add_argument('--params_dir', type=Path, default='hyperparams',
                             help='the hyperparams directory')
-        parser.add_argument('--hyperparams', type=str, default='hyperparams/atari.csv',
-                            help='path to the hyperparams file to use')
+        parser.add_argument('--hyperparams', type=str, default='atari',
+                            help='which hyperparams csv file to use')
         return parser
 
     def parse_common_args(self, parser):
@@ -208,4 +207,29 @@ class BaseTrial:
         for arg_name, arg_value in args.other_args:
             update_param(params, arg_name, arg_value)
         return params
+    
+    def make_deterministic(self, seed, force_deterministic=False):
+        set_random_seed(seed)
+        torch.backends.cudnn.benchmark = False  # make alg selection determistics, but may be slower
+        if force_deterministic:
+            torch.use_deterministic_algorithms(True)  # must use deterministic algorithms
 
+    def make_env(self, env_name, env_seed):
+        if self.params['use_deepmind_wrappers']:
+            env = pfrl.wrappers.atari_wrappers.make_atari(env_name, max_frames=30*60*60)  # 30 min with 60 fps
+            env = pfrl.wrappers.atari_wrappers.wrap_deepmind(
+                env,
+                episode_life=True,
+                clip_rewards=True,
+                frame_stack=True,
+                scale=False,
+                fire_reset=True,
+                channel_order="chw",
+                flicker=False,
+            )
+        else:
+            env = gym.make(env_name)
+        print(f'making environment {env_name}')
+        env.seed(env_seed)
+        env.action_space.seed(env_seed)
+        return env
