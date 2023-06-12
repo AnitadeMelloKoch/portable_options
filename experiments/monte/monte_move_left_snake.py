@@ -1,23 +1,22 @@
-from portable.environment import MonteBootstrapWrapper
+from experiments.monte.environment import MonteBootstrapWrapper
 from experiments import Experiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
+from portable.utils.ale_utils import get_object_position, get_skull_position
 from experiments import check_termination_correct_enemy, get_percent_completed_enemy
 from portable.utils.utils import load_gin_configs
 
 initiation_positive_files = [
-    'resources/monte_images/room4_move_left_spider_initiation_positive.npy',
-    'resources/monte_images/room4_move_left_spider_initiation_1_positive.npy',
-    'resources/monte_images/room4_move_left_spider_initiation_2_positive.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_positive.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_1_positive.npy',
 ]
 initiation_negative_files = [
-    'resources/monte_images/room4_move_left_spider_initiation_negative.npy',
-    'resources/monte_images/room4_move_left_spider_initiation_1_negative.npy',
-    'resources/monte_images/room4_move_left_spider_initiation_2_negative.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_negative.npy',
+    'resources/monte_images/room9_move_left_snake_initiation_1_negative.npy',
 ]
 initiation_priority_negative_files = [
     'resources/monte_images/screen_death_1.npy',
@@ -28,19 +27,13 @@ initiation_priority_negative_files = [
 ]
 
 termination_positive_files = [
-    'resources/monte_images/room4_move_left_spider_termination_positive.npy',
-    'resources/monte_images/room4_move_left_spider_termination_1_positive.npy',
+    'resources/monte_images/room9_move_left_snake_termination_positive.npy',
 ]
 termination_negative_files = [
-    'resources/monte_images/room4_move_left_spider_termination_1_negative.npy',
-    'resources/monte_images/room4_move_left_spider_termination_2_negative.npy',
-    'resources/monte_images/room4_move_left_spider_termination_negative.npy',
-    
-
+    'resources/monte_images/room9_move_left_snake_termination_1_negative.npy',
+    'resources/monte_images/room9_move_left_snake_termination_negative.npy',
 ]
 termination_priority_negative_files = [
-    'resources/monte_images/room4_move_left_spider_termination_positive.npy',
-    'resources/monte_images/room4_move_left_spider_termination_1_positive.npy',
 ]
 
 def phi(x):
@@ -59,53 +52,60 @@ def make_env(seed):
 
 initiation_state_files = [
     [
+        'resources/monte_env_states/room9/enemy/right_of_left_snake.pkl',
+        'resources/monte_env_states/room9/enemy/right_of_right_snake.pkl',
+    ],[
+        'resources/monte_env_states/room11/enemy/right_of_right_snake.pkl',
+        'resources/monte_env_states/room11/enemy/right_of_right_snake_2.pkl',
+        'resources/monte_env_states/room11/enemy/right_of_right_snake_3.pkl',
+    ],[
+        'resources/monte_env_states/room22/enemy/right_snake.pkl',
+    ],[
+        'resources/monte_env_states/room2/enemy/right_skull_0.pkl',
+        'resources/monte_env_states/room2/enemy/right_skull_1.pkl',
+    ],[
         'resources/monte_env_states/room4/enemy/right_of_spider_0.pkl',
         'resources/monte_env_states/room4/enemy/right_of_spider_1.pkl',
     ],[
-        'resources/monte_env_states/room13/enemy/right_spider.pkl',
-    ],[
-        'resources/monte_env_states/room21/enemy/right_spider.pkl',
-    ],[
         'resources/monte_env_states/room1/enemy/right_of_skull_0.pkl',
         'resources/monte_env_states/room1/enemy/right_of_skull_1.pkl',
-    ],[
-        'resources/monte_env_states/room2/enemy/right_of_skull_0.pkl',
-        'resources/monte_env_states/room2/enemy/right_of_skull_1.pkl',
-    ],[
-        'resources/monte_env_states/room11/enemy/right_of_right_snake.pkl',
     ]
 ]
 
 terminations = [
     [
-        (0, 235, 4),
-        (0, 235, 4),
+        (11, 235, 9),
+        (42, 235, 9),
     ],[
-        (0, 235, 13)
+        (97, 235, 11),
+        (97, 235, 11),
+        (97, 235, 11),
     ],[
-        (0, 235, 21),
-    ],[
-        (0, 148, 1),
-        (0, 148, 1),
+        (25, 235, 22)
     ],[
         (0, 235, 2),
         (0, 235, 2),
     ],[
-        (97, 235, 11)
+        (0, 235, 4),
+        (0, 235, 4),
+    ],[
+        (0, 148, 1),
+        (0, 148, 1),
     ]
 ]
 
 room_names = [
-    "room4", # 0
-    "room13", # 1
-    "room21", # 2
-    "room1",
+    "room9", # 0
+    "room11_left", 
+    "room11_right",
+    "room22",
     "room2",
-    "room11",
+    "room4",
+    "room1",
 ]
 
 order = [
-    0, 1, 2, 3, 4, 5
+    0, 1, 2, 3, 4, 5, 6, 7
 ]
 
 bootstrap_env = atari_wrappers.wrap_deepmind(
@@ -205,7 +205,3 @@ if __name__ == "__main__":
             )
         
         experiment.save()
-
-    
-    
-

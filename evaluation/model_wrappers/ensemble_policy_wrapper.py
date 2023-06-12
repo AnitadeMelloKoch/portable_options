@@ -8,6 +8,6 @@ class EnsemblePolicyWrapper():
         
     def __call__(self, input):
         pred = self.model.get_single_module(input, self.module)
-        pred = pred.squeeze()
+        pred = pred.q_values
         
         return pred

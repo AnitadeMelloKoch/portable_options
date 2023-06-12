@@ -3,7 +3,7 @@ from experiments import ClassifierExperiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper, MonteBootstrapWrapper
+from experiments.monte.environment import MonteAgentWrapper, MonteBootstrapWrapper
 from portable.utils import load_init_states
 import argparse
 

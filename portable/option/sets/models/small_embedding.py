@@ -29,12 +29,14 @@ class SmallEmbedding(nn.Module):
         self.attention_depth = attention_depth
         self.stack_size = stack_size
         
+        self.attention_depth = stack_size
+        
         self.sampled = DistanceWeightedSampling(batch_k=batch_k, normalize=normalize)
 
-        self.spacial_feature_extractor_layers = self.build_spacial_layers()
+        # self.spacial_feature_extractor_layers = self.build_spacial_layers()
 
         self.attention_modules = nn.ModuleList([
-            AttentionModule(self.attention_depth, self.attention_depth)
+            AttentionModule(self.stack_size, self.attention_depth)
             for i in range(self.num_attention_modules)])
 
         self.global_feature_extractor_layers = self.build_global_layers()
@@ -84,8 +86,9 @@ class SmallEmbedding(nn.Module):
         return x
 
     def forward(self, x, sampling=False, return_attention_mask=False):
-        spacial_features = self.spatial_feature_extractor(x)
-        attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+        attentions = [self.attention_modules[i](x) for i in range(self.num_attention_modules)]
 
         for i in range(self.num_attention_modules):
             N, D, H, W = attentions[i].size()
@@ -94,7 +97,8 @@ class SmallEmbedding(nn.Module):
             attention_min, _ = attention.min(dim=1, keepdim=True)
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
-        embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        # embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        embedding = torch.cat([self.global_feature_extractor(attentions[i]*x).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
         if sampling is True:
             embedding = torch.flatten(embedding, 1)
@@ -103,16 +107,19 @@ class SmallEmbedding(nn.Module):
             return embedding if not return_attention_mask else (embedding, attentions)
         
     def forward_one_attention(self, x, attention_idx):
-        spacial_features = self.spatial_feature_extractor(x)
-        attention = self.attention_modules[attention_idx](spacial_features)
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attention = self.attention_modules[attention_idx](spacial_features)
 
+        attention = self.attention_modules[attention_idx](x)
+        
         N, D, H, W = attention.size()
         attention = attention.view(-1, H*W)
         attention_max, _ = attention.max(dim=1, keepdim=True)
         attention_min, _ = attention.min(dim=1, keepdim=True)
         attention = ((attention-attention_min)/(attention_max-attention_min+1e-8)).view(N,D,H,W)
 
-        embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
+        # embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
+        embedding = torch.cat([self.global_feature_extractor(attention*x).unsqueeze(1)])
 
         return embedding
     

@@ -1,10 +1,10 @@
-from portable.environment import MonteBootstrapWrapper
+from experiments.monte.environment import MonteBootstrapWrapper
 import os
 from experiments import PolicyExperiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
 

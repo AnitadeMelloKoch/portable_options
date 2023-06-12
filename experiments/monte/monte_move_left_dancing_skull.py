@@ -1,9 +1,9 @@
-from portable.environment import MonteBootstrapWrapper
+from experiments.monte.environment import MonteBootstrapWrapper
 from experiments import Experiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
 from portable.utils.utils import load_gin_configs

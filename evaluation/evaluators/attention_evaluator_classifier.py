@@ -14,25 +14,19 @@ class AttentionEvaluatorClassifier():
 
     def __init__(
             self,
+            classifier,
             plot_dir,
-            classifier_save_path,
-            num_modules=8):
+            stack_size):
         
-        self.device = torch.device("cuda")
-
-        self.classifier_save_path = classifier_save_path
-        self.classifier = EnsembleClassifierDecayingDiv(
-            device=self.device,
-            num_modules=num_modules
-        )
-        self.classifier.load(self.classifier_save_path)
+        self.classifier = classifier
 
         self.plot_dir = plot_dir
         os.makedirs(self.plot_dir, exist_ok=True)
-        self.num_modules = num_modules
+        self.num_modules = self.classifier.num_modules
 
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
+        self.stack_size = stack_size
         
         self.integrated_gradients = []
         for x in range(self.num_modules):
@@ -130,7 +124,7 @@ class AttentionEvaluatorClassifier():
             
 
     def _plot_attributions(self, image, attributions, votes, plot_name):
-        fig, axes = plt.subplots(nrows=self.num_modules+1, ncols=4, figsize=(2*4,2*(self.num_modules + 1)))
+        fig, axes = plt.subplots(nrows=self.num_modules+1, ncols=self.stack_size, figsize=(2*self.stack_size,2*(self.num_modules + 1)))
         # plt.subplots_adjust(wspace=0.1, hspace=0.1)
         
         image = image.numpy()
@@ -146,6 +140,7 @@ class AttentionEvaluatorClassifier():
                         fontsize=10, ha='right', va='center', rotation=90)
             
         for idx, attribute in enumerate(attributions):
+            print(attribute)
             attribute = attribute.cpu().detach().numpy()
             for ax_idx, ax in enumerate(axes[idx+1,:]):
                 if not np.sum(attribute[:,ax_idx,...]) == 0:

@@ -1,22 +1,23 @@
-from portable.environment import MonteBootstrapWrapper
+from experiments.monte.environment import MonteBootstrapWrapper
 from experiments import Experiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
 from experiments import check_termination_correct_enemy, get_percent_completed_enemy
 from portable.utils.utils import load_gin_configs
 
 initiation_positive_files = [
-    'resources/monte_images/room1_state_move_left_skull_initiation_positive.npy',
-    'resources/monte_images/room1_state_move_left_skull_1_initiation_positive.npy',
-    'resources/monte_images/room1_state_move_left_skull_2_initiation_positive.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_positive.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_1_positive.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_2_positive.npy',
 ]
 initiation_negative_files = [
-    'resources/monte_images/room1_state_move_left_skull_initiation_negative.npy',
-    'resources/monte_images/room1_state_move_left_skull_2_initiation_negative.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_negative.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_1_negative.npy',
+    'resources/monte_images/room4_move_left_spider_initiation_2_negative.npy',
 ]
 initiation_priority_negative_files = [
     'resources/monte_images/screen_death_1.npy',
@@ -27,13 +28,19 @@ initiation_priority_negative_files = [
 ]
 
 termination_positive_files = [
-    'resources/monte_images/room1_state_move_left_skull_termination_positive.npy',
+    'resources/monte_images/room4_move_left_spider_termination_positive.npy',
+    'resources/monte_images/room4_move_left_spider_termination_1_positive.npy',
 ]
 termination_negative_files = [
-    'resources/monte_images/room1_state_move_left_skull_termination_positive.npy',
+    'resources/monte_images/room4_move_left_spider_termination_1_negative.npy',
+    'resources/monte_images/room4_move_left_spider_termination_2_negative.npy',
+    'resources/monte_images/room4_move_left_spider_termination_negative.npy',
+    
+
 ]
 termination_priority_negative_files = [
-    'resources/monte_images/room1_state_move_left_skull_termination_positive.npy',
+    'resources/monte_images/room4_move_left_spider_termination_positive.npy',
+    'resources/monte_images/room4_move_left_spider_termination_1_positive.npy',
 ]
 
 def phi(x):
@@ -52,50 +59,47 @@ def make_env(seed):
 
 initiation_state_files = [
     [
-        'resources/monte_env_states/room1/enemy/skull_right_0.pkl',
-        'resources/monte_env_states/room1/enemy/skull_right_1.pkl',
-    ],[
-        'resources/monte_env_states/room5/enemy/right_of_skull_0.pkl',
-    ],[
-        'resources/monte_env_states/room18/enemy/right_skull.pkl',
-    ],[
         'resources/monte_env_states/room4/enemy/right_of_spider_0.pkl',
         'resources/monte_env_states/room4/enemy/right_of_spider_1.pkl',
     ],[
+        'resources/monte_env_states/room13/enemy/right_spider.pkl',
+    ],[
+        'resources/monte_env_states/room21/enemy/right_spider.pkl',
+    ],[
+        'resources/monte_env_states/room1/enemy/right_of_skull_0.pkl',
+        'resources/monte_env_states/room1/enemy/right_of_skull_1.pkl',
+    ],[
         'resources/monte_env_states/room2/enemy/right_of_skull_0.pkl',
         'resources/monte_env_states/room2/enemy/right_of_skull_1.pkl',
-        'resources/monte_env_states/room2/enemy/right_of_skull_2.pkl',
     ],[
         'resources/monte_env_states/room11/enemy/right_of_right_snake.pkl',
-        'resources/monte_env_states/room11/enemy/right_of_right_snake_2.pkl',
     ]
 ]
 
 terminations = [
     [
-        (0, 148, 1),
-        (0, 148, 1),
-    ],[
-        (0, 235, 5),
-    ],[
-        (0, 235, 18),
-    ],[
         (0, 235, 4),
         (0, 235, 4),
+    ],[
+        (0, 235, 13)
+    ],[
+        (0, 235, 21),
+    ],[
+        (0, 148, 1),
+        (0, 148, 1),
     ],[
         (0, 235, 2),
         (0, 235, 2),
     ],[
-        (97, 235, 11),
         (97, 235, 11)
     ]
 ]
 
 room_names = [
-    "room1", # 0
-    "room5", # 1
-    "room18", # 2
-    "room4",
+    "room4", # 0
+    "room13", # 1
+    "room21", # 2
+    "room1",
     "room2",
     "room11",
 ]
@@ -154,7 +158,7 @@ if __name__ == "__main__":
     experiment.bootstrap_from_room(
         load_init_states(initiation_state_files[0]),
         terminations[0],
-        5,
+        100,
         use_agent_space=False
     )
 

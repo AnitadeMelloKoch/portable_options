@@ -189,7 +189,12 @@ class ValueEnsemble():
         self.embedding.eval()
         self.q_networks.eval()
         
-        embeddings = self.embedding(state, return_attention_mask=False)
+        embedding = self.embedding.forward_one_attention(state, module).squeeze()
+        embedding, _ = self.recurrent_memory(embedding)
+        
+        qvals = self.q_networks[module](embedding)
+        
+        return qvals
             
 
     def get_attention(self, x):

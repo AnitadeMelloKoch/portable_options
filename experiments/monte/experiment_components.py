@@ -13,7 +13,7 @@ import pandas as pd
 from portable.option import Option
 from portable.utils import set_player_ram, plot_attentions, plot_state
 from portable.option.sets.utils import get_vote_function, VOTE_FUNCTION_NAMES
-from portable.environment.agent_wrapper import actions
+from experiments.monte.environment.agent_wrapper import actions
 
 @gin.configurable
 class PolicyExperiment():

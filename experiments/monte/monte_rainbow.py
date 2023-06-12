@@ -1,4 +1,4 @@
-from portable.environment import MonteBootstrapWrapper, MonteAgentWrapper
+from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
 from experiments import RainbowExperiment
 from pfrl.wrappers import atari_wrappers
 from portable.utils import load_init_states

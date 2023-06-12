@@ -1,23 +1,22 @@
-import torch 
-import random 
+import torch
+import random
 import numpy as np 
-from experiments.minigrid.doorkey.core.agents.rainbow import Rainbow
 from portable.option import Option
-import os
+import os 
 from portable.option.sets.utils import VOTE_FUNCTION_NAMES
 import logging 
-import datetime 
-import pandas as pd
+import pandas as pd 
 import lzma 
 import dill 
-import gin
+import gin 
+from experiments import BaseExperiment
 
 @gin.configurable
-class MinigridOptionExperiment():
+class FactoredMinigridOptionExperiment(BaseExperiment):
+        
     def __init__(self,
                  base_dir,
                  experiment_name,
-                 training_seed,
                  training_envs,
                  random_seed,
                  create_env_function,
@@ -25,6 +24,9 @@ class MinigridOptionExperiment():
                  create_agent_function,
                  action_space,
                  policy_phi,
+                 markov_option_builder,
+                 get_latent_state_function,
+                 num_object_planes=6,
                  num_frames_train=10**5,
                  lr=1e-4,
                  initiation_vote_function="weighted_vote_low",
@@ -43,8 +45,10 @@ class MinigridOptionExperiment():
                  train_termination_embedding_epochs=100,
                  train_termination_classifier_epochs=100,
                  train_policy_max_steps=10000,
-                 train_policy_success_rate=0.8,
-                 max_option_tries=5):
+                 train_policy_success_rate=0.8):
+        
+        super().__init__(base_dir, experiment_name, random_seed, create_env_function, device_type)
+        
         
         assert device_type in ["cpu", "cuda"]
         assert initiation_vote_function in VOTE_FUNCTION_NAMES
@@ -65,44 +69,42 @@ class MinigridOptionExperiment():
         os.makedirs(self.plot_dir, exist_ok=True)
         
         self.agent = create_agent_function(action_space,
-                                        #    save_dir=os.path.join(self.save_dir, "option_agent"),
                                            gpu=0,
-                                           n_input_channels=3,
+                                           n_input_channels=num_object_planes,
                                            lr=lr,
                                            sigma=sigma)
+        
         self.num_base_actions = 7
         self.num_options = action_space - self.num_base_actions
         self.options = [Option(self.device,
-                                       initiation_vote_function,
-                                       termination_vote_function,
-                                       policy_phi) for _ in range(self.num_options)] # type: ignore
+                               markov_option_builder=markov_option_builder,
+                               get_latent_state=get_latent_state_function,
+                               initiation_vote_function=initiation_vote_function,
+                               termination_vote_function=termination_vote_function,
+                               policy_phi=policy_phi) for _ in range(self.num_options)]
         
         for idx in range(len(initiation_positive_files)):
             self.options[idx].initiation.add_data_from_files(initiation_positive_files[idx],
-                                            initiation_negative_files[idx],
-                                            initiation_priority_negative_files[idx])
+                                                             initiation_negative_files[idx],
+                                                             initiation_priority_negative_files[idx])
             self.options[idx].termination.add_data_from_files(termination_positive_files[idx],
-                                            termination_negative_files[idx],
-                                            termination_priority_negative_files[idx])
+                                                              termination_negative_files[idx],
+                                                              termination_priority_negative_files[idx])
         
         if train_options:
             self.train_policy(training_envs,
                               train_policy_max_steps,
                               train_policy_success_rate)
             self.train_initiation(train_initiation_embedding_epochs,
-                                   train_initiation_classifier_epochs)
+                                  train_initiation_classifier_epochs)
             self.train_termination(train_termination_embedding_epochs,
-                                    train_termination_classifier_epochs)
-                
-        self.training_env_seed = training_seed
-        self.test_env_seeds = random.choices(np.arange(1000), k=num_levels)
+                                   train_termination_classifier_epochs)
+        
+        self.test_env_seeds = random.choice(np.arange(1000), k=num_levels)
         self.test_env_seeds = [int(x) for x in self.test_env_seeds]
         self.num_levels = num_levels
         self.num_frames_train = num_frames_train
         
-        log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
-        logging.basicConfig(filename=log_file, 
-                            format='%(asctime)s %(levelname)s: %(message)s')
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.random_seed))
         logging.info("======== HYPERPARAMETERS ========")
         logging.info("Train options: {}".format(train_options))
@@ -114,8 +116,6 @@ class MinigridOptionExperiment():
         logging.info("Termination classifier epochs: {}".format(train_termination_classifier_epochs))
         logging.info("Train policy max steps: {}".format(train_policy_max_steps))
         logging.info("Train policy success rate: {}".format(train_policy_success_rate))
-        logging.info("Max option tries: {}".format(max_option_tries))
-        logging.info("Train seed: {}".format(training_seed))
         logging.info("Number of levels in experiment: {}".format(num_levels))
         logging.info("Test seeds: {}".format(self.test_env_seeds))
         
@@ -126,39 +126,24 @@ class MinigridOptionExperiment():
                                            'frames',
                                            'env_num'
                                        ])
-    
-    def save(self):
-        self.agent.save()
-        os.makedirs(self.save_dir, exist_ok=True)
-        filename = os.path.join(self.save_dir, 'experiment_data.pkl')
-        with lzma.open(filename, 'wb') as f:
-            dill.dump(self.trial_data, f)
-            
-    def load(self):
-        self.option.load(self.save_dir)
-        filename = os.path.join(self.save_dir, 'experiment_data.pkl')
-        if os.path.exists(filename):
-            with lzma.open(filename, 'rb') as f:
-                self.trial_data = dill.load(f)
-    
+        
     def train_policy(self, training_envs, max_steps, success_rate):
         for idx in range(len(training_envs)):
             self.options[idx].bootstrap_policy(training_envs[idx],
                                                max_steps,
                                                success_rate)
-    
+        
     def train_initiation(self, embedding_epochs, classifier_epochs):
         for idx in range(len(self.options)):
             self.options[idx].initiation.train(embedding_epochs,
                                                classifier_epochs)
     
     def train_termination(self, embedding_epochs, classifier_epochs):
-        for idx in range(len(self.options)):
+        for idx in range(len(self.opitons)):
             self.options[idx].termination.train(embedding_epochs,
-                                               classifier_epochs)
-    
-    def train_test_envs(self, 
-                        episodes_per_level):
+                                                classifier_epochs)
+        
+    def train_test_envs(self):
         for idx, env_seed in enumerate(self.test_env_seeds):
             env = self.make_env(env_seed)
             total_steps = 0
@@ -181,6 +166,12 @@ class MinigridOptionExperiment():
                 f'Reward: {undiscounted_return}')
                 print(100 * '-')
                 
+                logging.log(100 * '-')
+                logging.log(f'Episode: {ep} for env seed: {env_seed}',
+                f"Steps': {total_steps}",
+                f'Reward: {undiscounted_return}')
+                logging.log(100 * '-')
+                
     def run_episode(self, env):
         obs, info = env.reset()
         done = False
@@ -196,24 +187,34 @@ class MinigridOptionExperiment():
             trajectory.append((obs, action, reward, next_obs, done, info["needs_reset"]))
             
             obs = next_obs
-            episode_reward += reward
+            episode_reward += reward 
             steps += step_num
-
+            
         self.agent.experience_replay(trajectory)
         return rewards, steps
-    
+        
     def run_one_step(self, state, info, env):
         action = self.agent.act(state)
         if action < self.num_base_actions:
-            next_obs, reward,done, info = env.step(action)
+            next_obs, reward, done, info = env.step(action)
             return next_obs, reward, done, info, 1
         
         option_idx = action - self.num_base_actions
-        if not self.options[option_idx].can_initiate(state, 
-                                                 (info["player_x"], info["player_y"], info["has_key"], info["door_open"])):
-            next_obs, reward,done, info = env.step(5)
+        if not self.options[option_idx].can_initiate(state,
+                                                     env,
+                                                     info):
+            next_obs, reward, done, info = env.step(5)
             return next_obs, reward, done, info, 1
+        
         return self.options[option_idx].run(env,
-                                     state,
-                                     info,
-                                     eval=False)
+                                            state,
+                                            info,
+                                            eval=False)
+        
+        
+        
+        
+        
+
+
+

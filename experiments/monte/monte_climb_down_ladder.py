@@ -1,10 +1,10 @@
-from portable.environment import MonteBootstrapWrapper
+from experiments.monte.environment import MonteBootstrapWrapper
 import os
 from experiments import Experiment
 import numpy as np
 from pfrl.wrappers import atari_wrappers
 
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment import MonteAgentWrapper
 from portable.utils import load_init_states
 import argparse
 
@@ -13,10 +13,6 @@ from portable.utils.utils import load_gin_configs
 def get_percent_completed(start_pos, final_pos, terminations, env):
     top_of_room = 253
     bottom_of_room = 135
-    
-    info = env.get_current_info({})
-    if info["dead"]:
-        return 0
 
     def manhatten(top,bot):
         distance = 0
@@ -42,9 +38,6 @@ def get_percent_completed(start_pos, final_pos, terminations, env):
 
 def check_termination_correct(final_pos, terminations, env):
     epsilon = 2
-    info = env.get_current_info({})
-    if info["dead"]:
-        return False
     def in_epsilon_square(current_position, final_position):
         if current_position[0] <= (final_position[0] + epsilon) and \
             current_position[0] >= (final_position[0] - epsilon) and \
@@ -62,26 +55,29 @@ def check_termination_correct(final_pos, terminations, env):
 
 
 initiation_positive_files = [
-    'resources/monte_images/screen_climb_down_ladder_initiation_positive.npy'
+    'resources/monte_images/climb_down_ladder_initiation_positive.npy'
 ]
 initiation_negative_files = [
-    'resources/monte_images/screen_climb_down_ladder_initiation_negative.npy'
+    'resources/monte_images/climb_down_ladder_initiation_negative.npy'
 ]
 initiation_priority_negative_files = [
-    'resources/monte_images/screen_death_1.npy',
-    'resources/monte_images/screen_death_2.npy',
-    'resources/monte_images/screen_death_3.npy',
-    'resources/monte_images/screen_death_4.npy',
-    'resources/monte_images/screen_death_5.npy'
+    'resources/monte_images/death.npy',
+    'resources/monte_images/falling_1.npy',
+    'resources/monte_images/falling_2.npy',
+    'resources/monte_images/falling_3.npy',
 ]
 termination_positive_files = [
-    'resources/monte_images/screen_climb_down_ladder_termination_positive.npy'
+    'resources/monte_images/climb_down_ladder_termination_positive.npy',
+    'resources/monte_images/climb_down_ladder_1_termination_positive.npy',
+    'resources/monte_images/climb_down_ladder_2_termination_positive.npy',
+    'resources/monte_images/climb_down_ladder_3_termination_positive.npy',
+    'resources/monte_images/climb_down_ladder_4_termination_positive.npy'
 ]
 termination_negative_files = [
-    'resources/monte_images/screen_climb_down_ladder_termination_negative.npy'
+    'resources/monte_images/climb_down_ladder_termination_negative.npy'
 ]
 termination_priority_negative_files = [
-    'resources/monte_images/screen_climb_down_ladder_initiation_positive.npy'
+    'resources/monte_images/climb_down_ladder_initiation_positive.npy'
 ]
 
 def phi(x):
@@ -96,7 +92,7 @@ def make_env(seed):
     )
     env.seed(seed)
 
-    return MonteAgentWrapper(env, agent_space=False)
+    return MonteAgentWrapper(env, agent_space=True)
 
 initiation_state_files = [
     [
@@ -148,6 +144,7 @@ initiation_state_files = [
         'resources/monte_env_states/room5/ladder/top_0.pkl',
         'resources/monte_env_states/room5/ladder/top_1.pkl',
         'resources/monte_env_states/room5/ladder/top_2.pkl',
+        'resources/monte_env_states/room5/ladder/top_3.pkl',
     ],[
         'resources/monte_env_states/room14/ladder/top_0.pkl',
         'resources/monte_env_states/room14/ladder/top_1.pkl',
@@ -241,7 +238,7 @@ bootstrap_env = MonteBootstrapWrapper(
     load_init_states(initiation_state_files[0]),
     terminations[0],
     check_termination_correct,
-    agent_space=False
+    agent_space=True
 )
 
 if __name__ == "__main__":
@@ -282,7 +279,7 @@ if __name__ == "__main__":
             load_init_states(initiation_state_files[0]),
             terminations[0],
             100,
-            use_agent_space=False
+            use_agent_space=True
         )
 
         for y in range(len(initiation_state_files)):
@@ -293,7 +290,7 @@ if __name__ == "__main__":
                 100,
                 eval=True,
                 trial_name="{}_eval_after_bootstrap".format(room_names[idx]),
-                use_agent_space=False
+                use_agent_space=True
             )
 
         experiment.save()
@@ -306,7 +303,7 @@ if __name__ == "__main__":
                 2000,
                 eval=False,
                 trial_name="{}_train".format(room_names[idx]),
-                use_agent_space=False
+                use_agent_space=True
             )
             experiment.test_assimilate(
                 load_init_states(initiation_state_files[0]),
@@ -314,7 +311,7 @@ if __name__ == "__main__":
                 instantiation_instances,
                 500,
                 trial_name="{}_assimilate_test_".format(room_names[idx]),
-                use_agent_space=False
+                use_agent_space=True
             )
 
             for y in range(len(initiation_state_files)):
@@ -325,7 +322,7 @@ if __name__ == "__main__":
                     500,
                     eval=True,
                     trial_name="{}_eval_after_{}_train".format(room_names[idy], room_names[idx]),
-                    use_agent_space=False
+                    use_agent_space=True
                 )
             
             experiment.save()

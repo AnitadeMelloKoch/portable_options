@@ -1,4 +1,2 @@
-from experiments.experiment import Experiment
 from experiments.utils import check_termination_correct_enemy, get_percent_completed_enemy
-from experiments.rainbow_experiment import RainbowExperiment
-from experiments.experiment_components import PolicyExperiment, ClassifierExperiment
+from experiments.experiment import BaseExperiment

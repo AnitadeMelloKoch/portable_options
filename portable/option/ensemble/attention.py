@@ -13,13 +13,21 @@ class Attention(nn.Module):
         self.num_attention_modules = num_attention_modules
         self.out_dim = embedding_size
         self.attention_depth = attention_depth
+        
+        self.attention_depth = stack_size
 
         self.conv1 = nn.Conv2d(in_channels=stack_size, out_channels=self.attention_depth, kernel_size=3, stride=1)
         self.pool1 = nn.MaxPool2d(2)
 
+        # self.attention_modules = nn.ModuleList(
+        #     [
+        #         nn.Conv2d(in_channels=self.attention_depth, out_channels=self.attention_depth, kernel_size=1, bias=False) 
+        #         for _ in range(self.num_attention_modules)
+        #     ]
+        # )
         self.attention_modules = nn.ModuleList(
             [
-                nn.Conv2d(in_channels=self.attention_depth, out_channels=self.attention_depth, kernel_size=1, bias=False) 
+                nn.Conv2d(in_channels=stack_size, out_channels=self.attention_depth, kernel_size=1, bias=False) 
                 for _ in range(self.num_attention_modules)
             ]
         )
@@ -46,8 +54,10 @@ class Attention(nn.Module):
         return x
 
     def forward(self, x, return_attention_mask=False):
-        spacial_features = self.spatial_feature_extractor(x)
-        attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+
+        attentions = [self.attention_modules[i](x) for i in range(self.num_attention_modules)]
 
         # normalize attention to between [0, 1]
         for i in range(self.num_attention_modules):
@@ -57,20 +67,23 @@ class Attention(nn.Module):
             attention_min, _ = attention.min(dim=1, keepdim=True)
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
-        embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        # embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        embedding = torch.cat([self.global_feature_extractor(attentions[i]*x).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
         return embedding if not return_attention_mask else (embedding, attentions)
 
     def forward_one_attention(self, x, attention_idx):
-        spacial_features = self.spatial_feature_extractor(x)
-        attention = self.attention_modules[attention_idx](spacial_features)
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attention = self.attention_modules[attention_idx](spacial_features)
 
+        attention = self.attention_modules[attention_idx](x)
+        
         N, D, H, W = attention.size()
         attention = attention.view(-1, H*W)
         attention_max, _ = attention.max(dim=1, keepdim=True)
         attention_min, _ = attention.min(dim=1, keepdim=True)
         attention = ((attention-attention_min)/(attention_max-attention_min+1e-8)).view(N,D,H,W)
 
-        embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
+        embedding = torch.cat([self.global_feature_extractor(attention*x).unsqueeze(1)])
 
         return embedding
