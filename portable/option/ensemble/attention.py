@@ -32,8 +32,8 @@ class Attention(nn.Module):
             ]
         )
 
-        self.conv2 = nn.Conv2d(in_channels=self.attention_depth, out_channels=64, kernel_size=3, stride=2)
-        self.pool2 = nn.MaxPool2d(2)
+        # self.conv2 = nn.Conv2d(in_channels=self.attention_depth, out_channels=64, kernel_size=3, stride=2)
+        # self.pool2 = nn.MaxPool2d(2)
 
         self.linear = nn.LazyLinear(self.out_dim)
         
@@ -44,8 +44,8 @@ class Attention(nn.Module):
         return x
 
     def global_feature_extractor(self, x):
-        x = F.relu(self.conv2(x))
-        x = self.pool2(x)
+        # x = F.relu(self.conv2(x))
+        # x = self.pool2(x)
 
         x = torch.flatten(x, 1)
         x = self.linear(x)

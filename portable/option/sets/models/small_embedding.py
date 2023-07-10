@@ -39,7 +39,7 @@ class SmallEmbedding(nn.Module):
             AttentionModule(self.stack_size, self.attention_depth)
             for i in range(self.num_attention_modules)])
 
-        self.global_feature_extractor_layers = self.build_global_layers()
+        # self.global_feature_extractor_layers = self.build_global_layers()
 
         self.linear = nn.LazyLinear(self.out_dim)
 
@@ -76,8 +76,8 @@ class SmallEmbedding(nn.Module):
         return x
 
     def global_feature_extractor(self, x):
-        for layer in self.global_feature_extractor_layers:
-            x = layer(x)
+        # for layer in self.global_feature_extractor_layers:
+        #     x = layer(x)
 
         x = torch.flatten(x, 1)
         x = self.linear(x)

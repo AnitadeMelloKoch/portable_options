@@ -4,8 +4,6 @@ import torch
 from portable.option.memory import SetDataset
 from portable.option.sets.models import EnsembleClassifier
 
-logger = logging.getLogger(__name__)
-
 class Set():
     def __init__(
             self,

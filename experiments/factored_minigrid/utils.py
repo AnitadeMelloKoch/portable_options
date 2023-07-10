@@ -21,6 +21,7 @@ class FactoredMinigridInfoWrapper(Wrapper):
         self._timestep = 0
         
         self.env_seed = seed 
+        self.object_locs = {}
     
     def reset(self):
         obs, info = self.env.reset()
@@ -45,8 +46,27 @@ class FactoredMinigridInfoWrapper(Wrapper):
         info['has_key'] = self._has_key()
         info['door_open'] = determine_is_door_open(self)
         info['seed'] = self.env_seed
+        self._get_object_locations()
+        info['object_locations'] = self.object_locs
         
         return info
+    
+    def _get_object_locations(self):
+        for i in range(self.env.unwrapped.grid.width):
+            for j in range(self.env.unwrapped.grid.height):
+                tile = self.env.unwrapped.grid.get(i,j)
+                if tile is not None:
+                    if tile.type == "door":
+                        self.object_locs[tile.type] = [i, j, int(tile.is_open)]
+                    elif tile.type != "wall":
+                        self.object_locs[tile.type] = [i, j, 0]
+                    
+        self.object_locs["agent"] = [
+            self.env.agent_pos[0], self.env.agent_pos[1], self.env.agent_dir
+        ]
+        
+        if self.env.unwrapped.carrying is not None:
+            self.object_locs[self.env.unwrapped.carrying.type] = [-1, -1, 0]
     
     def _has_key(self):
         if self.env.unwrapped.carrying is None:
