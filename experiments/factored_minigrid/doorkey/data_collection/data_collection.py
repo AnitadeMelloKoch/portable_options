@@ -249,7 +249,8 @@ perform_action(env, actions.RIGHT, 4,        init_positive=True, term_positive=F
 perform_action(env, actions.FORWARD, 1,      init_positive=True, term_positive=False)
 perform_action(env, actions.RIGHT, 4,        init_positive=True, term_positive=False)
 perform_action(env, actions.FORWARD, 1,      init_positive=False, term_positive=True)
-perform_action(env, actions.FORWARD, 4,      init_positive=False, term_positive=True)
+perform_action(env, actions.RIGHT, 6,        init_positive=False, term_positive=True)
+
 
 
 base_file_name = "doorkey_gogoal_{}".format(training_seed)
@@ -258,11 +259,11 @@ if len(init_positive_image) > 0:
     np.save('resources/minigrid_images/{}_initiation_image_positive.npy'.format(base_file_name), init_positive_image)
     np.save('resources/minigrid_images/{}_initiation_loc_positive.npy'.format(base_file_name), init_positive_locs)
 if len(init_negative_image) > 0:
-    np.save('resources/minigrid_images/{}_initiation_image_negative.npy'.format(base_file_name), init_positive_image)
-    np.save('resources/minigrid_images/{}_initiation_loc_negative.npy'.format(base_file_name), init_positive_locs)
+    np.save('resources/minigrid_images/{}_initiation_image_negative.npy'.format(base_file_name), init_negative_image)
+    np.save('resources/minigrid_images/{}_initiation_loc_negative.npy'.format(base_file_name), init_negative_locs)
 if len(term_positive_image) > 0:
     np.save('resources/minigrid_images/{}_termination_image_positive.npy'.format(base_file_name), term_positive_image)
     np.save('resources/minigrid_images/{}_termination_loc_positive.npy'.format(base_file_name), term_positive_locs)
 if len(term_negative_image) > 0:
-    np.save('resources/minigrid_images/{}_termination_image_negative.npy'.format(base_file_name), term_positive_image)
-    np.save('resources/minigrid_images/{}_termination_loc_negative.npy'.format(base_file_name), term_positive_locs)
+    np.save('resources/minigrid_images/{}_termination_image_negative.npy'.format(base_file_name), term_negative_image)
+    np.save('resources/minigrid_images/{}_termination_loc_negative.npy'.format(base_file_name), term_negative_locs)

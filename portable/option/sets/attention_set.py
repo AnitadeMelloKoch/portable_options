@@ -3,8 +3,8 @@ import numpy as np
 import os
 import logging
 from portable.option.memory import SetDataset
-from portable.option.sets.models import get_feature_extractor
-from portable.option.ensemble import ViT
+# from portable.option.sets.models import get_feature_extractor
+from portable.option.ensemble.multiheaded_attention import ViT
 import copy
 from torch.utils.tensorboard import SummaryWriter
 
@@ -40,14 +40,14 @@ class TransformerSet():
         
         self.vit = ViT(in_channel=6,
                        patch_size=16,
-                       feature_dim=768,
-                       img_size=84,
+                       feature_dim=feature_size,
+                       img_size=576,
                        depth=6,
                        n_classes=2,
                        **{"attention_num":attention_num,
-                          "dropout_prob":0.1,
+                          "dropout_prob":0.,
                           "forward_expansion": 4,
-                          "forward_dropout":0.1})
+                          "forward_dropout":0.})
         
         
         self.device = device

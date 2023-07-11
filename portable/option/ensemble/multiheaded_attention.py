@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from einops import repeat, rearrange
 from einops.layers.torch import Reduce, Rearrange
+from portable.option.sets.models.feature_extractors import get_feature_extractor
 
 class PrintLayer(torch.nn.Module):
     # print input. For debugging
@@ -12,7 +13,7 @@ class PrintLayer(torch.nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x)
+        print(x.shape)
         
         return x
     
@@ -167,24 +168,30 @@ class ClassificationHead(torch.nn.Sequential):
 class PatchEmbedding(torch.nn.Module):
     def __init__(self, in_channels, patch_size, feature_dim, img_size):
         super().__init__()
-        self.patch_size = patch_size
-        self.projection = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels,
-                            feature_dim,
-                            kernel_size=patch_size,
-                            stride=patch_size),
-            Rearrange('b e (h) (w) -> b (h w) e')
-        )
+        # self.patch_size = patch_size
+        # self.projection = torch.nn.Sequential(
+        #     torch.nn.Conv2d(in_channels,
+        #                     feature_dim,
+        #                     kernel_size=patch_size,
+        #                     stride=patch_size),
+        #     Rearrange('b e (h) (w) -> b (h w) e')
+        # )
+        self.feature_extractor = get_feature_extractor("factored_minigrid_images", {})
+        self.flatten = torch.nn.Flatten(2)
+        self.projection = torch.nn.Linear(img_size, feature_dim)
+        
         self.cls_token = torch.nn.Parameter(torch.randn(1,1,feature_dim))
         self.positions = torch.nn.Parameter(
-            torch.randn((img_size//patch_size)**2 + 1, feature_dim)
+            torch.randn(in_channels, feature_dim)
         )
     
     def forward(self, x):
+        x = self.feature_extractor(x)
+        x = self.flatten(x)
         x = self.projection(x)
         
         cls_tokens = repeat(self.cls_token, '() n e -> b n e', b=x.shape[0])
-        x = torch.cat([cls_tokens, x], dim=1)
+        # x = torch.cat([cls_tokens, x], dim=1)
         x += self.positions
         
         return x
@@ -200,8 +207,9 @@ class ViT(torch.nn.Sequential):
                  **kwargs):
         super().__init__(
             PatchEmbedding(in_channel, patch_size, feature_dim, img_size),
+            PrintLayer(),
             TransformerEncoder(depth, feature_dim=feature_dim, **kwargs),
-            ClassificationHead(feature_dim, n_classes)
+            ClassificationHead(feature_dim, n_classes),
         )
 
 
