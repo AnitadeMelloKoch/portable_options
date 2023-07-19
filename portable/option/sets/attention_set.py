@@ -2,7 +2,7 @@ import torch
 import numpy as np 
 import os
 import logging
-from portable.option.memory import SetDataset
+from portable.option.memory import PositionSet, factored_minigrid_formatter
 # from portable.option.sets.models import get_feature_extractor
 from portable.option.ensemble.multiheaded_attention import ViT
 import copy
@@ -30,7 +30,9 @@ class TransformerSet():
                  dataset_max_size=100000,
                  dataset_batch_size=16):
         
-        self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
+        self.dataset = PositionSet(max_size=dataset_max_size, 
+                                   batchsize=dataset_batch_size, 
+                                   data_formatter=factored_minigrid_formatter)
 
         self.feature_num = feature_num
         self.attention_num = attention_num
@@ -39,12 +41,13 @@ class TransformerSet():
         # feature_extractor = get_feature_extractor(feature_extractor_type, feature_extractor_params)
         
         self.vit = ViT(in_channel=6,
-                       patch_size=16,
+                       patch_size=6,
                        feature_dim=feature_size,
-                       img_size=576,
-                       depth=6,
+                       img_size=84,
+                       depth=2,
                        n_classes=2,
-                       **{"attention_num":attention_num,
+                       device=device,
+                       **{"attention_num":1,
                           "dropout_prob":0.,
                           "forward_expansion": 4,
                           "forward_dropout":0.})
@@ -77,7 +80,9 @@ class TransformerSet():
         assert isinstance(priority_negative_files, list)
         
         self.dataset.add_true_files(positive_files)
+        print("false files:", negative_files)
         self.dataset.add_false_files(negative_files)
+        print("sanity check")
         self.dataset.add_priority_false_files(priority_negative_files)
         
     def add_data(self,
@@ -104,9 +109,9 @@ class TransformerSet():
             y = y.to(self.device)
         
         if plot:
-            output = self.vit(x)
+            output = self.vit((x, y))
         else:
-            output = self.vit(x)
+            output = self.vit((x, y))
         
         if y is not None:
             # loss = 0

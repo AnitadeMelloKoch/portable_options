@@ -28,6 +28,9 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
+    def transform(self, x):
+        return x/255.0
+
     @staticmethod
     def _getfilenames(path):
         true_filename = os.path.join(path, 'true_data.pkl')
@@ -228,6 +231,11 @@ class SetDataset():
             shuffle_idxs = torch.randperm(len(data))
             data = data[shuffle_idxs]
             labels = labels[shuffle_idxs]
+
+        # print("pre-transform data:", data)
+        data = self.transform(data)
+        # print("transformed data:", data)
+        # print(labels)
 
         return data, labels
 

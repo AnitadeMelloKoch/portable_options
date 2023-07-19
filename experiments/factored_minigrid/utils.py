@@ -64,7 +64,6 @@ class FactoredMinigridInfoWrapper(Wrapper):
         self.object_locs["agent"] = [
             self.env.agent_pos[0], self.env.agent_pos[1], self.env.agent_dir
         ]
-        
         if self.env.unwrapped.carrying is not None:
             self.object_locs[self.env.unwrapped.carrying.type] = [-1, -1, 0]
     

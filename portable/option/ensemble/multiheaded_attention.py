@@ -166,9 +166,9 @@ class ClassificationHead(torch.nn.Sequential):
         )
 
 class PatchEmbedding(torch.nn.Module):
-    def __init__(self, in_channels, patch_size, feature_dim, img_size):
+    def __init__(self, in_channels, patch_size, feature_dim, img_size, device):
         super().__init__()
-        # self.patch_size = patch_size
+        self.patch_size = patch_size
         # self.projection = torch.nn.Sequential(
         #     torch.nn.Conv2d(in_channels,
         #                     feature_dim,
@@ -176,22 +176,28 @@ class PatchEmbedding(torch.nn.Module):
         #                     stride=patch_size),
         #     Rearrange('b e (h) (w) -> b (h w) e')
         # )
-        self.feature_extractor = get_feature_extractor("factored_minigrid_images", {})
-        self.flatten = torch.nn.Flatten(2)
-        self.projection = torch.nn.Linear(img_size, feature_dim)
+        # self.feature_extractor = get_feature_extractor("factored_minigrid_positions", {"device": device})
+        # self.flatten = torch.nn.Flatten(2)
+        self.projection = torch.nn.Linear(3, feature_dim)
         
         self.cls_token = torch.nn.Parameter(torch.randn(1,1,feature_dim))
         self.positions = torch.nn.Parameter(
-            torch.randn(in_channels, feature_dim)
+            # torch.randn((img_size//patch_size)**2+1, feature_dim)
+            torch.randn(7, feature_dim)
         )
     
     def forward(self, x):
-        x = self.feature_extractor(x)
-        x = self.flatten(x)
+        # x = self.feature_extractor(x)
+        # The line `# x = self.feature_extractor(x)` is commented out, so it is not being executed.
+        # However, it appears to be a call to a feature extractor module or function that takes an
+        # input `x` and extracts features from it. The purpose of this line would be to extract
+        # relevant features from the input before further processing in the model.
+        # x = self.flatten(x)
+        x = x[0]
         x = self.projection(x)
         
         cls_tokens = repeat(self.cls_token, '() n e -> b n e', b=x.shape[0])
-        # x = torch.cat([cls_tokens, x], dim=1)
+        x = torch.cat([cls_tokens, x], dim=1)
         x += self.positions
         
         return x
@@ -204,10 +210,10 @@ class ViT(torch.nn.Sequential):
                  img_size,
                  depth,
                  n_classes,
+                 device,
                  **kwargs):
         super().__init__(
-            PatchEmbedding(in_channel, patch_size, feature_dim, img_size),
-            PrintLayer(),
+            PatchEmbedding(in_channel, patch_size, feature_dim, img_size, device),
             TransformerEncoder(depth, feature_dim=feature_dim, **kwargs),
             ClassificationHead(feature_dim, n_classes),
         )
