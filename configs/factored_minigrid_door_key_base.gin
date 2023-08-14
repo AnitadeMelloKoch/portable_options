@@ -1,0 +1,6 @@
+import experiments.factored_minigrid.experiment.factored_minigrid_experiment
+
+FactoredMinigridExperiment.experiment_name = "key_door_base_rl"
+FactoredMinigridExperiment.training_seed = 100
+FactoredMinigridExperiment.num_levels = 16
+FactoredMinigridExperiment.device_type = "cuda"

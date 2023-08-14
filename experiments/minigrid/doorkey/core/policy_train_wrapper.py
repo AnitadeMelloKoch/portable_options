@@ -27,7 +27,6 @@ class DoorKeyPolicyTrainWrapper(Wrapper):
         self.door_open = door_open
     
     def _find_objs(self):
-        print('looking for objects')
         for x in range(self.env.unwrapped.width):
             for y in range(self.env.unwrapped.height):
                 cell = self.env.unwrapped.grid.get(x, y)
@@ -88,7 +87,8 @@ class DoorKeyPolicyTrainWrapper(Wrapper):
                     door.is_locked = False
                     door.is_open = True
         
-            obs, _, _, info = self.env.step(5)
+            obs, _, _, info = self.env.step(actions.LEFT)
+            obs, _, _, info = self.env.step(actions.RIGHT)
         
         info = self._modify_info_dict(info)
         # print("player pos:", info["player_pos"])

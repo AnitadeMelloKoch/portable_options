@@ -11,7 +11,7 @@ from pfrl.replay_buffer import ReplayUpdater, batch_experiences
 from pfrl.utils.batch_states import batch_states
 
 from portable.option.policy.agents import Agent
-from portable.option.policy.value_ensemble import ValueEnsemble
+from portable.option.policy.attention_value_ensemble import AttentionValueEnsemble
 
 class EnsembleAgent(Agent):
     """
@@ -26,27 +26,24 @@ class EnsembleAgent(Agent):
                 batch_size,
                 phi,
                 prioritized_replay_anneal_steps,
-                stack_size=4,
+                embedding, 
+                divergence_loss_scale=1,
                 buffer_length=100000,
                 update_interval=4,
                 q_target_update_interval=40,
-                embedding_output_size=64, 
                 learning_rate=2.5e-4,
                 final_epsilon=0.01,
                 final_exploration_frames=10**6,
                 discount_rate=0.9,
                 num_modules=8, 
-                num_output_classes=18,
+                num_actions=18,
                 c=100,
-                plot_dir=None,
-                embedding_plot_freq=10000,
-                verbose=False,):
+                summary_writer=None):
         # vars
         self.device = device
         self.phi = phi
         self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
         self.buffer_length = buffer_length
-        self.embedding_output_size = embedding_output_size
         self.learning_rate = learning_rate
         self.final_epsilon = final_epsilon
         self.final_exploration_frames = final_exploration_frames
@@ -54,27 +51,26 @@ class EnsembleAgent(Agent):
         self.batch_size = batch_size
         self.q_target_update_interval = q_target_update_interval
         self.update_interval = update_interval
-        self.num_output_classes = num_output_classes
+        self.num_actions = num_actions
         self.num_modules = num_modules
         self.step_number = 0
         self.episode_number = 0
         self.update_epochs_per_step = 1
-        self.embedding_plot_freq = embedding_plot_freq
         self.discount_rate = discount_rate
         self.c = c
+        self.embedding = embedding
         
         # ensemble
-        self.value_ensemble = ValueEnsemble(
-            stack_size=stack_size,
+        self.value_ensemble = AttentionValueEnsemble(
             device=device,
-            embedding_output_size=embedding_output_size,
+            embedding=embedding,
             learning_rate=learning_rate,
             discount_rate=discount_rate,
-            num_modules=num_modules,
+            attention_module_num=num_modules,
             c=c,
-            num_output_classes=num_output_classes,
-            plot_dir=plot_dir,
-            verbose=verbose,
+            num_actions=num_actions,
+            divergence_loss_scale=divergence_loss_scale,
+            summary_writer=summary_writer
         )
 
         # explorer
@@ -82,7 +78,7 @@ class EnsembleAgent(Agent):
             1.0,
             final_epsilon,
             final_exploration_frames,
-            lambda: np.random.randint(num_output_classes),
+            lambda: np.random.randint(num_actions),
         )
 
         # Prioritized Replay
@@ -117,14 +113,14 @@ class EnsembleAgent(Agent):
             buffer_length=self.buffer_length,
             update_interval=self.update_interval,
             q_target_update_interval=self.q_target_update_interval,
-            embedding_output_size=self.embedding_output_size,
             learning_rate=self.learning_rate,
             final_epsilon=self.final_epsilon,
             final_exploration_frames=self.final_exploration_frames,
             discount_rate=self.discount_rate,
             num_modules=self.num_modules,
-            num_output_classes=self.num_output_classes,
-            c=self.c
+            num_actions=self.num_actions,
+            c=self.c,
+            embedding=self.embedding
         )
 
         new_policy.value_ensemble = copy.deepcopy(self.value_ensemble)

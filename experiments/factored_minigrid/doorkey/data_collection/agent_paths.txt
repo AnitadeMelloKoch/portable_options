@@ -283,7 +283,6 @@ perform_action(env, actions.FORWARD, 1,    init_positive=False, term_positive=Tr
 perform_action(env, actions.RIGHT, 6,      init_positive=False, term_positive=True)
 
 seed 2
-
 perform_action(env, actions.FORWARD, 1,      init_positive=False, term_positive=False)
 perform_action(env, actions.RIGHT, 6,        init_positive=False, term_positive=False)
 perform_action(env, actions.FORWARD, 1,      init_positive=False, term_positive=False)
@@ -435,3 +434,5 @@ perform_action(env, actions.FORWARD, 1,      init_positive=True, term_positive=F
 perform_action(env, actions.RIGHT, 4,        init_positive=True, term_positive=False)
 perform_action(env, actions.FORWARD, 1,      init_positive=False, term_positive=True)
 perform_action(env, actions.RIGHT, 6,        init_positive=False, term_positive=True)
+
+

@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 from PIL import Image
 import gymnasium as gym
-from gymnasium.core import Wrapper, ObservationWrapper
+from gymnasium.core import Env, Wrapper, ObservationWrapper
 from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper, ReseedWrapper, StateBonus
 from enum import IntEnum
 import collections
@@ -118,6 +118,26 @@ class ScaledStateBonus(StateBonus):
         return obs, reward, terminated, truncated, info
     
 
+class ScaleObsWrapper(ObservationWrapper):
+    def observation(self, observation):
+        img = Image.fromarray(observation)
+        return np.asarray(img.resize((128, 128), Image.BILINEAR))
+
+class PadObsWrapper(ObservationWrapper):
+    def __init__(self, 
+                 env: Env,
+                 pad: tuple):
+        super().__init__(env)
+        
+        self.pad = pad
+    
+    def observation(self, observation):
+        padded_obs = np.stack([
+            np.pad(observation[:,:,idx], self.pad, mode="constant", constant_values=0) for idx in range(3)
+        ], axis=-1)
+                
+        return padded_obs
+
 class RandomStartWrapper(Wrapper):
     def __init__(self, env, start_locs=[]):
         
@@ -175,6 +195,8 @@ def environment_builder(
     level_name='MiniGrid-Empty-8x8-v0',
     reward_fn='sparse',
     grayscale=True,
+    scale_obs=False,
+    pad_obs=False,
     add_count_based_bonus=True,
     exploration_reward_scale=0,
     seed=42,
@@ -193,7 +215,12 @@ def environment_builder(
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    env = ResizeObsWrapper(env)
+    if scale_obs:
+        print("scale obs")
+        env = ScaleObsWrapper(env)
+    if pad_obs:
+        env = PadObsWrapper(env)
+    # env = ResizeObsWrapper(env)
     env = TransposeObsWrapper(env)
     if grayscale:
         env = GrayscaleWrapper(env)

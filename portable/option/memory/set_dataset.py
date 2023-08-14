@@ -189,7 +189,9 @@ class SetDataset():
     def get_batch(self, shuffle_batch=True):
 
         if self.true_length == 0 or self.false_length == 0:
-            return self._unibatch()
+            data, labels = self._unibatch()
+            data = self.transform(data)
+            return data, labels
 
         if self.priority_false_length > 0:
             normal_false = self._get_minibatch(
@@ -236,7 +238,7 @@ class SetDataset():
         data = self.transform(data)
         # print("transformed data:", data)
         # print(labels)
-
+        
         return data, labels
 
     def true_index(self):
@@ -255,14 +257,16 @@ class SetDataset():
             data =  self._get_minibatch(
                 self.false_index(False), 
                 self.false_data, 
-                self.batchsize
+                self.batchsize,
+                self.shuffled_indices_false
                 ) 
             labels = torch.from_numpy(np.array([0]*len(data)))
         else:
             data = self._get_minibatch(
                 self.true_index(), 
                 self.true_data, 
-                self.batchsize
+                self.batchsize,
+                self.shuffled_indices_true
                 )
             labels = torch.from_numpy(np.array([1]*len(data)))
         

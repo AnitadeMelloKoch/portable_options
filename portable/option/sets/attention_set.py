@@ -1,75 +1,91 @@
-import torch 
+import logging 
 import numpy as np 
+import torch 
 import os
-import logging
-from portable.option.memory import PositionSet, factored_minigrid_formatter
-# from portable.option.sets.models import get_feature_extractor
-from portable.option.ensemble.multiheaded_attention import ViT
-import copy
-from torch.utils.tensorboard import SummaryWriter
+from portable.option.memory import SetDataset
+from portable.option.ensemble.custom_attention import *
+from portable.option.sets.utils import BayesianWeighting
 
 logger = logging.getLogger(__name__)
 
-class TransformerSet():
+class AttentionSet():
     def __init__(self,
                  device,
-                 
-                 attention_num,
-                 feature_size,
-                 feature_extractor_type,
-                 encoder_layer_num,
-                 feature_num,
+                 vote_function,
+                 embedding: AutoEncoder,
                  log_dir,
-                 feed_forward_hidden_dim=2048,
-                 output_class_num=2,
-                 dropout_prob=0.1,
-                 feature_extractor_params={},
-                 learning_rate=1e-4,
-                 key_size=None,
                  
-                 dataset_max_size=100000,
-                 dataset_batch_size=16):
+                 attention_module_num=8,
+                 learning_rate=1e-3,
+                 beta_distribution_alpha=30,
+                 beta_distribution_beta=5,
+                 divergence_loss_scale=1,
+                 regularization_loss_scale=0.5,
+                 
+                 dataset_max_size=200000,
+                 dataset_batch_size=16,
+                 
+                 summary_writer=None,
+                 model_name="classifier"):
         
-        self.dataset = PositionSet(max_size=dataset_max_size, 
-                                   batchsize=dataset_batch_size, 
-                                   data_formatter=factored_minigrid_formatter)
-
-        self.feature_num = feature_num
-        self.attention_num = attention_num
-        self.attention_num = 1
+        self.embedding = embedding
         
-        # feature_extractor = get_feature_extractor(feature_extractor_type, feature_extractor_params)
-        
-        self.vit = ViT(in_channel=6,
-                       patch_size=6,
-                       feature_dim=feature_size,
-                       img_size=84,
-                       depth=2,
-                       n_classes=2,
-                       device=device,
-                       **{"attention_num":1,
-                          "dropout_prob":0.,
-                          "forward_expansion": 4,
-                          "forward_dropout":0.})
-        
+        self.classifier = AttentionEnsembleII(num_attention_heads=attention_module_num,
+                                              num_features=embedding.num_embedding_features,
+                                              num_classes=2,
+                                              input_dim=attention_module_num*embedding.feature_size)
+        self.classifier.to(device)
+        self.confidences = BayesianWeighting(beta_distribution_alpha,
+                                             beta_distribution_beta,
+                                             self.attention_num,
+                                             self.device)
         
         self.device = device
-        self.vit.to(device)
-        
-        self.loss = torch.nn.CrossEntropyLoss()
-        self.grad_clip_norm = 1.0
-        self.optimizer = torch.optim.Adam(self.vit.parameters(), learning_rate)
-        self.writer = SummaryWriter(log_dir=log_dir)
+        self.vote_function = vote_function
+        self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
+        self.attention_num = attention_module_num
+        self.alpha = beta_distribution_alpha
+        self.beta = beta_distribution_beta
+        self.div_scale = divergence_loss_scale
+        self.reg_scale = regularization_loss_scale
         self.log_dir = log_dir
-        os.makedirs(self.log_dir, exist_ok=True)
+        self.summary_writer = summary_writer
+        self.name = model_name
+        
+        self.votes = None 
+        
+        self.optimizers = [
+            torch.optim.Adam(self.classifier.attentions[idx].parameters(), lr=learning_rate) for idx in range(self.attention_num)
+        ]
+        
+        self.crossentropy = torch.nn.CrossEntropyLoss()
         
     def save(self, path):
-        classifier_save_path = os.path.join(path, 'classifier')
-        torch.save(self.classifier.state_dict(), classifier_save_path)
+        torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
+        self.dataset.save(path)
+        self.confidences.save(os.path.join(path, 'confidence'))
     
     def load(self, path):
-        classifier_save_path = os.path.join(path, 'classifier')
-        self.classifier.load_state_dict(torch.load(classifier_save_path))
+        self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
+        self.dataset.load(path)
+        self.confidences.load(os.path.join(path, 'confidence'))
+    
+    def add_data(self,
+                 positive_data=[],
+                 negative_data=[],
+                 priority_negative_data=[]):
+        assert isinstance(positive_data, list)
+        assert isinstance(negative_data, list)
+        assert isinstance(priority_negative_data, list)
+
+        if len(positive_data) > 0:
+            self.dataset.add_true_data(positive_data)
+        
+        if len(negative_data) > 0:
+            self.dataset.add_false_data(negative_data)
+
+        if len(priority_negative_data) > 0:
+            self.dataset.add_priority_false_data(priority_negative_data)
 
     def add_data_from_files(self,
                             positive_files,
@@ -78,118 +94,119 @@ class TransformerSet():
         assert isinstance(positive_files, list)
         assert isinstance(negative_files, list)
         assert isinstance(priority_negative_files, list)
-        
+
         self.dataset.add_true_files(positive_files)
-        print("false files:", negative_files)
         self.dataset.add_false_files(negative_files)
-        print("sanity check")
         self.dataset.add_priority_false_files(priority_negative_files)
-        
-    def add_data(self,
-                 positive_data=[],
-                 negative_data=[],
-                 priority_negative_data=[]):
-        assert isinstance(positive_data, list)
-        assert isinstance(negative_data, list)
-        assert isinstance(priority_negative_data, list)
-        
-        if len(positive_data) > 0:
-            self.dataset.add_true_data(positive_data)
-        
-        if len(negative_data) > 0:
-            self.dataset.add_false_data(negative_data)
-        
-        if len(priority_negative_data) > 0:
-            self.dataset.add_priority_false_data(priority_negative_data)
-
-    def step(self, x, y=None, epoch=0, plot=False):
-        
-        x = x.to(self.device)
-        if y is not None:
-            y = y.to(self.device)
-        
-        if plot:
-            output = self.vit((x, y))
-        else:
-            output = self.vit((x, y))
-        
-        if y is not None:
-            # loss = 0
-            # loss_tracker = np.zeros(len(output))
-            # acc_tracker = np.zeros(len(output))
-            # for idx, attn in enumerate(output):
-            #     attn_loss = self.loss(attn, y)
-            #     loss += attn_loss
-            #     loss_tracker[idx] = attn_loss.item()
-            #     pred_class = torch.argmax(attn, dim=1).detach()
-            #     acc_tracker[idx] = (torch.sum(pred_class==y).item())/len(attn)
-            # """ACCURACY CALC"""
-            # loss /= self.attention_num
-            # loss.backward()
-            # torch.nn.utils.clip_grad_norm_(self.classifier.parameters(), max_norm=self.grad_clip_norm)
-            # self.optimizer.zero_grad()
-            # self.optimizer.step()
-            # return loss.item(), loss_tracker, acc_tracker
-
-            loss = self.loss(output, y)
-            pred_class = torch.argmax(output, dim=1).detach()
-            acc = (torch.sum(pred_class==y).item())/len(y)
-            loss.backward()
-            self.optimizer.zero_grad()
-            self.optimizer.step()
-            return loss, acc
-
-        else:
-            return output
-
-
-    def train(self, epochs):
-        self.vit.train()
+    
+    def train(self,
+              epochs):
         
         for epoch in range(epochs):
-            loss = 0
-            acc = 0
-            loss_tracker = np.zeros(self.attention_num)
-            acc_tracker = np.zeros(self.attention_num)
-            counter = 0
             self.dataset.shuffle()
-            num_batches = self.dataset.num_batches
-            for b_idx in range(num_batches):
+            loss = np.zeros(self.attention_num)
+            classifier_losses = np.zeros(self.attention_num)
+            classifier_acc = np.zeros(self.attention_num)
+            div_losses = np.zeros(self.attention_num)
+            l1_losses = np.zeros(self.attention_num)
+            counter = 0
+            for _ in range(self.dataset.num_batches):
+                counter += 1
                 x, y = self.dataset.get_batch()
-                max_x = torch.max(x)
-                if max_x > 1:
-                    x /= 255
-                
-                b_loss, b_acc = self.step(x, y)
-                loss += b_loss
-                acc += b_acc
-                
-            loss /= counter +1
-            acc /= counter+1
+                x = x.to(self.device)
+                x = self.embedding.feature_extractor(x)
+                y = y.to(self.device)
+                pred_y = self.classifier(x)
+                masks = self.classifier.get_attention_masks()
+                for attn_idx in range(self.attention_num):
+                    b_loss = self.crossentropy(pred_y[attn_idx], y)
+                    pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
+                    classifier_losses[attn_idx] += b_loss.item()
+                    div_loss = self.div_scale*divergence_loss(masks, attn_idx)
+                    div_losses[attn_idx] += div_loss.item()
+                    regulariser_loss = self.reg_scale*l1_loss(masks, attn_idx)
+                    l1_losses[attn_idx] += regulariser_loss
+                    b_loss += div_loss
+                    b_loss += regulariser_loss
+                    classifier_acc[attn_idx] += (torch.sum(pred_class==y).item())/len(y)
+                    b_loss.backward()
+                    self.optimizers[attn_idx].step()
+                    self.optimizers[attn_idx].zero_grad()
+                    loss[attn_idx] += b_loss.item()
             
-            print("loss: {} acc: {}".format(loss, acc))
-                
-            #     step_loss, attn_losses, attn_accs = self.step(x, 
-            #                                                   y, 
-            #                                                   epoch,
-            #                                                   plot=(b_idx==0))
-            #     loss_tracker += attn_losses
-            #     acc_tracker += attn_accs
-            #     loss += step_loss
-            #     counter += 1
+            masks = self.classifier.get_attention_masks()
+            cat_masks = torch.cat(masks).squeeze().detach().cpu().numpy()
+            fig, ax = plt.subplots()
+            ax.matshow(cat_masks)
+            for (i, j), z in np.ndenumerate(cat_masks):
+                ax.text(j, i, '{:0.3f}'.format(z), ha='center', va='center')
             
-            # loss /= counter + 1
-            # loss_tracker /= counter + 1
-            # acc_tracker /= counter + 1
+            img_save_path = os.path.join(self.log_dir, 'masks.png')
+            fig.savefig(img_save_path, bbox_inches='tight')
+            plt.close(fig)
             
-            # logger.info("Epoch {}: overall loss: {:.2f}".format(epoch, loss))
-            # print("Epoch {}: overall loss: {:.2f}".format(epoch, loss))
-            # self.writer.add_scalar("loss/ensemble_loss", loss, epoch)
-            # for idx in range(self.attention_num):
-            #     logger.info("Att {}: loss={:.2f} accuracy={:.2f}".format(idx, loss_tracker[idx], acc_tracker[idx]))
-            #     print("Att {}: loss={:.2f} accuracy={:.2f}".format(idx, loss_tracker[idx], acc_tracker[idx]))
-            #     self.writer.add_scalar("loss/member_{}_loss".format(idx), loss_tracker[idx], epoch)
-            #     self.writer.add_scalar("accuracy/member_{}_acc".format(idx), acc_tracker[idx], epoch)
+            if self.summary_writer is not None:
+                for idx in range(self.attention_num):
+                    self.summary_writer.add_scalar('{}/total_loss/{}'.format(self.name, idx),
+                                                   loss[idx]/counter,
+                                                   epoch)
+                    self.summary_writer.add_scalar('{}/classifier_loss/{}'.format(self.name, idx),
+                                                   classifier_losses[idx]/counter,
+                                                   epoch)
+                    self.summary_writer.add_scalar('{}/divergence_loss/{}'.format(self.name, idx),
+                                                   div_losses[idx]/counter,
+                                                   epoch)
+                    self.summary_writer.add_scalar('{}/l1_loss/{}'.format(self.name, idx),
+                                                   l1_losses[idx]/counter,
+                                                   epoch)
+                    self.summary_writer.add_scalar('{}/accuracy/{}'.format(self.name, idx),
+                                                   classifier_acc[idx]/counter,
+                                                   epoch)
+            
+            print("Epoch {}".format(epoch))
+            print("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
+                                                                    classifier_losses[idx]/counter,
+                                                                    div_losses[idx]/counter,
+                                                                    l1_losses[idx]/counter,
+                                                                    loss[idx]/counter,
+                                                                    classifier_acc[idx]/counter))
+
+            logger.info("Epoch {}".format(epoch))
+            logger.info("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
+                                                                    classifier_losses[idx]/counter,
+                                                                    div_losses[idx]/counter,
+                                                                    l1_losses[idx]/counter,
+                                                                    loss[idx]/counter,
+                                                                    classifier_acc[idx]/counter))
+    def vote(self, x):
+        x = x.to(self.device)
+        with torch.no_grad():
+            x = self.embedding.feature_extractor()
+            conf = self.confidences.weights(False)
+            pred_y = self.classifier(x)
+        
+        votes = torch.argmax(pred_y, axis=-1)
+        
+        self.votes = votes
+        
+        return pred_y, votes, conf
+        
+    def get_attentions(self):
+        return self.classifier.get_attention_masks()
+
+    def update_confidence(self,
+                          was_successful: bool,
+                          votes: list):
+        success_count = votes
+        failure_count = np.ones(len(votes)) - votes
+        
+        if not was_successful:
+            success_count = failure_count
+            failure_count = votes
+        
+        self.confidences.update_successes(success_count)
+        self.confidences.update_failures(failure_count)
+
 
 
 

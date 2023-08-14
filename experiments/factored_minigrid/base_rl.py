@@ -1,10 +1,9 @@
-from experiments.minigrid.doorkey.core.minigrid_experiment import MinigridExperiment
+from experiments.factored_minigrid.experiment.factored_minigrid_experiment import FactoredMinigridExperiment
 from experiments.minigrid.doorkey.core.agents.rainbow import Rainbow
 import os
 import numpy as np 
-from experiments.minigrid.utils import environment_builder
+from experiments.factored_minigrid.utils import environment_builder
 import argparse 
-from experiments.minigrid.doorkey.core.doorkey_option_wrapper import DoorKeyEnvOptionWrapper
 
 from portable.utils.utils import load_gin_configs
 import torch
@@ -28,7 +27,7 @@ if __name__ == "__main__":
             n_actions,
             gpu,
             n_input_channels,
-            env_steps=500_000,
+            env_steps=1_000_000,
             lr=1e-4,
             sigma=0.5
         ):
@@ -40,20 +39,22 @@ if __name__ == "__main__":
             replay_buffer_size=int(3e5),
             gpu=gpu, n_obs_channels=n_input_channels,
             use_custom_batch_states=False,
-            epsilon_decay_steps=125000 # don't forget to change
+            epsilon_decay_steps=50000 # don't forget to change
         )
         return Rainbow(n_actions, **kwargs)
     
     def create_env(seed):
-        return DoorKeyEnvOptionWrapper(environment_builder('MiniGrid-DoorKey-8x8-v0', 
+        return environment_builder('FactoredMiniGrid-DoorKey-8x8-v0', 
                                    seed=seed,
-                                   grayscale=False))
+                                   max_steps=2000)
     
-    experiment = MinigridExperiment(base_dir=args.base_dir,
+    experiment = FactoredMinigridExperiment(base_dir=args.base_dir,
                             random_seed=args.seed,
                             create_env_function=create_env,
                             create_agent_function=create_agent,
-                            action_space=10
+                            action_space=7
                             )
     
     experiment.train_test_envs()
+    
+    

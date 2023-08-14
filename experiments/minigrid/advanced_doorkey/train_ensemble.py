@@ -6,40 +6,38 @@ from torch.utils.tensorboard import SummaryWriter
 import torchvision
 import matplotlib.pyplot as plt
 import os
-
-from portable.option.sets.models import FactoredMinigridImageFeatureExtractor
+import logging
 
 
 initiation_positive_files = [
-    'resources/factored_minigrid_images/doorkey_opendoor_0_initiation_image_positive.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_0_initiation_positive.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_1_initiation_positive.npy',
 ]
 
 initiation_negative_files = [
-    'resources/factored_minigrid_images/doorkey_opendoor_0_initiation_image_negative.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_0_initiation_negative.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_1_initiation_negative.npy',
 ]
 
 test_positive_files = [
-    'resources/factored_minigrid_images/doorkey_opendoor_1_initiation_image_positive.npy',
-    'resources/factored_minigrid_images/doorkey_opendoor_2_initiation_image_positive.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_2_initiation_positive.npy',
 ]
 
 test_negative_files = [
-    'resources/factored_minigrid_images/doorkey_opendoor_1_initiation_image_negative.npy',
-    'resources/factored_minigrid_images/doorkey_opendoor_2_initiation_image_negative.npy',
+    'resources/minigrid_images/adv_doorkey_getredkey_doorred_2_initiation_negative.npy',
 ]
 
-encoder_save_dir = "runs/custom_attention_test/encoder/6/encoder.ckpt"
+encoder_save_dir = "runs/advanced_doorkey/encoder/0/encoder.ckpt"
 
 if __name__ == "__main__":
-    log_dir_base = "runs/custom_attention_test/ensemble"
-    log_dir = os.path.join(log_dir_base, "0")
+    log_dir_base = "runs/advanced_doorkey/ensemble"
+    log_dir = os.path.join(log_dir_base, "1")
     x = 0
     while os.path.exists(log_dir):
         x += 1
         log_dir = os.path.join(log_dir_base, str(x))
 
     writer = SummaryWriter(log_dir=log_dir)
-
     dataset = SetDataset(batchsize=16)
 
     dataset.add_true_files(initiation_positive_files)
@@ -50,16 +48,14 @@ if __name__ == "__main__":
     test_dataset.add_true_files(test_positive_files)
     test_dataset.add_false_files(test_negative_files)
 
-    attention_heads = 6
+    attention_heads = 10
 
     model = AttentionEnsembleII(num_attention_heads=attention_heads,
-                                num_features=8,
-                                num_classes=2,
-                                input_dim=1000*8)
+                                embedding_size=500,
+                                num_classes=2)
 
-    encoder = AutoEncoder(6, 8, 1000)
+    encoder = AutoEncoder(3, 500, image_height=128, image_width=128)
     
-    # feature_extractor = FactoredMinigridImageFeatureExtractor()
     encoder.load_state_dict(torch.load(encoder_save_dir))
     
     criterion = torch.nn.CrossEntropyLoss()
@@ -70,8 +66,9 @@ if __name__ == "__main__":
     device = torch.device("cuda")
     model.to(device)
     encoder.to(device)
+    train_x = None
 
-    for epoch in range(3000):
+    for epoch in range(400):
         dataset.shuffle()
         loss = np.zeros(attention_heads)
         classifier_losses = np.zeros(attention_heads)
@@ -84,9 +81,9 @@ if __name__ == "__main__":
             x, y = dataset.get_batch()
             # x = feature_extractor(x)
             x = x.to(device)
+            train_x = x
             with torch.no_grad():
                 x = encoder.feature_extractor(x)
-                print(x)
             y = y.to(device)
             pred_y = model(x)
             masks = model.get_attention_masks()
@@ -107,17 +104,19 @@ if __name__ == "__main__":
         
         attention_images = []
         masks = model.get_attention_masks()
-        cat_masks = torch.cat(masks).squeeze().detach().cpu().numpy()
-        fig, ax = plt.subplots()
-        ax.matshow(cat_masks)
-        for (i, j), z in np.ndenumerate(cat_masks):
-            ax.text(j, i, '{:0.3f}'.format(z), ha='center', va='center')
-        
-        img_save_path = os.path.join(log_dir, 'masks.png')
-        fig.savefig(img_save_path, bbox_inches='tight')
-        plt.close(fig)
         
         for idx in range(attention_heads):
+            image = encoder.masked_image(train_x[0].unsqueeze(0), masks[idx])
+            fig, axes = plt.subplots(ncols=2)
+            axes[0].set_axis_off()
+            axes[1].set_axis_off()
+            axes[0].imshow(np.transpose(train_x[0].cpu().numpy(), axes=(1,2,0)))
+            axes[1].imshow(np.transpose(image[0].cpu().numpy(), axes=(1,2,0)))
+            
+            fig.savefig("{}/mask_{}.png".format(log_dir, idx))
+            plt.close(fig)
+            
+            
             writer.add_scalar('train_overall_loss/{}'.format(idx), loss[idx]/counter, epoch)
             writer.add_scalar('train_classifier_loss/{}'.format(idx), classifier_losses[idx]/counter, epoch)
             writer.add_scalar('train_divergence_loss/{}'.format(idx), div_losses[idx]/counter, epoch)

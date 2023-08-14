@@ -13,6 +13,8 @@ import gin
 import dill
 import matplotlib.pyplot as plt
 import numpy as np
+import random
+import torch
 
 
 def create_log_dir(dir_path, remove_existing=True, log_git=True):
@@ -209,3 +211,10 @@ class BaseTrial:
             update_param(params, arg_name, arg_value)
         return params
 
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    
+    

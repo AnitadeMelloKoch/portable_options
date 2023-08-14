@@ -4,21 +4,21 @@ from portable.option.ensemble.custom_attention import *
 from torchviz import make_dot
 
 initiation_positive_files = [
-    'resources/minigrid_images/doorkey_getkey_0_initiation_loc_positive.npy',
+    'resources/minigrid_images/doorkey_opendoor_0_initiation_loc_positive.npy',
 ]
 
 initiation_negative_files = [
-    'resources/minigrid_images/doorkey_getkey_0_initiation_loc_negative.npy',
+    'resources/minigrid_images/doorkey_opendoor_0_initiation_loc_negative.npy',
 ]
 
 test_positive_files = [
-    'resources/minigrid_images/doorkey_getkey_1_initiation_loc_positive.npy',
-    'resources/minigrid_images/doorkey_getkey_2_initiation_loc_positive.npy',
+    'resources/minigrid_images/doorkey_opendoor_1_initiation_loc_positive.npy',
+    'resources/minigrid_images/doorkey_opendoor_2_initiation_loc_positive.npy',
 ]
 
 test_negative_files = [
-    'resources/minigrid_images/doorkey_getkey_1_initiation_loc_negative.npy',
-    'resources/minigrid_images/doorkey_getkey_2_initiation_loc_negative.npy',
+    'resources/minigrid_images/doorkey_opendoor_1_initiation_loc_negative.npy',
+    'resources/minigrid_images/doorkey_opendoor_2_initiation_loc_negative.npy',
 ]
 
 dataset = PositionSet(batchsize=16,

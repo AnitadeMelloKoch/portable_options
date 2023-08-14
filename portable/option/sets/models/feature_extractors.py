@@ -22,8 +22,6 @@ class FactoredMinigridImageFeatureExtractor(torch.nn.Module):
         super().__init__()
         
     def forward(self, x):
-        y = x[1]
-        x = x[0]
         device = x.device
         num_batches, num_channels, _, _ = x.shape
         new_batch = np.zeros((num_batches, num_channels, 32, 24))
@@ -32,20 +30,21 @@ class FactoredMinigridImageFeatureExtractor(torch.nn.Module):
             for channel in range(num_channels):
                 img = Image.fromarray(x[batch, channel, :,:])
                 new_batch[batch, channel, :, :] = np.asarray(img.resize((24,32), Image.BILINEAR))
-            # plot_image(new_batch[batch], y[batch])
+            # plot_image(new_batch[batch])
         new_batch = torch.from_numpy(new_batch).to(device).float()
-        return new_batch.view(-1, 6, 768)
+        return new_batch
+        # return new_batch.view(-1, 6, 768)
     
     # try with "ram info"
 
-def plot_image(image, y):
+def plot_image(image):
     print(image.shape)
     fig, axes = plt.subplots(nrows=1, ncols=6)
     for idx, ax in enumerate(axes):
         ax.set_axis_off()
         ax.imshow(image[idx], cmap='gray')
     plt.show(block=False)
-    input("continue: class {}".format(y))
+    input("continue")
     plt.close(fig)
 
 class FactoredMinigridPositionFeatureExtractor(torch.nn.Module):

@@ -1,0 +1,605 @@
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+##### Seed 0 #####
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+perform_action(env, actions.RIGHT, 2,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 7,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 6,         init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.RIGHT, 2,           init_positive=True, term_positive=False, show=False)
+for _ in range(4):
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=True, term_positive=False, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=True, term_positive=False, show=False)
+
+    perform_action(env, actions.LEFT, 3,        init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 1,       init_positive=True, term_positive=False, show=False)
+
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=True, term_positive=False, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=True, term_positive=False, show=False)
+
+    perform_action(env, actions.RIGHT, 3,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.LEFT, 1,        init_positive=True, term_positive=False, show=False)
+
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+
+# in front of grey key
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+for _ in range(10):
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+
+for _ in range(10):
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.LEFT, 3,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+
+for _ in range(10):
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.RIGHT, 3,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,            init_positive=True, term_positive=False, show=False)
+
+# in front of red key
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.RIGHT, 3,           init_positive=True, term_positive=False, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+
+# in front of yellow key
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+
+# going to get red key
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 8,         init_positive=True, term_positive=False, show=False)
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#### Going to pick up red key
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+perform_action(env, actions.PICKUP, 1,          init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 12,        init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 2,           init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 1,       init_positive=False, term_positive=True, show=False)
+
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 1,        init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+# in front of grey key
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+
+for _ in range(2):
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 1,       init_positive=False, term_positive=True, show=False)
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 1,        init_positive=False, term_positive=True, show=False)
+
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 9,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 10,        init_positive=False, term_positive=True, show=False)
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+# about to open door
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+perform_action(env, actions.TOGGLE, 1,          init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 4,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 10,        init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 2,           init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 1,       init_positive=False, term_positive=True, show=False)
+
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 1,        init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+# in front of grey key
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+
+for _ in range(2):
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 1,       init_positive=False, term_positive=True, show=False)
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 1,        init_positive=False, term_positive=True, show=False)
+
+    for _ in range(10):
+        perform_action(env, actions.RIGHT, 4,   init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1, init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 9,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 10,        init_positive=False, term_positive=True, show=False)
+# in front of open door
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 4,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+
+for _ in range(6):
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 6,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+# on goal
+perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 8,           init_positive=False, term_positive=True, show=False)
+
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+#### Seed 1
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+perform_action(env, actions.FORWARD, 11,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 2,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=True, term_positive=False, show=False)
+
+for _ in range(5):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+# in front of red key
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=True, term_positive=False, show=False)
+for _ in range(2):
+    for _ in range(5):
+        perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+    for _ in range(4):
+        perform_action(env, actions.RIGHT, 4,       init_positive=True, term_positive=False, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+for _ in range(3):
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 4,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(2):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=True, term_positive=False, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 6,               init_positive=True, term_positive=False, show=False)
+# in bottom corner
+perform_action(env, actions.FORWARD, 1,             init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 10,            init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=True, term_positive=False, show=False)
+perform_action(env, actions.FORWARD, 3,             init_positive=True, term_positive=False, show=False)
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#### Going to pick up red key
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+perform_action(env, actions.PICKUP, 1,              init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 3,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=False, term_positive=True, show=False)
+# in top corner
+for _ in range(4):
+    for _ in range(5):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    for _ in range(4):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(2):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 6,               init_positive=False, term_positive=True, show=False)
+# bottom corner
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 13,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+# about to open door
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+perform_action(env, actions.TOGGLE, 1,              init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 5,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=False, term_positive=True, show=False)
+# in top corner
+for _ in range(4):
+    for _ in range(5):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.LEFT, 3,            init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    for _ in range(4):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+for _ in range(4):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 1,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.LEFT, 3,                init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(2):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 3,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+for _ in range(3):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 6,               init_positive=False, term_positive=True, show=False)
+# # bottom corner
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 13,            init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 1,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 2,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 4,               init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.FORWARD, 8,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 2,               init_positive=False, term_positive=True, show=False)
+
+for _ in range(6):
+    for _ in range(6):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    for _ in range(2):
+        perform_action(env, actions.RIGHT, 3,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    for _ in range(6):
+        perform_action(env, actions.RIGHT, 4,       init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+    for _ in range(2):
+        perform_action(env, actions.LEFT, 3,        init_positive=False, term_positive=True, show=False)
+        perform_action(env, actions.FORWARD, 1,     init_positive=False, term_positive=True, show=False)
+
+for _ in range(6):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+for _ in range(2):
+    perform_action(env, actions.RIGHT, 3,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+for _ in range(5):
+    perform_action(env, actions.RIGHT, 4,           init_positive=False, term_positive=True, show=False)
+    perform_action(env, actions.FORWARD, 1,         init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.RIGHT, 4,               init_positive=False, term_positive=True, show=False)
+
+perform_action(env, actions.FORWARD, 1,             init_positive=False, term_positive=True, show=False)
+perform_action(env, actions.RIGHT, 6,               init_positive=False, term_positive=True, show=False)
+
+
+

@@ -80,7 +80,6 @@ class FactoredDoorKeyPolicyTrainWrapper(Wrapper):
         obs, info = self.env.reset()
         self._find_objs()
         
-        self._timestep = 0
         
         if self.start_key_collected or self.start_door_open:
             key = self.env.unwrapped.grid.get(self.object_pos["key"][0], self.object_pos["key"][1])
@@ -107,7 +106,10 @@ class FactoredDoorKeyPolicyTrainWrapper(Wrapper):
         
         self.env.unwrapped.agent_pos = (rand_x, rand_y)
         self.env.unwrapped.agent_dir = np.random.randint(0, 4)
-        self.env.step(actions.DONE)
+        obs, _, _, _ = self.env.step(actions.RIGHT)
+        obs, _, _, _ = self.env.step(actions.LEFT)
+        
+        self._timestep = 0
         
         info = self._modify_info_dict(info)
         
