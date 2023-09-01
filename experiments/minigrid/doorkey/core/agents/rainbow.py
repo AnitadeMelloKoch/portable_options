@@ -7,6 +7,7 @@ from pfrl import agents, explorers
 from pfrl.wrappers import atari_wrappers
 from pfrl.q_functions import DistributionalDuelingDQN
 from pfrl.utils import batch_states as pfrl_batch_states
+from PIL import Image
 
 
 class Rainbow:
@@ -85,12 +86,36 @@ class Rainbow:
         
         return x
 
+    @staticmethod
+    def transform_obs(x):
+        if len(x.shape) == 3:
+            num_channels, _, _ = x.shape
+            num_batches = 1
+            remove_batches=True
+            x = np.expand_dims(x, 0)
+        else:
+            num_batches, num_channels, _, _ = x.shape
+            remove_batches = False
+        frames = np.zeros((num_batches, num_channels, 84, 84))
+        for batch in range(num_batches):
+            for channel in range(num_channels):
+                img = Image.fromarray(x[batch, channel, :, :])
+                frames[batch, channel, :, :] = np.asarray(img.resize((84, 84), Image.BILINEAR))
+        
+        if remove_batches:
+            frames = np.squeeze(frames)
+        
+        return frames
+
     def act(self, state):
         """ Action selection method at the current state. """
+        state = self.transform_obs(state)
         return self.agent.act(state)
 
     def step(self, state, action, reward, next_state, done, reset):
         """ Learning update based on a given transition from the environment. """
+        state = self.transform_obs(state)
+        next_state = self.transform_obs(state)
         reset = reset['needs_reset'] if isinstance(reset, dict) else reset
         assert isinstance(reset, bool), type(reset)
         self._overwrite_pfrl_state(state, action)
@@ -98,11 +123,13 @@ class Rainbow:
 
     def _overwrite_pfrl_state(self, state, action):
         """ Hack the pfrl state so that we can call act() consecutively during an episode before calling step(). """
+        state = self.transform_obs(state)
         self.agent.batch_last_obs = [state]
         self.agent.batch_last_action = [action]
 
     @torch.no_grad()
     def value_function(self, states):
+        states = self.transform_obs(states)
         batch_states = self.agent.batch_states(states, self.device, self.phi)
         action_values = self.agent.model(batch_states).q_values
         return action_values.max(dim=1).values

@@ -49,10 +49,10 @@ class PolicyExperiment():
         logging.basicConfig(
             filename=log_file,
             format='%(asctime)s %(levelname)s: %(message)s',
-            level=logging.INFO
+            level=logger.info
         )
 
-        logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
+        logger.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
         
 
         self.policy_success_rate = policy_success_rate
@@ -135,10 +135,10 @@ class ClassifierExperiment():
         logging.basicConfig(
             filename=log_file,
             format='%(asctime)s %(levelname)s: %(message)s',
-            level=logging.INFO
+            level=logger.info
         )
 
-        logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
+        logger.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
         
         self.trial_data = {}
 

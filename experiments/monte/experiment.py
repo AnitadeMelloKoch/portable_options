@@ -80,7 +80,7 @@ class Experiment():
         logging.basicConfig(
             filename=log_file,
             format='%(asctime)s %(levelname)s: %(message)s',
-            level=logging.INFO
+            level=logging.info
         )
 
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
@@ -225,7 +225,7 @@ class Experiment():
             trial_name,
             use_agent_space=False):
         assert isinstance(possible_inits, list)
-        logging.info("[experiment:run_trial] Starting trial {}".format(trial_name))
+        logger.info("[experiment:run_trial] Starting trial {}".format(trial_name))
         print("[experiment:run_trial] Starting trial {}".format(trial_name))
 
         results = []
@@ -241,7 +241,7 @@ class Experiment():
         instance_well_trained = False
 
         while episode_count < max_episodes_in_trial and (not instance_well_trained):
-            logging.info("Episode {}/{}".format(episode_count, max_episodes_in_trial))
+            logger.info("Episode {}/{}".format(episode_count, max_episodes_in_trial))
             completed = False
             
             rand_idx = random.randint(0, len(possible_inits)-1)
@@ -262,7 +262,7 @@ class Experiment():
             must_break = False
             while (attempt < self.max_option_tries) and (timedout < 3) and (not must_break):
                 attempt += 1
-                logging.info("Attempt {}/{}".format(attempt, self.max_option_tries))
+                logger.info("Attempt {}/{}".format(attempt, self.max_option_tries))
 
                 option_result = self.option.run(
                     self.env,
@@ -275,7 +275,7 @@ class Experiment():
                     instantiation_instances.add(self.option.markov_idx)
 
                 if option_result is None:
-                    logging.info("[experiment:run_trial] Option did not initiate")
+                    logger.info("[experiment:run_trial] Option did not initiate")
                     result = 0
                     must_break = True
                     position = info["position"]
@@ -286,11 +286,11 @@ class Experiment():
                     _, _, done, info, steps = option_result
 
                     if info["needs_reset"]:
-                        logging.info("[experiment:run_trial] Environment needs reset")
+                        logger.info("[experiment:run_trial] Environment needs reset")
                         must_break = True
                     if info["option_timed_out"]:
                         timedout += 1
-                        logging.info("[experiment:run_trial] Option timed out ({}/{})".format(timedout, 3))
+                        logger.info("[experiment:run_trial] Option timed out ({}/{})".format(timedout, 3))
 
                     if done:
                         must_break = True
@@ -318,7 +318,7 @@ class Experiment():
             completeds.append(completed)
             deads.append(info["dead"])
             stepses.append(steps)
-            logging.info("Succeeded: {}".format(completed))
+            logger.info("Succeeded: {}".format(completed))
 
 
         d = pd.DataFrame(
@@ -337,14 +337,14 @@ class Experiment():
             
         self.trial_data = self.trial_data.append(d)
 
-        logging.info("[experiment:run_trial] Finished trial {} performance: {}".format(
+        logger.info("[experiment:run_trial] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
             ))
-        logging.info("[experiment:run_trial] All instances well trained: {}".format(
+        logger.info("[experiment:run_trial] All instances well trained: {}".format(
             instance_well_trained))
         if not instance_well_trained:
-            logging.info("[experiment:run_trial] instance success rates:"
+            logger.info("[experiment:run_trial] instance success rates:"
                 .format([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
             )
 
@@ -370,10 +370,10 @@ class Experiment():
             instantiation_instances = list(instantiation_instances)
 
         if len(instantiation_instances) == 0:
-            logging.info("[experiment:test_assimilation] No instances to test.")
+            logger.info("[experiment:test_assimilation] No instances to test.")
 
-        logging.info("[experiment:test_assimilation] Starting assimilation test.")
-        logging.info(instantiation_instances)
+        logger.info("[experiment:test_assimilation] Starting assimilation test.")
+        logger.info(instantiation_instances)
         print("[experiment:test_assimilation] Starting assimilation test.")
 
         results = []
@@ -390,7 +390,7 @@ class Experiment():
         for instance_idx in instantiation_instances:
             instance = self.option.markov_instantiations[instance_idx]
             while episode_count < max_episodes_in_trial and (not instance_succeeded):
-                logging.info("Assimilation test {}/{}".format(episode_count, max_episodes_in_trial))
+                logger.info("Assimilation test {}/{}".format(episode_count, max_episodes_in_trial))
                 completed = False
                 episode_count += 1
 
@@ -454,7 +454,7 @@ class Experiment():
                         20,
                         80
                     )
-            logging.info("Instance {} succeeded: {} average performance: {}"
+            logger.info("Instance {} succeeded: {} average performance: {}"
                 .format(instance_idx, completed, np.mean(results)))
             
             d = pd.DataFrame(
@@ -473,7 +473,7 @@ class Experiment():
 
             self.trial_data = self.trial_data.append(d)
 
-        logging.info("[experiment] Finished trial {} performance: {}".format(
+        logger.info("[experiment] Finished trial {} performance: {}".format(
             trial_name,
             np.mean(results)
         ))
@@ -493,11 +493,11 @@ class Experiment():
         assert isinstance(possible_inits, list)
         assert isinstance(true_terminations, list)
         
-        logging.info("Bootstrapping weights from training room")
+        logger.info("Bootstrapping weights from training room")
         print("Bootstrapping weights from training room")
 
         for x in range(number_episodes_in_trial):
-            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
+            logger.info("Episode {}/{}".format(x, number_episodes_in_trial))
             rand_idx = random.randint(0, len(possible_inits)-1)
             rand_state = possible_inits[rand_idx]
             state = self._set_env_ram(
@@ -526,23 +526,23 @@ class Experiment():
                 )
 
                 if option_result is None:
-                    logging.info("initiation was not triggered")
+                    logger.info("initiation was not triggered")
                     self.option.initiation_update_confidence(was_successful=False, votes=self.option.initiation.votes)
                     break
 
                 _, _, done, info, _ = option_result
 
                 if info['needs_reset']:
-                    logging.info("Breaking because environment needs reset")
+                    logger.info("Breaking because environment needs reset")
                     break
 
                 if info['option_timed_out']:
-                    logging.info('[experiment] option has timed out {} times'.format(timedout))
+                    logger.info('[experiment] option has timed out {} times'.format(timedout))
                     timedout += 1
 
                 if self._check_termination_correct(self.env.get_current_position(), true_terminations[rand_idx], self.env):
                     self.option.termination_update_confidence(was_successful=True, votes=self.option.termination.votes)
-                    logging.info("Breaking because correct termination was found")
+                    logger.info("Breaking because correct termination was found")
                     break
                 else:
                     self.option.termination_update_confidence(was_successful=False, votes=self.option.termination.votes)

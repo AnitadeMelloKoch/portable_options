@@ -12,6 +12,8 @@ from pfrl.utils.batch_states import batch_states
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.attention_value_ensemble import AttentionValueEnsemble
+from pfrl.collections.prioritized import PrioritizedBuffer
+import warnings
 
 class EnsembleAgent(Agent):
     """
@@ -21,7 +23,7 @@ class EnsembleAgent(Agent):
     this class currently doesn't support batched observe() and act()
     """
     def __init__(self, 
-                device, 
+                use_gpu, 
                 warmup_steps,
                 batch_size,
                 phi,
@@ -40,7 +42,7 @@ class EnsembleAgent(Agent):
                 c=100,
                 summary_writer=None):
         # vars
-        self.device = device
+        self.use_gpu = use_gpu
         self.phi = phi
         self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
         self.buffer_length = buffer_length
@@ -62,7 +64,7 @@ class EnsembleAgent(Agent):
         
         # ensemble
         self.value_ensemble = AttentionValueEnsemble(
-            device=device,
+            use_gpu=use_gpu,
             embedding=embedding,
             learning_rate=learning_rate,
             discount_rate=discount_rate,
@@ -101,11 +103,12 @@ class EnsembleAgent(Agent):
             replay_start_size=warmup_steps,
             update_interval=update_interval,
         )
+        self.replay_buffer_loaded = True
     
     def initialize_new_policy(self):
 
         new_policy = EnsembleAgent(
-            device=self.device,
+            use_gpu=self.use_gpu,
             warmup_steps=self.warmup_steps,
             batch_size=self.batch_size,
             phi=self.phi,
@@ -123,15 +126,38 @@ class EnsembleAgent(Agent):
             embedding=self.embedding
         )
 
-        new_policy.value_ensemble = copy.deepcopy(self.value_ensemble)
+        new_policy.value_ensemble.recurrent_memory.load_state_dict(self.value_ensemble.recurrent_memory.state_dict())
+        new_policy.value_ensemble.attentions.load_state_dict(self.value_ensemble.attentions.state_dict())
+        new_policy.value_ensemble.q_networks.load_state_dict(self.value_ensemble.q_networks.state_dict())
+        new_policy.value_ensemble.target_q_networks.load_state_dict(self.value_ensemble.target_q_networks.state_dict())
+        new_policy.value_ensemble.target_q_networks.eval()
 
         return new_policy
-            
+    
+    def move_to_gpu(self):
+        self.value_ensemble.move_to_gpu()
+    
+    def move_to_cpu(self):
+        self.value_ensemble.move_to_cpu()
+    
+    def store_buffer(self, save_file):
+        self.replay_buffer.save(save_file)
+        self.replay_buffer.memory = PrioritizedBuffer()
+        
+        self.replay_buffer_loaded = False
+    
+    def load_buffer(self, save_file):
+        self.replay_buffer.load(save_file)
+        
+        self.replay_buffer_loaded = True
+    
     def update_step(self):
         self.step_number += 1
         self.value_ensemble.step()
 
     def train(self, epochs):
+        if self.replay_buffer_loaded is False:
+            raise Exception("replay buffer is not loaded")
         if len(self.replay_buffer) < self.batch_size*epochs:
             return False
         
@@ -146,6 +172,9 @@ class EnsembleAgent(Agent):
         store the experience tuple into the replayreplay_buffer buffer
         and update the agent if necessary
         """
+        if self.replay_buffer_loaded is False:
+            warnings.warn("Replay buffer is not loaded. This may not be intended.")
+        
         self.update_step()
 
         # update replay buffer 
@@ -170,7 +199,7 @@ class EnsembleAgent(Agent):
         if terminal:
             self.episode_number += 1
             self.value_ensemble.update_leader()
-
+    
     def update(self, experiences, errors_out=None):
         """
         update the model
@@ -188,11 +217,18 @@ class EnsembleAgent(Agent):
             errors_out (list or None): If set to a list, then TD-errors
                 computed from the given experiences are appended to the list.
         """
+        if self.replay_buffer_loaded is False:
+            warnings.warn("Replay buffer is not loaded. This may not be intended.")
+        
         if self.training:
             has_weight = "weight" in experiences[0][0]
+            if self.use_gpu:
+                device = torch.device("cuda")
+            else:
+                device = torch.device("cpu")
             exp_batch = batch_experiences(
                 experiences,
-                device=self.device,
+                device=device,
                 phi=self.phi,
                 gamma=self.discount_rate,
                 batch_states=batch_states,
@@ -201,7 +237,7 @@ class EnsembleAgent(Agent):
             if has_weight:
                 exp_batch["weights"] = torch.tensor(
                     [elem[0]["weight"] for elem in experiences],
-                    device=self.device,
+                    device=device,
                     dtype=torch.float32,
                 )
                 if errors_out is None:
@@ -222,7 +258,15 @@ class EnsembleAgent(Agent):
             return_ensemble_info (bool): when set to true, this function returns
                 (action_selected, actions_selected_by_each_learner, q_values_of_each_actions_selected)
         """
-        obs = batch_states([obs], self.device, self.phi)
+        if self.replay_buffer_loaded is False:
+            warnings.warn("Replay buffer is not loaded. This may not be intended.")
+        
+        if self.use_gpu:
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        
+        obs = batch_states([obs], device, self.phi)
         action, actions, action_q_vals, _ = self.value_ensemble.predict_actions(obs, return_q_values=True)
         
         # action selection strategy
@@ -241,15 +285,16 @@ class EnsembleAgent(Agent):
         return a
 
     def save(self, save_dir):
-        path = os.path.join(save_dir, "agent.pkl")
-        with lzma.open(path, 'wb') as f:
-            dill.dump(self, f)
+        if self.replay_buffer_loaded is False:
+            warnings.warn("Replay buffer is not loaded. This may not be intended.")
+        
+        self.value_ensemble.save(save_dir)
+        self.replay_buffer.save(os.path.join(save_dir, 'replay_buffer.pkl'))
 
-    @classmethod
-    def load(cls, load_path, plot_dir=None):
-        with lzma.open(load_path, 'rb') as f:
-            agent = dill.load(f)
-        # hack to change the plot_dir of the agent
-        agent.value_ensemble.embedding.plot_dir = plot_dir
+    def load(self, load_path):
+        self.value_ensemble.load(load_path)
+        self.replay_buffer.save(os.path.join(load_path, 'replay_buffer.pkl'))
 
-        return agent
+        self.replay_buffer_loaded = True
+        
+        

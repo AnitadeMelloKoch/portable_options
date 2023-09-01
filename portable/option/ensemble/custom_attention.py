@@ -3,6 +3,7 @@ import numpy as np
 import torch.nn as nn
 
 import matplotlib.pyplot as plt
+import gin
 
 class AttentionLayer(nn.Module):
     # this layer learns a feature set
@@ -94,10 +95,17 @@ class AttentionEnsembleII(nn.Module):
         self.embedding_size = embedding_size
         self.num_classes = num_classes
     
-    def forward(self, x):
+    def forward(self, x, concat_results=False):
         output = []
+        
         for attention in self.attentions:
-            output.append(attention(x))
+            if concat_results:
+                att_out = attention(x).unsqueeze(1)
+            else:
+                att_out = attention(x)
+            output.append(att_out)
+        if concat_results:
+            output = torch.cat(output, 1)
         
         return output
 
@@ -113,6 +121,7 @@ class PrintSize(nn.Module):
         print(x.shape)
         return x
 
+@gin.configurable
 class AutoEncoder(nn.Module):
     def __init__(self,
                  num_input_channels,

@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 class AttentionSet():
     def __init__(self,
-                 device,
-                 vote_function,
+                 use_gpu,
+                 vote_threshold,
                  embedding: AutoEncoder,
                  log_dir,
                  
@@ -29,19 +29,10 @@ class AttentionSet():
                  model_name="classifier"):
         
         self.embedding = embedding
+        self.embedding.eval()
         
-        self.classifier = AttentionEnsembleII(num_attention_heads=attention_module_num,
-                                              num_features=embedding.num_embedding_features,
-                                              num_classes=2,
-                                              input_dim=attention_module_num*embedding.feature_size)
-        self.classifier.to(device)
-        self.confidences = BayesianWeighting(beta_distribution_alpha,
-                                             beta_distribution_beta,
-                                             self.attention_num,
-                                             self.device)
-        
-        self.device = device
-        self.vote_function = vote_function
+        self.use_gpu = use_gpu
+        self.vote_threshold = vote_threshold
         self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
         self.attention_num = attention_module_num
         self.alpha = beta_distribution_alpha
@@ -51,6 +42,13 @@ class AttentionSet():
         self.log_dir = log_dir
         self.summary_writer = summary_writer
         self.name = model_name
+        
+        self.classifier = AttentionEnsembleII(num_attention_heads=attention_module_num,
+                                              num_classes=2,
+                                              embedding_size=embedding.feature_size)
+        self.confidences = BayesianWeighting(beta_distribution_alpha,
+                                             beta_distribution_beta,
+                                             self.attention_num)
         
         self.votes = None 
         
@@ -69,6 +67,13 @@ class AttentionSet():
         self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
         self.dataset.load(path)
         self.confidences.load(os.path.join(path, 'confidence'))
+    
+    def move_to_gpu(self):
+        if self.use_gpu:
+            self.classifier.to("cuda")
+    
+    def move_to_cpu(self):
+        self.classifier.to("cpu")
     
     def add_data(self,
                  positive_data=[],
@@ -90,7 +95,7 @@ class AttentionSet():
     def add_data_from_files(self,
                             positive_files,
                             negative_files,
-                            priority_negative_files):
+                            priority_negative_files=[]):
         assert isinstance(positive_files, list)
         assert isinstance(negative_files, list)
         assert isinstance(priority_negative_files, list)
@@ -101,7 +106,8 @@ class AttentionSet():
     
     def train(self,
               epochs):
-        
+        self.move_to_gpu()
+        self.classifier.train()
         for epoch in range(epochs):
             self.dataset.shuffle()
             loss = np.zeros(self.attention_num)
@@ -113,9 +119,10 @@ class AttentionSet():
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                x = x.to(self.device)
+                if self.use_gpu:
+                    x = x.to("cuda")
+                    y = y.to("cuda")
                 x = self.embedding.feature_extractor(x)
-                y = y.to(self.device)
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
                 for attn_idx in range(self.attention_num):
@@ -134,18 +141,9 @@ class AttentionSet():
                     self.optimizers[attn_idx].zero_grad()
                     loss[attn_idx] += b_loss.item()
             
-            masks = self.classifier.get_attention_masks()
-            cat_masks = torch.cat(masks).squeeze().detach().cpu().numpy()
-            fig, ax = plt.subplots()
-            ax.matshow(cat_masks)
-            for (i, j), z in np.ndenumerate(cat_masks):
-                ax.text(j, i, '{:0.3f}'.format(z), ha='center', va='center')
-            
-            img_save_path = os.path.join(self.log_dir, 'masks.png')
-            fig.savefig(img_save_path, bbox_inches='tight')
-            plt.close(fig)
-            
             if self.summary_writer is not None:
+                print("Epoch {}".format(epoch))
+                logger.info("Epoch {}".format(epoch))
                 for idx in range(self.attention_num):
                     self.summary_writer.add_scalar('{}/total_loss/{}'.format(self.name, idx),
                                                    loss[idx]/counter,
@@ -163,33 +161,46 @@ class AttentionSet():
                                                    classifier_acc[idx]/counter,
                                                    epoch)
             
-            print("Epoch {}".format(epoch))
-            print("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
-                                                                    classifier_losses[idx]/counter,
-                                                                    div_losses[idx]/counter,
-                                                                    l1_losses[idx]/counter,
-                                                                    loss[idx]/counter,
-                                                                    classifier_acc[idx]/counter))
+                    print("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
+                                                                            classifier_losses[idx]/counter,
+                                                                            div_losses[idx]/counter,
+                                                                            l1_losses[idx]/counter,
+                                                                            loss[idx]/counter,
+                                                                            classifier_acc[idx]/counter))
 
-            logger.info("Epoch {}".format(epoch))
-            logger.info("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
-                                                                    classifier_losses[idx]/counter,
-                                                                    div_losses[idx]/counter,
-                                                                    l1_losses[idx]/counter,
-                                                                    loss[idx]/counter,
-                                                                    classifier_acc[idx]/counter))
+                    logger.info("att {} - class loss: {:.2f} div loss: {:.2f} l1 loss: {:.2f} total loss: {:.2f} acc: {:.2f}".format(idx, 
+                                                                            classifier_losses[idx]/counter,
+                                                                            div_losses[idx]/counter,
+                                                                            l1_losses[idx]/counter,
+                                                                            loss[idx]/counter,
+                                                                            classifier_acc[idx]/counter))
     def vote(self, x):
-        x = x.to(self.device)
-        with torch.no_grad():
-            x = self.embedding.feature_extractor()
-            conf = self.confidences.weights(False)
-            pred_y = self.classifier(x)
+        self.classifier.eval()
         
-        votes = torch.argmax(pred_y, axis=-1)
+        if type(x) is np.ndarray:
+            x = torch.from_numpy(x).float()
+        
+        if len(x.shape):
+            x = x.unsqueeze(0)
+        if self.use_gpu:
+            x = x.to("cuda")
+        x = self.embedding.feature_extractor(x)
+        with torch.no_grad():
+            conf = self.confidences.weights()
+            pred_y = self.classifier(x,  concat_results=True)
+        
+        votes = torch.argmax(pred_y, axis=-1)[0]
         
         self.votes = votes
         
-        return pred_y, votes, conf
+        vote = False
+        
+        for idx in range(self.attention_num):
+            if conf[idx] >= self.vote_threshold:
+                if votes[idx] == 1:
+                    vote = True
+        
+        return vote, pred_y, votes, conf
         
     def get_attentions(self):
         return self.classifier.get_attention_masks()

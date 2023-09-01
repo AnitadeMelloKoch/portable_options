@@ -9,8 +9,7 @@ class BayesianWeighting():
     def __init__(self,
         alpha,
         beta,
-        num_heads,
-        device):
+        num_heads):
         self.alpha = alpha
         self.beta = beta
         self.num_heads = num_heads
@@ -19,8 +18,6 @@ class BayesianWeighting():
 
         self.successes = np.zeros(self.num_heads)
         self.failures = np.zeros(self.num_heads)
-
-        self.device = device
 
         self.update_weights()
 
@@ -59,11 +56,8 @@ class BayesianWeighting():
 
         self.update_weights()
 
-    def weights(self, move_to_device=True):
-        if move_to_device:
-            return torch.from_numpy(self.weightings).to(self.device)
-        else:
-            return self.weightings
+    def weights(self):
+        return self.weightings
 
     def update_successes(self, successes):
         # e.g. if you have 4 classifiers should have input [0, 2, 1, 3]

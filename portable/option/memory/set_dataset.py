@@ -4,6 +4,7 @@ import math
 import os
 import pickle
 from portable.utils import plot_state
+import random
 
 class SetDataset():
     def __init__(
@@ -28,9 +29,13 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
-    def transform(self, x):
+    @staticmethod
+    def transform(x):
         return x/255.0
 
+    def set_transform_function(self, transform):
+        self.transform = transform
+    
     @staticmethod
     def _getfilenames(path):
         true_filename = os.path.join(path, 'true_data.pkl')
@@ -108,6 +113,19 @@ class SetDataset():
         self.shuffle()
         self.counter = 0
     
+    def add_some_true_files(self, file_list):
+        # load data from true file and only add a few random samples
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            data = random.sample(data, 20)
+            self.true_data = self.concatenate(self.true_data, data)
+        self.true_length = len(self.true_data)
+        self._set_batch_num()
+        self.shuffle()
+        self.counter = 0
+    
     def add_false_files(self, file_list):
         # load data from a file for false data
         for file in file_list:
@@ -120,6 +138,20 @@ class SetDataset():
         self.shuffle()
         self.counter = 0
 
+    def add_some_false_files(self, file_list):
+        # load data from true file and only add a few random samples
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            data = random.sample(data, 20)
+            self.false_data = self.concatenate(self.false_data, data)
+        self.false_length = len(self.false_data)
+        self._set_batch_num()
+        self.shuffle()
+        self.counter = 0
+    
+    
     def add_priority_false_files(self, file_list):
         # load data from a file for priority false data
         for file in file_list:
@@ -234,10 +266,7 @@ class SetDataset():
             data = data[shuffle_idxs]
             labels = labels[shuffle_idxs]
 
-        # print("pre-transform data:", data)
         data = self.transform(data)
-        # print("transformed data:", data)
-        # print(labels)
         
         return data, labels
 

@@ -5,11 +5,9 @@ import torch
 class UpperConfidenceBound():
     def __init__(self,
                  num_modules,
-                 device,
                  c=100):
         
         self.num_modules = num_modules
-        self.device = device
         self.c = c
 
         # value in bandit problem
@@ -45,23 +43,20 @@ class UpperConfidenceBound():
         self.time_step = np.load(time_step_file)
         self.visitation_count = np.load(count_file)
 
-    def weights(self, move_to_device=True):
+    def weights(self):
         """
         Return the weights of all members of the ensemble at this time step.
         """
         weights = self.accumulated_reward + self.c*np.sqrt(
             2*np.log(self.time_step)/(self.visitation_count+1e-8)
         )
-        if move_to_device:
-            return torch.from_numpy(weights).to(self.device)
-        else:
-            return weights
+        return weights
 
     def select_leader(self):
         """
         Select leader using upper confidence bound. Incriments visitation count.
         """
-        leader = np.argmax(self.weights(False))
+        leader = np.argmax(self.weights())
         self.visitation_count[leader] += 1
 
         return leader

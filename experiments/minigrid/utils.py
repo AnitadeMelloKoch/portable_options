@@ -126,14 +126,28 @@ class ScaleObsWrapper(ObservationWrapper):
 class PadObsWrapper(ObservationWrapper):
     def __init__(self, 
                  env: Env,
-                 pad: tuple):
+                 image_size: tuple):
         super().__init__(env)
         
-        self.pad = pad
+        self.image_size = image_size
     
     def observation(self, observation):
+        x, y, c = observation.shape
+        pad_x = (self.image_size[0] - x) // 2
+        pad_y = (self.image_size[1] - y) // 2
+        
+        if pad_x%2 == 0:
+            final_pad_x = (pad_x, pad_x)
+        else:
+            final_pad_x = (pad_x + 1, pad_x)
+        
+        if pad_y%2 == 0:
+            final_pad_y = (pad_y, pad_y)
+        else:
+            final_pad_y = (pad_y + 1, pad_y)
+        
         padded_obs = np.stack([
-            np.pad(observation[:,:,idx], self.pad, mode="constant", constant_values=0) for idx in range(3)
+            np.pad(observation[:,:,idx], (final_pad_x, final_pad_y), mode="constant", constant_values=0) for idx in range(3)
         ], axis=-1)
                 
         return padded_obs
@@ -202,7 +216,8 @@ def environment_builder(
     seed=42,
     random_reset=False,
     max_steps=None,
-    random_starts=[]
+    random_starts=[],
+    final_image_size=(152,152)
     ):
     if max_steps is not None and max_steps > 0:
         env = gym.make(level_name, max_steps=max_steps,
@@ -216,10 +231,9 @@ def environment_builder(
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
     if scale_obs:
-        print("scale obs")
         env = ScaleObsWrapper(env)
     if pad_obs:
-        env = PadObsWrapper(env)
+        env = PadObsWrapper(env, final_image_size)
     # env = ResizeObsWrapper(env)
     env = TransposeObsWrapper(env)
     if grayscale:

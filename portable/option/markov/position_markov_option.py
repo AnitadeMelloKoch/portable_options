@@ -47,7 +47,6 @@ class PositionMarkovOption(MarkovOption):
         self.option_timeout = max_option_steps
 
         self.performance = deque(maxlen=min_required_interactions)
-        self.interactions = 0
         self.min_interactions = min_required_interactions
         self.success_rate_required = success_rate_required
         self.assimilation_performance = deque(maxlen=assimilation_min_required_interactions)

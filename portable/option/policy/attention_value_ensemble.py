@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class AttentionValueEnsemble():
     def __init__(self,
-                 device,
+                 use_gpu,
                  embedding: AutoEncoder,
                  num_actions,
                  
@@ -30,7 +30,7 @@ class AttentionValueEnsemble():
         
         self.attention_num = attention_module_num
         self.num_actions = num_actions
-        self.device = device 
+        self.use_gpu = use_gpu
         self.gamma = discount_rate
         self.div_scale = divergence_loss_scale
         self.summary_writer = summary_writer
@@ -44,39 +44,55 @@ class AttentionValueEnsemble():
             input_size=embedding.feature_size,
             hidden_size=gru_hidden_size,
             batch_first=True
-        ).to(self.device)
+        )
         
         self.attentions = nn.ModuleList(
-            [AttentionLayer(self.embedding.num_embedding_features) for _ in range(self.attention_num)]
+            [AttentionLayer(gru_hidden_size) for _ in range(self.attention_num)]
         )
         self.q_networks = nn.ModuleList(
             [LinearQFunction(in_features=gru_hidden_size, 
                              n_actions=num_actions) for _ in range(self.attention_num)]
-        ).to(self.device)
+        )
         self.target_q_networks = deepcopy(self.q_networks)
         self.target_q_networks.eval()
         
         self.optimizer = optim.Adam(
             list(self.attentions.parameters()) + list(self.q_networks.parameters()) + list(self.recurrent_memory.parameters()),
-            learning_rate=learning_rate
+            lr=learning_rate
         )
         
         self.upper_confidence_bound = UpperConfidenceBound(num_modules=attention_module_num,
-                                                           c=c,
-                                                           device=device)
+                                                           c=c)
         self.action_leader = np.random.choice(attention_module_num)
         
         self.timestep = 0
-        
+    
+    def move_to_gpu(self):
+        if self.use_gpu:
+            self.recurrent_memory.to("cuda")
+            self.attentions.to("cuda")
+            self.q_networks.to("cuda")
+            self.target_q_networks.to("cuda")
+    
+    def move_to_cpu(self):
+        self.recurrent_memory.to("cpu")
+        self.attentions.to("cpu")
+        self.q_networks.to("cpu")
+        self.target_q_networks.to("cpu")
+    
     def save(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
         
         torch.save(self.q_networks.state_dict(), os.path.join(path, 'policy_networks.pt'))
+        torch.save(self.attentions.state_dict(), os.path.join(path, 'attentions.pt'))
+        torch.save(self.recurrent_memory.state_dict(), os.path.join(path, 'gru.pt'))
         self.upper_confidence_bound.save(os.path.join(path, 'upper_conf_bound'))
     
     def load(self, path):
         self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
+        self.attentions.load_state_dict(torch.load(os.path.join(path, 'attentions.pt')))
+        self.recurrent_memory.load_state_dict(torch.load(os.path.join(path, 'gru.pt')))
         self.upper_confidence_bound.load(os.path.join(path, 'upper_conf_bound'))
     
     def step(self):
@@ -98,13 +114,16 @@ class AttentionValueEnsemble():
     
     def apply_attentions(self, x):
         batch_size, num_features, gru_out_size = x.shape
-        attentioned_embeddings = torch.zeros((batch_size, self.attention_num, num_features, gru_out_size))
+        attentioned_embeddings = torch.zeros((batch_size, self.attention_num, gru_out_size))
         
         for idx, attention in enumerate(self.attentions):
             out = attention(x)
-            attentioned_embeddings[:,idx,...] = out
+            attentioned_embeddings[:,idx,...] = out.squeeze(1)
         
-        return attentioned_embeddings
+        if self.use_gpu:
+            return attentioned_embeddings.to("cuda")
+        else:
+            return attentioned_embeddings
     
     def train(self,
               exp_batch,
@@ -126,8 +145,9 @@ class AttentionValueEnsemble():
         loss = 0
         
         state_embeddings = self.embedding.feature_extractor(batch_states)
+        state_embeddings = state_embeddings.unsqueeze(1)
         state_embeddings, _ = self.recurrent_memory(state_embeddings)
-        att_state_embeddings = self.flatten(self.apply_attentions(state_embeddings))
+        att_state_embeddings = self.apply_attentions(state_embeddings)
         
         masks = self.get_attention_masks()
         
@@ -140,10 +160,11 @@ class AttentionValueEnsemble():
         
         # q learning loss
         td_losses = np.zeros((self.attention_num,))
-        next_state_embeddings = self.embedding(batch_next_states)
         with torch.no_grad():
+            next_state_embeddings = self.embedding.feature_extractor(batch_next_states)
+            next_state_embeddings = next_state_embeddings.unsqueeze(1)
             next_state_embeddings, _ = self.recurrent_memory(next_state_embeddings)
-            attn_next_state_embeddings = self.flatten(self.apply_attentions(next_state_embeddings))
+            attn_next_state_embeddings = self.apply_attentions(next_state_embeddings)
         
         all_errors_out = np.zeros((self.attention_num, len(batch_states)))
         
@@ -185,8 +206,8 @@ class AttentionValueEnsemble():
             self.target_q_networks.load_state_dict(self.q_networks.state_dict())
         
         # logging
-        print(f"Div loss: {l_div.item()}. Q loss: {np.sum(td_losses)}")
-        logger.info(f"Div loss: {l_div.item()}. Q loss: {np.sum(td_losses)}")
+        # print(f"Div loss: {l_div.item()}. Q loss: {np.sum(td_losses)}")
+        # logger.info(f"Div loss: {l_div.item()}. Q loss: {np.sum(td_losses)}")
         
         if self.summary_writer is not None:
             self.summary_writer.add_scalar('{}/div_loss'.format(self.model_name),
@@ -208,10 +229,11 @@ class AttentionValueEnsemble():
             return_q_values: if True, return the predicted q values each learner predicts on the action of their choice.
         """
         with torch.no_grad():
-            embeddings = self.embedding(state)
+            embeddings = self.embedding.feature_extractor(state)
             self.recurrent_memory.flatten_parameters()
+            embeddings = embeddings.unsqueeze(1)
             embeddings, _ = self.recurrent_memory(embeddings)
-            embeddings = self.flatten(self.apply_attentions(embeddings))
+            embeddings = self.apply_attentions(embeddings)
             
             actions = np.zeros(self.attention_num, dtype=np.int)
             q_values = np.zeros(self.attention_num, dtype=np.float32)

@@ -14,6 +14,7 @@ from portable.utils.utils import plot_state
 
 logger = logging.getLogger(__name__)
 import time
+import math
 
 import matplotlib.pyplot as plt
 
@@ -131,6 +132,7 @@ class Option():
         
         self.use_log = log
 
+        
         
     def log(self, message):
         if self.use_log:
@@ -491,7 +493,7 @@ class Option():
                       policy_epochs,
                       embedding_epochs,
                       classifier_epochs):
-        logging.info("[portable option:update_option] Updating option with given instance")
+        logger.info("[portable option:update_option] Updating option with given instance")
         # Update confidences because we now know this was a success
         self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
         self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)

@@ -65,7 +65,8 @@ class MinigridExperiment():
         
         log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(filename=log_file, 
-                            format='%(asctime)s %(levelname)s: %(message)s')
+                            format='%(asctime)s %(levelname)s: %(message)s',
+                            level=logging.info)
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.random_seed))
         logging.info("======== HYPERPARAMETERS ========")
         logging.info("Training base rainbow agent with no options")

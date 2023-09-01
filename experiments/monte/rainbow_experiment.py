@@ -79,7 +79,7 @@ class RainbowExperiment():
         logging.basicConfig(
             filename=log_file,
             format='%(asctime)s %(levelname)s: %(message)s',
-            level=logging.INFO
+            level=logger.info
         )
 
         self.agent = create_exploration_runner(
@@ -308,7 +308,7 @@ class RainbowExperiment():
                 if instance.is_well_trained():
                     well_trained_instances.append(idx)
             if len(well_trained_instances) > 0 and self.options[option_idx].identify_original_initiation(position):
-                logging.info("[experiment:execute_action] testing markov instance for assimilation")
+                logger.info("[experiment:execute_action] testing markov instance for assimilation")
                 test_idx = random.choice(well_trained_instances)
                 self.options[option_idx].markov_instantiations[test_idx].assimilate_run(
                     self.env,
@@ -317,7 +317,7 @@ class RainbowExperiment():
                 )
                 can_assimilate = self.options[option_idx].markov_instantiations[test_idx].can_assimilate()
                 if can_assimilate is True:
-                    logging.info("[experiment:execute_action] markov instance can be assimilated")
+                    logger.info("[experiment:execute_action] markov instance can be assimilated")
                     self.options[option_idx].update_option(
                         self.options[option_idx].markov_instantiations[test_idx],
                         1000,
@@ -326,7 +326,7 @@ class RainbowExperiment():
                     )
                     del self.options[option_idx].markov_instantiations[test_idx]
                 elif can_assimilate is False:
-                    logging.info("[experiment:execute_action] markov instance cannot be assimilated and is being created as a new option")
+                    logger.info("[experiment:execute_action] markov instance cannot be assimilated and is being created as a new option")
                     if self.primitive_action_num + len(self.options) < self.action_num:
                         new_option = Option(
                             device=self.device,
@@ -345,7 +345,7 @@ class RainbowExperiment():
                         self.options.append(new_option)
                     del self.options[option_idx].markov_instantiations[test_idx]
             else:
-                logging.info("[experiment:execute_action] running option as normal")
+                logger.info("[experiment:execute_action] running option as normal")
                 state, reward, done, info, steps = self.options[option_idx].run(
                     self.env, 
                     state, 
@@ -376,7 +376,7 @@ class RainbowExperiment():
             total_steps += steps
 
             if done:
-                logging.info("[experiment] Episode ended.")
+                logger.info("[experiment] Episode ended.")
                 self.agent.end_episode(
                     reward,
                     action,
@@ -385,7 +385,7 @@ class RainbowExperiment():
                 )
                 break
             if info['needs_reset']:
-                logging.info("[experiment] Episode timed out.")
+                logger.info("[experiment] Episode timed out.")
                 break
 
             # rainbow agent record step
@@ -394,7 +394,7 @@ class RainbowExperiment():
             action = self.agent.select_action(mask)
             actions_taken += 1
 
-        logging.info("[experiment] Total Reward: {} Env steps: {} Actions taken: {}".format(
+        logger.info("[experiment] Total Reward: {} Env steps: {} Actions taken: {}".format(
             episode_reward,
             total_steps,
             actions_taken
@@ -456,7 +456,7 @@ class RainbowExperiment():
             episode_rewards, episode_steps, episode_action_num = self.run_episode(
                 eval=False
             )
-            logging.info("[experiment] Episode {}".format(self.episode))
+            logger.info("[experiment] Episode {}".format(self.episode))
             print("[experiment] Episode {}".format(self.episode))
             d = pd.DataFrame(
                 [
@@ -472,7 +472,7 @@ class RainbowExperiment():
             self.episode += 1
 
             total_steps += episode_action_num
-            logging.info("Actions taken: {}".format(total_steps))
+            logger.info("Actions taken: {}".format(total_steps))
             print("Actions taken: {}".format(total_steps))
         
 

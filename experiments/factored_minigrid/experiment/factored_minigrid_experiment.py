@@ -66,12 +66,12 @@ class FactoredMinigridExperiment():
         log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s')
-        logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.random_seed))
-        logging.info("======== HYPERPARAMETERS ========")
-        logging.info("Training base rainbow agent with no options")
-        logging.info("Train seed: {}".format(training_seed))
-        logging.info("Number of levels in experiment: {}".format(num_levels))
-        logging.info("Test seeds: {}".format(self.test_env_seeds))
+        logger.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.random_seed))
+        logger.info("======== HYPERPARAMETERS ========")
+        logger.info("Training base rainbow agent with no options")
+        logger.info("Train seed: {}".format(training_seed))
+        logger.info("Number of levels in experiment: {}".format(num_levels))
+        logger.info("Test seeds: {}".format(self.test_env_seeds))
         
         self.trial_data = pd.DataFrame([],
                                        columns=[

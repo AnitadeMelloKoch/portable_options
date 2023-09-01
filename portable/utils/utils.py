@@ -132,7 +132,7 @@ def update_param(params, name, value):
         raise KeyError(
             "Parameter '{}' specified, but not found in hyperparams file.".format(name))
     else:
-        logging.info("Updating parameter '{}' to {}".format(name, value))
+        logger.info("Updating parameter '{}' to {}".format(name, value))
     if type(params[name]) == bool:
         params[name] = bool(strtobool(value))
     else:
