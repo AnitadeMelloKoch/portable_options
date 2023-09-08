@@ -235,7 +235,7 @@ class AttentionValueEnsemble():
             embeddings, _ = self.recurrent_memory(embeddings)
             embeddings = self.apply_attentions(embeddings)
             
-            actions = np.zeros(self.attention_num, dtype=np.int)
+            actions = np.zeros(self.attention_num, dtype=np.int32)
             q_values = np.zeros(self.attention_num, dtype=np.float32)
             all_q_values = np.zeros((self.attention_num, self.num_actions),
                                     dtype=np.float32)

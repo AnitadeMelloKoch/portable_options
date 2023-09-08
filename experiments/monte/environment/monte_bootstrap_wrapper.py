@@ -1,4 +1,4 @@
-from portable.environment import MonteAgentWrapper
+from experiments.monte.environment.agent_wrapper import MonteAgentWrapper
 from portable.utils import set_player_ram
 import random
 

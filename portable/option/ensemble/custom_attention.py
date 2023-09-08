@@ -133,6 +133,11 @@ class AutoEncoder(nn.Module):
         self.height_mult = image_height//4
         self.width_mult = image_width//4
         
+        if image_height == 200:
+            self.height_mult = 38
+        if image_width == 200:
+            self.width_mult = 38
+        
         self.feature_size = feature_size
         
         self.encoder = nn.Sequential(

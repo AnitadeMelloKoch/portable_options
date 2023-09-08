@@ -97,7 +97,8 @@ class AttentionOption():
                                        dataset_max_size=initiation_dataset_maxsize,
                                        attention_module_num=initiation_attention_module_num,
                                        model_name="initiation",
-                                       summary_writer=summary_writer)
+                                       summary_writer=summary_writer,
+                                       padding_func=dataset_transform_function)
         self.initiation.move_to_gpu()
         self.termination = AttentionSet(use_gpu=use_gpu,
                                         embedding=embedding,
@@ -109,11 +110,8 @@ class AttentionOption():
                                         dataset_max_size=termination_dataset_maxsize,
                                         attention_module_num=termination_attention_module_num,
                                         model_name="termination",
-                                        summary_writer=summary_writer)
-
-        if dataset_transform_function is not None:
-            self.initiation.dataset.set_transform_function(dataset_transform_function)
-            self.termination.dataset.set_transform_function(dataset_transform_function)
+                                        summary_writer=summary_writer,
+                                        padding_func=dataset_transform_function)
         
         # build markov option
         self.markov_option_builder = markov_option_builder
@@ -164,6 +162,7 @@ class AttentionOption():
 
         if os.path.exists(os.path.join(policy_path, 'agent.pkl')):
             self.policy = self.policy.load(os.path.join(policy_path, 'agent.pkl'))
+            
         self.initiation.load(initiation_path)
         self.termination.load(termination_path)
 
@@ -189,6 +188,10 @@ class AttentionOption():
         ## TODO
         # how to check if we already have instance?
         
+        path = os.path.join(self.save_dir, 'markov', str(len(self.markov_instantiations)))
+        os.makedirs(path, exist_ok=True)
+        file = os.path.join(path, 'memory_buffer.pkl')
+        
         self.markov_instantiations.append(
             self.markov_option_builder(
                 states=states,
@@ -197,7 +200,8 @@ class AttentionOption():
                 initial_policy=self.policy,
                 initiation_votes=self.initiation.votes,
                 termination_votes=self.termination.votes,
-                use_gpu=self.use_gpu
+                use_gpu=self.use_gpu,
+                save_file=file
             )
         )
     
@@ -300,13 +304,18 @@ class AttentionOption():
                         termination_vector = self._cumulative_discount_vector[:steps]
                         rewards = np.array(rewards)
                         total_reward = np.sum(termination_vector*rewards)
-                        
+                        self.policy.store_buffer(self.policy_buffer_save_file)
+                        self.policy.move_to_cpu()
+                        info["option_timed_out"] = False
                         return next_state, total_reward, done, info, steps
                     else:
                         # episode ended but option did not
                         termination_vector = self._cumulative_discount_vector[:steps]
                         rewards = np.array(rewards)
                         total_reward = np.sum(termination_vector*rewards)
+                        self.policy.store_buffer(self.policy_buffer_save_file)
+                        self.policy.move_to_cpu()
+                        info["option_timed_out"] = False
                         return next_state, total_reward, done, info, steps
                 state = next_state
         # option didn't find a valid termination before time limit
@@ -320,6 +329,8 @@ class AttentionOption():
         
         self.policy.store_buffer(self.policy_buffer_save_file)
         self.policy.move_to_cpu()
+        
+        info["option_timed_out"] = True
         
         return next_state, total_reward, done, info, steps
         

@@ -26,14 +26,19 @@ class AttentionSet():
                  dataset_batch_size=16,
                  
                  summary_writer=None,
-                 model_name="classifier"):
+                 model_name="classifier",
+                 padding_func=None):
         
         self.embedding = embedding
         self.embedding.eval()
         
         self.use_gpu = use_gpu
         self.vote_threshold = vote_threshold
-        self.dataset = SetDataset(max_size=dataset_max_size, batchsize=dataset_batch_size)
+        if padding_func is None:
+            padding_func = lambda x: x
+        self.dataset = SetDataset(max_size=dataset_max_size, 
+                                  batchsize=dataset_batch_size,
+                                  padding_func=padding_func)
         self.attention_num = attention_module_num
         self.alpha = beta_distribution_alpha
         self.beta = beta_distribution_beta

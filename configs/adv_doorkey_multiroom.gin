@@ -1,18 +1,18 @@
-import experiments.monte.attention_experiment
+import experiments.minigrid.advanced_doorkey.core.advanced_minigrid_experiment
 import portable.option.portable_option
 import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
-MonteExperiment.experiment_name                                     = "climb_down_ladder"
-MonteExperiment.initiation_epochs                                   = 50
-MonteExperiment.termination_epochs                                  = 50
-MonteExperiment.policy_lr                                           = 1e-4
-MonteExperiment.policy_max_steps                                    = 1e7
-MonteExperiment.policy_success_threshold                            = 0.98
-MonteExperiment.use_gpu                                             = True
-MonteExperiment.max_episodes_in_trial                               = 100
-MonteExperiment.use_agent_state                                     = False
-MonteExperiment.max_option_tries                                    = 5
+AdvancedMinigridExperiment.experiment_name                          = "multiroom"
+AdvancedMinigridExperiment.num_options                              = 1
+AdvancedMinigridExperiment.initiation_epochs                        = 40
+AdvancedMinigridExperiment.termination_epochs                       = 40
+AdvancedMinigridExperiment.policy_lr                                = 1e-4
+AdvancedMinigridExperiment.policy_max_steps                         = 1e7
+AdvancedMinigridExperiment.policy_success_threshold                 = 0.9
+AdvancedMinigridExperiment.agent_lr                                 = 1e-4
+AdvancedMinigridExperiment.use_gpu                                  = True
+AdvancedMinigridExperiment.sigma                                    = 0.5
 
 AttentionOption.initiation_vote_threshold                           = 0.4
 AttentionOption.termination_vote_threshold                          = 0.4
@@ -45,9 +45,9 @@ AttentionOption.timeout                                             = 150
 AttentionOption.min_option_length                                   = 1
 
 NNMarkovOption.classifier_type                                      = "cnn"
-NNMarkovOption.image_height                                         = 84
-NNMarkovOption.image_width                                          = 84
-NNMarkovOption.num_channels                                         = 4
+NNMarkovOption.image_height                                         = 200
+NNMarkovOption.image_width                                          = 200
+NNMarkovOption.num_channels                                         = 3
 NNMarkovOption.classifier_train_epochs                              = 300
 NNMarkovOption.max_option_steps                                     = 150
 NNMarkovOption.min_required_interactions                            = 100
@@ -56,8 +56,7 @@ NNMarkovOption.assimilation_min_required_interactions               = 100
 NNMarkovOption.assimilation_success_rate_required                   = 0.8
 NNMarkovOption.lr                                                   = 1e-3
 
-AutoEncoder.num_input_channels                                      = 4
+AutoEncoder.num_input_channels                                      = 3
 AutoEncoder.feature_size                                            = 500
-AutoEncoder.image_height                                            = 84
-AutoEncoder.image_width                                             = 84
-
+AutoEncoder.image_height                                            = 200
+AutoEncoder.image_width                                             = 200

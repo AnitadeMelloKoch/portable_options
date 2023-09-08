@@ -223,10 +223,22 @@ if __name__ == "__main__":
     def dataset_transform(x):
         x = x/255.0
         
-        padding = ((12,12),(12,12))
+        b, c, x_size, y_size = x.shape
+        pad_x = (158 - x_size) // 2
+        pad_y = (158 - y_size) // 2
+        
+        if pad_x%2 == 0:
+            padding_x = (pad_x, pad_x)
+        else:
+            padding_x = (pad_x + 1, pad_x)
+        
+        if pad_y%2 == 0:
+            padding_y = (pad_y, pad_y)
+        else:
+            padding_y = (pad_y + 1, pad_y)
         
         padded_obs = np.stack([
-            np.pad(x[:,:,idx], padding, mode="constant", constant_values=0) for idx in range(3)
+            np.pad(x[:,:,idx], (padding_x, padding_y), mode="constant", constant_values=0) for idx in range(3)
         ], axis=-1)
         
         return padded_obs
@@ -265,17 +277,19 @@ if __name__ == "__main__":
                              termination_votes,
                              false_states,
                              initial_policy,
-                             device):
+                             use_gpu,
+                             save_file):
         labels = [1]*len(states) + [0]*len(false_states)
         data = list(states) + list(false_states)
         
-        option = NNMarkovOption(device=device,
+        option = NNMarkovOption(use_gpu=use_gpu,
                                 initiation_states=data,
                                 initiation_labels=labels,
                                 termination=termination_state,
                                 initial_policy=initial_policy,
                                 initiation_votes=initiation_votes,
-                                termination_votes=termination_votes)
+                                termination_votes=termination_votes,
+                                save_file=save_file)
         
         return option
     
@@ -301,8 +315,7 @@ if __name__ == "__main__":
                              termination_positive_files=termination_positive_files,
                              termination_negative_files=termination_negative_files)
     
-    # should train a new embedding? probs not
-    experiment.load_embedding(load_dir="")
+    experiment.load_embedding(load_dir="resources/encoders/lockedroom/encoder.ckpt")
     
     experiment.train_options(training_envs=training_envs)
     

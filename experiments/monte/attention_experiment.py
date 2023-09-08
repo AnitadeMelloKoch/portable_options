@@ -16,13 +16,13 @@ from portable.utils.utils import set_seed
 from portable.option import AttentionOption
 from portable.option.ensemble.custom_attention import AutoEncoder
 from portable.utils import set_player_ram
+from portable.utils import load_init_states
 
 @gin.configurable
 class MonteExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
-                 training_seed,
                  experiment_seed,
                  markov_option_builder,
                  policy_phi,
@@ -38,7 +38,6 @@ class MonteExperiment():
                  use_agent_state=False,
                  max_option_tries=5):
         
-        self.training_seed = training_seed
         self.initiation_epochs = initiation_epochs
         self.termination_epochs = termination_epochs
         self.policy_lr = policy_lr
@@ -76,13 +75,16 @@ class MonteExperiment():
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
         logging.info("======== HYPERPARAMETERS ========")
         logging.info("Experiment seed: {}".format(experiment_seed))
-        logging.info("Training seed: {}".format(training_seed))
         
-        self.trial_data = pd.DataFrame([],
-                                       columns=['reward',
-                                                'seed',
-                                                'frames',
-                                                'env_num'])
+        # self.trial_data = pd.DataFrame([],
+        #                                columns=['start_position'
+        #                                         'end_position',
+        #                                         'true_terminations',
+        #                                         'completed',
+        #                                         'dead',
+        #                                         'steps',
+        #                                         'trained_instance',
+        #                                         'current_instance'])
         
         self.trial_data = []
         
@@ -187,7 +189,7 @@ class MonteExperiment():
                      use_agent_space):
         env.reset()
         _ = set_player_ram(env, ram)
-        env.stacked_state = state,
+        env.stacked_state = state
         env.stacked_agent_state = agent_state
         
         if use_agent_space:
@@ -199,7 +201,9 @@ class MonteExperiment():
                     env,
                     possible_starts,
                     true_terminations,
-                    trial_name):
+                    eval,
+                    train_instance,
+                    current_instance):
         
         episode_count = 0
         results = []
@@ -212,13 +216,16 @@ class MonteExperiment():
         instance_well_trained = False
         instantiation_instances = set()
         
+        possible_rams = load_init_states(possible_starts)
+        
         while episode_count < self.max_episodes_in_trial and (not instance_well_trained):
             logging.info("[run instance] Episode {}/{}".format(episode_count, self.max_episodes_in_trial))
             completed = False
             
             rand_idx = random.randint(0, len(possible_starts)-1)
-            rand_state = possible_starts[rand_idx]
-            state = self._set_env_ram(rand_state["ram"],
+            rand_state = possible_rams[rand_idx]
+            state = self._set_env_ram(env,
+                                      rand_state["ram"],
                                       rand_state["state"],
                                       rand_state["agent_state"],
                                       self.use_agent_state)
@@ -237,7 +244,7 @@ class MonteExperiment():
                 option_result = self.option.run(env,
                                                 state,
                                                 info,
-                                                False,
+                                                eval,
                                                 [])
                 
                 if self.option.markov_idx is not None:
@@ -266,17 +273,13 @@ class MonteExperiment():
                     agent_state = info["stacked_agent_state"]
                     position = info["position"]
 
-                    completed = self._check_termination_correct(position, true_terminations[rand_idx], self.env)
+                    completed = self._check_termination_true(position, true_terminations[rand_idx], env)
                     if completed:
                         must_break = True
         
             episode_count += 1
             instance_well_trained = all([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
             
-            result = self._get_percent_completed(start_pos, position, true_terminations[rand_idx], self.env)
-            if info["dead"]:
-                result = 0
-            results.append(result)
             start_poses.append(start_pos)
             end_poses.append(position)
             correct_terminations.append(true_terminations[rand_idx])
@@ -285,24 +288,16 @@ class MonteExperiment():
             final_steps.append(steps)
             logging.info("Succeeded: {}".format(completed))
         
-        d = pd.DataFrame(
-            [
-                {
-                    "normalized_distance": np.mean(results),
-                    "start_position": start_poses,
-                    "end_position": end_poses,
-                    "true_terminations": correct_terminations,
-                    "completed": completeds,
-                    "dead": deads,
-                    "steps": final_steps
-                }
-            ], index=pd.Index(data=[trial_name], name='name')
-        )
-            
-        self.trial_data = self.trial_data.append(d)
-        
-        logging.info("[experiment:run_trial] Finished trial {} performance: {}".format(
-            trial_name,
+        self.trial_data.append({"start_position": start_poses,
+                                "end_position": end_poses,
+                                "true_terminations": correct_terminations,
+                                "completed": completeds,
+                                "dead": deads,
+                                "steps": final_steps,
+                                "trained_instance": train_instance,
+                                "current_instance": current_instance,
+                                "eval": eval})
+        logging.info("[experiment:run_trial] Finished trial performance: {}".format(
             np.mean(results)
             ))
         logging.info("[experiment:run_trial] All instances well trained: {}".format(
@@ -312,8 +307,8 @@ class MonteExperiment():
                 .format([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
             )
 
-        print("[experiment] Finished trial {} performance: {}".format(
-            trial_name,
+        print("[experiment] Finished trial performance: {}".format(
             np.mean(results)
             ))
+        
         return instantiation_instances

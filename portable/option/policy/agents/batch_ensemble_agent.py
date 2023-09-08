@@ -25,6 +25,7 @@ class BatchedEnsembleAgent(Agent):
     """
     def __init__(self,
                  embedding: AutoEncoder,
+                 embedding_phi,
                  learning_rate,
                  num_modules,
                  use_gpu,
@@ -48,6 +49,7 @@ class BatchedEnsembleAgent(Agent):
         
         self.use_gpu = use_gpu
         self.embedding = embedding
+        self.embedding_phi = embedding_phi
         self.learning_rate = learning_rate
         self.num_modules = num_modules
         self.warmup_steps = warmup_steps
@@ -82,8 +84,10 @@ class BatchedEnsembleAgent(Agent):
         
         # attention layer
         self.attentions = nn.ModuleList(
-            [AttentionLayer(self.embedding.feature_size) for _ in range(self.attention_num)]
+            [AttentionLayer(self.embedding.feature_size) for _ in range(self.num_modules)]
         )
+        if self.use_gpu:
+            self.attentions = self.attentions.to("cuda")
         # ppo agent
         self.heads = [self.make_ppo_agent() for _ in range(self.num_modules)]
         
@@ -222,8 +226,9 @@ class BatchedEnsembleAgent(Agent):
                                                                reward)
     
     def _attention_embed_obs(self, batch_obs):
+        batch_obs = self.embedding_phi(batch_obs, self.use_gpu)
         obs_embeddings = self.embedding.feature_extractor(batch_obs)
-        batch_size, num_features, output_size = obs_embeddings
+        batch_size, output_size = obs_embeddings.shape
         attentioned_embeddings = torch.zeros((batch_size, self.num_modules, output_size))
         
         for idx, attention in enumerate(self.attentions):
@@ -253,8 +258,8 @@ class BatchedEnsembleAgent(Agent):
             # learners choose actions
             embedded_obs = self._attention_embed_obs(batch_obs)
             batch_actions = [
-                self.learners[i].batch_act(embedded_obs[i])
-                for i in range(self.num_learners)
+                self.heads[i].batch_act(embedded_obs[:,i,:])
+                for i in range(self.num_modules)
             ]
             batch_action = batch_actions[self.action_leader]
 

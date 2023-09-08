@@ -36,11 +36,13 @@ class NNMarkovOption(MarkovOption):
                  classifier_train_epochs,
                  use_gpu,
                  lr,
+                 save_file,
                  use_log=True):
         super().__init__(use_log)
         
         assert classifier_type in ["cnn", "mlp"]
         
+        self.save_file = save_file
         self.initiation = NNClassifier(classifier_type,
                                        image_height,
                                        image_width,
@@ -66,6 +68,7 @@ class NNMarkovOption(MarkovOption):
         self.assimilation_performance = deque(maxlen=min_required_interactions)
         self.assimilation_min_interactions = assimilation_min_required_interactions
         self.assimilation_success_rate_required = assimilation_success_rate_required
+        self.policy.store_buffer(save_file=self.save_file)
     
     @staticmethod
     def _get_save_paths(path):
@@ -116,7 +119,7 @@ class NNMarkovOption(MarkovOption):
         rewards = []
         states = []
         
-        self.policy.load_buffer()
+        self.policy.load_buffer(save_file=self.save_file)
         self.policy.move_to_gpu()
         
         with evaluating(self.policy) if evaluate else nullcontext():
@@ -145,11 +148,17 @@ class NNMarkovOption(MarkovOption):
                         self.log('[markov option] option chose to terminate')
                         if not evaluate:
                             self._option_success({"states": states})
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        info["option_timed_out"] = False
                         return next_state, rewards, done, info, steps
                     
                     if done:
                         if not evaluate:
                             self._option_fail({"states": states})
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        info["option_timed_out"] = False
                         return next_state, rewards, done, info, steps
                 
                 state = next_state
@@ -159,8 +168,10 @@ class NNMarkovOption(MarkovOption):
         if not evaluate:
             self._option_fail({"states": states})
         
-        self.policy.store_buffer()
+        self.policy.store_buffer(save_file=self.save_file)
         self.policy.move_to_cpu()
+        
+        info["option_timed_out"] = True
         
         return next_state, rewards, done, info, steps
     

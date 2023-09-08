@@ -285,16 +285,14 @@ class EnsembleAgent(Agent):
         return a
 
     def save(self, save_dir):
-        if self.replay_buffer_loaded is False:
-            warnings.warn("Replay buffer is not loaded. This may not be intended.")
+        if self.replay_buffer_loaded is True:
+            warnings.warn("Replay buffer is loaded. This may not be intended. Please save replay buffer separately")
         
         self.value_ensemble.save(save_dir)
-        self.replay_buffer.save(os.path.join(save_dir, 'replay_buffer.pkl'))
 
     def load(self, load_path):
         self.value_ensemble.load(load_path)
-        self.replay_buffer.save(os.path.join(load_path, 'replay_buffer.pkl'))
 
-        self.replay_buffer_loaded = True
+        self.replay_buffer_loaded = False
         
         

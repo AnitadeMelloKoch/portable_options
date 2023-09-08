@@ -26,7 +26,6 @@ class ProcgenExperiment():
                  experiment_name,
                  experiment_seed,
                  policy_phi,
-                 agent_type,
                  env_name,
                  batch_size,
                  warmup_steps,
@@ -41,6 +40,7 @@ class ProcgenExperiment():
                  entropy_coef,
                  clip_range,
                  max_grad_norm,
+                 embedding_phi,
                  policy_epochs=10,
                  attention_num=3,
                  learning_rate=5e-4,
@@ -54,7 +54,6 @@ class ProcgenExperiment():
                  distribution_mode="hard",
                  max_steps_per_level=1e6):
         
-        assert agent_type in ["ppo", "ensemble"]
         
         self.warmup_steps = warmup_steps
         self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
@@ -64,6 +63,7 @@ class ProcgenExperiment():
         self.final_epsilon = final_epsilon
         self.final_exploration_frames = final_exploration_frames
         self.batch_size = batch_size
+        self.embedding_phi = embedding_phi
         
         self.base_dir = base_dir
         self.use_gpu = use_gpu
@@ -103,7 +103,7 @@ class ProcgenExperiment():
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.INFO)
-        logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
+        logging.info("[experiment] Beginning experiment {} seed {}".format(self.experiment_name, self.experiment_seed))
         logging.info("======== HYPERPARAMETERS ========")
         logging.info("Experiment seed: {}".format(experiment_seed))
         
@@ -120,6 +120,8 @@ class ProcgenExperiment():
                                        columns=['env_seed',
                                                 'reward',
                                                 'steps'])
+        
+        self.agent = None
 
     def save(self):
         self.agent.save(os.path.join(self.save_dir, 'policy'))
@@ -136,6 +138,7 @@ class ProcgenExperiment():
     
     def _make_agent(self, env):
         self.agent = BatchedEnsembleAgent(embedding=self.embedding,
+                                          embedding_phi=self.embedding_phi,
                                           learning_rate=self.learning_rate,
                                           num_modules=self.attention_num,
                                           use_gpu=self.use_gpu,
@@ -218,6 +221,7 @@ class ProcgenExperiment():
         The following level is sampled randomly, so evaluation is not deterministic, and performed on god knows
         which levels.
         """
+        
         venv = ProcgenEnv(num_envs=self.num_envs,
                           env_name=self.env_name,
                           num_levels=self.evaluate_num_levels if eval else 1,
@@ -231,17 +235,19 @@ class ProcgenExperiment():
         venv = VecExtractDictObs(venv, "rgb")
         venv = VecMonitor(venv, filename=None, keep_buf=100)
         venv = VecNormalize(venv, ob=False)
+        
+        return venv
     
     def run(self):
-        train_env = self.make_vector_env(seed=0, eval=False)
-        test_env = self.make_vector_env(seed=0, eval=True)
+        train_env = self.make_vector_env(level_index=0, eval=False)
+        test_env = self.make_vector_env(level_index=0, eval=True)
         
-        self.agent = self._make_agent(train_env)
+        self._make_agent(train_env)
         
-        train_level_seeds = random.choices(range(10, 5000), k=self.num_levels)
+        train_level_seeds = random.choices(range(10, 100), k=self.num_levels)
         
         for seed in train_level_seeds:
-            train_env = self.make_vector_env(seed=seed, eval=False)
+            train_env = self.make_vector_env(level_index=seed, eval=False)
             self.run_level(train_env,
                            test_env, 
                            seed)

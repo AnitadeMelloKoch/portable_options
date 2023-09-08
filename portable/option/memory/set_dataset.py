@@ -10,7 +10,8 @@ class SetDataset():
     def __init__(
             self, 
             batchsize=16,
-            max_size=100000
+            max_size=100000,
+            pad_func=lambda x: x,
         ):
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
@@ -21,6 +22,7 @@ class SetDataset():
         self.priority_false_length = 0
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
+        self.pad = pad_func
         self.counter = 0
         self.num_batches = 0
         self.list_max_size = max_size//2
@@ -105,6 +107,7 @@ class SetDataset():
         # load data from a file for true data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.true_data = self.concatenate(self.true_data, data)
@@ -117,6 +120,7 @@ class SetDataset():
         # load data from true file and only add a few random samples
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             data = random.sample(data, 20)
@@ -130,6 +134,7 @@ class SetDataset():
         # load data from a file for false data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
@@ -142,6 +147,7 @@ class SetDataset():
         # load data from true file and only add a few random samples
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             data = random.sample(data, 20)
@@ -156,6 +162,7 @@ class SetDataset():
         # load data from a file for priority false data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)

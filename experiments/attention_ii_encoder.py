@@ -7,19 +7,7 @@ import copy
 from torch.utils.tensorboard import SummaryWriter
 import os 
 
-initiation_positive_files = [
-    'resources/factored_minigrid_images/doorkey_getkey_0_initiation_image_positive.npy',
-    'resources/factored_minigrid_images/doorkey_getkey_1_initiation_image_positive.npy',
-    'resources/factored_minigrid_images/doorkey_getkey_2_initiation_image_positive.npy',
-]
-
-initiation_negative_files = [
-    'resources/factored_minigrid_images/doorkey_getkey_0_initiation_image_negative.npy',
-    'resources/factored_minigrid_images/doorkey_getkey_1_initiation_image_negative.npy',
-    'resources/factored_minigrid_images/doorkey_getkey_2_initiation_image_negative.npy',
-]
-
-other = [
+files = [
     'resources/factored_minigrid_images/doorkey_start.npy',
     'resources/factored_minigrid_images/doorkey_start_2.npy',
     'resources/factored_minigrid_images/doorkey_no_key.npy',
@@ -37,9 +25,7 @@ while os.path.exists(log_dir):
 writer = SummaryWriter(log_dir=log_dir)
 
 dataset = SetDataset(batchsize=64)
-dataset.add_true_files(initiation_positive_files)
-dataset.add_true_files(initiation_negative_files)
-dataset.add_true_files(other)
+dataset.add_true_files(files)
 
 model = AutoEncoder(6, 8, 1000)
 mse = torch.nn.MSELoss()

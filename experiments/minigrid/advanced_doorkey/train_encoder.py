@@ -9,29 +9,57 @@ import os
 
 files = [
     'resources/minigrid_images/adv_doorkey_random_states.npy',
+    'resources/minigrid_images/lockedroom_random_states.npy',
 ]
+
+def dataset_transform(x):
+    b, c, x_size, y_size = x.shape
+    pad_x = (152 - x_size)
+    pad_y = (152 - y_size)
+    
+    if pad_x%2 == 0:
+        padding_x = (pad_x//2, pad_x//2)
+    else:
+        padding_x = (pad_x//2 + 1, pad_x//2)
+    
+    if pad_y%2 == 0:
+        padding_y = (pad_y//2, pad_y//2)
+    else:
+        padding_y = (pad_y//2 + 1, pad_y//2)
+    
+    transformed_x = np.zeros((b,c,152,152))
+    
+    for im_idx in range(b):
+        transformed_x[im_idx,:,:,:] = np.stack([
+            np.pad(x[im_idx,idx,:,:], 
+                   (padding_x, padding_y), 
+                   mode="constant", constant_values=0) for idx in range(c)
+        ], axis=0)
+    
+    return transformed_x
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--feature_size", type=int)
-    args = parser.parse_args()
+    # parser.add_argument("--feature_size", type=int)
+    # args = parser.parse_args()
     
     log_dir_base = "runs/advanced_doorkey/encoder"
-    log_dir = os.path.join(log_dir_base, "0")
+    log_dir = os.path.join(log_dir_base, "lockedroom-{}".format(0))
     x = 0
     while os.path.exists(log_dir):
         x += 1
-        log_dir = os.path.join(log_dir_base, str(x))
+        log_dir = os.path.join(log_dir_base, "lockedroom-{}".format(x))
     
     writer = SummaryWriter(log_dir=log_dir)
-    dataset = SetDataset(batchsize=256, max_size=500000)
+    dataset = SetDataset(batchsize=256, max_size=500000, pad_func=dataset_transform)
     dataset.add_true_files(files)
     
-    feature_size = args.feature_size
+    # feature_size = args.feature_size
+    feature_size = 500
     lr = 1e-4
     
-    model = AutoEncoder(3, feature_size, image_height=128, image_width=128)
+    model = AutoEncoder(3, feature_size, image_height=152, image_width=152)
     mse = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     

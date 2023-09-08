@@ -86,11 +86,11 @@ class AdvancedMinigridExperiment():
         logging.info("Experiment seed: {}".format(experiment_seed))
         logging.info("Training seed: {}".format(training_seed))
         
-        self.trial_data = pd.DataFrame([],
-                                       columns=['reward',
-                                                'seed',
-                                                'frames',
-                                                'env_num'])
+        # self.trial_data = pd.DataFrame([],
+        #                                columns=['reward',
+        #                                         'seed',
+        #                                         'frames',
+        #                                         'env_num'])
         
         self.trial_data = []
         
@@ -268,8 +268,8 @@ class AdvancedMinigridExperiment():
             num_envs,
             frames_per_env):
         # run experiment
-        if self.embedding_loaded is not True:
-            raise Exception("Embedding has not yet been loaded")
+        # if self.embedding_loaded is not True:
+        #     raise Exception("Embedding has not yet been loaded")
         
         logging.info("[experiment] Beginning experiment")
         logging.info("[experiment] Training on {} environments, {} frames per environment".format(num_envs,
@@ -296,12 +296,12 @@ class AdvancedMinigridExperiment():
                                         "env_idx": idx})
                 
                 print(100*'-')
-                print(f'Env seed: {seed}',
-                f"Env Frames': {frames}",
-                f'Reward: {undiscounted_return}')
+                print(f'Env seed: {str(seed)}',
+                f"Env Frames': {str(frames)}",
+                f'Reward: {str(undiscounted_return)}')
                 print(100 * '-')
                 
-                logging.info(f'[experiment] Env seed: {seed}',
-                f"Env Frames': {frames}",
-                f'Reward: {undiscounted_return}')
+                logging.info('[experiment] Env seed: {}'.format(seed))
+                logging.info("Env Frames': {}".format(frames))
+                logging.info('Reward: {}'.format(undiscounted_return))
                 logging.info(100 * '-')

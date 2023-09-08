@@ -225,7 +225,8 @@ if __name__ == "__main__":
                              termination_votes,
                              false_states,
                              initial_policy,
-                             use_gpu):
+                             use_gpu,
+                             save_file):
         labels = [1]*len(states) + [0]*len(false_states)
         data = list(states) + list(false_states)
         
@@ -235,7 +236,8 @@ if __name__ == "__main__":
                                 termination=termination_state,
                                 initial_policy=initial_policy,
                                 initiation_votes=initiation_votes,
-                                termination_votes=termination_votes)
+                                termination_votes=termination_votes,
+                                save_file=save_file)
         
         return option
     
@@ -271,7 +273,7 @@ if __name__ == "__main__":
                              termination_negative_files=termination_negative_files)
     
     # should train a new embedding? probs not
-    experiment.load_embedding(load_dir="runs/advanced_doorkey/encoder/0/encoder.ckpt")
+    experiment.load_embedding(load_dir="resources/encoders/doorkey/encoder.ckpt")
     
     experiment.train_options(training_envs=training_envs)
     

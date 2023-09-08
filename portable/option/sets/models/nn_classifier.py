@@ -66,12 +66,12 @@ class NNClassifier():
                 if type(x) is np.ndarray:
                     x = torch.from_numpy(x).float()
                 if self.use_gpu:
-                    x.to("cuda")
+                    x = x.to("cuda")
                 x = x.unsqueeze(0)
                 y = torch.tensor(y)
                 y = y.unsqueeze(0)
                 if self.use_gpu:
-                    y.to("cuda")
+                    y = y.to("cuda")
                 pred = self.model(x)
                 loss = self.criterion(pred, y)
                 loss.backward()
@@ -84,12 +84,12 @@ class NNClassifier():
                 if type(x) is np.ndarray:
                     x = torch.from_numpy(x).float()
                 if self.use_gpu:
-                    x.to("cuda")
+                    x = x.to("cuda")
                 x = x.unsqueeze(0)
                 y = torch.tensor(y)
                 y = y.unsqueeze(0)
                 if self.use_gpu:
-                    y.to("cuda")
+                    y = y.to("cuda")
                 pred = self.model(x)
                 accuracies.append(int(torch.argmax(pred) == y))
         
@@ -103,6 +103,15 @@ class NNClassifier():
             x.to("cuda")
         return self.model(x)
 
+class PrintLayer(torch.nn.Module):
+    # print input. For debugging
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        
+        return x
 
 class MLPClassifier(nn.Module):
     def __init__(self,
@@ -134,9 +143,6 @@ class CNNClassifier(nn.Module):
                  num_input_channels):
         super().__init__()
         
-        height_mult = image_height//8
-        width_mult = image_width//8
-        
         self.network = nn.Sequential(
             nn.Conv2d(num_input_channels, 8, 3),
             nn.ReLU(),
@@ -151,7 +157,7 @@ class CNNClassifier(nn.Module):
             nn.MaxPool2d(2,2),
             nn.BatchNorm2d(32),
             nn.Flatten(),
-            nn.Linear(6272, 1000),
+            nn.LazyLinear(1000),
             nn.ReLU(),
             nn.Linear(1000, 2),
             nn.Softmax(-1)
