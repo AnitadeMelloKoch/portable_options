@@ -4,12 +4,12 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 AdvancedMinigridExperiment.experiment_name                          = "lockedroom"
-AdvancedMinigridExperiment.num_options                              = 1
-AdvancedMinigridExperiment.initiation_epochs                        = 40
-AdvancedMinigridExperiment.termination_epochs                       = 40
+AdvancedMinigridExperiment.num_options                              = 12
+AdvancedMinigridExperiment.initiation_epochs                        = 60
+AdvancedMinigridExperiment.termination_epochs                       = 60
 AdvancedMinigridExperiment.policy_lr                                = 1e-4
 AdvancedMinigridExperiment.policy_max_steps                         = 1e7
-AdvancedMinigridExperiment.policy_success_threshold                 = 0.9
+AdvancedMinigridExperiment.policy_success_threshold                 = 0.98
 AdvancedMinigridExperiment.agent_lr                                 = 1e-4
 AdvancedMinigridExperiment.use_gpu                                  = True
 AdvancedMinigridExperiment.sigma                                    = 0.5
