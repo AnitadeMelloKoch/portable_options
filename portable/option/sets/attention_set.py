@@ -38,7 +38,7 @@ class AttentionSet():
             padding_func = lambda x: x
         self.dataset = SetDataset(max_size=dataset_max_size, 
                                   batchsize=dataset_batch_size,
-                                  padding_func=padding_func)
+                                  pad_func=padding_func)
         self.attention_num = attention_module_num
         self.alpha = beta_distribution_alpha
         self.beta = beta_distribution_beta
