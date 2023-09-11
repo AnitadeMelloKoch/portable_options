@@ -279,6 +279,7 @@ class ProcgenExperiment():
                                                               test_obs,
                                                               test_steps)
                 test_epinfo_buf.extend(test_epinfo)
+            step_cnt += 1
     
     def step(self, env, obs, steps, env_max_steps=1000):
         action = self.agent.batch_act(obs)
