@@ -221,27 +221,30 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def dataset_transform(x):
-        x = x/255.0
-        
         b, c, x_size, y_size = x.shape
-        pad_x = (158 - x_size) // 2
-        pad_y = (158 - y_size) // 2
+        pad_x = (152 - x_size)
+        pad_y = (152 - y_size)
         
         if pad_x%2 == 0:
-            padding_x = (pad_x, pad_x)
+            padding_x = (pad_x//2, pad_x//2)
         else:
-            padding_x = (pad_x + 1, pad_x)
+            padding_x = (pad_x//2 + 1, pad_x//2)
         
         if pad_y%2 == 0:
-            padding_y = (pad_y, pad_y)
+            padding_y = (pad_y//2, pad_y//2)
         else:
-            padding_y = (pad_y + 1, pad_y)
+            padding_y = (pad_y//2 + 1, pad_y//2)
         
-        padded_obs = np.stack([
-            np.pad(x[:,:,idx], (padding_x, padding_y), mode="constant", constant_values=0) for idx in range(3)
-        ], axis=-1)
+        transformed_x = np.zeros((b,c,152,152))
         
-        return padded_obs
+        for im_idx in range(b):
+            transformed_x[im_idx,:,:,:] = np.stack([
+                np.pad(x[im_idx,idx,:,:], 
+                    (padding_x, padding_y), 
+                    mode="constant", constant_values=0) for idx in range(c)
+            ], axis=0)
+        
+        return transformed_x
     
     def policy_phi(x):
         if type(x) is np.ndarray:
@@ -308,7 +311,8 @@ if __name__ == "__main__":
                                             create_agent_function=create_agent,
                                             num_options=12,
                                             markov_option_builder=create_markov_option,
-                                            policy_phi=policy_phi)
+                                            policy_phi=policy_phi,
+                                            dataset_transform_function=dataset_transform)
     
     experiment.add_datafiles(initiation_positive_files=initiation_positive_files,
                              initiation_negative_files=initiation_negative_files,
