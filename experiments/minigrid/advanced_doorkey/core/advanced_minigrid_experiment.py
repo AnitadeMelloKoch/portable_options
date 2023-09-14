@@ -246,22 +246,24 @@ class AdvancedMinigridExperiment():
             return next_obs, reward, done, info, 1
         # if action >= primitive_actions we need to run the appropriate option
         option_idx = action - self.primitive_actions
-        if not self.options[option_idx].can_initiate(state):
-            # option cannot initiate so instead run a noop action
-            # takes 1 step
-            next_obs, reward, done, info = env.step(6)
-            return next_obs, reward, done, info, 1
         
         if len(self.buffer) >= 20:
             false_states = random.sample(list(self.buffer), 20)
         else:
             false_states = list(self.buffer)
         
-        return self.options[option_idx].run(env,
-                                            state,
-                                            info,
-                                            eval=False,
-                                            false_states=false_states)
+        option_output = self.options[option_idx].run(env,
+                                                     state,
+                                                     info,
+                                                     eval=False,
+                                                     false_states=false_states)
+        if option_output is None:
+            # option cannot initiate so instead run a noop action
+            # takes 1 step
+            next_obs, reward, done, info = env.step(6)
+            return next_obs, reward, done, info, 1
+        else:
+            return option_output
     
     def run(self,
             make_env,
