@@ -211,6 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--num_envs", type=int, required=True)
     parser.add_argument("--frames_per_env", type=int, required=True)
+    parser.add_argument("--skip_train_options", action='store_true')
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
             ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
@@ -321,7 +322,8 @@ if __name__ == "__main__":
     
     experiment.load_embedding(load_dir="resources/encoders/lockedroom/encoder.ckpt")
     
-    experiment.train_options(training_envs=training_envs)
+    if not args.skip_train_options:
+        experiment.train_options(training_envs=training_envs)
     
     experiment.run(make_env=create_env,
                    num_envs=args.num_envs,
