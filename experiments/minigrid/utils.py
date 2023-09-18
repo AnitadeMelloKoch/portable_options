@@ -89,6 +89,11 @@ class ScaleObsWrapper(ObservationWrapper):
         img = Image.fromarray(observation)
         return np.asarray(img.resize((128, 128), Image.BILINEAR))
 
+class NormalizeObsWrapper(ObservationWrapper):
+    def observation(self, observation):
+        observation = observation/255.0
+        return observation
+
 class PadObsWrapper(ObservationWrapper):
     def __init__(self, 
                  env: Env,
@@ -183,7 +188,8 @@ def environment_builder(
     random_reset=False,
     max_steps=None,
     random_starts=[],
-    final_image_size=(152,152)
+    final_image_size=(152,152),
+    normalize_obs=True
     ):
     if max_steps is not None and max_steps > 0:
         env = gym.make(level_name, max_steps=max_steps,
@@ -194,6 +200,8 @@ def environment_builder(
     env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
     env = RGBImgObsWrapper(env) # Get pixel observations
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
+    if normalize_obs:
+        env = NormalizeObsWrapper(env)
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
     if scale_obs:

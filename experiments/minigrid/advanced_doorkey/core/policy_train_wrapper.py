@@ -216,9 +216,12 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             # input("Option completed. Continue?")
             return obs, 1, True, info
         else:
+            # print(obs.shape)
+            # print(obs)
             # fig = plt.figure(num=1, clear=True)
             # ax = fig.add_subplot()
-            # screen = self.env.render()
+            # # screen = self.env.render()
+            # screen = np.transpose(obs.numpy(), axes=(1,2,0))
             # ax.imshow(screen)
             # plt.show(block=False)
             # input("continue?")

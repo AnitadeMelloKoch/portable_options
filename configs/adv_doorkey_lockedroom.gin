@@ -26,7 +26,7 @@ AttentionOption.policy_learning_rate                                = 2.5e-4
 AttentionOption.final_epsilon                                       = 0.01
 AttentionOption.final_exploration_frames                            = 1e6
 AttentionOption.discount_rate                                       = 0.9
-AttentionOption.policy_attention_module_num                         = 3
+AttentionOption.policy_attention_module_num                         = 8
 AttentionOption.num_actions                                         = 7
 AttentionOption.policy_c                                            = 100
 AttentionOption.initiation_beta_distribution_alpha                  = 100
@@ -57,6 +57,6 @@ NNMarkovOption.assimilation_success_rate_required                   = 0.8
 NNMarkovOption.lr                                                   = 1e-3
 
 AutoEncoder.num_input_channels                                      = 3
-AutoEncoder.feature_size                                            = 500
+AutoEncoder.feature_size                                            = 1000
 AutoEncoder.image_height                                            = 152
 AutoEncoder.image_width                                             = 152

@@ -20,7 +20,7 @@ class AttentionSet():
                  beta_distribution_alpha=30,
                  beta_distribution_beta=5,
                  divergence_loss_scale=1,
-                 regularization_loss_scale=0.5,
+                 regularization_loss_scale=0.05,
                  
                  dataset_max_size=200000,
                  dataset_batch_size=16,
