@@ -173,13 +173,15 @@ class MonteExperiment():
         self.option.termination.add_data_from_files(termination_positive_files,
                                                     termination_negative_files)
         
-    def train_option(self, training_envs):
+    def train_option(self, training_env):
         logging.info('[experiment] Training option')
         self.option.initiation.train(self.initiation_epochs)
         self.option.termination.train(self.termination_epochs)
-        self.option.bootstrap_policy(training_envs,
+        self.option.bootstrap_policy(training_env,
                                      self.policy_max_steps,
                                      self.policy_success_threshold)
+        
+        self.option.save()
     
     @staticmethod
     def _set_env_ram(env, 

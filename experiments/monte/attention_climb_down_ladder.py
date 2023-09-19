@@ -289,6 +289,28 @@ if __name__ == "__main__":
         markov_option_builder=create_markov_option
     )
     
+    experiment.add_datafiles(initiation_positive_files,
+                             initiation_negative_files,
+                             termination_positive_files,
+                             termination_negative_files)
+    
+    bootstrap_env = atari_wrappers.wrap_deepmind(
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
+        episode_life=True,
+        clip_rewards=True,
+        frame_stack=False
+    )
+    
+    bootstrap_env = MonteBootstrapWrapper(
+        bootstrap_env,
+        load_init_states(initiation_state_files[0]),
+        terminations[0],
+        check_termination_correct,
+        agent_space=False
+    )
+    
+    experiment.train_option(training_env=[bootstrap_env])
+    
     experiment.load_embedding(load_dir="resources/encoders/monte/encoder.ckpt")
     
 

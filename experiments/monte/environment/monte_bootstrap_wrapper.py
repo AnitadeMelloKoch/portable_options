@@ -10,7 +10,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
             check_true_termination,
             reward_on_success=1,
             agent_space=False,
-            max_steps=60 * 60 * 30):
+            max_steps=60 * 60 * 30
+            ):
         super().__init__(env, agent_space, stack_observations=True, max_steps=max_steps)
 
         """
@@ -34,7 +35,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
 
         self.jumped_previously = False
 
-    def reset(self):
+    def reset(self,
+              agent_reposition_attempts=0):
         self.env.reset()
         rand_idx = random.randint(0, len(self.init_states)-1)
         rand_state = self.init_states[rand_idx]

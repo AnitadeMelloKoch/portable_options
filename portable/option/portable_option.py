@@ -8,6 +8,7 @@ from operator import countOf
 from collections import deque
 import math
 import torch
+import matplotlib.pyplot as plt 
 
 from portable.option.sets import AttentionSet
 from portable.option.policy.agents import EnsembleAgent
@@ -212,6 +213,7 @@ class AttentionOption():
             state = torch.from_numpy(state).float()
         
         vote_global, _, votes, conf = self.initiation.vote(state)
+        print("can initiate votes: {}".format(votes))
         
         local_vote = False
         for idx in range(len(self.markov_instantiations)):
@@ -233,6 +235,7 @@ class AttentionOption():
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
         global_vote, markov_vote = self.can_initiate(state)
+        print("Votes: portable={} non-portable={}".format(global_vote, markov_vote))
         
         if global_vote and not markov_vote:
             return self._portable_run(env,
@@ -282,6 +285,15 @@ class AttentionOption():
                 should_terminate, _, votes, conf = self.termination.vote(next_state)
                 steps += 1
                 rewards.append(reward)
+                
+                fig = plt.figure(num=1, clear=True)
+                ax = fig.add_subplot()
+                ax.imshow(np.transpose(state, axes=[1,2,0]))
+                plt.show(block=False)
+                print("terminate: {}".format(should_terminate))
+                print("termination votes: {}".format(votes))
+                print("done: {}".format(done))
+                input("Option. Continue?")
                 
                 if steps < self.min_option_length:
                     should_terminate = False
@@ -356,7 +368,7 @@ class AttentionOption():
         
         env = random.choice(bootstrap_envs)
         
-        rand_num = np.random.randint(low=1, high=20)
+        rand_num = np.random.randint(low=0, high=10)
         state, info = env.reset(agent_reposition_attempts=rand_num)
         
         while step_number < max_steps:
