@@ -116,25 +116,30 @@ class ProcgenExperiment():
         self.num_envs = num_envs
         self.distribution_mode = distribution_mode
         
-        self.trial_data = pd.DataFrame([],
-                                       columns=['env_seed',
-                                                'reward',
-                                                'steps'])
+        self.trial_data_train = []
+        self.trial_data_eval = []
         
         self.agent = None
 
     def save(self):
         self.agent.save(os.path.join(self.save_dir, 'policy'))
-        filename = os.path.join(self.save_dir, 'experiment_data.pkl')
+        filename = os.path.join(self.save_dir, 'experiment_data_train.pkl')
         with lzma.open(filename, 'wb') as f:
-            dill.dump(self.trial_data, f)
+            dill.dump(self.trial_data_train, f)
+        filename = os.path.join(self.save_dir, 'experiment_data_eval.pkl')
+        with lzma.open(filename, 'wb') as f:
+            dill.dump(self.trial_data_eval, f)
     
     def load(self):
         self.agent.load(os.path.join(self.save_dir, 'policy'))
-        filename = os.path.join(self.save_dir, 'experiment_data.pkl')
+        filename = os.path.join(self.save_dir, 'experiment_data_train.pkl')
         if os.path.exists(filename):
             with lzma.open(filename, 'rb') as f:
-                self.trial_data = dill.load(f)
+                self.trial_data_train = dill.load(f)
+        filename = os.path.join(self.save_dir, 'experiment_data_eval.pkl')
+        if os.path.exists(filename):
+            with lzma.open(filename, 'rb') as f:
+                self.trial_data_eval = dill.load(f)
     
     def _make_agent(self, env):
         self.agent = BatchedEnsembleAgent(embedding=self.embedding,
@@ -258,11 +263,9 @@ class ProcgenExperiment():
                   seed):
         logging.info("Begin Training on Level with Seed: {}".format(seed))
         
-        train_info_buf = deque(maxlen=100)
         train_obs = train_env.reset()
         train_steps = np.zeros(self.num_envs, dtype=int)
         
-        test_epinfo_buf = deque(maxlen=100)
         test_obs = test_env.reset()
         test_steps = np.zeros(self.num_envs)
         
@@ -272,14 +275,19 @@ class ProcgenExperiment():
             train_obs, train_steps, train_epinfo = self.step(train_env,
                                                              train_obs,
                                                              train_steps)
-            train_info_buf.extend(train_epinfo)
+            self.trial_data_train.extend(train_epinfo)
             
             with evaluating(self.agent):
                 test_obs, test_steps, test_epinfo = self.step(test_env,
                                                               test_obs,
                                                               test_steps)
-                test_epinfo_buf.extend(test_epinfo)
+                self.trial_data_eval.extend(test_epinfo)
             step_cnt += 1
+        
+        self.save()
+    
+    def safe_mean(xs):
+        return np.nan if len(xs) == 0 else np.mean(xs)
     
     def step(self, env, obs, steps, env_max_steps=1000):
         action = self.agent.batch_act(obs)
@@ -294,10 +302,11 @@ class ProcgenExperiment():
                                  batch_reset=reset)
         
         epinfo = []
-        for info in infos:
-            maybe_epinfo = info.get('episode')
-            if maybe_epinfo:
-                epinfo.append(maybe_epinfo)
+        for idx, info in enumerate(infos):
+            info["reward"] = reward[idx]
+            info["steps"] = steps[idx]
+            
+            epinfo.append(info)
         
         return new_obs, steps, epinfo
     
