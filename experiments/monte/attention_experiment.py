@@ -36,7 +36,8 @@ class MonteExperiment():
                  use_gpu=True,
                  max_episodes_in_trial=100,
                  use_agent_state=False,
-                 max_option_tries=5):
+                 max_option_tries=5,
+                 train_options=True):
         
         self.initiation_epochs = initiation_epochs
         self.termination_epochs = termination_epochs
@@ -48,6 +49,7 @@ class MonteExperiment():
         self.use_agent_state = use_agent_state
         self.max_option_tries = max_option_tries
         self._check_termination_true = check_termination_true
+        self.train_options = train_options
         
         if self.use_gpu:
             self.embedding = AutoEncoder().to("cuda")
@@ -174,6 +176,9 @@ class MonteExperiment():
                                                     termination_negative_files)
         
     def train_option(self, training_env):
+        if self.train_options is False:
+            self.option.load()
+            return
         logging.info('[experiment] Training option')
         self.option.initiation.train(self.initiation_epochs)
         self.option.termination.train(self.termination_epochs)

@@ -8,11 +8,13 @@ MonteExperiment.initiation_epochs                                   = 50
 MonteExperiment.termination_epochs                                  = 50
 MonteExperiment.policy_lr                                           = 1e-4
 MonteExperiment.policy_max_steps                                    = 1e7
-MonteExperiment.policy_success_threshold                            = 0.98
+MonteExperiment.policy_success_threshold                            = 0.9
 MonteExperiment.use_gpu                                             = True
 MonteExperiment.max_episodes_in_trial                               = 100
 MonteExperiment.use_agent_state                                     = False
 MonteExperiment.max_option_tries                                    = 5
+MonteExperiment.train_options                                       = False
+
 
 AttentionOption.initiation_vote_threshold                           = 0.4
 AttentionOption.termination_vote_threshold                          = 0.4
