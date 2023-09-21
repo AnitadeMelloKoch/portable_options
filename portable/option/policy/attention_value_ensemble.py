@@ -23,7 +23,7 @@ class AttentionValueEnsemble():
                  discount_rate=0.9,
                  c=100,
                  gru_hidden_size=128,
-                 divergence_loss_scale=1,
+                 divergence_loss_scale=0.005,
                  
                  summary_writer=None,
                  model_name='policy'):

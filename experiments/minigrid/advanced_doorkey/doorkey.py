@@ -10,6 +10,47 @@ import numpy as np
 import torch
 import random
 
+def make_random_getkey_env(train_colour, check_option_complete):
+    colours = ["red", "green", "blue", "purple", "yellow", "grey"]
+    possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
+    
+    door_colour = random.choice(possible_key_colours)
+    possible_key_colours = list(filter(lambda c: c!= door_colour, possible_key_colours))
+    other_col = random.choice(possible_key_colours)
+    key_cols = [train_colour, other_col]
+    random.shuffle(key_cols)
+    
+    return AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-16x16-v0',
+            seed=training_seed,
+            grayscale=False
+        ),
+        check_option_complete=check_option_complete,
+        door_colour=door_colour,
+        key_colours=key_cols,
+        time_limit=150
+    )
+
+def make_random_opendoor_env(train_colour, check_option_complete):
+    colours = ["red", "green", "blue", "purple", "yellow", "grey"]
+    possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
+    
+    key_cols = random.choices(possible_key_colours, k=2)
+    random.shuffle(key_cols)
+    
+    AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-16x16-v0',
+            seed=training_seed,
+            grayscale=False
+        ),
+        check_option_complete=check_option_complete,
+        door_colour=train_colour,
+        key_colours=key_cols,
+        time_limit=150
+    )
+
 training_envs = [
     # get red key
     [
@@ -22,7 +63,11 @@ training_envs = [
             check_option_complete=check_got_redkey,
             door_colour="red",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("red", check_got_redkey),
+        make_random_getkey_env("red", check_got_redkey),
+        make_random_getkey_env("red", check_got_redkey),
+        make_random_getkey_env("red", check_got_redkey),
     ],
     # get blue key
     [
@@ -35,7 +80,12 @@ training_envs = [
             check_option_complete=check_got_bluekey,
             door_colour="blue",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("blue", check_got_bluekey),
+        make_random_getkey_env("blue", check_got_bluekey),
+        make_random_getkey_env("blue", check_got_bluekey),
+        make_random_getkey_env("blue", check_got_bluekey),
+        
     ],
     # get green key
     [
@@ -48,7 +98,11 @@ training_envs = [
             check_option_complete=check_got_greenkey,
             door_colour="green",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("green", check_got_greenkey),
+        make_random_getkey_env("green", check_got_greenkey),
+        make_random_getkey_env("green", check_got_greenkey),
+        make_random_getkey_env("green", check_got_greenkey),
     ],
     # get purple key
     [
@@ -61,7 +115,11 @@ training_envs = [
             check_option_complete=check_got_purplekey,
             door_colour="purple",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("purple", check_got_purplekey),
+        make_random_getkey_env("purple", check_got_purplekey),
+        make_random_getkey_env("purple", check_got_purplekey),
+        make_random_getkey_env("purple", check_got_purplekey),
     ],
     # get yellow key
     [
@@ -74,7 +132,11 @@ training_envs = [
             check_option_complete=check_got_yellowkey,
             door_colour="yellow",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("yellow", check_got_yellowkey),
+        make_random_getkey_env("yellow", check_got_yellowkey),
+        make_random_getkey_env("yellow", check_got_yellowkey),
+        make_random_getkey_env("yellow", check_got_yellowkey),
     ],
     # get grey key
     [
@@ -87,7 +149,11 @@ training_envs = [
             check_option_complete=check_got_greykey,
             door_colour="grey",
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("grey", check_got_greykey),
+        make_random_getkey_env("grey", check_got_greykey),
+        make_random_getkey_env("grey", check_got_greykey),
+        make_random_getkey_env("grey", check_got_greykey),
     ],
     # open red door
     [
@@ -101,7 +167,11 @@ training_envs = [
             door_colour="red",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("red", check_dooropen),
+        make_random_getkey_env("red", check_dooropen),
+        make_random_getkey_env("red", check_dooropen),
+        make_random_getkey_env("red", check_dooropen),
     ],
     # open blue door
     [
@@ -115,7 +185,11 @@ training_envs = [
             door_colour="blue",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("blue", check_dooropen),
+        make_random_getkey_env("blue", check_dooropen),
+        make_random_getkey_env("blue", check_dooropen),
+        make_random_getkey_env("blue", check_dooropen),
     ],
     # open green door
     [
@@ -129,7 +203,11 @@ training_envs = [
             door_colour="green",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("green", check_dooropen),
+        make_random_getkey_env("green", check_dooropen),
+        make_random_getkey_env("green", check_dooropen),
+        make_random_getkey_env("green", check_dooropen),
     ],
     # open purple door
     [
@@ -143,7 +221,11 @@ training_envs = [
             door_colour="purple",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("purple", check_dooropen),
+        make_random_getkey_env("purple", check_dooropen),
+        make_random_getkey_env("purple", check_dooropen),
+        make_random_getkey_env("purple", check_dooropen),
     ],
     # open yellow door
     [
@@ -157,7 +239,11 @@ training_envs = [
             door_colour="yellow",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("yellow", check_dooropen),
+        make_random_getkey_env("yellow", check_dooropen),
+        make_random_getkey_env("yellow", check_dooropen),
+        make_random_getkey_env("yellow", check_dooropen),
     ],
     # open grey door
     [
@@ -171,8 +257,27 @@ training_envs = [
             door_colour="grey",
             key_collected=True,
             time_limit=150
-        )
+        ),
+        make_random_getkey_env("grey", check_dooropen),
+        make_random_getkey_env("grey", check_dooropen),
+        make_random_getkey_env("grey", check_dooropen),
+        make_random_getkey_env("grey", check_dooropen),
     ],
+]
+
+names = [
+    "get red key",
+    "get blue key",
+    "get green key",
+    "get purple key",
+    "get yellow key",
+    "get grey key",
+    "open red door",
+    "open blue door",
+    "open green door",
+    "open purple door",
+    "open yellow door",
+    "open grey door",
 ]
 
 if __name__ == "__main__":
@@ -266,7 +371,8 @@ if __name__ == "__main__":
                                             create_agent_function=create_agent,
                                             num_options=12,
                                             markov_option_builder=create_markov_option,
-                                            policy_phi=policy_phi)
+                                            policy_phi=policy_phi,
+                                            names=names)
     
     experiment.add_datafiles(initiation_positive_files=initiation_positive_files,
                              initiation_negative_files=initiation_negative_files,
@@ -278,6 +384,8 @@ if __name__ == "__main__":
     
     if not args.skip_train_options:
         experiment.train_options(training_envs=training_envs)
+    else:
+        experiment.load()
     
     experiment.run(make_env=create_env,
                    num_envs=args.num_envs,

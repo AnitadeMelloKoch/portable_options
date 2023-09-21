@@ -19,8 +19,8 @@ class AttentionSet():
                  learning_rate=1e-3,
                  beta_distribution_alpha=30,
                  beta_distribution_beta=5,
-                 divergence_loss_scale=1,
-                 regularization_loss_scale=0.05,
+                 divergence_loss_scale=0.05,
+                 regularization_loss_scale=0.,
                  
                  dataset_max_size=200000,
                  dataset_batch_size=16,
@@ -69,6 +69,7 @@ class AttentionSet():
         self.confidences.save(os.path.join(path, 'confidence'))
     
     def load(self, path):
+        print("Classifier loaded from: {}".format(path))
         self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
         self.dataset.load(path)
         self.confidences.load(os.path.join(path, 'confidence'))
@@ -213,18 +214,13 @@ class AttentionSet():
     def update_confidence(self,
                           was_successful: bool,
                           votes: list):
-        success_count = votes
-        failure_count = np.ones(len(votes)) - votes
+        success_count = votes.cpu().numpy()
+        failure_count = np.ones(len(success_count)) - success_count
         
         if not was_successful:
             success_count = failure_count
-            failure_count = votes
+            failure_count = votes.cpu().numpy()
         
         self.confidences.update_successes(success_count)
         self.confidences.update_failures(failure_count)
-
-
-
-
-
 

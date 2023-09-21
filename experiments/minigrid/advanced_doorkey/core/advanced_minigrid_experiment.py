@@ -36,7 +36,8 @@ class AdvancedMinigridExperiment():
                  policy_success_threshold=0.98,
                  agent_lr=1e-4,
                  use_gpu=True,
-                 sigma=0.5):
+                 sigma=0.5,
+                 names=None):
         
         
         self.training_seed = training_seed
@@ -102,7 +103,8 @@ class AdvancedMinigridExperiment():
                                         embedding=self.embedding,
                                         policy_phi=policy_phi,
                                         dataset_transform_function=dataset_transform_function,
-                                        save_dir=os.path.join(option_save_dirs, str(x))) for x in range(num_options)]
+                                        save_dir=os.path.join(option_save_dirs, str(x)),
+                                        option_name=names[x] if names is not None else None) for x in range(num_options)]
     
     def save(self):
         self.agent.save()
@@ -114,7 +116,7 @@ class AdvancedMinigridExperiment():
             self.options[idx].save()
 
     def load(self):
-        self.agent.load()
+        # self.agent.load()
         filename = os.path.join(self.save_dir, 'experiment_data.pkl')
         if os.path.exists(filename):
             with lzma.open(filename, 'rb') as f:
@@ -240,8 +242,17 @@ class AdvancedMinigridExperiment():
     
     def run_one_step(self, env, state, info):
         action = self.agent.act(state)
+        # print("ACTION: {}".format(action))
         if action < self.primitive_actions:
             next_obs, reward, done, info = env.step(action)
+            
+            # fig = plt.figure(num=1, clear=True)
+            # ax = fig.add_subplot()
+            # ax.imshow(np.transpose(state, axes=[1,2,0]))
+            # plt.show(block=False)
+            # print("done: {}".format(done))
+            # input("Primitive action. Continue?")
+            
             # add step number of 1 to return
             return next_obs, reward, done, info, 1
         # if action >= primitive_actions we need to run the appropriate option
@@ -251,6 +262,8 @@ class AdvancedMinigridExperiment():
             false_states = random.sample(list(self.buffer), 20)
         else:
             false_states = list(self.buffer)
+        
+        # print("Running option number: {}".format(option_idx))
         
         option_output = self.options[option_idx].run(env,
                                                      state,

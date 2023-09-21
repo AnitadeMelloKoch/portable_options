@@ -61,7 +61,8 @@ class AttentionOption():
                  timeout,
                  min_option_length,
                  original_initiation_function=None,
-                 dataset_transform_function=None):
+                 dataset_transform_function=None,
+                 option_name=None):
         
         self._cumulative_discount_vector = np.array(
             [math.pow(discount_rate, n) for n in range(timeout)]
@@ -69,6 +70,8 @@ class AttentionOption():
         
         summary_writer = SummaryWriter(log_dir=log_dir)
         self.use_gpu = use_gpu
+        
+        self.name = option_name
         
         self.policy = EnsembleAgent(use_gpu=use_gpu,
                                     warmup_steps=policy_warmup_steps,
@@ -161,8 +164,9 @@ class AttentionOption():
     def load(self):
         policy_path, initiation_path, termination_path, markov_path = self._get_save_paths()
 
-        if os.path.exists(os.path.join(policy_path, 'agent.pkl')):
-            self.policy = self.policy.load(os.path.join(policy_path, 'agent.pkl'))
+        if os.path.exists(policy_path):
+            print("policy loaded from: {}".format(policy_path))
+            self.policy.load(policy_path)
             
         self.initiation.load(initiation_path)
         self.termination.load(termination_path)
@@ -213,7 +217,7 @@ class AttentionOption():
             state = torch.from_numpy(state).float()
         
         vote_global, _, votes, conf = self.initiation.vote(state)
-        print("can initiate votes: {}".format(votes))
+        # print("[{}] can initiate votes: {}".format(self.name, votes))
         
         local_vote = False
         for idx in range(len(self.markov_instantiations)):
@@ -235,7 +239,7 @@ class AttentionOption():
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
         global_vote, markov_vote = self.can_initiate(state)
-        print("Votes: portable={} non-portable={}".format(global_vote, markov_vote))
+        # print("[{}] Votes: portable={} non-portable={}".format(self.name, global_vote, markov_vote))
         
         if global_vote and not markov_vote:
             return self._portable_run(env,
@@ -281,19 +285,21 @@ class AttentionOption():
                 
                 action = self.policy.act(state)
                 
+                # print("PRIMITIVE ACTION: {}".format(action))
+                
                 next_state, reward, done, info = env.step(action)
                 should_terminate, _, votes, conf = self.termination.vote(next_state)
                 steps += 1
                 rewards.append(reward)
                 
-                fig = plt.figure(num=1, clear=True)
-                ax = fig.add_subplot()
-                ax.imshow(np.transpose(state, axes=[1,2,0]))
-                plt.show(block=False)
-                print("terminate: {}".format(should_terminate))
-                print("termination votes: {}".format(votes))
-                print("done: {}".format(done))
-                input("Option. Continue?")
+                # fig = plt.figure(num=1, clear=True)
+                # ax = fig.add_subplot()
+                # ax.imshow(np.transpose(state, axes=[1,2,0]))
+                # plt.show(block=False)
+                # print("[{}] terminate: {}".format(self.name, should_terminate))
+                # print("[{}] termination votes: {}".format(self.name, votes))
+                # print("[{}] done: {}".format(self.name, done))
+                # input("[{}] Option. Continue?".format(self.name))
                 
                 if steps < self.min_option_length:
                     should_terminate = False

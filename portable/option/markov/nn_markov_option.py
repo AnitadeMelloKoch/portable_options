@@ -10,6 +10,7 @@ from portable.option.sets.models.nn_classifier import NNClassifier
 import gin
 import torch
 from portable.option.policy.agents import EnsembleAgent
+import matplotlib.pyplot as plt
 
 @gin.configurable
 class NNMarkovOption(MarkovOption):
@@ -129,11 +130,21 @@ class NNMarkovOption(MarkovOption):
                 
                 action = self.policy.act(state)
                 
+                # print("PRIMITIVE ACTION: {}".format(action))
+                
                 next_state, reward, done, info = env.step(action)
                 
                 rewards.append(reward)
                 
                 should_terminate = self.can_terminate(next_state)
+                
+                # fig = plt.figure(num=1, clear=True)
+                # ax = fig.add_subplot()
+                # ax.imshow(np.transpose(state, axes=[1,2,0]))
+                # plt.show(block=False)
+                # print("terminate: {}".format(should_terminate))
+                # print("done: {}".format(done))
+                # input("Primitive action. Continue?")
                 
                 # overwrite reward with reward for option
                 if should_terminate:
