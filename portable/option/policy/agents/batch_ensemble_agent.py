@@ -44,6 +44,7 @@ class BatchedEnsembleAgent(Agent):
                  step_epochs,
                  clip_range,
                  max_grad_norm,
+                 divergence_loss_scale,
                  fix_attention=False):
         super().__init__()
         
@@ -68,10 +69,12 @@ class BatchedEnsembleAgent(Agent):
         self.step_epochs = step_epochs
         self.clip_range = clip_range
         self.max_grad_norm = max_grad_norm
+        self.divergence_loss_scale = divergence_loss_scale
         
         self.action_leader = np.random.choice(num_modules)
         
         self.step_number = 0
+        self.episode_number = 0
         self.n_updates = 0
         
         self.head_accumulated_reward = np.zeros(num_modules)
@@ -172,6 +175,8 @@ class BatchedEnsembleAgent(Agent):
             for idx in range(self.num_modules):
                 div_loss += divergence_loss(masks, idx)
             
+            div_loss = self.divergence_loss_scale*div_loss
+            
             loss = head_loss + div_loss
             
             self.attentions.train()
@@ -213,6 +218,10 @@ class BatchedEnsembleAgent(Agent):
                     self.batch_last_obs[i] = None
                     self.batch_last_action[i] = None
                     self.replay_buffer.stop_current_episode(env_id=i)
+
+        if batch_reset.any() or batch_done.any():
+            self.episode_number += np.logical_or(batch_reset, batch_done).sum()
+            self._set_action_leader()
     
     def _batch_observe_eval(self,
                             batch_obs,

@@ -65,7 +65,7 @@ class ProcgenExperiment():
         self.batch_size = batch_size
         self.embedding_phi = embedding_phi
         
-        self.base_dir = base_dir
+        self.base_dir = os.path.join(base_dir, experiment_name)
         self.use_gpu = use_gpu
         self.experiment_name = experiment_name
         self.experiment_seed = experiment_seed
@@ -161,7 +161,8 @@ class ProcgenExperiment():
                                           num_envs=self.num_envs,
                                           step_epochs=self.policy_epochs,
                                           clip_range=self.clip_range,
-                                          max_grad_norm=self.max_grad_norm)
+                                          max_grad_norm=self.max_grad_norm,
+                                          divergence_loss_scale=self.divergence_loss_scale)
     
     def load_embedding(self, load_dir=None):
         if load_dir is None:
@@ -270,19 +271,32 @@ class ProcgenExperiment():
         test_steps = np.zeros(self.num_envs)
         
         step_cnt = 0
+        cumulative_reward_train = 0
+        cumulative_reward_test = 0
         
         while step_cnt < self.max_steps_per_level:
             train_obs, train_steps, train_epinfo = self.step(train_env,
                                                              train_obs,
                                                              train_steps)
             self.trial_data_train.extend(train_epinfo)
+            cumulative_reward_train += np.mean([train_epinfo[x]["reward"] for x in range(len(train_epinfo))])
             
             with evaluating(self.agent):
                 test_obs, test_steps, test_epinfo = self.step(test_env,
                                                               test_obs,
                                                               test_steps)
                 self.trial_data_eval.extend(test_epinfo)
+                cumulative_reward_test += np.mean([test_epinfo[x]["reward"] for x in range(len(test_epinfo))])
+            
             step_cnt += 1
+            
+            if step_cnt%100 == 0:
+                
+                print("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
+                print("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
+                
+                logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
+                logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
         
         self.save()
     
@@ -300,6 +314,7 @@ class ProcgenExperiment():
                                  batch_reward=reward,
                                  batch_done=done,
                                  batch_reset=reset)
+        
         
         epinfo = []
         for idx, info in enumerate(infos):

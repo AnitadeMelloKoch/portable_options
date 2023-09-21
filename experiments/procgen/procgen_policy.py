@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--base_dir", type=str, required=True)
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
+    parser.add_argument("--encoder_name", type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
             ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
             ' "create_atari_environment.game_name="Pong"").')
@@ -33,7 +34,7 @@ if __name__ == "__main__":
                                    policy_phi=phi,
                                    embedding_phi=embedding_phi)
     
-    experiment.load_embedding("resources/encoders/procgen/encoder.ckpt")
+    experiment.load_embedding("resources/encoders/procgen/{}.ckpt".format(args.encoder_name))
     
     experiment.run()
     

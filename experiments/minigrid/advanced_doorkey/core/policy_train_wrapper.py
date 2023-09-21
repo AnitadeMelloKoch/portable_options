@@ -182,7 +182,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         for idx, key in enumerate(self.objects["keys"]):
             if key.position == self.door_key_position:
                 continue
-            if c_idx > len(self.key_colours):
+            if c_idx >= len(self.key_colours):
                 return
             
             colour = self.key_colours[c_idx]
