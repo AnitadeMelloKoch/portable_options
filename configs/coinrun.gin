@@ -29,7 +29,7 @@ ProcgenExperiment.divergence_loss_scale                             = 0.005
 ProcgenExperiment.num_levels                                        = 20
 ProcgenExperiment.num_envs                                          = 8
 ProcgenExperiment.evaluate_num_levels                               = 5
-ProcgenExperiment.distribution_mode                                 = "hard"
+ProcgenExperiment.distribution_mode                                 = "easy"
 ProcgenExperiment.max_steps_per_level                               = 1e6
 
 AutoEncoder.num_input_channels                                      = 3

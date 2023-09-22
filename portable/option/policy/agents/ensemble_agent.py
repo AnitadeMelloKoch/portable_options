@@ -29,7 +29,7 @@ class EnsembleAgent(Agent):
                 phi,
                 prioritized_replay_anneal_steps,
                 embedding, 
-                divergence_loss_scale=1,
+                divergence_loss_scale=0.05,
                 buffer_length=100000,
                 update_interval=4,
                 q_target_update_interval=40,
