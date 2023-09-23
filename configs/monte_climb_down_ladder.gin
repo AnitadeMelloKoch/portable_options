@@ -4,8 +4,8 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 MonteExperiment.experiment_name                                     = "climb_down_ladder"
-MonteExperiment.initiation_epochs                                   = 50
-MonteExperiment.termination_epochs                                  = 50
+MonteExperiment.initiation_epochs                                   = 100
+MonteExperiment.termination_epochs                                  = 100
 MonteExperiment.policy_lr                                           = 1e-4
 MonteExperiment.policy_max_steps                                    = 1e7
 MonteExperiment.policy_success_threshold                            = 0.9
@@ -13,7 +13,7 @@ MonteExperiment.use_gpu                                             = True
 MonteExperiment.max_episodes_in_trial                               = 100
 MonteExperiment.use_agent_state                                     = False
 MonteExperiment.max_option_tries                                    = 5
-MonteExperiment.train_options                                       = False
+MonteExperiment.train_options                                       = True
 
 
 AttentionOption.initiation_vote_threshold                           = 0.4
@@ -44,7 +44,7 @@ AttentionOption.termination_dataset_maxsize                         = 100000
 AttentionOption.min_interactions                                    = 100
 AttentionOption.min_success_rate                                    = 0.7
 AttentionOption.timeout                                             = 150
-AttentionOption.min_option_length                                   = 1
+AttentionOption.min_option_length                                   = 5
 
 NNMarkovOption.classifier_type                                      = "cnn"
 NNMarkovOption.image_height                                         = 84

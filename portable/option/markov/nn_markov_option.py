@@ -103,12 +103,13 @@ class NNMarkovOption(MarkovOption):
             self.termination = pickle.load(f)
     
     def can_initiate(self, 
-                     agent_space_state):
-        prediction = self.initiation.predict(agent_space_state)
+                     state,
+                     info):
+        prediction = self.initiation.predict(state)
         return torch.argmax(prediction) == 1
     
-    def can_terminate(self, agent_space_state):
-        return np.array_equal(agent_space_state, self.termination)
+    def can_terminate(self, state):
+        return np.array_equal(state, self.termination)
     
     def run(self,
             env,

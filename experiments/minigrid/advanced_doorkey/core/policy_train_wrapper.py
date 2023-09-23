@@ -161,6 +161,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         
         new_key = Key(self.door_colour)
         keys = []
+        
         for key in self.objects["keys"]:
             if key.colour == old_colour:
                 self.env.unwrapped.grid.set(
@@ -170,6 +171,15 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 )
                 keys.append(KeyTuple(key.position,
                                      self.door_colour))
+            elif key.colour == self.door_colour:
+                replace_key = Key(old_colour)
+                self.env.unwrapped.grid.set(
+                    key.position[0],
+                    key.position[1],
+                    replace_key
+                )
+                keys.append(KeyTuple(key.position,
+                                     old_colour))
             else:
                 keys.append(key)
         self.objects["keys"] = keys

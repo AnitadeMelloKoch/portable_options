@@ -232,6 +232,7 @@ class AttentionValueEnsemble():
             embeddings = self.embedding.feature_extractor(state)
             self.recurrent_memory.flatten_parameters()
             embeddings = embeddings.unsqueeze(1)
+            
             embeddings, _ = self.recurrent_memory(embeddings)
             embeddings = self.apply_attentions(embeddings)
             

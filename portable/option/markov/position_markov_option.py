@@ -90,9 +90,11 @@ class PositionMarkovOption(MarkovOption):
             self.epsilon = np.load(os.path.join(termination_path, 'epsilon.npy'))
 
     def can_initiate(self, 
-                     agent_space_state):
+                     state,
+                     info):
         # Input should be agent's ram position
-        return self.initiation.predict(agent_space_state)
+        position = [info["position"][0], info["position"][1]]
+        return self.initiation.predict(position)
 
     def can_terminate(self, 
                       agent_space_state):
@@ -123,6 +125,9 @@ class PositionMarkovOption(MarkovOption):
         agent_state = info["stacked_agent_state"]
         positions = []
         position = (info["player_x"], info["player_y"])
+        
+        self.policy.load_buffer(save_file=self.save_file)
+        self.policy.move_to_gpu()
 
         # if we are evaluating then set policy to eval mode else ignore
         with evaluating(self.policy) if evaluate else nullcontext():
@@ -162,6 +167,8 @@ class PositionMarkovOption(MarkovOption):
                                 "positions": positions,
                                 "agent_space_states":agent_space_states
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     if done and not should_terminate:
                         self.log('[Markov option] Episode ended and we are still executing option. Option failed')
@@ -173,12 +180,16 @@ class PositionMarkovOption(MarkovOption):
                                 "positions": positions,
                                 "agent_space_states":agent_space_states
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     # environment needs reset
                     if info['needs_reset']:
                         info['option_timed_out'] = False
                         # option did not fail or succeed. Trajectory won't be used to update option
                         self.log('[Markov option] Environment timed out.')
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     # option ended 'successfully'
                     if should_terminate:
@@ -192,6 +203,8 @@ class PositionMarkovOption(MarkovOption):
                                 "termination": position,
                                 "agent_space_termination": agent_state
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                 state = next_state
 
@@ -200,13 +213,17 @@ class PositionMarkovOption(MarkovOption):
 
         positions.append(position)
         agent_space_states.append(agent_state)
-
+        
+        
         if evaluate:
             self._option_fail({
                 "positions": positions,
                 "agent_space_states":agent_space_states
             })
 
+        self.policy.store_buffer(save_file=self.save_file)
+        self.policy.move_to_cpu()
+        
         return next_state, total_reward, done, info, steps
 
     def can_assimilate(self):

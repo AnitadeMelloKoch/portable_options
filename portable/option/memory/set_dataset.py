@@ -33,7 +33,10 @@ class SetDataset():
 
     @staticmethod
     def transform(x):
-        return x/255.0
+        if torch.max(x) > 1:
+            return x/255.0
+        else:
+            return x
 
     def set_transform_function(self, transform):
         self.transform = transform

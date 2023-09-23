@@ -3,6 +3,7 @@ import os
 from experiments.monte.attention_experiment import MonteExperiment
 import numpy as np
 from portable.option.markov.nn_markov_option import NNMarkovOption
+from portable.option.markov.position_markov_option import PositionMarkovOption
 from pfrl.wrappers import atari_wrappers
 
 from experiments.monte.environment import MonteAgentWrapper
@@ -247,7 +248,9 @@ bootstrap_env = MonteBootstrapWrapper(
 if __name__ == "__main__":
     
     def create_markov_option(states,
+                             infos,
                              termination_state,
+                             termination_info,
                              initiation_votes,
                              termination_votes,
                              false_states,
@@ -257,14 +260,20 @@ if __name__ == "__main__":
         labels = [1]*len(states) + [0]*len(false_states)
         data = list(states) + list(false_states)
         
-        option = NNMarkovOption(use_gpu=use_gpu,
-                                initiation_states=data,
-                                initiation_labels=labels,
-                                termination=termination_state,
-                                initial_policy=initial_policy,
-                                initiation_votes=initiation_votes,
-                                termination_votes=termination_votes,
-                                save_file=save_file)
+        positions = [info["position"] for info in infos]
+        
+        option = PositionMarkovOption(images=states,
+                                      positions=positions,
+                                      terminations=termination_info["position"],
+                                      termination_images=termination_state,
+                                      initial_policy=initial_policy,
+                                      max_option_steps=100,
+                                      initiation_votes=initiation_votes,
+                                      termination_votes=termination_votes,
+                                      min_required_interactions=100,
+                                      success_rate_required=0.7,
+                                      assimilation_min_required_interactions=50,
+                                      assimilation_success_rate_required=0.7)
         
         return option
     
@@ -315,6 +324,12 @@ if __name__ == "__main__":
     
 
     env = make_env(args.seed)
+    
+    experiment.bootstrap_from_room(env,
+                                   load_init_states(initiation_state_files[0]),
+                                   terminations[0],
+                                   1,
+                                   use_agent_space=False)
     
     for y in range(10):
         markov_instances = experiment.run_instance(env,

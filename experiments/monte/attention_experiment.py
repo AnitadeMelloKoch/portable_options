@@ -286,6 +286,8 @@ class MonteExperiment():
         
             episode_count += 1
             instance_well_trained = all([self.option.markov_instantiations[instance].is_well_trained() for instance in instantiation_instances])
+            if len(instantiation_instances) == 0:
+                instance_well_trained = False
             
             start_poses.append(start_pos)
             end_poses.append(position)
@@ -294,6 +296,9 @@ class MonteExperiment():
             deads.append(info["dead"])
             final_steps.append(steps)
             logging.info("Succeeded: {}".format(completed))
+            
+            results.append(int(completed))
+            
         
         self.trial_data.append({"start_position": start_poses,
                                 "end_position": end_poses,
@@ -304,6 +309,7 @@ class MonteExperiment():
                                 "trained_instance": train_instance,
                                 "current_instance": current_instance,
                                 "eval": eval})
+        
         logging.info("[experiment:run_trial] Finished trial performance: {}".format(
             np.mean(results)
             ))
@@ -319,3 +325,67 @@ class MonteExperiment():
             ))
         
         return instantiation_instances
+    
+    def bootstrap_from_room(self,
+                            env,
+                            possible_inits,
+                            true_terminations,
+                            number_episodes_in_trial,
+                            use_agent_space=False):
+        
+        assert isinstance(possible_inits, list)
+        assert isinstance(true_terminations, list)
+        
+        logging.info("Bootstrapping termination confidences from training room")
+        print("Bootstrapping termination confidences from training room")
+        
+        for x in range(number_episodes_in_trial):
+            logging.info("Episode {}/{}".format(x, number_episodes_in_trial))
+            rand_idx = random.randint(0, len(possible_inits)-1)
+            rand_state = possible_inits[rand_idx]
+            state = self._set_env_ram(env,
+                                      rand_state["ram"],
+                                      rand_state["state"],
+                                      rand_state["agent_state"],
+                                      self.use_agent_state)
+            
+            info = env.get_current_info({})
+            done = False
+            
+            count = 0
+            timedout = 0
+            
+            while (not done) and (not info["needs_reset"]) and (count < 100) and (timedout<3):
+                count += 1
+                
+                option_result = self.option.run(env,
+                                                state,
+                                                info,
+                                                True,
+                                                [])
+                
+                if option_result is None:
+                    logging.info("initiation was not triggered")
+                    self.option.initiation_update_confidence(was_successful=False, votes=self.option.initiation.votes)
+                    break
+                
+                _, _, done, info, _ = option_result
+                
+                if info["needs_reset"]:
+                    break
+                
+                if info["option_timed_out"]:
+                    timedout += 1
+                
+                position = info["position"]
+                
+                if self._check_termination_true(position, true_terminations[rand_idx], env):
+                    self.option.termination_update_confidence(was_successful=True, votes=self.option.termination.votes)
+                    logging.info("correct termination was found")
+                    break
+                else:
+                    self.option.termination_update_confidence(was_successful=False, votes=self.option.termination.votes)
+            
+    
+    
+    

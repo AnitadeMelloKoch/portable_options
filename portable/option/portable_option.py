@@ -188,7 +188,9 @@ class AttentionOption():
     
     def create_instance(self,
                         states,
+                        infos,
                         termination_state,
+                        termination_info,
                         false_states):
         ## TODO
         # how to check if we already have instance?
@@ -201,7 +203,9 @@ class AttentionOption():
             self.markov_option_builder(
                 states=states,
                 false_states=false_states,
+                infos=infos,
                 termination_state=termination_state,
+                termination_info=termination_info,
                 initial_policy=self.policy,
                 initiation_votes=self.initiation.votes,
                 termination_votes=self.termination.votes,
@@ -211,7 +215,8 @@ class AttentionOption():
         )
     
     def can_initiate(self,
-                     state):
+                     state,
+                     info):
         logger.info("[portable option initiation] Checking if option can initiate")
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
@@ -221,7 +226,8 @@ class AttentionOption():
         
         local_vote = False
         for idx in range(len(self.markov_instantiations)):
-            prediction = self.markov_instantiations[idx].can_initiate(state)
+            prediction = self.markov_instantiations[idx].can_initiate(state,
+                                                                      info)
             
             if prediction == True:
                 self.markov_idx = idx
@@ -238,7 +244,7 @@ class AttentionOption():
         
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
-        global_vote, markov_vote = self.can_initiate(state)
+        global_vote, markov_vote = self.can_initiate(state, info)
         # print("[{}] Votes: portable={} non-portable={}".format(self.name, global_vote, markov_vote))
         
         if global_vote and not markov_vote:
@@ -270,6 +276,7 @@ class AttentionOption():
         steps = 0
         rewards = []
         states = []
+        infos = []
         
         logger.info('[option portable run] Starting portable option run')
         
@@ -282,6 +289,7 @@ class AttentionOption():
                 if type(state) is np.ndarray:
                     state = torch.from_numpy(state).float()
                 states.append(state)
+                infos.append(info)
                 
                 action = self.policy.act(state)
                 
@@ -317,8 +325,10 @@ class AttentionOption():
                         logger.info('[portable option run] Option chose to end.')
                         if not eval:
                             self._option_success(states,
-                                                next_state,
-                                                false_states)
+                                                 infos,
+                                                 next_state,
+                                                 info,
+                                                 false_states)
                         termination_vector = self._cumulative_discount_vector[:steps]
                         rewards = np.array(rewards)
                         total_reward = np.sum(termination_vector*rewards)
@@ -374,7 +384,7 @@ class AttentionOption():
         
         env = random.choice(bootstrap_envs)
         
-        rand_num = np.random.randint(low=0, high=10)
+        rand_num = np.random.randint(low=0, high=20)
         state, info = env.reset(agent_reposition_attempts=rand_num)
         
         while step_number < max_steps:
@@ -441,11 +451,15 @@ class AttentionOption():
 
     def _option_success(self,
                         states,
+                        infos,
                         termination_state,
+                        termination_info,
                         false_states):
         
         self.create_instance(states,
+                             infos,
                              termination_state,
+                             termination_info,
                              false_states)
         
     
