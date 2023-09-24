@@ -51,6 +51,7 @@ def make_random_opendoor_env(train_colour, check_option_complete):
         check_option_complete=check_option_complete,
         door_colour=train_colour,
         key_colours=key_cols,
+        key_collected=True,
         time_limit=50
     )
 
