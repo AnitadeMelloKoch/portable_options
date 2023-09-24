@@ -373,7 +373,7 @@ class AttentionOption():
         episode_number = 0
         total_reward = 0
         rewards = []
-        success_queue_size = 50
+        success_queue_size = 100
         # success_queue_size = 500
         success_rates = deque(maxlen=success_queue_size)
         logger.info("[option bootstrap] Bootstrapping option policy...")
@@ -384,7 +384,7 @@ class AttentionOption():
         
         env = random.choice(bootstrap_envs)
         
-        rand_num = np.random.randint(low=0, high=20)
+        rand_num = np.random.randint(low=0, high=5)
         state, info = env.reset(agent_reposition_attempts=rand_num)
         
         while step_number < max_steps:

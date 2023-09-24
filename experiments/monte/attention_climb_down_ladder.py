@@ -273,7 +273,8 @@ if __name__ == "__main__":
                                       min_required_interactions=100,
                                       success_rate_required=0.7,
                                       assimilation_min_required_interactions=50,
-                                      assimilation_success_rate_required=0.7)
+                                      assimilation_success_rate_required=0.7,
+                                      save_file=save_file)
         
         return option
     

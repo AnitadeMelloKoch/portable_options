@@ -26,11 +26,13 @@ class PositionMarkovOption(MarkovOption):
         success_rate_required,
         assimilation_min_required_interactions,
         assimilation_success_rate_required,
+        save_file,
         epsilon=2, 
         use_log=True):
         
         super().__init__(use_log)
 
+        self.save_file = save_file
         self.initiation = PositionClassifier()
         self.initiation.add_positive_examples(images, positions)
         self.initiation.fit_classifier()

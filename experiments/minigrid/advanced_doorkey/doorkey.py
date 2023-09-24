@@ -20,16 +20,19 @@ def make_random_getkey_env(train_colour, check_option_complete):
     key_cols = [train_colour, other_col]
     random.shuffle(key_cols)
     
+    print("door colour:", door_colour)
+    print("key colours:", key_cols)
+    
     return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'AdvancedDoorKey-8x8-v0',
             seed=training_seed,
             grayscale=False
         ),
         check_option_complete=check_option_complete,
         door_colour=door_colour,
         key_colours=key_cols,
-        time_limit=150
+        time_limit=50
     )
 
 def make_random_opendoor_env(train_colour, check_option_complete):
@@ -39,16 +42,16 @@ def make_random_opendoor_env(train_colour, check_option_complete):
     key_cols = random.choices(possible_key_colours, k=2)
     random.shuffle(key_cols)
     
-    AdvancedDoorKeyPolicyTrainWrapper(
+    return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'AdvancedDoorKey-8x8-v0',
             seed=training_seed,
             grayscale=False
         ),
         check_option_complete=check_option_complete,
         door_colour=train_colour,
         key_colours=key_cols,
-        time_limit=150
+        time_limit=50
     )
 
 training_envs = [
@@ -56,15 +59,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_redkey,
             door_colour="red",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("red", check_got_redkey),
         make_random_getkey_env("red", check_got_redkey),
         make_random_getkey_env("red", check_got_redkey),
         make_random_getkey_env("red", check_got_redkey),
@@ -73,15 +75,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_bluekey,
             door_colour="blue",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("blue", check_got_bluekey),
         make_random_getkey_env("blue", check_got_bluekey),
         make_random_getkey_env("blue", check_got_bluekey),
         make_random_getkey_env("blue", check_got_bluekey),
@@ -91,15 +92,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_greenkey,
             door_colour="green",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("green", check_got_greenkey),
         make_random_getkey_env("green", check_got_greenkey),
         make_random_getkey_env("green", check_got_greenkey),
         make_random_getkey_env("green", check_got_greenkey),
@@ -108,15 +108,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_purplekey,
             door_colour="purple",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("purple", check_got_purplekey),
         make_random_getkey_env("purple", check_got_purplekey),
         make_random_getkey_env("purple", check_got_purplekey),
         make_random_getkey_env("purple", check_got_purplekey),
@@ -125,15 +124,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_yellowkey,
             door_colour="yellow",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("yellow", check_got_yellowkey),
         make_random_getkey_env("yellow", check_got_yellowkey),
         make_random_getkey_env("yellow", check_got_yellowkey),
         make_random_getkey_env("yellow", check_got_yellowkey),
@@ -142,15 +140,14 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_got_greykey,
             door_colour="grey",
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("grey", check_got_greykey),
         make_random_getkey_env("grey", check_got_greykey),
         make_random_getkey_env("grey", check_got_greykey),
         make_random_getkey_env("grey", check_got_greykey),
@@ -159,109 +156,103 @@ training_envs = [
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="red",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("red", check_dooropen),
-        make_random_getkey_env("red", check_dooropen),
-        make_random_getkey_env("red", check_dooropen),
-        make_random_getkey_env("red", check_dooropen),
+        make_random_opendoor_env("red", check_dooropen),
+        make_random_opendoor_env("red", check_dooropen),
+        make_random_opendoor_env("red", check_dooropen),
     ],
     # open blue door
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="blue",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("blue", check_dooropen),
-        make_random_getkey_env("blue", check_dooropen),
-        make_random_getkey_env("blue", check_dooropen),
-        make_random_getkey_env("blue", check_dooropen),
+        make_random_opendoor_env("blue", check_dooropen),
+        make_random_opendoor_env("blue", check_dooropen),
+        make_random_opendoor_env("blue", check_dooropen),
     ],
     # open green door
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="green",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("green", check_dooropen),
-        make_random_getkey_env("green", check_dooropen),
-        make_random_getkey_env("green", check_dooropen),
-        make_random_getkey_env("green", check_dooropen),
+        make_random_opendoor_env("green", check_dooropen),
+        make_random_opendoor_env("green", check_dooropen),
+        make_random_opendoor_env("green", check_dooropen),
     ],
     # open purple door
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="purple",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("purple", check_dooropen),
-        make_random_getkey_env("purple", check_dooropen),
-        make_random_getkey_env("purple", check_dooropen),
-        make_random_getkey_env("purple", check_dooropen),
+        make_random_opendoor_env("purple", check_dooropen),
+        make_random_opendoor_env("purple", check_dooropen),
+        make_random_opendoor_env("purple", check_dooropen),
     ],
     # open yellow door
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="yellow",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("yellow", check_dooropen),
-        make_random_getkey_env("yellow", check_dooropen),
-        make_random_getkey_env("yellow", check_dooropen),
-        make_random_getkey_env("yellow", check_dooropen),
+        make_random_opendoor_env("yellow", check_dooropen),
+        make_random_opendoor_env("yellow", check_dooropen),
+        make_random_opendoor_env("yellow", check_dooropen),
     ],
     # open grey door
     [
         AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=training_seed,
                 grayscale=False
             ),
             check_option_complete=check_dooropen,
             door_colour="grey",
             key_collected=True,
-            time_limit=150
+            time_limit=50
         ),
-        make_random_getkey_env("grey", check_dooropen),
-        make_random_getkey_env("grey", check_dooropen),
-        make_random_getkey_env("grey", check_dooropen),
-        make_random_getkey_env("grey", check_dooropen),
+        make_random_opendoor_env("grey", check_dooropen),
+        make_random_opendoor_env("grey", check_dooropen),
+        make_random_opendoor_env("grey", check_dooropen),
     ],
 ]
 
@@ -326,7 +317,9 @@ if __name__ == "__main__":
         return Rainbow(n_actions, **kwargs)
     
     def create_markov_option(states,
+                             infos,
                              termination_state,
+                             termination_info,
                              initiation_votes,
                              termination_votes,
                              false_states,
@@ -355,7 +348,7 @@ if __name__ == "__main__":
         
         env = AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'AdvancedDoorKey-8x8-v0',
                 seed=seed,
                 grayscale=False
             ),
@@ -380,7 +373,7 @@ if __name__ == "__main__":
                              termination_negative_files=termination_negative_files)
     
     # should train a new embedding? probs not
-    experiment.load_embedding(load_dir="resources/encoders/doorkey/encoder.ckpt")
+    experiment.load_embedding(load_dir="resources/encoders/doorkey_8x8/encoder.ckpt")
     
     if not args.skip_train_options:
         experiment.train_options(training_envs=training_envs)
