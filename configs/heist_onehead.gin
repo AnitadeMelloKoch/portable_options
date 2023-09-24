@@ -4,8 +4,8 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 ProcgenExperiment.use_gpu                                           = True
-ProcgenExperiment.experiment_name                                   = "coinrun"
-ProcgenExperiment.env_name                                          = "coinrun"
+ProcgenExperiment.experiment_name                                   = "heist"
+ProcgenExperiment.env_name                                          = "heist"
 ProcgenExperiment.batch_size                                        = 32
 ProcgenExperiment.warmup_steps                                      = 1024
 ProcgenExperiment.prioritized_replay_anneal_steps                   = 50000
@@ -20,7 +20,7 @@ ProcgenExperiment.entropy_coef                                      = 0.01
 ProcgenExperiment.clip_range                                        = 0.2
 ProcgenExperiment.max_grad_norm                                     = 0.5
 ProcgenExperiment.policy_epochs                                     = 10
-ProcgenExperiment.attention_num                                     = 8
+ProcgenExperiment.attention_num                                     = 1
 ProcgenExperiment.learning_rate                                     = 5e-4
 ProcgenExperiment.discount_rate                                     = 0.9
 ProcgenExperiment.c                                                 = 500

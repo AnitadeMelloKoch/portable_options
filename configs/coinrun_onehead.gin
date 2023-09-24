@@ -30,10 +30,10 @@ ProcgenExperiment.num_levels                                        = 20
 ProcgenExperiment.num_envs                                          = 8
 ProcgenExperiment.evaluate_num_levels                               = 5
 ProcgenExperiment.distribution_mode                                 = "easy"
-ProcgenExperiment.max_steps_per_level                               = 1e6
+ProcgenExperiment.max_steps_per_level                               = 5e5
 
 AutoEncoder.num_input_channels                                      = 3
-AutoEncoder.feature_size                                            = 1000
+AutoEncoder.feature_size                                            = 500
 AutoEncoder.image_height                                            = 64
 AutoEncoder.image_width                                             = 64
 
