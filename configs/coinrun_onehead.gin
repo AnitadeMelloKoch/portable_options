@@ -4,7 +4,7 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 ProcgenExperiment.use_gpu                                           = True
-ProcgenExperiment.experiment_name                                   = "coinrun"
+ProcgenExperiment.experiment_name                                   = "coinrun_onehead"
 ProcgenExperiment.env_name                                          = "coinrun"
 ProcgenExperiment.batch_size                                        = 32
 ProcgenExperiment.warmup_steps                                      = 1024

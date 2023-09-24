@@ -250,7 +250,7 @@ class ProcgenExperiment():
         
         self._make_agent(train_env)
         
-        train_level_seeds = random.choices(range(10, 100), k=self.num_levels)
+        train_level_seeds = random.sample(range(10, 100), self.num_levels)
         
         for seed in train_level_seeds:
             train_env = self.make_vector_env(level_index=seed, eval=False)
@@ -263,6 +263,7 @@ class ProcgenExperiment():
                   test_env,
                   seed):
         logging.info("Begin Training on Level with Seed: {}".format(seed))
+        print("Begin Training on Level with Seed: {}".format(seed))
         
         train_obs = train_env.reset()
         train_steps = np.zeros(self.num_envs, dtype=int)
