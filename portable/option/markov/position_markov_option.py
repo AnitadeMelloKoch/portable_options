@@ -251,6 +251,9 @@ class PositionMarkovOption(MarkovOption):
         steps = 0
         total_reward = 0
         position = (info["player_x"], info["player_y"])
+        
+        self.policy.load_buffer(save_file=self.save_file)
+        self.policy.move_to_gpu()
 
         with evaluating(self.policy):
             while steps < self.option_timeout:
@@ -277,28 +280,47 @@ class PositionMarkovOption(MarkovOption):
                         self.log('[assimilation test] Agent died. Option failed.')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(0)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
 
                     if done and not should_terminate:
                         self.log('[assimilation test] Episode ended but we are still executing option. Option failed.')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(0)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info
                     
                     if info['needs_reset']:
                         info['option_timed_out'] = False
                         self.log('[assimilation test] Environment timed out.')
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
                     if should_terminate:
                         self.log('[assimilation test] Option ended successfully. Ending option')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(1)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
             state = next_state
         self.log("[assimilation test] Option timed out")
         info["option_timed_out"] = True
         self.assimilation_performance.append(0)
-
+        
+        self.policy.store_buffer(save_file=self.save_file)
+        self.policy.move_to_cpu()
+        
         return next_state, total_reward, done, info, steps
 
     def _option_success(self, success_data: dict):

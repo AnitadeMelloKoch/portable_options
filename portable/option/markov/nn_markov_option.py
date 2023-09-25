@@ -210,7 +210,7 @@ class NNMarkovOption(MarkovOption):
         steps = 0
         rewards = []
         
-        self.policy.load_buffer()
+        self.policy.load_buffer(save_file=self.save_file)
         self.policy.move_to_gpu()
         
         with evaluating(self.policy):
@@ -245,7 +245,7 @@ class NNMarkovOption(MarkovOption):
             
             self.assimilation_performance.append(0)
             
-            self.policy.store_buffer()
+            self.policy.store_buffer(self.save_file)
             self.policy.move_to_cpu()
             
             return next_state, rewards, done, info, steps
