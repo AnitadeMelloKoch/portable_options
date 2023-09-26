@@ -294,9 +294,9 @@ class ProcgenExperiment():
             if step_cnt%100 == 0:
                 
                 print("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
-                print("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
+                print("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
                 
-                logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
+                logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
                 logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
         
         self.save()

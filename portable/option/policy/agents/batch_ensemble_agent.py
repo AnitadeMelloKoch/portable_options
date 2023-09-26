@@ -1,7 +1,7 @@
 import torch.nn as nn
 import numpy as np 
 from pfrl import replay_buffers
-from pfrl.replay_buffer import batch_experiences
+from pfrl.replay_buffer import batch_experiences, ReplayUpdater
 from pfrl.utils.batch_states import batch_states
 import logging
 import gin
@@ -83,7 +83,7 @@ class BatchedEnsembleAgent(Agent):
         self.upper_confidence_bound = UpperConfidenceBound(num_modules=num_modules,
                                                            c = self.bandit_exploration_weight)
         
-        self.replay_buffer = replay_buffers.ReplayBuffer(capacity=self.buffer_length)
+        
         
         # attention layer
         self.attentions = nn.ModuleList(
@@ -101,7 +101,15 @@ class BatchedEnsembleAgent(Agent):
         
         self.optimizer = torch.optim.Adam(learnable_parameters,
                                           lr=self.learning_rate)
-    
+
+        self.optimizers = [
+            torch.optim.Adam(
+                params=list(self.attentions[idx].parameters())+list(self.heads[idx].model.parameters()),
+                lr=learning_rate
+            ) for idx in range(self.num_modules)
+        ]
+        
+        
     def save(self, save_dir):
         pass
     
@@ -147,14 +155,29 @@ class BatchedEnsembleAgent(Agent):
                       batch_done,
                       batch_reset):
         with self.set_evaluating():
-            embedded_obs = self._attention_embed_obs(batch_obs)
-            losses = []
-            for idx, head in enumerate(self.heads):
-                maybe_loss = head.batch_observe(embedded_obs[idx],
-                                                batch_reward,
-                                                batch_done,
-                                                batch_reset)
-                losses.append(maybe_loss)
+            embedded_obs = self._attention_embed_obs(batch_obs, self.action_leader)
+            
+            loss = self.heads[self.action_leader].batch_observe(embedded_obs,
+                                                                batch_reward,
+                                                                batch_done,
+                                                                batch_reset)
+        
+        if loss is not None:
+            masks = self.get_attention_masks()
+            div_loss = self.divergence_loss_scale*divergence_loss(masks, self.action_leader)
+
+            loss += div_loss
+            
+            self.attentions[self.action_leader].train()
+            self.optimizers[self.action_leader].zero_grad()
+            loss.backward()
+            
+            nn.utils.clip_grad_norm(
+                self.heads[self.action_leader].model.parameters(),
+                self.heads[self.action_leader].max_grad_norm
+            )
+            self.optimizers[self.action_leader].step()
+            self.attentions[self.action_leader].eval()
         
         if self.training:
             self._batch_observe_train(batch_obs,
@@ -167,26 +190,27 @@ class BatchedEnsembleAgent(Agent):
                                      batch_done,
                                      batch_reset)
         
-        if np.sum([loss is not None for loss in losses]) == self.num_modules:
-            head_loss = torch.stack(losses).sum()
+        # if np.sum([loss is not None for loss in losses]) == self.num_modules:
+        #     head_loss = torch.stack(losses).mean()
             
-            masks = self.get_attention_masks()
-            div_loss = 0
-            for idx in range(self.num_modules):
-                div_loss += divergence_loss(masks, idx)
+        #     masks = self.get_attention_masks()
+        #     div_loss = 0
+        #     for idx in range(self.num_modules):
+        #         div_loss += divergence_loss(masks, idx)
             
-            div_loss = self.divergence_loss_scale*div_loss
+        #     div_loss = self.divergence_loss_scale*div_loss
             
-            loss = head_loss + div_loss
+        #     loss = head_loss + div_loss
             
-            self.attentions.train()
-            self.optimizer.zero_grad()
-            loss.backward()
-            for head in self.heads:
-                if hasattr(head, 'max_grad_norm') and head.max_grad_norm is not None:
-                    nn.utils.clip_grad_norm(head.model.parameters(), head.max_grad_norm)
-            self.optimizer.step()
-            self.attentions.eval()
+        #     self.attentions.train()
+        #     self.optimizer.zero_grad()
+        #     loss.backward()
+        #     for head in self.heads:
+        #         if hasattr(head, 'max_grad_norm') and head.max_grad_norm is not None:
+        #             nn.utils.clip_grad_norm(head.model.parameters(), head.max_grad_norm)
+        #     self.optimizer.step()
+        #     self.attentions.eval()
+        
     
     def get_attention_masks(self):
         masks = []
@@ -204,24 +228,14 @@ class BatchedEnsembleAgent(Agent):
             self.upper_confidence_bound.step()
             
             if self.batch_last_obs[i] is not None:
-                # add transition to the replay buffer
-                transition = {
-                    "state": self.batch_last_obs[i],
-                    "action": self.batch_last_action[i],
-                    "reward": batch_reward[i],
-                    "next_state": batch_obs[i],
-                    "next_action": None,
-                    "is_state_terminal": batch_done[i],
-                }
-                self.replay_buffer.append(env_id=i, **transition)
                 if batch_reset[i] or batch_done[i]:
                     self.batch_last_obs[i] = None
                     self.batch_last_action[i] = None
-                    self.replay_buffer.stop_current_episode(env_id=i)
 
         if batch_reset.any() or batch_done.any():
             self.episode_number += np.logical_or(batch_reset, batch_done).sum()
             self._set_action_leader()
+    
     
     def _batch_observe_eval(self,
                             batch_obs,
@@ -234,22 +248,16 @@ class BatchedEnsembleAgent(Agent):
         self.upper_confidence_bound.update_accumulated_rewards(self.action_leader,
                                                                reward)
     
-    def _attention_embed_obs(self, batch_obs):
+    def _attention_embed_obs(self, batch_obs, idx):
         batch_obs = self.embedding_phi(batch_obs, self.use_gpu)
         obs_embeddings = self.embedding.feature_extractor(batch_obs)
-        batch_size, output_size = obs_embeddings.shape
-        attentioned_embeddings = torch.zeros((batch_size, self.num_modules, output_size))
         
-        for idx, attention in enumerate(self.attentions):
-            out = attention(obs_embeddings)
-            attentioned_embeddings[:,idx,...] = out.squeeze(1)
+        attentioned_embedding = self.attentions[idx](obs_embeddings)
         
         if self.use_gpu:
-            return attentioned_embeddings.to("cuda")
+            return attentioned_embedding.to("cuda")
         else:
-            return attentioned_embeddings
-        
-        
+            return attentioned_embedding
     
     def observe(self,
                 obs,
@@ -265,12 +273,8 @@ class BatchedEnsembleAgent(Agent):
     def batch_act(self, batch_obs):
         with self.set_evaluating():
             # learners choose actions
-            embedded_obs = self._attention_embed_obs(batch_obs)
-            batch_actions = [
-                self.heads[i].batch_act(embedded_obs[:,i,:])
-                for i in range(self.num_modules)
-            ]
-            batch_action = batch_actions[self.action_leader]
+            embedded_obs = self._attention_embed_obs(batch_obs, self.action_leader)
+            batch_action = self.heads[self.action_leader].batch_act((embedded_obs))
 
             self.batch_last_obs = list(batch_obs)
             self.batch_last_action = list(batch_action)
