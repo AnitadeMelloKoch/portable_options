@@ -121,25 +121,17 @@ class ProcgenExperiment():
         
         self.agent = None
 
-    def save(self):
+    def save(self, seed):
         self.agent.save(os.path.join(self.save_dir, 'policy'))
-        filename = os.path.join(self.save_dir, 'experiment_data_train.pkl')
+        filename = os.path.join(self.save_dir, 'experiment_data_{}_train.pkl'.format(seed))
         with lzma.open(filename, 'wb') as f:
             dill.dump(self.trial_data_train, f)
-        filename = os.path.join(self.save_dir, 'experiment_data_eval.pkl')
+        filename = os.path.join(self.save_dir, 'experiment_data_{}_eval.pkl'.format(seed))
         with lzma.open(filename, 'wb') as f:
             dill.dump(self.trial_data_eval, f)
     
     def load(self):
         self.agent.load(os.path.join(self.save_dir, 'policy'))
-        filename = os.path.join(self.save_dir, 'experiment_data_train.pkl')
-        if os.path.exists(filename):
-            with lzma.open(filename, 'rb') as f:
-                self.trial_data_train = dill.load(f)
-        filename = os.path.join(self.save_dir, 'experiment_data_eval.pkl')
-        if os.path.exists(filename):
-            with lzma.open(filename, 'rb') as f:
-                self.trial_data_eval = dill.load(f)
     
     def _make_agent(self, env):
         self.agent = BatchedEnsembleAgent(embedding=self.embedding,
@@ -301,7 +293,9 @@ class ProcgenExperiment():
                 logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_train))
                 logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_test))
         
-        self.save()
+        self.save(seed)
+        self.trial_data_train = []
+        self.trial_data_eval = []
     
     def safe_mean(xs):
         return np.nan if len(xs) == 0 else np.mean(xs)
