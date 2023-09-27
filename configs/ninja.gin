@@ -4,12 +4,12 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 ProcgenExperiment.use_gpu                                           = True
-ProcgenExperiment.experiment_name                                   = "ninja"
+ProcgenExperiment.experiment_name                                   = "ninja_3head"
 ProcgenExperiment.env_name                                          = "ninja"
 ProcgenExperiment.batch_size                                        = 32
 ProcgenExperiment.warmup_steps                                      = 1024
 ProcgenExperiment.prioritized_replay_anneal_steps                   = 50000
-ProcgenExperiment.buffer_length                                     = 100000
+ProcgenExperiment.buffer_length                                     = 20000
 ProcgenExperiment.update_interval                                   = 4
 ProcgenExperiment.q_target_update_interval                          = 10
 ProcgenExperiment.final_epsilon                                     = 0.01

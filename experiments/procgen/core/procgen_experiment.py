@@ -271,11 +271,13 @@ class ProcgenExperiment():
         test_obs = test_env.reset()
         test_steps = np.zeros(self.num_envs)
         
+        max_steps = self.max_steps_per_level//self.num_envs
+        
         step_cnt = 0
         cumulative_reward_train = 0
         cumulative_reward_test = 0
         
-        while step_cnt < self.max_steps_per_level:
+        while step_cnt < max_steps:
             train_obs, train_steps, train_epinfo = self.step(train_env,
                                                              train_obs,
                                                              train_steps)
@@ -293,11 +295,11 @@ class ProcgenExperiment():
             
             if step_cnt%100 == 0:
                 
-                print("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
-                print("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
+                print("[Train] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_train))
+                print("[Eval] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_test))
                 
-                logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_train))
-                logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt, cumulative_reward_test))
+                logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_train))
+                logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_test))
         
         self.save()
     
@@ -321,6 +323,8 @@ class ProcgenExperiment():
         for idx, info in enumerate(infos):
             info["reward"] = reward[idx]
             info["steps"] = steps[idx]
+            info["done"] = done[idx]
+            info["reset"] = reset[idx]
             
             epinfo.append(info)
         
