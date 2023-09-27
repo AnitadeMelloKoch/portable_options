@@ -54,6 +54,8 @@ class PositionMarkovOption(MarkovOption):
         self.assimilation_performance = deque(maxlen=assimilation_min_required_interactions)
         self.assimilation_min_interactions = assimilation_min_required_interactions
         self.assimilation_success_rate_required = assimilation_success_rate_required
+        
+        self.policy.store_buffer(save_file=self.save_file)
 
     @staticmethod
     def _get_save_paths(path):

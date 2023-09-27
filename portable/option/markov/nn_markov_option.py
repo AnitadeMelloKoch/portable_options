@@ -171,6 +171,7 @@ class NNMarkovOption(MarkovOption):
                         self.policy.store_buffer(save_file=self.save_file)
                         self.policy.move_to_cpu()
                         info["option_timed_out"] = False
+                        self.log('[markov option] episode ended. option didnt')
                         return next_state, rewards, done, info, steps
                 
                 state = next_state

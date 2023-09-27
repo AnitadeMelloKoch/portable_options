@@ -13,7 +13,7 @@ MonteExperiment.use_gpu                                             = True
 MonteExperiment.max_episodes_in_trial                               = 100
 MonteExperiment.use_agent_state                                     = False
 MonteExperiment.max_option_tries                                    = 5
-MonteExperiment.train_options                                       = True
+MonteExperiment.train_options                                       = False
 
 AttentionOption.initiation_vote_threshold                           = 0.4
 AttentionOption.termination_vote_threshold                          = 0.4
