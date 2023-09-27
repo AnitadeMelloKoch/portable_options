@@ -121,12 +121,12 @@ class ProcgenExperiment():
         
         self.agent = None
 
-    def save(self, seed):
+    def save(self, seed, idx):
         self.agent.save(os.path.join(self.save_dir, 'policy'))
-        filename = os.path.join(self.save_dir, 'experiment_data_{}_train.pkl'.format(seed))
+        filename = os.path.join(self.save_dir, 'experiment_data_{}_seed{}_train.pkl'.format(idx,seed))
         with lzma.open(filename, 'wb') as f:
             dill.dump(self.trial_data_train, f)
-        filename = os.path.join(self.save_dir, 'experiment_data_{}_eval.pkl'.format(seed))
+        filename = os.path.join(self.save_dir, 'experiment_data_{}_seed{}_eval.pkl'.format(idx,seed))
         with lzma.open(filename, 'wb') as f:
             dill.dump(self.trial_data_eval, f)
     
@@ -244,16 +244,18 @@ class ProcgenExperiment():
         
         train_level_seeds = random.sample(range(10, 100), self.num_levels)
         
-        for seed in train_level_seeds:
+        for idx, seed in enumerate(train_level_seeds):
             train_env = self.make_vector_env(level_index=seed, eval=False)
             self.run_level(train_env,
                            test_env, 
-                           seed)
+                           seed,
+                           idx)
     
     def run_level(self,
                   train_env,
                   test_env,
-                  seed):
+                  seed,
+                  idx):
         logging.info("Begin Training on Level with Seed: {}".format(seed))
         print("Begin Training on Level with Seed: {}".format(seed))
         
@@ -293,7 +295,7 @@ class ProcgenExperiment():
                 logging.info("[Train] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_train))
                 logging.info("[Eval] Step count: {} Ave reward: {}".format(step_cnt*self.num_envs, cumulative_reward_test))
         
-        self.save(seed)
+        self.save(seed, idx)
         self.trial_data_train = []
         self.trial_data_eval = []
     
