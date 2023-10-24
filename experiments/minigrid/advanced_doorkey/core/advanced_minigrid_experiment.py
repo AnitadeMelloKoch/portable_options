@@ -263,11 +263,10 @@ class AdvancedMinigridExperiment():
                                         option_mask)
         
         if action == 0:
-            next_obs, reward, done, info = self.global_option.run(env,
-                                                                  state,
-                                                                  info,
-                                                                  eval=False)
-            return next_obs, reward, done, 0, 0, info, 1
+            action = self.global_option.act(state)
+            next_obs, reward, done, info = env.step(action)
+
+            return next_obs, [reward], done, 0, 0, info, 1
         else:
             option_idx = action - 1
             
