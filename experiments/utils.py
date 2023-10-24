@@ -30,6 +30,10 @@ def get_percent_completed_enemy(start_pos, final_pos, terminations, env):
     if start_pos[2] != final_pos[2]:
         return 0
 
+    info = env.get_current_info({})
+    if info["dead"]:
+        return 0
+
     room = start_pos[2]
     ground_y = start_pos[1]
     ram = env.unwrapped.ale.getRAM()
@@ -81,7 +85,11 @@ def get_percent_completed_enemy(start_pos, final_pos, terminations, env):
 
 def check_termination_correct_enemy(final_pos, terminations, env):
     if terminations[2] != final_pos[2]:
-        return 0
+        return False
+    
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
 
     room = terminations[2]
     ground_y = terminations[1]

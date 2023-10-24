@@ -1,0 +1,44 @@
+import experiments.procgen.core.procgen_experiment
+import portable.option.portable_option
+import portable.option.markov.nn_markov_option
+import portable.option.ensemble.custom_attention
+
+ProcgenExperiment.use_gpu                                           = True
+ProcgenExperiment.experiment_name                                   = "coinrun_3head"
+ProcgenExperiment.env_name                                          = "coinrun"
+ProcgenExperiment.batch_size                                        = 32
+ProcgenExperiment.warmup_steps                                      = 1024
+ProcgenExperiment.prioritized_replay_anneal_steps                   = 50000
+ProcgenExperiment.buffer_length                                     = 20000
+ProcgenExperiment.update_interval                                   = 4
+ProcgenExperiment.q_target_update_interval                          = 10
+ProcgenExperiment.final_epsilon                                     = 0.01
+ProcgenExperiment.final_exploration_frames                          = 1e6
+ProcgenExperiment.ppo_lambda                                        = 0.95
+ProcgenExperiment.value_function_coef                               = 0.5
+ProcgenExperiment.entropy_coef                                      = 0.01
+ProcgenExperiment.clip_range                                        = 0.2
+ProcgenExperiment.max_grad_norm                                     = 0.5
+ProcgenExperiment.policy_epochs                                     = 10
+ProcgenExperiment.attention_num                                     = 3
+ProcgenExperiment.learning_rate                                     = 5e-4
+ProcgenExperiment.discount_rate                                     = 0.9
+ProcgenExperiment.c                                                 = 500
+ProcgenExperiment.gru_hidden_size                                   = 128
+ProcgenExperiment.divergence_loss_scale                             = 0.005
+ProcgenExperiment.num_levels                                        = 20
+ProcgenExperiment.num_envs                                          = 8
+ProcgenExperiment.evaluate_num_levels                               = 5
+ProcgenExperiment.distribution_mode                                 = "easy"
+ProcgenExperiment.max_steps_per_level                               = 1e6
+
+AutoEncoder.num_input_channels                                      = 3
+AutoEncoder.feature_size                                            = 500
+AutoEncoder.image_height                                            = 64
+AutoEncoder.image_width                                             = 64
+
+
+
+
+
+

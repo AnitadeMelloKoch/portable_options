@@ -22,6 +22,7 @@ class EnsembleClassifier():
         num_output_classes=2,
         batch_k=8,
         normalize=False,
+        stack_size=4,
         
         beta_distribution_alpha=30,
         beta_distribution_beta=5):
@@ -31,6 +32,7 @@ class EnsembleClassifier():
         self.device = device
 
         self.embedding = SmallEmbedding(embedding_size=embedding_output_size, 
+                                   stack_size=stack_size,
                                    num_attention_modules=self.num_modules,
                                    batch_k=batch_k,
                                    normalize=normalize).to(self.device)
@@ -117,6 +119,9 @@ class EnsembleClassifier():
             dataset.shuffle()
             for _ in range(num_batches):
                 x, _ = dataset.get_batch(shuffle_batch=False)
+                max_x = torch.max(x)
+                if max_x >1:
+                    x /= 255
                 x = x.to(self.device)
 
                 _, anchors, positive, negative, _ = self.embedding(x, sampling=True)
@@ -162,6 +167,9 @@ class EnsembleClassifier():
             dataset.shuffle()
             for _ in range(num_batches):
                 x, y = dataset.get_batch()
+                max_x = torch.max(x)
+                if max_x >1:
+                    x /= 255
                 x = x.to(self.device)
                 y = y.to(self.device)
 
@@ -200,7 +208,6 @@ class EnsembleClassifier():
         embeddings = self.embedding(x, return_attention_mask=False).detach()
         pred_idx = np.zeros(self.num_modules, dtype=np.int16)
         pred = np.zeros(self.num_modules)
-
         for idx in range(self.num_modules):
             attention_x = embeddings[:, idx, :]
             pred_y = self.classifiers[idx](attention_x).detach().cpu().numpy()[0]
@@ -211,6 +218,20 @@ class EnsembleClassifier():
             return pred_idx, pred, self.confidences.weights(False), self.get_attention(x)
 
         return pred_idx, pred, self.confidences.weights(False)
+
+    def get_single_module(self, x, module):
+        self.set_classifiers_eval()
+        self.embedding.eval()
+        
+        max_x = torch.max(x)
+        if max_x > 1:
+            with torch.no_grad():
+                x/=255
+        x = x.to(self.device)
+        embedding = self.embedding.forward_one_attention(x, module).squeeze()
+
+        return self.classifiers[module](embedding)
+
 
     def update_successes(self, successes):
         self.confidences.update_successes(successes)

@@ -3,7 +3,7 @@ import numpy as np
 
 
 n_modules = None  # number of modules, global variable that needs to be initialized once
-every_tuple = None  # initialized in batched_L_divergence(), so that we don't repeatedly compute it
+every_tuples = {}  # initialized in batched_L_divergence(), so that we don't repeatedly compute it
 def L_divergence(feats):
     """
     feats is of shape (n_modules, n_features)
@@ -22,25 +22,29 @@ def L_divergence(feats):
 
     return loss.mean()
 
-def batched_L_divergence(batch_feats, weights):
+def batched_L_divergence(batch_feats, weights, margin=1):
     """
     batch_feats is of shape (batch_size, n_modules, n_features)
     """
     if batch_feats.shape[1] == 1:
         return 0  # no need to compute the loss if there is only one module
-
+    
     global every_tuple
-    if every_tuple is None:
-        every_tuple = torch.combinations(torch.Tensor(range(batch_feats.shape[1])), 2).long()
-        
-    weights = torch.unsqueeze(weights, 1)
-    weights = torch.unsqueeze(weights, 0)
-    batch_feats = weights*batch_feats
+    if batch_feats.shape[1] not in every_tuples:
+        # I think its this
+        every_tuples[batch_feats.shape[1]] = torch.combinations(torch.Tensor(range(batch_feats.shape[1])), 2).long()
+
+    every_tuple = every_tuples[batch_feats.shape[1]]
+
+    every_tuple_weights = weights[every_tuple]
+    every_tuple_weights = (every_tuple_weights[:,0] * every_tuple_weights[:,1]).unsqueeze(0)
 
     every_tuple_features = batch_feats[:, every_tuple, :]  # (batch_size, num_tuple, 2, dim)
     every_tuple_difference = every_tuple_features.diff(dim=2).squeeze(2)  # (batch_size, num_tuple, dim)
-    loss = torch.clamp(1 - torch.sum(every_tuple_difference.pow(2), dim=-1), min=0)  # (batch_size, num_tuple)
+    loss = torch.clamp(margin - torch.mean(every_tuple_difference.pow(2), dim=-1), min=0)  # (batch_size, num_tuple)
+    loss = every_tuple_weights*loss
     mean_loss = loss.sum(-1).mean()
+    # print(loss)
     return mean_loss
 
 def batched_criterion(feats, feat_class, weights):
@@ -66,11 +70,16 @@ def batched_criterion(feats, feat_class, weights):
 
     return homo_loss, heter_loss, div_loss
 
-def L_metric(feat1, feat2, same_class=True):
-    d = torch.sum((feat1 - feat2).pow(2).view((-1, feat1.size(-1))), 1)
+def L_metric(feat1, feat2, weights, same_class=True):
+    d = torch.sum((feat1 - feat2).pow(2), -1)
     if same_class:
+        d = weights*d
+        d = torch.flatten(d)
         return d.sum()/d.size(0)
     else:
+        d = 1 - d
+        d = weights*d
+        d = torch.flatten(d)
         return torch.clamp(1 - d, min=0).sum() / d.size(0)
 
 
@@ -99,12 +108,8 @@ def criterion(anchors, positives, negatives, weights):
     expanded_weights = torch.unsqueeze(weights, -1)
     expanded_weights = torch.unsqueeze(expanded_weights, 0)
 
-    weighted_anchors = expanded_weights*anchors
-    weighted_positives = expanded_weights*positives
-    weighted_negatives = expanded_weights*negatives
-
-    loss_homo = L_metric(weighted_anchors, weighted_positives)
-    loss_heter = L_metric(weighted_anchors, weighted_negatives, False)
+    loss_homo = L_metric(anchors, positives, weights)
+    loss_heter = L_metric(anchors, negatives, weights, False)
     loss_div = 0
 
     loss_div = batched_L_divergence(anchors, weights) + batched_L_divergence(positives, weights) + batched_L_divergence(negatives, weights) / 3

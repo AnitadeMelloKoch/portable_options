@@ -4,12 +4,14 @@ import math
 import os
 import pickle
 from portable.utils import plot_state
+import random
 
 class SetDataset():
     def __init__(
             self, 
             batchsize=16,
-            max_size=100000
+            max_size=100000,
+            pad_func=lambda x: x,
         ):
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
@@ -20,6 +22,7 @@ class SetDataset():
         self.priority_false_length = 0
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
+        self.pad = pad_func
         self.counter = 0
         self.num_batches = 0
         self.list_max_size = max_size//2
@@ -28,6 +31,16 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
+    @staticmethod
+    def transform(x):
+        if torch.max(x) > 1:
+            return x/255.0
+        else:
+            return x
+
+    def set_transform_function(self, transform):
+        self.transform = transform
+    
     @staticmethod
     def _getfilenames(path):
         true_filename = os.path.join(path, 'true_data.pkl')
@@ -97,8 +110,23 @@ class SetDataset():
         # load data from a file for true data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
+            self.true_data = self.concatenate(self.true_data, data)
+        self.true_length = len(self.true_data)
+        self._set_batch_num()
+        self.shuffle()
+        self.counter = 0
+    
+    def add_some_true_files(self, file_list):
+        # load data from true file and only add a few random samples
+        for file in file_list:
+            data = np.load(file)
+            data = self.pad(data)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            data = random.sample(data, 20)
             self.true_data = self.concatenate(self.true_data, data)
         self.true_length = len(self.true_data)
         self._set_batch_num()
@@ -109,6 +137,7 @@ class SetDataset():
         # load data from a file for false data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
@@ -117,10 +146,26 @@ class SetDataset():
         self.shuffle()
         self.counter = 0
 
+    def add_some_false_files(self, file_list):
+        # load data from true file and only add a few random samples
+        for file in file_list:
+            data = np.load(file)
+            data = self.pad(data)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            data = random.sample(data, 20)
+            self.false_data = self.concatenate(self.false_data, data)
+        self.false_length = len(self.false_data)
+        self._set_batch_num()
+        self.shuffle()
+        self.counter = 0
+    
+    
     def add_priority_false_files(self, file_list):
         # load data from a file for priority false data
         for file in file_list:
             data = np.load(file)
+            data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)
@@ -186,7 +231,9 @@ class SetDataset():
     def get_batch(self, shuffle_batch=True):
 
         if self.true_length == 0 or self.false_length == 0:
-            return self._unibatch()
+            data, labels = self._unibatch()
+            data = self.transform(data)
+            return data, labels
 
         if self.priority_false_length > 0:
             normal_false = self._get_minibatch(
@@ -229,6 +276,8 @@ class SetDataset():
             data = data[shuffle_idxs]
             labels = labels[shuffle_idxs]
 
+        data = self.transform(data)
+        
         return data, labels
 
     def true_index(self):
@@ -247,14 +296,16 @@ class SetDataset():
             data =  self._get_minibatch(
                 self.false_index(False), 
                 self.false_data, 
-                self.batchsize
+                self.batchsize,
+                self.shuffled_indices_false
                 ) 
             labels = torch.from_numpy(np.array([0]*len(data)))
         else:
             data = self._get_minibatch(
                 self.true_index(), 
                 self.true_data, 
-                self.batchsize
+                self.batchsize,
+                self.shuffled_indices_true
                 )
             labels = torch.from_numpy(np.array([1]*len(data)))
         

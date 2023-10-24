@@ -66,20 +66,20 @@ class MontezumaRevengeReplayBuffer():
 
         filename = self._generate_filename(checkpoint_dir, 'player_x')
         if os.path.exists(filename):
-            logging.info('Loading player_x data')
+            logger.info('Loading player_x data')
             self.memory['player_x'] = np.load(filename, allow_pickle=False)
 
         filename = self._generate_filename(checkpoint_dir, 'player_y')
         if os.path.exists(filename):
-            logging.info('Loading player_y data')
+            logger.info('Loading player_y data')
             self.memory['player_y'] = np.load(filename, allow_pickle=False)
 
         filename = self._generate_filename(checkpoint_dir, 'room_number')
         if os.path.exists(filename):
-            logging.info('Loading room_number data')
+            logger.info('Loading room_number data')
             self.memory['room_number'] = np.load(filename, allow_pickle=False)
 
         filename = self._generate_filename(checkpoint_dir, 'observation')
         if os.path.exists(filename):
-            logging.info('Loading observation data')
+            logger.info('Loading observation data')
             self.memory['observation'] = np.load(filename, allow_pickle=False)

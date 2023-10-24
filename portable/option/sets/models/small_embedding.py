@@ -4,6 +4,22 @@ import torch.nn.functional as F
 
 from portable.option.ensemble import DistanceWeightedSampling
 
+class AttentionModule(nn.Module):
+    def __init__(self, in_channels, attention_depth) -> None:
+        super().__init__()
+        self.cnn1 = nn.Conv2d(in_channels=in_channels,
+                              out_channels=attention_depth,
+                              kernel_size=(4,4),
+                              bias=False,
+                              padding='same')
+        # torch.nn.init.normal_(self.cnn1.weight)
+        
+        
+    def forward(self, x):
+        x = self.cnn1(x)
+        # x = self.cnn2(x)
+        
+        return x
 class SmallEmbedding(nn.Module):
 
     def __init__(self, stack_size=4, embedding_size=64, attention_depth=32, num_attention_modules=8, batch_k=4, normalize=False):
@@ -11,28 +27,57 @@ class SmallEmbedding(nn.Module):
         self.num_attention_modules = num_attention_modules
         self.out_dim = embedding_size
         self.attention_depth = attention_depth
+        self.stack_size = stack_size
+        
+        self.attention_depth = stack_size
         
         self.sampled = DistanceWeightedSampling(batch_k=batch_k, normalize=normalize)
 
-        self.conv1 = nn.Conv2d(in_channels=stack_size, out_channels=self.attention_depth, kernel_size=3, stride=1)
-        self.pool1 = nn.MaxPool2d(2)
+        # self.spacial_feature_extractor_layers = self.build_spacial_layers()
 
-        self.attention_modules = nn.ModuleList([nn.Conv2d(in_channels=self.attention_depth, out_channels=self.attention_depth, kernel_size=1, bias=False) for i in range(self.num_attention_modules)])
+        self.attention_modules = nn.ModuleList([
+            AttentionModule(self.stack_size, self.attention_depth)
+            for i in range(self.num_attention_modules)])
 
-        self.conv2 = nn.Conv2d(in_channels=self.attention_depth, out_channels=64, kernel_size=3, stride=2)
-        self.pool2 = nn.MaxPool2d(2)
+        # self.global_feature_extractor_layers = self.build_global_layers()
 
-        self.linear = nn.Linear(1536, self.out_dim)
+        self.linear = nn.LazyLinear(self.out_dim)
+
+    def build_spacial_layers(self):
+        layers = []
+        
+        layers.append(nn.Conv2d(in_channels=self.stack_size, 
+                                out_channels=self.attention_depth, 
+                                kernel_size=(3,3), 
+                                stride=(1,1),
+                                padding='same'))
+        layers.append(nn.ReLU())
+        layers.append(nn.MaxPool2d(2))
+        
+        return nn.ModuleList(layers)
+
+    def build_global_layers(self):
+        layers = []
+        
+        layers.append(nn.Conv2d(in_channels=self.attention_depth, 
+                                out_channels=128, 
+                                kernel_size=(3,3), 
+                                stride=(1,1), 
+                                padding="same"))
+        layers.append(nn.ReLU())
+        layers.append(nn.MaxPool2d(2))
+        
+        return nn.ModuleList(layers)
 
     def spatial_feature_extractor(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.pool1(x)
+        for layer in self.spacial_feature_extractor_layers:
+            x = layer(x)
 
         return x
 
     def global_feature_extractor(self, x):
-        x = F.relu(self.conv2(x))
-        x = self.pool2(x)
+        # for layer in self.global_feature_extractor_layers:
+        #     x = layer(x)
 
         x = torch.flatten(x, 1)
         x = self.linear(x)
@@ -41,8 +86,9 @@ class SmallEmbedding(nn.Module):
         return x
 
     def forward(self, x, sampling=False, return_attention_mask=False):
-        spacial_features = self.spatial_feature_extractor(x)
-        attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attentions = [self.attention_modules[i](spacial_features) for i in range(self.num_attention_modules)]
+        attentions = [self.attention_modules[i](x) for i in range(self.num_attention_modules)]
 
         for i in range(self.num_attention_modules):
             N, D, H, W = attentions[i].size()
@@ -51,10 +97,31 @@ class SmallEmbedding(nn.Module):
             attention_min, _ = attention.min(dim=1, keepdim=True)
             attentions[i] = ((attention - attention_min)/(attention_max-attention_min+1e-8)).view(N, D, H, W)
 
-        embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        # embedding = torch.cat([self.global_feature_extractor(attentions[i]*spacial_features).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
+        embedding = torch.cat([self.global_feature_extractor(attentions[i]*x).unsqueeze(1) for i in range(self.num_attention_modules)], 1)
 
         if sampling is True:
             embedding = torch.flatten(embedding, 1)
             return self.sampled(embedding) if not return_attention_mask else (self.sampled(embedding), attentions)
         else:
             return embedding if not return_attention_mask else (embedding, attentions)
+        
+    def forward_one_attention(self, x, attention_idx):
+        # spacial_features = self.spatial_feature_extractor(x)
+        # attention = self.attention_modules[attention_idx](spacial_features)
+
+        attention = self.attention_modules[attention_idx](x)
+        
+        N, D, H, W = attention.size()
+        attention = attention.view(-1, H*W)
+        attention_max, _ = attention.max(dim=1, keepdim=True)
+        attention_min, _ = attention.min(dim=1, keepdim=True)
+        attention = ((attention-attention_min)/(attention_max-attention_min+1e-8)).view(N,D,H,W)
+
+        # embedding = torch.cat([self.global_feature_extractor(attention*spacial_features).unsqueeze(1)])
+        embedding = torch.cat([self.global_feature_extractor(attention*x).unsqueeze(1)])
+
+        return embedding
+    
+    def compute_l1_loss(self, w):
+        return torch.abs(w).sum()

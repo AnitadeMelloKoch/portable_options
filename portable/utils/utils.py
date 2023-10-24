@@ -13,6 +13,8 @@ import gin
 import dill
 import matplotlib.pyplot as plt
 import numpy as np
+import random
+import torch
 
 
 def create_log_dir(dir_path, remove_existing=True, log_git=True):
@@ -90,7 +92,7 @@ def load_hyperparams(filepath):
                 params[name] = locate(dtype)(value)
     return params
 
-def plot_state(state, plot_name):
+def plot_state(state, plot_name="", return_fig=False):
     fig = plt.figure(num=1, clear=True)
     gs = fig.add_gridspec(nrows=1, ncols=4)
 
@@ -99,6 +101,9 @@ def plot_state(state, plot_name):
         ax.imshow(state[x], cmap='gray')
         ax.axis('off')
 
+    if return_fig:
+        return fig, ax
+    
     fig.savefig(plot_name, bbox_inches='tight')
     plt.close('all')
 
@@ -127,7 +132,7 @@ def update_param(params, name, value):
         raise KeyError(
             "Parameter '{}' specified, but not found in hyperparams file.".format(name))
     else:
-        logging.info("Updating parameter '{}' to {}".format(name, value))
+        logger.info("Updating parameter '{}' to {}".format(name, value))
     if type(params[name]) == bool:
         params[name] = bool(strtobool(value))
     else:
@@ -206,3 +211,10 @@ class BaseTrial:
             update_param(params, arg_name, arg_value)
         return params
 
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    
+    

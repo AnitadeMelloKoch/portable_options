@@ -30,15 +30,15 @@ class PositionClassifier:
 
     def save(self, path):
         if self.classifier is not None:
-            with open(os.path.join(path, 'classifier.pkl')) as f:
+            with open(os.path.join(path, 'classifier.pkl'), "wb") as f:
                 pickle.dump(self.classifier, f)
         
         if len(self.positive_examples) > 0:
-            with open(os.path.join(path, 'positive_examples.pkl')) as f:
+            with open(os.path.join(path, 'positive_examples.pkl'), "wb") as f:
                 pickle.dump(self.positive_examples, f)
         
         if len(self.negative_examples) > 0:
-            with open(os.path.join(path, 'negative_examples.pkl')) as f:
+            with open(os.path.join(path, 'negative_examples.pkl'), "wb") as f:
                 pickle.dump(self.negative_examples)
 
         np.save(os.path.join(path, 'epsilon.npy'), self.epsilon)

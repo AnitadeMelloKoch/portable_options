@@ -16,6 +16,7 @@ class ValueEnsemble():
 
     def __init__(self, 
         device,
+        stack_size=4,
         embedding_output_size=64, 
         gru_hidden_size=128,
         learning_rate=2.5e-4,
@@ -33,6 +34,7 @@ class ValueEnsemble():
         self.verbose = verbose
 
         self.embedding = Attention(
+            stack_size=stack_size,
             embedding_size=embedding_output_size, 
             num_attention_modules=self.num_modules
         ).to(self.device)
@@ -169,7 +171,7 @@ class ValueEnsemble():
 
             actions = np.zeros(self.num_modules, dtype=np.int)
             q_values = np.zeros(self.num_modules, dtype=np.float)
-            all_q_values = np.zeros((self.num_modules, 18), dtype=np.float)
+            all_q_values = np.zeros((self.num_modules, self.num_output_classes), dtype=np.float)
             for idx in range(self.num_modules):
                 attention = embeddings[:,idx,:]
                 q_vals = self.q_networks[idx](attention)
@@ -182,6 +184,18 @@ class ValueEnsemble():
         if return_q_values:
             return selected_action, actions, q_values, all_q_values
         return selected_action
+
+    def get_single_module(self, state, module):
+        self.embedding.eval()
+        self.q_networks.eval()
+        
+        embedding = self.embedding.forward_one_attention(state, module).squeeze()
+        embedding, _ = self.recurrent_memory(embedding)
+        
+        qvals = self.q_networks[module](embedding)
+        
+        return qvals
+            
 
     def get_attention(self, x):
         self.embedding.eval()

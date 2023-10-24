@@ -1,0 +1,75 @@
+import experiments.minigrid.advanced_doorkey.core.advanced_minigrid_experiment
+import portable.option.portable_option
+import portable.option.markov.nn_markov_option
+import portable.option.ensemble.custom_attention
+import portable.agent.option_agent
+
+AdvancedMinigridExperiment.experiment_name                          = "doorkey"
+AdvancedMinigridExperiment.num_options                              = 12
+AdvancedMinigridExperiment.initiation_epochs                        = 100
+AdvancedMinigridExperiment.termination_epochs                       = 100
+AdvancedMinigridExperiment.policy_lr                                = 1e-4
+AdvancedMinigridExperiment.policy_max_steps                         = 2e6
+AdvancedMinigridExperiment.policy_success_threshold                 = 0.9
+AdvancedMinigridExperiment.use_gpu                                  = True
+
+OptionAgent.num_actions                                             = 13
+OptionAgent.batch_size                                              = 32
+OptionAgent.warmup_steps                                            = 1024
+OptionAgent.buffer_length                                           = 500000
+OptionAgent.update_interval                                         = 4
+OptionAgent.q_target_update_interval                                = 10
+OptionAgent.learning_rate                                           = 2.5e-4
+OptionAgent.final_epsilon                                           = 0.05
+OptionAgent.final_exploration_frames                                = 1e6
+OptionAgent.discount_rate                                           = 0.9
+OptionAgent.prioritized_replay_anneal_steps                         = 500000
+
+AttentionOption.initiation_vote_threshold                           = 0.4
+AttentionOption.termination_vote_threshold                          = 0.4
+AttentionOption.prioritized_replay_anneal_steps                     = 50000
+AttentionOption.policy_warmup_steps                                 = 1024
+AttentionOption.policy_batchsize                                    = 32
+AttentionOption.policy_buffer_length                                = 50000
+AttentionOption.policy_update_interval                              = 4
+AttentionOption.q_target_update_interval                            = 10
+AttentionOption.policy_learning_rate                                = 2.5e-4
+AttentionOption.final_epsilon                                       = 0.01
+AttentionOption.final_exploration_frames                            = 1e6
+AttentionOption.discount_rate                                       = 0.9
+AttentionOption.policy_attention_module_num                         = 8
+AttentionOption.num_actions                                         = 7
+AttentionOption.policy_c                                            = 100
+AttentionOption.initiation_beta_distribution_alpha                  = 100
+AttentionOption.initiation_beta_distribution_beta                   = 10
+AttentionOption.initiation_attention_module_num                     = 8
+AttentionOption.initiation_lr                                       = 1e-4
+AttentionOption.initiation_dataset_maxsize                          = 100000
+AttentionOption.termination_beta_distribution_alpha                 = 100
+AttentionOption.termination_beta_distribution_beta                  = 10
+AttentionOption.termination_attention_module_num                    = 8
+AttentionOption.termination_lr                                      = 1e-4
+AttentionOption.termination_dataset_maxsize                         = 100000
+AttentionOption.min_interactions                                    = 100
+AttentionOption.min_success_rate                                    = 0.7
+AttentionOption.timeout                                             = 50
+AttentionOption.min_option_length                                   = 1
+AttentionOption.max_instantiations                                  = 10
+AttentionOption.option_handling_method                              = "continue-with-multi-instantiations"
+
+NNMarkovOption.classifier_type                                      = "cnn"
+NNMarkovOption.image_height                                         = 64
+NNMarkovOption.image_width                                          = 64
+NNMarkovOption.num_channels                                         = 3
+NNMarkovOption.classifier_train_epochs                              = 300
+NNMarkovOption.max_option_steps                                     = 50
+NNMarkovOption.min_required_interactions                            = 100
+NNMarkovOption.success_rate_required                                = 0.8
+NNMarkovOption.assimilation_min_required_interactions               = 100
+NNMarkovOption.assimilation_success_rate_required                   = 0.8
+NNMarkovOption.lr                                                   = 1e-3
+
+AutoEncoder.num_input_channels                                      = 3
+AutoEncoder.feature_size                                            = 500
+AutoEncoder.image_height                                            = 64
+AutoEncoder.image_width                                             = 64

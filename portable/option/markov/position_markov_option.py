@@ -26,11 +26,13 @@ class PositionMarkovOption(MarkovOption):
         success_rate_required,
         assimilation_min_required_interactions,
         assimilation_success_rate_required,
+        save_file,
         epsilon=2, 
         use_log=True):
         
         super().__init__(use_log)
 
+        self.save_file = save_file
         self.initiation = PositionClassifier()
         self.initiation.add_positive_examples(images, positions)
         self.initiation.fit_classifier()
@@ -47,12 +49,13 @@ class PositionMarkovOption(MarkovOption):
         self.option_timeout = max_option_steps
 
         self.performance = deque(maxlen=min_required_interactions)
-        self.interactions = 0
         self.min_interactions = min_required_interactions
         self.success_rate_required = success_rate_required
         self.assimilation_performance = deque(maxlen=assimilation_min_required_interactions)
         self.assimilation_min_interactions = assimilation_min_required_interactions
         self.assimilation_success_rate_required = assimilation_success_rate_required
+        
+        self.policy.store_buffer(save_file=self.save_file)
 
     @staticmethod
     def _get_save_paths(path):
@@ -72,10 +75,10 @@ class PositionMarkovOption(MarkovOption):
         self.policy.save(policy_path)
         self.initiation.save(initiation_path)
 
-        with open(os.path.join(termination_path, 'terminations.pkl')) as f:
+        with open(os.path.join(termination_path, 'terminations.pkl'), "wb") as f:
             pickle.dump(self.termination, f)
         
-        np.save(self.epsilon, os.path.join(termination_path, 'epsilon.npy'))
+        np.save(os.path.join(termination_path, 'epsilon.npy'), self.epsilon)
 
     def load(self, path: str):
         policy_path, initiation_path, termination_path = self._get_save_paths(path)
@@ -91,9 +94,11 @@ class PositionMarkovOption(MarkovOption):
             self.epsilon = np.load(os.path.join(termination_path, 'epsilon.npy'))
 
     def can_initiate(self, 
-                     agent_space_state):
+                     state,
+                     info):
         # Input should be agent's ram position
-        return self.initiation.predict(agent_space_state)
+        position = [info["position"][0], info["position"][1]]
+        return self.initiation.predict(position)
 
     def can_terminate(self, 
                       agent_space_state):
@@ -124,6 +129,9 @@ class PositionMarkovOption(MarkovOption):
         agent_state = info["stacked_agent_state"]
         positions = []
         position = (info["player_x"], info["player_y"])
+        
+        self.policy.load_buffer(save_file=self.save_file)
+        self.policy.move_to_gpu()
 
         # if we are evaluating then set policy to eval mode else ignore
         with evaluating(self.policy) if evaluate else nullcontext():
@@ -163,6 +171,8 @@ class PositionMarkovOption(MarkovOption):
                                 "positions": positions,
                                 "agent_space_states":agent_space_states
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     if done and not should_terminate:
                         self.log('[Markov option] Episode ended and we are still executing option. Option failed')
@@ -174,12 +184,16 @@ class PositionMarkovOption(MarkovOption):
                                 "positions": positions,
                                 "agent_space_states":agent_space_states
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     # environment needs reset
                     if info['needs_reset']:
                         info['option_timed_out'] = False
                         # option did not fail or succeed. Trajectory won't be used to update option
                         self.log('[Markov option] Environment timed out.')
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                     # option ended 'successfully'
                     if should_terminate:
@@ -193,6 +207,8 @@ class PositionMarkovOption(MarkovOption):
                                 "termination": position,
                                 "agent_space_termination": agent_state
                             })
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
                         return next_state, total_reward, done, info, steps
                 state = next_state
 
@@ -201,13 +217,17 @@ class PositionMarkovOption(MarkovOption):
 
         positions.append(position)
         agent_space_states.append(agent_state)
-
+        
+        
         if evaluate:
             self._option_fail({
                 "positions": positions,
                 "agent_space_states":agent_space_states
             })
 
+        self.policy.store_buffer(save_file=self.save_file)
+        self.policy.move_to_cpu()
+        
         return next_state, total_reward, done, info, steps
 
     def can_assimilate(self):
@@ -233,6 +253,9 @@ class PositionMarkovOption(MarkovOption):
         steps = 0
         total_reward = 0
         position = (info["player_x"], info["player_y"])
+        
+        self.policy.load_buffer(save_file=self.save_file)
+        self.policy.move_to_gpu()
 
         with evaluating(self.policy):
             while steps < self.option_timeout:
@@ -259,28 +282,47 @@ class PositionMarkovOption(MarkovOption):
                         self.log('[assimilation test] Agent died. Option failed.')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(0)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
 
                     if done and not should_terminate:
                         self.log('[assimilation test] Episode ended but we are still executing option. Option failed.')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(0)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info
                     
                     if info['needs_reset']:
                         info['option_timed_out'] = False
                         self.log('[assimilation test] Environment timed out.')
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
                     if should_terminate:
                         self.log('[assimilation test] Option ended successfully. Ending option')
                         info['option_timed_out'] = False
                         self.assimilation_performance.append(1)
+                        
+                        self.policy.store_buffer(save_file=self.save_file)
+                        self.policy.move_to_cpu()
+                        
                         return next_state, total_reward, done, info, steps
             state = next_state
         self.log("[assimilation test] Option timed out")
         info["option_timed_out"] = True
         self.assimilation_performance.append(0)
-
+        
+        self.policy.store_buffer(save_file=self.save_file)
+        self.policy.move_to_cpu()
+        
         return next_state, total_reward, done, info, steps
 
     def _option_success(self, success_data: dict):
