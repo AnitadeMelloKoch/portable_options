@@ -68,6 +68,8 @@ class AttentionOption():
                  min_success_rate,
                  timeout,
                  min_option_length,
+                 use_oracle_for_term=False,
+                 termination_oracle=None,
                  original_initiation_function=None,
                  dataset_transform_function=None,
                  option_name=None):
@@ -111,18 +113,24 @@ class AttentionOption():
                                        summary_writer=summary_writer,
                                        padding_func=dataset_transform_function)
         self.initiation.move_to_gpu()
-        self.termination = AttentionSet(use_gpu=use_gpu,
-                                        embedding=embedding,
-                                        log_dir=log_dir,
-                                        vote_threshold=termination_vote_threshold,
-                                        beta_distribution_alpha=termination_beta_distribution_alpha,
-                                        beta_distribution_beta=termination_beta_distribution_beta,
-                                        learning_rate=termination_lr,
-                                        dataset_max_size=termination_dataset_maxsize,
-                                        attention_module_num=termination_attention_module_num,
-                                        model_name="termination",
-                                        summary_writer=summary_writer,
-                                        padding_func=dataset_transform_function)
+        if use_oracle_for_term:
+            assert termination_oracle is not None
+            self.termination = termination_oracle
+            self.use_oracle_for_term = True
+        else:
+            self.use_oracle_for_term = False
+            self.termination = AttentionSet(use_gpu=use_gpu,
+                                            embedding=embedding,
+                                            log_dir=log_dir,
+                                            vote_threshold=termination_vote_threshold,
+                                            beta_distribution_alpha=termination_beta_distribution_alpha,
+                                            beta_distribution_beta=termination_beta_distribution_beta,
+                                            learning_rate=termination_lr,
+                                            dataset_max_size=termination_dataset_maxsize,
+                                            attention_module_num=termination_attention_module_num,
+                                            model_name="termination",
+                                            summary_writer=summary_writer,
+                                            padding_func=dataset_transform_function)
         
         # build markov option
         self.markov_option_builder = markov_option_builder
@@ -163,7 +171,8 @@ class AttentionOption():
         
         self.policy.save(policy_path)
         self.initiation.save(initiation_path)
-        self.termination.save(termination_path)
+        if not self.use_oracle_for_term:
+            self.termination.save(termination_path)
 
         for idx, instance in enumerate(self.markov_instantiations):
             save_path = os.path.join(markov_path, str(idx))
@@ -179,7 +188,8 @@ class AttentionOption():
             self.policy.load(policy_path)
             
         self.initiation.load(initiation_path)
-        self.termination.load(termination_path)
+        if not self.use_oracle_for_term:
+            self.termination.load(termination_path)
 
         for idx, instance in self.markov_instantiations:
             save_path = os.path.join(markov_path, str(idx))
@@ -209,6 +219,10 @@ class AttentionOption():
         os.makedirs(path, exist_ok=True)
         file = os.path.join(path, 'memory_buffer.pkl')
         
+        termination_votes = []
+        if not self.use_oracle_for_term:
+            termination_votes = self.termination.votes
+        
         self.markov_instantiations.append(
             self.markov_option_builder(
                 states=states,
@@ -218,7 +232,7 @@ class AttentionOption():
                 termination_info=termination_info,
                 initial_policy=self.policy,
                 initiation_votes=self.initiation.votes,
-                termination_votes=self.termination.votes,
+                termination_votes=termination_votes,
                 use_gpu=self.use_gpu,
                 save_file=file
             )
@@ -274,6 +288,13 @@ class AttentionOption():
             raise Exception("Option handling method not recognized")
         
     
+    def can_terminate(self, env, next_state):
+        if self.use_oracle_for_term:
+            should_terminate = self.termination(env)
+        else:
+            should_terminate, _, votes, conf = self.termination.vote(next_state)
+        return should_terminate
+    
     def _continue_multi_inst_run(self,
                                  env,
                                  state,
@@ -295,7 +316,8 @@ class AttentionOption():
             
             self.policy.load_buffer(self.policy_buffer_save_file)
             self.policy.move_to_gpu()
-            self.termination.move_to_gpu()
+            if not self.use_oracle_for_term:
+                self.termination.move_to_gpu()
             
             with evaluating(self.policy):
                 while steps < self.option_timeout and options_created < self.max_instantiations:
@@ -307,7 +329,7 @@ class AttentionOption():
                     action = self.policy.act(state)
                     
                     next_state, reward, done, info = env.step(action)
-                    should_terminate, _, votes, conf = self.termination.vote(next_state)
+                    should_terminate = self.can_terminate(env, next_state)
                     steps += 1
                     rewards.append(reward)
                     
@@ -418,7 +440,8 @@ class AttentionOption():
         self.initiation.update_confidence(was_successful, votes)
     
     def termination_update_confidence(self, was_successful, votes):
-        self.termination.update_confidence(was_successful, votes)
+        if not self.use_oracle_for_term:
+            self.termination.update_confidence(was_successful, votes)
 
     def _option_success(self,
                         states,
@@ -446,7 +469,8 @@ class AttentionOption():
         logger.info("[update portable option] Updating option with given instance")
         # Update confidences because we now know this was a success
         self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
-        self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
+        if not self.use_oracle_for_term:
+            self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
         # replace replay buffer? maybe should do a random merge or something?
         ########################################
         #       TODO
@@ -456,7 +480,8 @@ class AttentionOption():
         
         self.policy = markov_option.policy
         self.initiation.train(set_epochs)
-        self.termination.train(set_epochs)
+        if not self.use_oracle_for_term:
+            self.termination.train(set_epochs)
         
         self.save()
 

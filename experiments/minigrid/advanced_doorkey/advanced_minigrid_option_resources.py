@@ -299,3 +299,45 @@ def check_dooropen(env):
 
     return door.is_open
 
+def check_reddoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "red")
+
+def check_bluedoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "blue")
+
+def check_greendoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "green")
+
+def check_purpledoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "purple")
+
+def check_yellowdoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "yellow")
+
+def check_greydoor_open(env):
+    door = env.get_door_obj()
+    
+    return door.is_open and (door.color == "grey")
+
+termination_oracles_doorkey = [check_got_redkey,
+                               check_got_bluekey,
+                               check_got_greenkey,
+                               check_got_purplekey,
+                               check_got_yellowkey,
+                               check_got_greykey,
+                               check_reddoor_open,
+                               check_bluedoor_open,
+                               check_greendoor_open,
+                               check_purpledoor_open,
+                               check_yellowdoor_open,
+                               check_greydoor_open]
