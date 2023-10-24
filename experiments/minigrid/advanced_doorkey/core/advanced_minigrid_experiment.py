@@ -268,19 +268,19 @@ class AdvancedMinigridExperiment():
 
             return next_obs, [reward], done, 0, 0, info, 1
         else:
-            option_idx = action - 1
+            action_idx = action - 1
             
             if len(self.buffer) >= 20:
                 false_states = random.sample(list(self.buffer), 20)
             else:
                 false_states = list(self.buffer)
             
-            next_obs, reward, done, info, steps = self.options[option_idx].run(env,
-                                                                                               state,
-                                                                                               info,
-                                                                                               option_idx=option,
-                                                                                               eval=False,
-                                                                                               false_states=false_states)
+            next_obs, reward, done, info, steps = self.options[action_idx].run(env,
+                                                                               state,
+                                                                               info,
+                                                                               option_idx=option_idx,
+                                                                               eval=False,
+                                                                               false_states=false_states)
             return next_obs, reward, done, action, option, info, steps
             
     def run(self,
