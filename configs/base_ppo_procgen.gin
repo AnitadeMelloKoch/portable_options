@@ -1,0 +1,26 @@
+import experiments.procgen.core.base_procgen_experiment
+
+ProcgenBasePPOExperiment.use_gpu                                = True
+ProcgenBasePPOExperiment.experiment_name                        = "base_ppo"
+ProcgenBasePPOExperiment.env_name                               = "coinrun"
+ProcgenBasePPOExperiment.batch_size                             = 32
+ProcgenBasePPOExperiment.prioritized_replay_anneal_steps        = 50000
+ProcgenBasePPOExperiment.warmup_steps                           = 1024
+ProcgenBasePPOExperiment.buffer_length                          = 20000
+ProcgenBasePPOExperiment.update_interval                        = 4
+ProcgenBasePPOExperiment.q_target_update_interval               = 10
+ProcgenBasePPOExperiment.final_epsilon                          = 0.01
+ProcgenBasePPOExperiment.final_exploration_frames               = 1e6
+ProcgenBasePPOExperiment.ppo_lambda                             = 0.95
+ProcgenBasePPOExperiment.value_function_coef                    = 0.5
+ProcgenBasePPOExperiment.entropy_coef                           = 0.01
+ProcgenBasePPOExperiment.clip_range                             = 0.2
+ProcgenBasePPOExperiment.max_grad_norm                          = 0.5
+ProcgenBasePPOExperiment.policy_epochs                          = 10
+ProcgenBasePPOExperiment.learning_rate                          = 5e-4
+ProcgenBasePPOExperiment.discount_rate                          = 0.9
+ProcgenBasePPOExperiment.num_levels                             = 100
+ProcgenBasePPOExperiment.num_envs                               = 8
+ProcgenBasePPOExperiment.evaluate_num_levels                    = 8
+ProcgenBasePPOExperiment.distribution_mode                      = "easy"
+ProcgenBasePPOExperiment.max_steps_per_level                    = 1e4

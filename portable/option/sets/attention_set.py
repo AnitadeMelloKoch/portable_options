@@ -69,10 +69,11 @@ class AttentionSet():
         self.confidences.save(os.path.join(path, 'confidence'))
     
     def load(self, path):
-        print("Classifier loaded from: {}".format(path))
-        self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
-        self.dataset.load(path)
-        self.confidences.load(os.path.join(path, 'confidence'))
+        if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
+            print("Classifier loaded from: {}".format(path))
+            self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
+            self.dataset.load(path)
+            self.confidences.load(os.path.join(path, 'confidence'))
     
     def move_to_gpu(self):
         if self.use_gpu:

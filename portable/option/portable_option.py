@@ -17,12 +17,19 @@ from torch.utils.tensorboard import SummaryWriter
 
 logger = logging.getLogger(__name__)
 
+OPTION_HANDLING_METHODS = [
+    # run portable option. Each time the option wants to terminate, create a new
+    # non-portable option
+    "continue-with-multi-instantiations",       
+]
+
 @gin.configurable
 class AttentionOption():
     def __init__(self,
                  use_gpu,
                  log_dir,
                  save_dir,
+                 option_handling_method,
                  
                  markov_option_builder,
                  initiation_vote_threshold,
@@ -30,6 +37,7 @@ class AttentionOption():
                  policy_phi,
                  prioritized_replay_anneal_steps,
                  embedding,
+                 max_instantiations,
                  
                  policy_warmup_steps,
                  policy_batchsize,
@@ -64,14 +72,13 @@ class AttentionOption():
                  dataset_transform_function=None,
                  option_name=None):
         
-        self._cumulative_discount_vector = np.array(
-            [math.pow(discount_rate, n) for n in range(timeout)]
-        )
+        assert option_handling_method in OPTION_HANDLING_METHODS
         
         summary_writer = SummaryWriter(log_dir=log_dir)
         self.use_gpu = use_gpu
         
         self.name = option_name
+        self.option_handling_method = option_handling_method
         
         self.policy = EnsembleAgent(use_gpu=use_gpu,
                                     warmup_steps=policy_warmup_steps,
@@ -127,6 +134,9 @@ class AttentionOption():
         self.min_success_rate = min_success_rate
         self.original_initiation_function = original_initiation_function
         self.markov_idx = None
+        self.max_instantiations = max_instantiations
+        
+        self.initiation_checked = False
         
         self.log_dir = log_dir
         self.save_dir = save_dir
@@ -224,144 +234,105 @@ class AttentionOption():
         vote_global, _, votes, conf = self.initiation.vote(state)
         # print("[{}] can initiate votes: {}".format(self.name, votes))
         
-        local_vote = False
+        local_vote = []
         for idx in range(len(self.markov_instantiations)):
             prediction = self.markov_instantiations[idx].can_initiate(state,
                                                                       info)
             
             if prediction == True:
-                self.markov_idx = idx
-                local_vote = True
+                local_vote.append(idx)
         
-        return vote_global, local_vote
+        self.markov_idx = local_vote
+        option_mask = [1*len(local_vote)] + [0*(self.max_instantiations-len(local_vote))]
+        
+        self.initiation_checked = True
+        
+        return vote_global, option_mask
     
     def run(self,
             env,
             state,
             info,
+            option_idx,
             eval,
             false_states):
         
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
-        global_vote, markov_vote = self.can_initiate(state, info)
-        # print("[{}] Votes: portable={} non-portable={}".format(self.name, global_vote, markov_vote))
         
-        if global_vote and not markov_vote:
-            return self._portable_run(env,
-                                      state,
-                                      info,
-                                      eval,
-                                      false_states)
-        elif markov_vote:
-            next_state, rewards, done, info, steps = self.markov_instantiations[self.markov_idx].run(env,
-                                                                   state,
-                                                                   info,
-                                                                   eval)
-            rewards = np.array(rewards)
-            termination_vector = self._cumulative_discount_vector[:steps]
-            total_reward = np.sum(termination_vector*rewards)
-            
-            return next_state, total_reward, done, info, steps
+        assert self.initiation_checked is True
+        self.initiation_checked = False
+        
+        if self.option_handling_method == OPTION_HANDLING_METHODS[0]:
+            return self._continue_multi_inst_run(env, 
+                                                 state,
+                                                 info,
+                                                 option_idx,
+                                                 eval,
+                                                 false_states)
         else:
-            return None
+            raise Exception("Option handling method not recognized")
+        
     
-    def _portable_run(self,
-                      env,
-                      state,
-                      info,
-                      eval,
-                      false_states):
-        # run option policy. Takes control from higher-level agent
-        steps = 0
-        rewards = []
-        states = []
-        infos = []
-        
-        logger.info('[option portable run] Starting portable option run')
-        
-        self.policy.load_buffer(self.policy_buffer_save_file)
-        self.policy.move_to_gpu()
-        self.termination.move_to_gpu()
-        
-        with evaluating(self.policy):
-            while steps < self.option_timeout:
-                if type(state) is np.ndarray:
-                    state = torch.from_numpy(state).float()
-                states.append(state)
-                infos.append(info)
-                
-                action = self.policy.act(state)
-                
-                # print("PRIMITIVE ACTION: {}".format(action))
-                
-                next_state, reward, done, info = env.step(action)
-                should_terminate, _, votes, conf = self.termination.vote(next_state)
-                steps += 1
-                rewards.append(reward)
-                
-                # fig = plt.figure(num=1, clear=True)
-                # ax = fig.add_subplot()
-                # ax.imshow(np.transpose(state, axes=[1,2,0]))
-                # plt.show(block=False)
-                # print("[{}] terminate: {}".format(self.name, should_terminate))
-                # print("[{}] termination votes: {}".format(self.name, votes))
-                # print("[{}] done: {}".format(self.name, done))
-                # input("[{}] Option. Continue?".format(self.name))
-                
-                if steps < self.min_option_length:
-                    should_terminate = False
-                
-                # overwrite reward with option reward
-                if should_terminate is True:
-                    reward = 1
-                else:
-                    reward = 0
-                self.policy.observe(state, action, reward, next_state, done or should_terminate)
-                
-                if done or should_terminate:
+    def _continue_multi_inst_run(self,
+                                 env,
+                                 state,
+                                 info,
+                                 option_idx,
+                                 eval,
+                                 false_states):
+        if len(self.markov_idx) != 0:
+            next_state, rewards, done, info, steps = self.markov_instantiations[self.markov_idx[option_idx]].run(env,
+                                                                                                                 state,
+                                                                                                                 info,
+                                                                                                                 eval)
+        else:
+            steps = 0
+            rewards = []
+            states = []
+            infos = []
+            options_created = 0
+            
+            self.policy.load_buffer(self.policy_buffer_save_file)
+            self.policy.move_to_gpu()
+            self.termination.move_to_gpu()
+            
+            with evaluating(self.policy):
+                while steps < self.option_timeout and options_created < self.max_instantiations:
+                    if type(state) is np.ndarray:
+                        state = torch.from_numpy(state).float()
+                    states.append(state)
+                    infos.append(info)
+                    
+                    action = self.policy.act(state)
+                    
+                    next_state, reward, done, info = env.step(action)
+                    should_terminate, _, votes, conf = self.termination.vote(next_state)
+                    steps += 1
+                    rewards.append(reward)
+                    
+                    # because this is in eval mode this doesn't do anything
+                    self.policy.observe(state, action, reward, next_state, done or should_terminate)
+                    
+                    if done:
+                        self.policy.store_buffer(self.policy_buffer_save_file)
+                        self.policy.move_to_cpu()
+                        info["option_timed_out"] = False
+                        return next_state, rewards, done, info, steps
+                    
                     if should_terminate:
-                        # option completed successfully
-                        logger.info('[portable option run] Option chose to end.')
                         if not eval:
                             self._option_success(states,
                                                  infos,
                                                  next_state,
                                                  info,
                                                  false_states)
-                        termination_vector = self._cumulative_discount_vector[:steps]
-                        rewards = np.array(rewards)
-                        total_reward = np.sum(termination_vector*rewards)
-                        self.policy.store_buffer(self.policy_buffer_save_file)
-                        self.policy.move_to_cpu()
-                        info["option_timed_out"] = False
-                        return next_state, total_reward, done, info, steps
-                    else:
-                        # episode ended but option did not
-                        termination_vector = self._cumulative_discount_vector[:steps]
-                        rewards = np.array(rewards)
-                        total_reward = np.sum(termination_vector*rewards)
-                        self.policy.store_buffer(self.policy_buffer_save_file)
-                        self.policy.move_to_cpu()
-                        info["option_timed_out"] = False
-                        return next_state, total_reward, done, info, steps
-                state = next_state
-        # option didn't find a valid termination before time limit
-        states.append(next_state)
-        if not eval:
-            self._option_fail(states)
-        logger.info('[portable option run] Option timed out')
-        termination_vector = self._cumulative_discount_vector[:steps]
-        rewards = np.array(rewards)
-        total_reward = np.sum(termination_vector*rewards)
-        
-        self.policy.store_buffer(self.policy_buffer_save_file)
-        self.policy.move_to_cpu()
-        
-        info["option_timed_out"] = True
-        
-        return next_state, total_reward, done, info, steps
-        
+                        
+                        vote_global, _, votes, conf = self.initiation.vote(state)
+                        if not vote_global:
+                            return next_state, rewards, done, info, steps
+            
+            return next_state, rewards, done, info, steps
     
     def bootstrap_policy(self,
                          bootstrap_envs,

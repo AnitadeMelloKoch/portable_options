@@ -32,10 +32,59 @@ import os
 #     # 'resources/procgen/easy_coinrun.npy',
 # ]
 
-# files = [
-#     'resources/minigrid_images/adv_doorkey_random_states.npy',
-#     # 'resources/minigrid_images/lockedroom_random_states.npy',
-# ]
+files = [
+    # 'resources/minigrid_images/adv_doorkey_8x8_random_states.npy',
+    'resources/procgen/coinrun_0.npy',
+    'resources/procgen/coinrun_1.npy',
+    'resources/procgen/coinrun_2.npy',
+    'resources/procgen/coinrun_3.npy',
+    'resources/procgen/coinrun_4.npy',
+    'resources/procgen/coinrun_5.npy',
+    'resources/procgen/coinrun_6.npy',
+    'resources/procgen/coinrun_7.npy',
+    'resources/procgen/coinrun_8.npy',
+    'resources/procgen/coinrun_9.npy',
+    'resources/procgen/coinrun_10.npy',
+    'resources/procgen/coinrun_11.npy',
+    'resources/procgen/coinrun_12.npy',
+    'resources/procgen/coinrun_13.npy',
+    'resources/procgen/coinrun_14.npy',
+    'resources/procgen/coinrun_15.npy',
+    'resources/procgen/coinrun_16.npy',
+    'resources/procgen/coinrun_17.npy',
+    'resources/procgen/coinrun_18.npy',
+    'resources/procgen/coinrun_19.npy',
+    'resources/procgen/coinrun_20.npy',
+    'resources/procgen/coinrun_21.npy',
+    'resources/procgen/coinrun_22.npy',
+    'resources/procgen/coinrun_23.npy',
+    'resources/procgen/coinrun_24.npy',
+    'resources/procgen/coinrun_25.npy',
+    'resources/procgen/coinrun_26.npy',
+    'resources/procgen/coinrun_27.npy',
+    'resources/procgen/coinrun_29.npy',
+    'resources/procgen/coinrun_28.npy',
+    'resources/procgen/coinrun_30.npy',
+    'resources/procgen/coinrun_31.npy',
+    'resources/procgen/coinrun_32.npy',
+    'resources/procgen/coinrun_33.npy',
+    'resources/procgen/coinrun_34.npy',
+    'resources/procgen/coinrun_35.npy',
+    'resources/procgen/coinrun_36.npy',
+    'resources/procgen/coinrun_37.npy',
+    'resources/procgen/coinrun_38.npy',
+    'resources/procgen/coinrun_39.npy',
+    'resources/procgen/coinrun_40.npy',
+    'resources/procgen/coinrun_41.npy',
+    'resources/procgen/coinrun_42.npy',
+    'resources/procgen/coinrun_43.npy',
+    'resources/procgen/coinrun_44.npy',
+    'resources/procgen/coinrun_45.npy',
+    'resources/procgen/coinrun_46.npy',
+    'resources/procgen/coinrun_47.npy',
+    'resources/procgen/coinrun_48.npy',
+    'resources/procgen/coinrun_49.npy',
+]
 
 # def dataset_transform(x):
 #     print(x.shape)
@@ -64,28 +113,29 @@ import os
     
 #     return transformed_x
 
-def dataset_transform(x):
-    b, x_size, y_size, c = x.shape
+# def dataset_transform(x):
+#     b, x_size, y_size, c = x.shape
     
-    print(x.shape)
-    transformed_x = np.transpose(x, axes=(0,3,1,2))
-    print(transformed_x.shape)
+#     print(x.shape)
+#     transformed_x = np.transpose(x, axes=(0,3,1,2))
+#     print(transformed_x.shape)
     
-    return transformed_x
+#     return transformed_x
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--env_name", type=str)
-    args = parser.parse_args()
+    # parser.add_argument("--env_name", type=str)
+    # args = parser.parse_args()
     
     
-    files = [
-        'resources/procgen/{}.npy'.format(args.env_name),
-    ]
+    # files = [
+    #     'resources/procgen/{}.npy'.format(args.env_name),
+    # ]
     
-    log_dir_base = "runs/procgen-encoder/{}".format(args.env_name)
-    # log_dir_base = "runs/advanced_doorkey/doorkey-encoder"
+    # log_dir_base = "runs/procgen-encoder/{}".format(args.env_name)
+    log_dir_base = "runs/procgen-encoder/coinrun"
+    # log_dir_base = "runs/advanced_doorkey/doorkey-8x8-encoder"
     log_dir = os.path.join(log_dir_base, "{}".format(0))
     x = 0
     while os.path.exists(log_dir):
@@ -93,8 +143,8 @@ if __name__ == "__main__":
         log_dir = os.path.join(log_dir_base, "{}".format(x))
     
     writer = SummaryWriter(log_dir=log_dir)
-    dataset = SetDataset(batchsize=256, max_size=500000, pad_func=dataset_transform)
-    # dataset = SetDataset(batchsize=256, max_size=500000)
+    # dataset = SetDataset(batchsize=256, max_size=500000, pad_func=dataset_transform)
+    dataset = SetDataset(batchsize=256, max_size=500000)
     dataset.add_true_files(files)
     
     # feature_size = args.feature_size
@@ -131,16 +181,13 @@ if __name__ == "__main__":
 
         writer.add_scalar('train/mse_loss', mse_losses/counter_train, epoch)
         writer.add_scalar('train/total_loss', loss/counter_train, epoch)
-        print("[{}] Epoch {} mse loss {} total loss {}".format(args.env_name,
+        print("[{}] Epoch {} mse loss {} total loss {}".format("doorkey",
                                                         epoch, 
                                                         mse_losses/counter_train,
                                                         loss/counter_train,
                                                         ))
 
-        torch.save(model.state_dict(), os.path.join("resources",
-                                                    "encoders",
-                                                    "procgen", 
-                                                    "{}.ckpt".format(args.env_name)))
+        torch.save(model.state_dict(), os.path.join(log_dir, "encoder.ckpt"))
 
         # for i in range(10):
         #     fig, axes = plt.subplots(ncols=2, nrows=4)

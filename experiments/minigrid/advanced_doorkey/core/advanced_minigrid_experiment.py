@@ -16,6 +16,8 @@ from collections import deque
 from portable.option import AttentionOption
 from portable.option.ensemble.custom_attention import AutoEncoder
 
+from portable.agent.option_agent import OptionAgent
+
 @gin.configurable
 class AdvancedMinigridExperiment():
     def __init__(self,
@@ -23,20 +25,20 @@ class AdvancedMinigridExperiment():
                  experiment_name,
                  training_seed,
                  experiment_seed,
-                 create_agent_function,
+                 action_agent,
+                 option_agent,
+                 global_option,
                  num_options,
                  markov_option_builder,
                  policy_phi,
+                 num_primitive_actions=7,
                  dataset_transform_function=None,
-                 primitive_actions=7,
                  initiation_epochs=300,
                  termination_epochs=300,
                  policy_lr=1e-4,
                  policy_max_steps=1e6,
                  policy_success_threshold=0.98,
-                 agent_lr=1e-4,
                  use_gpu=True,
-                 sigma=0.5,
                  names=None):
         
         
@@ -47,15 +49,16 @@ class AdvancedMinigridExperiment():
         self.policy_max_steps=policy_max_steps
         self.num_options = num_options
         self.policy_success_threshold = policy_success_threshold
-        self.action_space = num_options+primitive_actions
-        self.primitive_actions = primitive_actions
         self.use_gpu = use_gpu
+        self.num_primitive_actions = num_primitive_actions
         
-        self.agent = create_agent_function(self.action_space,
-                                           gpu=0,
-                                           n_input_channels=3,
-                                           lr=agent_lr,
-                                           sigma=sigma)
+        "FIRST OPTION IS GLOBAL OPTION gives access to primitive skills"
+        #################################################
+        #                     TODO                      #
+        #################################################
+        #   Change policy bootstrap to only consider    # 
+        #                 one policy                    #
+        #################################################
         
         if self.use_gpu:
             self.embedding = AutoEncoder().to("cuda")
@@ -87,13 +90,13 @@ class AdvancedMinigridExperiment():
         logging.info("Experiment seed: {}".format(experiment_seed))
         logging.info("Training seed: {}".format(training_seed))
         
-        # self.trial_data = pd.DataFrame([],
-        #                                columns=['reward',
-        #                                         'seed',
-        #                                         'frames',
-        #                                         'env_num'])
-        
         self.trial_data = []
+        
+        self.agent = OptionAgent(action_agent=action_agent,
+                                 option_agent=option_agent,
+                                 use_gpu=use_gpu,
+                                 phi=policy_phi,
+                                 summary_writer=self.writer)
         
         option_save_dirs = os.path.join(self.save_dir, 'options')
         
@@ -102,12 +105,15 @@ class AdvancedMinigridExperiment():
                                         markov_option_builder=markov_option_builder,
                                         embedding=self.embedding,
                                         policy_phi=policy_phi,
+                                        num_actions= num_primitive_actions,
                                         dataset_transform_function=dataset_transform_function,
                                         save_dir=os.path.join(option_save_dirs, str(x)),
                                         option_name=names[x] if names is not None else None) for x in range(num_options)]
+
+        self.global_option = global_option
     
     def save(self):
-        self.agent.save()
+        self.agent.save(self.save_dir)
         filename = os.path.join(self.save_dir, 'experiment_data.pkl')
         with lzma.open(filename, 'wb') as f:
             dill.dump(self.trial_data, f)
@@ -116,7 +122,7 @@ class AdvancedMinigridExperiment():
             self.options[idx].save()
 
     def load(self):
-        # self.agent.load()
+        self.agent.load(self.save_dir)
         filename = os.path.join(self.save_dir, 'experiment_data.pkl')
         if os.path.exists(filename):
             with lzma.open(filename, 'rb') as f:
@@ -213,21 +219,24 @@ class AdvancedMinigridExperiment():
         done = False
         episode_reward = 0
         rewards = []
-        trajectory = []
         steps = 0
         
         while not done:
             self.add_state_to_buffer(obs)
-            action = self.agent.act(obs)
-            next_obs, reward, done, info, step_num = self.run_one_step(env, obs, info)
+            next_obs, reward, done, action, option, info, step_num = self.run_one_step(env, obs, info)
             rewards.append(reward)
-            trajectory.append((obs, action, reward, next_obs, done, info["needs_reset"]))
+            
+            self.agent.observe(obs=obs,
+                               action=action,
+                               option_idx=option,
+                               rewards=reward,
+                               next_obs=next_obs,
+                               terminal=done)
             
             obs = next_obs
-            episode_reward += reward
+            episode_reward += sum(reward)
             steps += step_num
         
-        self.agent.experience_replay(trajectory)
         print("[rainbow agent] steps: {} undiscounter average reward: {}".format(steps,
                                                                                  np.sum(rewards)))
         return rewards, steps
@@ -241,43 +250,40 @@ class AdvancedMinigridExperiment():
         self.buffer.append(state)
     
     def run_one_step(self, env, state, info):
-        action = self.agent.act(state)
-        # print("ACTION: {}".format(action))
-        if action < self.primitive_actions:
-            next_obs, reward, done, info = env.step(action)
-            
-            # fig = plt.figure(num=1, clear=True)
-            # ax = fig.add_subplot()
-            # ax.imshow(np.transpose(state, axes=[1,2,0]))
-            # plt.show(block=False)
-            # print("done: {}".format(done))
-            # input("Primitive action. Continue?")
-            
-            # add step number of 1 to return
-            return next_obs, reward, done, info, 1
-        # if action >= primitive_actions we need to run the appropriate option
-        option_idx = action - self.primitive_actions
+        action_mask = [1]
+        option_mask = [[1*self.num_primitive_actions]]
         
-        if len(self.buffer) >= 20:
-            false_states = random.sample(list(self.buffer), 20)
+        for option in self.options:
+            can_execute, available_options = option.can_initiate(state, info)
+            action_mask.append(can_execute)
+            option_mask.append(available_options)
+        
+        action, option_idx = self.agent.act(state,
+                                        action_mask,
+                                        option_mask)
+        
+        if action == 0:
+            next_obs, reward, done, info = self.global_option.run(env,
+                                                                  state,
+                                                                  info,
+                                                                  eval=False)
+            return next_obs, reward, done, 0, 0, info, 1
         else:
-            false_states = list(self.buffer)
-        
-        # print("Running option number: {}".format(option_idx))
-        
-        option_output = self.options[option_idx].run(env,
-                                                     state,
-                                                     info,
-                                                     eval=False,
-                                                     false_states=false_states)
-        if option_output is None:
-            # option cannot initiate so instead run a noop action
-            # takes 1 step
-            next_obs, reward, done, info = env.step(6)
-            return next_obs, reward, done, info, 1
-        else:
-            return option_output
-    
+            option_idx = action - 1
+            
+            if len(self.buffer) >= 20:
+                false_states = random.sample(list(self.buffer), 20)
+            else:
+                false_states = list(self.buffer)
+            
+            next_obs, reward, done, info, steps = self.options[option_idx].run(env,
+                                                                                               state,
+                                                                                               info,
+                                                                                               option_idx=option,
+                                                                                               eval=False,
+                                                                                               false_states=false_states)
+            return next_obs, reward, done, action, option, info, steps
+            
     def run(self,
             make_env,
             num_envs,

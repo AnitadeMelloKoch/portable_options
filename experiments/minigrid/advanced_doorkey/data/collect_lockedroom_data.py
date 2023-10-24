@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     states = []
 
-    for x in tqdm(range(40000)):
+    for x in tqdm(range(50000)):
         env = environment_builder('MiniGrid-LockedRoom-v0',
                                 seed=np.random.randint(0, 10000),
                                 grayscale=False)

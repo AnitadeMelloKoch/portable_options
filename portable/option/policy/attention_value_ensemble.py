@@ -90,10 +90,13 @@ class AttentionValueEnsemble():
         self.upper_confidence_bound.save(os.path.join(path, 'upper_conf_bound'))
     
     def load(self, path):
-        self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
-        self.attentions.load_state_dict(torch.load(os.path.join(path, 'attentions.pt')))
-        self.recurrent_memory.load_state_dict(torch.load(os.path.join(path, 'gru.pt')))
-        self.upper_confidence_bound.load(os.path.join(path, 'upper_conf_bound'))
+        if os.path.exists(os.path.join(path, 'policy_networks.pt')):
+            self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
+            self.attentions.load_state_dict(torch.load(os.path.join(path, 'attentions.pt')))
+            self.recurrent_memory.load_state_dict(torch.load(os.path.join(path, 'gru.pt')))
+            self.upper_confidence_bound.load(os.path.join(path, 'upper_conf_bound'))
+        else:
+            print("NO PATH TO LOAD ATTENTION VALUE ENSEMBLE FROM")
     
     def step(self):
         self.upper_confidence_bound.step()

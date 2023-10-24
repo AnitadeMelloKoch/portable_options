@@ -3,12 +3,13 @@ import argparse
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 from experiments.minigrid.utils import environment_builder 
 from portable.utils.utils import load_gin_configs
-from experiments.minigrid.doorkey.core.agents.rainbow import Rainbow
+from portable.agent.model.rainbow import Rainbow
 from portable.option.markov.nn_markov_option import NNMarkovOption
 from experiments.minigrid.advanced_doorkey.advanced_minigrid_option_resources import *
 import numpy as np
 import torch
 import random
+from portable.agent.model.option_q import OptionDQN
 
 def make_random_getkey_env(train_colour, check_option_complete):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
@@ -19,9 +20,6 @@ def make_random_getkey_env(train_colour, check_option_complete):
     other_col = random.choice(possible_key_colours)
     key_cols = [train_colour, other_col]
     random.shuffle(key_cols)
-    
-    print("door colour:", door_colour)
-    print("key colours:", key_cols)
     
     return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
@@ -299,19 +297,14 @@ if __name__ == "__main__":
                 x = x/255.0
         return x
     
-    def create_agent(n_actions,
-                     gpu,
-                     n_input_channels,
-                     env_steps=500_000,
-                     lr=1e-4,
-                     sigma=0.5):
+    def create_agent(n_actions):
         kwargs = dict(
             n_atoms=51, v_max=10., v_min=-10.,
-            noisy_net_sigma=sigma, lr=lr, n_steps=3,
-            betasteps=env_steps // 4,
+            noisy_net_sigma=0.5, lr=1e-4, n_steps=3,
+            betasteps=500_000 // 4,
             replay_start_size=1024, 
             replay_buffer_size=int(3e5),
-            gpu=gpu, n_obs_channels=n_input_channels,
+            gpu=0, n_obs_channels=3,
             use_custom_batch_states=False,
             epsilon_decay_steps=125000 # don't forget to change
         )
@@ -362,7 +355,13 @@ if __name__ == "__main__":
     experiment = AdvancedMinigridExperiment(base_dir=args.base_dir,
                                             training_seed=training_seed,
                                             experiment_seed=args.seed,
-                                            create_agent_function=create_agent,
+                                            action_agent=create_agent(13),
+                                            option_agent=OptionDQN(height=64,
+                                                                   width=64,
+                                                                   channel_num=3,
+                                                                   action_vector_size=13,
+                                                                   num_options=10),
+                                            global_option=create_agent(7),
                                             num_options=12,
                                             markov_option_builder=create_markov_option,
                                             policy_phi=policy_phi,

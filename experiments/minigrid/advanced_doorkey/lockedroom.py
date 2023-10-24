@@ -28,7 +28,7 @@ training_envs = [
             ),
             check_option_complete=check_got_redkey,
             door_colour="red",
-            time_limit=150
+            time_limit=200
         )
     ],
     # get blue key

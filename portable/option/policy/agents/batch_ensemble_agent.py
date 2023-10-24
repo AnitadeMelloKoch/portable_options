@@ -98,9 +98,6 @@ class BatchedEnsembleAgent(Agent):
             [list(head.model.parameters()) for head in self.heads])
         )
         learnable_parameters = list(self.attentions.parameters()) + learnable_parameters
-        
-        self.optimizer = torch.optim.Adam(learnable_parameters,
-                                          lr=self.learning_rate)
 
         self.optimizers = [
             torch.optim.Adam(
@@ -189,27 +186,6 @@ class BatchedEnsembleAgent(Agent):
                                      batch_reward,
                                      batch_done,
                                      batch_reset)
-        
-        # if np.sum([loss is not None for loss in losses]) == self.num_modules:
-        #     head_loss = torch.stack(losses).mean()
-            
-        #     masks = self.get_attention_masks()
-        #     div_loss = 0
-        #     for idx in range(self.num_modules):
-        #         div_loss += divergence_loss(masks, idx)
-            
-        #     div_loss = self.divergence_loss_scale*div_loss
-            
-        #     loss = head_loss + div_loss
-            
-        #     self.attentions.train()
-        #     self.optimizer.zero_grad()
-        #     loss.backward()
-        #     for head in self.heads:
-        #         if hasattr(head, 'max_grad_norm') and head.max_grad_norm is not None:
-        #             nn.utils.clip_grad_norm(head.model.parameters(), head.max_grad_norm)
-        #     self.optimizer.step()
-        #     self.attentions.eval()
         
     
     def get_attention_masks(self):
