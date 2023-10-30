@@ -275,12 +275,15 @@ class AdvancedMinigridExperiment():
             else:
                 false_states = list(self.buffer)
             
-            next_obs, reward, done, info, steps = self.options[action_idx].run(env,
+            output = self.options[action_idx].run(env,
                                                                                state,
                                                                                info,
                                                                                option_idx=option_idx,
                                                                                eval=False,
                                                                                false_states=false_states)
+            
+            next_obs, reward, done, info, steps = output
+            
             return next_obs, reward, done, action, option, info, steps
             
     def run(self,

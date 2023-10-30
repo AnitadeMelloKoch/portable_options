@@ -307,6 +307,7 @@ class AttentionOption():
                                                                                                                  state,
                                                                                                                  info,
                                                                                                                  eval)
+            return next_state, rewards, done, info, steps
         else:
             steps = 0
             rewards = []
