@@ -39,7 +39,8 @@ class AdvancedMinigridExperiment():
                  policy_max_steps=1e6,
                  policy_success_threshold=0.98,
                  use_gpu=True,
-                 names=None):
+                 names=None,
+                 use_oracle_for_term=False,):
         
         
         self.training_seed = training_seed
@@ -51,6 +52,8 @@ class AdvancedMinigridExperiment():
         self.policy_success_threshold = policy_success_threshold
         self.use_gpu = use_gpu
         self.num_primitive_actions = num_primitive_actions
+        
+        self.use_oracle_for_term = use_oracle_for_term
         
         "FIRST OPTION IS GLOBAL OPTION gives access to primitive skills"
         #################################################
@@ -107,6 +110,7 @@ class AdvancedMinigridExperiment():
                                         policy_phi=policy_phi,
                                         num_actions= num_primitive_actions,
                                         dataset_transform_function=dataset_transform_function,
+                                        use_oracle_for_term=use_oracle_for_term,
                                         save_dir=os.path.join(option_save_dirs, str(x)),
                                         option_name=names[x] if names is not None else None) for x in range(num_options)]
 
@@ -196,8 +200,9 @@ class AdvancedMinigridExperiment():
         for idx in range(self.num_options):
             self.options[idx].initiation.add_data_from_files(initiation_positive_files[idx],
                                                              initiation_negative_files[idx])
-            self.options[idx].termination.add_data_from_files(termination_positive_files[idx],
-                                                              termination_negative_files[idx])
+            if not self.use_oracle_for_term:
+                self.options[idx].termination.add_data_from_files(termination_positive_files[idx],
+                                                                termination_negative_files[idx])
     
     def train_options(self,
                       training_envs):
@@ -205,7 +210,8 @@ class AdvancedMinigridExperiment():
         for idx in range(self.num_options):
             logging.info('[experiment] Training option {}'.format(idx))
             self.options[idx].initiation.train(self.initiation_epochs)
-            self.options[idx].termination.train(self.termination_epochs)
+            if not self.use_oracle_for_term:
+                self.options[idx].termination.train(self.termination_epochs)
             self.options[idx].bootstrap_policy(training_envs[idx],
                                                self.policy_max_steps,
                                                self.policy_success_threshold)
