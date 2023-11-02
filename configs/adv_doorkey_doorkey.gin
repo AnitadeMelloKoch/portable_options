@@ -12,6 +12,7 @@ AdvancedMinigridExperiment.policy_lr                                = 1e-4
 AdvancedMinigridExperiment.policy_max_steps                         = 2e6
 AdvancedMinigridExperiment.policy_success_threshold                 = 0.9
 AdvancedMinigridExperiment.use_gpu                                  = True
+AdvancedMinigridExperiment.num_instances_per_option                 = 20
 
 OptionAgent.num_actions                                             = 13
 OptionAgent.batch_size                                              = 32
@@ -54,7 +55,7 @@ AttentionOption.min_interactions                                    = 100
 AttentionOption.min_success_rate                                    = 0.7
 AttentionOption.timeout                                             = 50
 AttentionOption.min_option_length                                   = 1
-AttentionOption.max_instantiations                                  = 10
+AttentionOption.max_instantiations                                  = 20
 AttentionOption.option_handling_method                              = "continue-with-multi-instantiations"
 
 NNMarkovOption.classifier_type                                      = "cnn"

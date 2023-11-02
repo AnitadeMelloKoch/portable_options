@@ -13,6 +13,7 @@ from pfrl.utils.batch_states import batch_states
 from portable.option.policy.agents import Agent
 from portable.option.policy.attention_value_ensemble import AttentionValueEnsemble
 from pfrl.collections.prioritized import PrioritizedBuffer
+from portable.option.markov.markov_policy import MarkovAgent
 import warnings
 
 class EnsembleAgent(Agent):
@@ -107,30 +108,20 @@ class EnsembleAgent(Agent):
     
     def initialize_new_policy(self):
 
-        new_policy = EnsembleAgent(
-            use_gpu=self.use_gpu,
-            warmup_steps=self.warmup_steps,
-            batch_size=self.batch_size,
-            phi=self.phi,
-            prioritized_replay_anneal_steps=self.prioritized_replay_anneal_steps,
-            buffer_length=self.buffer_length,
-            update_interval=self.update_interval,
-            q_target_update_interval=self.q_target_update_interval,
-            learning_rate=self.learning_rate,
-            final_epsilon=self.final_epsilon,
-            final_exploration_frames=self.final_exploration_frames,
-            discount_rate=self.discount_rate,
-            num_modules=self.num_modules,
-            num_actions=self.num_actions,
-            c=self.c,
-            embedding=self.embedding
-        )
-
-        new_policy.value_ensemble.recurrent_memory.load_state_dict(self.value_ensemble.recurrent_memory.state_dict())
-        new_policy.value_ensemble.attentions.load_state_dict(self.value_ensemble.attentions.state_dict())
-        new_policy.value_ensemble.q_networks.load_state_dict(self.value_ensemble.q_networks.state_dict())
-        new_policy.value_ensemble.target_q_networks.load_state_dict(self.value_ensemble.target_q_networks.state_dict())
-        new_policy.value_ensemble.target_q_networks.eval()
+        new_policy = MarkovAgent(use_gpu=self.use_gpu,
+                                 warmup_steps=self.warmup_steps,
+                                 batch_size=self.batch_size,
+                                 phi=self.phi,
+                                 prioritized_replay_anneal_steps=self.prioritized_replay_anneal_steps,
+                                 embedding=self.embedding,
+                                 initial_policy=self.value_ensemble,
+                                 policy_idx=self.value_ensemble.action_leader,
+                                 update_interval=self.update_interval,
+                                 q_target_update_interval=self.q_target_update_interval,
+                                 learning_rate=2.5e-4,
+                                 final_epsilon=self.final_epsilon,
+                                 discount_rate=self.discount_rate,
+                                 num_actions=self.num_actions)
 
         return new_policy
     

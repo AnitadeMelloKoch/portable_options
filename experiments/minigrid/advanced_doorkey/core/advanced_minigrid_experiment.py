@@ -31,6 +31,7 @@ class AdvancedMinigridExperiment():
                  num_options,
                  markov_option_builder,
                  policy_phi,
+                 num_instances_per_option=10,
                  num_primitive_actions=7,
                  dataset_transform_function=None,
                  initiation_epochs=300,
@@ -51,6 +52,7 @@ class AdvancedMinigridExperiment():
         self.policy_success_threshold = policy_success_threshold
         self.use_gpu = use_gpu
         self.num_primitive_actions = num_primitive_actions
+        self.num_instances_per_option = num_instances_per_option
         
         "FIRST OPTION IS GLOBAL OPTION gives access to primitive skills"
         #################################################
@@ -234,11 +236,12 @@ class AdvancedMinigridExperiment():
                                terminal=done)
             
             obs = next_obs
-            episode_reward += sum(reward)
+            undiscounted_reward = np.sum(reward)
+            episode_reward += undiscounted_reward
             steps += step_num
         
         print("[rainbow agent] steps: {} undiscounter average reward: {}".format(steps,
-                                                                                 np.sum(rewards)))
+                                                                                 undiscounted_reward))
         return rewards, steps
     
     def add_state_to_buffer(self, state):
@@ -250,8 +253,8 @@ class AdvancedMinigridExperiment():
         self.buffer.append(state)
     
     def run_one_step(self, env, state, info):
-        action_mask = [1]
-        option_mask = [[1*self.num_primitive_actions]]
+        action_mask = [True]
+        option_mask = [np.ones(self.num_instances_per_option)]
         
         for option in self.options:
             can_execute, available_options = option.can_initiate(state, info)
@@ -307,7 +310,7 @@ class AdvancedMinigridExperiment():
             frames = 0
             while frames < frames_per_env:
                 episode_rewards, steps = self.run_episode(env)
-                undiscounted_return = sum(episode_rewards)
+                undiscounted_return = np.sum(sum(rewards) for rewards in episode_rewards)
                 frames += steps 
                 self.writer.add_scalar('undiscounter_return',
                                        undiscounted_return,

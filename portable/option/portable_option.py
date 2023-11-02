@@ -17,6 +17,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 logger = logging.getLogger(__name__)
 
+import warnings
+
 OPTION_HANDLING_METHODS = [
     # run portable option. Each time the option wants to terminate, create a new
     # non-portable option
@@ -257,7 +259,8 @@ class AttentionOption():
                 local_vote.append(idx)
         
         self.markov_idx = local_vote
-        option_mask = [1*len(local_vote)] + [0*(self.max_instantiations-len(local_vote))]
+        option_mask = np.zeros(self.max_instantiations)
+        option_mask[local_vote] = 1
         
         self.initiation_checked = True
         
@@ -313,7 +316,6 @@ class AttentionOption():
             rewards = []
             states = []
             infos = []
-            options_created = 0
             
             self.policy.load_buffer(self.policy_buffer_save_file)
             self.policy.move_to_gpu()
@@ -321,7 +323,7 @@ class AttentionOption():
                 self.termination.move_to_gpu()
             
             with evaluating(self.policy):
-                while steps < self.option_timeout and options_created < self.max_instantiations:
+                while steps < self.option_timeout:
                     if type(state) is np.ndarray:
                         state = torch.from_numpy(state).float()
                     states.append(state)
@@ -450,6 +452,10 @@ class AttentionOption():
                         termination_state,
                         termination_info,
                         false_states):
+        
+        if len(self.markov_instantiations) == self.max_instantiations:
+            warnings.warn("Max options created. Option is not being created.")
+            return
         
         self.create_instance(states,
                              infos,
