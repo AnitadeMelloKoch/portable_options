@@ -152,13 +152,13 @@ class OptionAgentModel():
         """
         with torch.no_grad():
             action_q_values = self.action_agent.q_function(state)[0]
-            action_q_values[action_mask] = -1e8
+            action_q_values[np.logical_not(action_mask)] = -1e8
             
             rand_val = np.random.rand()
             
             if rand_val < epsilon:
                 action = np.random.randint(0, len(action_q_values))
-                while action_mask[action] != 1:
+                while not action_mask[action]:
                     action = np.random.randint(0, len(action_q_values))
             else:
                 action = torch.argmax(action_q_values)
@@ -166,12 +166,18 @@ class OptionAgentModel():
             action_vector = np.zeros(self.num_actions)
             action_vector[action] = 1
             option_q_values = self.option_agent([action_vector], state)[0]
+            chosen_option_mask = option_mask[action]
+            if np.sum(chosen_option_mask) == 0:
+                return action, 0
+            
+            chosen_option_mask = np.logical_not(chosen_option_mask.astype(bool))
             
             if rand_val < epsilon:
                 option = np.random.randint(0, len(option_q_values))
-                while action_mask[action] != 1:
+                while not chosen_option_mask[option]:
                     option = np.random.randint(0, len(option_q_values))
             else:
+                option_q_values[option_mask] = -1e8
                 option = torch.argmax(option_q_values)
         
         return action, option
