@@ -210,7 +210,6 @@ dependencies:
     - google-auth-oauthlib==0.4.6
     - google-pasta==0.2.0
     - grpcio==1.51.1
-    - gym==0.15.7
     - gym3==0.3.3
     - gymnasium==0.26.3
     - gymnasium-notices==0.0.1
