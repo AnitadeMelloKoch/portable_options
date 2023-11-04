@@ -108,6 +108,7 @@ class SetDataset():
 
     def add_true_files(self, file_list):
         # load data from a file for true data
+        # TODO: weight 1 for confidence (compare sd)
         for file in file_list:
             data = np.load(file)
             data = self.pad(data)
@@ -277,8 +278,9 @@ class SetDataset():
             labels = labels[shuffle_idxs]
 
         data = self.transform(data)
+
         
-        return data, labels
+        return data, labels, sample_confidence
 
     def true_index(self):
         return (self.counter*self.data_batchsize) % self.true_length

@@ -62,6 +62,13 @@ class AttentionSet():
         ]
         
         self.crossentropy = torch.nn.CrossEntropyLoss()
+
+        # Saved feature mean and sd during initial training
+        self.saved_ftr_mean = None
+        self.saved_ftr_sd = None
+        self.this_ftr_mean = None
+        self.this_ftr_sd = None
+
         
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
@@ -92,6 +99,7 @@ class AttentionSet():
 
         if len(positive_data) > 0:
             self.dataset.add_true_data(positive_data)
+            #TODO: compared stored and new sample to calculate sample_confidence
         
         if len(negative_data) > 0:
             self.dataset.add_false_data(negative_data)
@@ -112,9 +120,17 @@ class AttentionSet():
         self.dataset.add_priority_false_files(priority_negative_files)
     
     def train(self,
-              epochs):
+              epochs,
+              save_ftr_mean_sd=False):
+
         self.move_to_gpu()
         self.classifier.train()
+
+        # Calculate running Mean and sd for features
+        temp_ftr_mean = np.zeros((self.embedding.feature_size))
+        temp_ftr_SST = np.zeros((self.embedding.feature_size))
+        running_n = 0
+        
         for epoch in range(epochs):
             self.dataset.shuffle()
             loss = np.zeros(self.attention_num)
@@ -132,6 +148,21 @@ class AttentionSet():
                 x = self.embedding.feature_extractor(x)
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
+
+                # Compute features post mask 
+                # ADD .cpu().numpy() ???
+                x_post_mask = masks*x
+
+                for batch_x_idx in range(x_post_mask.shape[0]):
+                    running_n += 1
+                    this_row = x_post_mask[batch_x_idx]
+                    if running_n == 1:
+                        temp_ftr_mean = this_row
+                    else:
+                        prev_mean = temp_ftr_mean
+                        temp_ftr_mean = prev_mean + (this_row-prev_mean)/(running_n)
+                        temp_ftr_SST += (this_row-prev_mean)*(this_row-temp_ftr_mean)
+
                 for attn_idx in range(self.attention_num):
                     b_loss = self.crossentropy(pred_y[attn_idx], y)
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
@@ -181,6 +212,13 @@ class AttentionSet():
                                                                             l1_losses[idx]/counter,
                                                                             loss[idx]/counter,
                                                                             classifier_acc[idx]/counter))
+        temp_ftr_sd = (temp_ftr_SST/(running_n-1))**0.5
+        if save_ftr_mean_sd:
+            self.saved_ftr_mean = temp_ftr_mean
+            self.saved_ftr_sd = temp_ftr_sd
+        self.this_ftr_mean = temp_ftr_mean
+        self.this_ftr_sd = temp_ftr_sd
+
     def vote(self, x):
         self.classifier.eval()
         
@@ -225,3 +263,8 @@ class AttentionSet():
         self.confidences.update_successes(success_count)
         self.confidences.update_failures(failure_count)
 
+    def get_saved_ftr_mean_sd(self):
+        return self.saved_ftr_mean, self.saved_ftr_sd
+
+    def get_this_ftr_mean_sd(self):
+        return self.this_ftr_mean, self.this_ftr_sd
