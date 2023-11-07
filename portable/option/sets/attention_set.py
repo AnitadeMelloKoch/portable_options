@@ -95,24 +95,20 @@ class AttentionSet():
     def add_data(self,
                  positive_data=[],
                  negative_data=[],
-                 priority_negative_data=[],
-                 positive_confidence=[],
-                 negative_confidence=[],
-                 priority_negative_confidence=[]):
+                 priority_negative_data=[]):
         assert isinstance(positive_data, list)
         assert isinstance(negative_data, list)
         assert isinstance(priority_negative_data, list)
 
         if len(positive_data) > 0:
-            self.dataset.add_true_data(positive_data, positive_confidence)
-            #TODO: compared stored and new sample to calculate sample_confidence
+            self.dataset.add_true_data(positive_data, self.sample_confidence(positive_data))
         
         if len(negative_data) > 0:
-            self.dataset.add_false_data(negative_data, negative_confidence)
+            self.dataset.add_false_data(negative_data, self.sample_confidence(negative_data))
 
         if len(priority_negative_data) > 0:
             self.dataset.add_priority_false_data(priority_negative_data, 
-                                                 priority_negative_confidence)
+                                                 self.sample_confidence(priority_negative_data))
 
     def add_data_from_files(self,
                             positive_files,
@@ -157,7 +153,7 @@ class AttentionSet():
                 masks = self.classifier.get_attention_masks()
 
                 # Compute features post mask 
-                # ADD .cpu().numpy() ???
+                # convert to numpy array? is it torch tensor type?
                 x_post_mask = masks*x
 
                 for batch_x_idx in range(x_post_mask.shape[0]):
@@ -275,19 +271,26 @@ class AttentionSet():
     def get_saved_ftr_distrbution(self):
         return self.saved_ftr_mean, self.saved_ftr_sd, self.saved_ftr_n
 
-    def get_this_ftr_mean_distribution(self):
+    def get_this_ftr_distribution(self):
         return self.this_ftr_mean, self.this_ftr_sd, self.this_ftr_n
 
-    def compute_confidence(self, data=[]):
+    def sample_confidence(self, data=[]):
+        # Assume given input is data_list
         if len(data) > 0:
-            # what will data look like?
-            pass
+            # assume each data is a 1-d numpy array length = feature_size
+            data_matrix = np.vstack(data)
+            given_mean = np.mean(data_matrix, axis=0)
+            given_sd = np.std(data_matrix, axis=0)
+            given_n = len(data)
         # if not given input, use saved feature distribution
+        else:
+            given_mean, given_sd, given_n = self.get_this_ftr_distribution()
+
+        saved_mean, saved_sd, saved_n = self.get_saved_ftr_distrbution()
         # Calculate p-values for each feature
-        SE_diff = np.sqrt(self.saved_ftr_sd**2/self.saved_ftr_n + 
-                          self.this_ftr_sd**2/self.this_ftr_n)
+        SE_diff = np.sqrt(saved_sd**2/saved_n + given_sd**2/given_n)
         # low z-score indicates similar samples
-        z_stat = (self.saved_ftr_mean - self.this_ftr_mean) / SE_diff
+        z_stat = (given_mean - saved_mean) / SE_diff
         # low z-score --> high p-value
         p_value = stats.norm.sf(np.abs(z_stat))*2  # Two-tailed
 
