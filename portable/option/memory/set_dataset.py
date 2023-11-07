@@ -31,9 +31,9 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
-        self.true_confidence = torch.numpy(np.array([])).float()
-        self.false_confidence = torch.numpy(np.array([])).float()
-        self.priority_false_confidence = torch.numpy(np.array([])).float()
+        self.true_confidence = torch.from_numpy(np.array([])).float()
+        self.false_confidence = torch.from_numpy(np.array([])).float()
+        self.priority_false_confidence = torch.from_numpy(np.array([])).float()
         
 
     @staticmethod
@@ -120,7 +120,8 @@ class SetDataset():
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.true_data = self.concatenate(self.true_data, data)
-            self.true_confidence = self.concatenate(self.true_confidence, torch.ones(len(data)))
+            self.true_confidence = self.concatenate(self.true_confidence, 
+                                                    torch.ones(len(data)))
         self.true_length = len(self.true_data)
         self._set_batch_num()
         self.shuffle()
@@ -135,7 +136,8 @@ class SetDataset():
             data = data.squeeze()
             data = random.sample(data, 20)
             self.true_data = self.concatenate(self.true_data, data)
-            self.true_confidence = self.concatenate(self.true_confidence, torch.ones(len(data)))
+            self.true_confidence = self.concatenate(self.true_confidence, 
+                                                    torch.ones(len(data)))
         self.true_length = len(self.true_data)
         self._set_batch_num()
         self.shuffle()
@@ -150,7 +152,8 @@ class SetDataset():
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
-            self.false_confidence = self.concatenate(self.false_confidence, torch.ones(len(data)))
+            self.false_confidence = self.concatenate(self.false_confidence, 
+                                                     torch.ones(len(data)))
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.shuffle()
@@ -165,7 +168,8 @@ class SetDataset():
             data = data.squeeze()
             data = random.sample(data, 20)
             self.false_data = self.concatenate(self.false_data, data)
-            self.false_confidence = self.concatenate(self.false_confidence, torch.ones(len(data)))
+            self.false_confidence = self.concatenate(self.false_confidence, 
+                                                     torch.ones(len(data)))
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.shuffle()
@@ -180,16 +184,18 @@ class SetDataset():
             data = torch.from_numpy(data).float()
             data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)
-            self.priority_false_confidence = self.concatenate(self.priority_false_confidence, torch.ones(len(data)))
+            self.priority_false_confidence = self.concatenate(self.priority_false_confidence, 
+                                                              torch.ones(len(data)))
         self.priority_false_length = len(self.priority_false_data)
         self._set_batch_num()
         self.shuffle()
         self.counter = 0
 
-    def add_true_data(self, data_list, confidence):
+    def add_true_data(self, data_list, conf_list):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
+        confidence = torch.from_numpy(np.array(conf_list)).float()
         self.true_data = self.concatenate(data, self.true_data)
         self.true_confidence = self.concatenate(confidence, self.true_confidence)
         if len(self.true_data) > self.list_max_size:
@@ -200,10 +206,11 @@ class SetDataset():
         self.counter = 0
         self.shuffle()
 
-    def add_false_data(self, data_list, confidence):
+    def add_false_data(self, data_list, conf_list):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
+        confidence = torch.from_numpy(np.array(conf_list)).float()
         self.false_data = self.concatenate(data, self.false_data)
         self.false_confidence = self.concatenate(confidence, self.false_confidence)
         if len(self.false_data) > self.list_max_size:
@@ -214,10 +221,11 @@ class SetDataset():
         self.counter = 0
         self.shuffle()
 
-    def add_priority_false_data(self, data_list, confidence):
+    def add_priority_false_data(self, data_list, conf_list):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
+        confidence = torch.from_numpy(np.array(conf_list)).float()
         self.priority_false_data = self.concatenate(data, self.priority_false_data)
         self.priority_false_confidence = self.concatenate(confidence, self.priority_false_confidence)
         if len(self.priority_false_data) > self.list_max_size//2:
