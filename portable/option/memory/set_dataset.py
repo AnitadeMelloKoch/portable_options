@@ -31,6 +31,11 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
+        self.true_confidence = torch.numpy(np.array([])).float()
+        self.false_confidence = torch.numpy(np.array([])).float()
+        self.priority_false_confidence = torch.numpy(np.array([])).float()
+        
+
     @staticmethod
     def transform(x):
         if torch.max(x) > 1:
@@ -55,13 +60,13 @@ class SetDataset():
             os.makedirs(path)
 
         with open(true_filename, "wb") as f:
-            pickle.dump(self.true_data, f)
+            pickle.dump((self.true_data, self.true_confidence), f)
 
         with open(false_filename, "wb") as f:
-            pickle.dump(self.false_data, f)
+            pickle.dump((self.false_data, self.false_confidence), f)
 
         with open(priority_false_filename, "wb") as f:
-            pickle.dump(self.priority_false_data, f)
+            pickle.dump((self.priority_false_data, self.priority_false_confidence), f)
 
     def load(self, path):
         true_filename, false_filename, priority_false_filename = self._getfilenames(path)
@@ -77,17 +82,17 @@ class SetDataset():
             return
         
         with open(true_filename, "rb") as f:
-            self.true_data = pickle.load(f)
+            self.true_data, self.true_confidence = pickle.load(f)
         
         self.true_length = len(self.true_data)
 
         with open(false_filename, "rb") as f:
-            self.false_data = pickle.load(f)
+            self.false_data, self.false_confidence = pickle.load(f)
 
         self.false_length = len(self.false_data)
 
         with open(priority_false_filename, "rb") as f:
-            self.priority_false_data = pickle.load(f)
+            self.priority_false_data, self.priority_false_confidence = pickle.load(f)
 
         self.priority_false_length = len(self.priority_false_data)
 
@@ -175,37 +180,43 @@ class SetDataset():
         self.shuffle()
         self.counter = 0
 
-    def add_true_data(self, data_list):
+    def add_true_data(self, data_list, confidence):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
         self.true_data = self.concatenate(data, self.true_data)
+        self.true_confidence = self.concatenate(confidence, self.true_confidence)
         if len(self.true_data) > self.list_max_size:
             self.true_data = self.true_data[:self.list_max_size]
+            self.true_confidence = self.true_confidence[:self.list_max_size]
         self.true_length = len(self.true_data)
         self._set_batch_num()
         self.counter = 0
         self.shuffle()
 
-    def add_false_data(self, data_list):
+    def add_false_data(self, data_list, confidence):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
         self.false_data = self.concatenate(data, self.false_data)
+        self.false_confidence = self.concatenate(confidence, self.false_confidence)
         if len(self.false_data) > self.list_max_size:
             self.false_data = self.false_data[:self.list_max_size]
+            self.priority_false_confidence = self.priority_false_confidence[:self.list_max_size]
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.counter = 0
         self.shuffle()
 
-    def add_priority_false_data(self, data_list):
+    def add_priority_false_data(self, data_list, confidence):
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
         self.priority_false_data = self.concatenate(data, self.priority_false_data)
+        self.priority_false_confidence = self.concatenate(confidence, self.priority_false_confidence)
         if len(self.priority_false_data) > self.list_max_size//2:
             self.priority_false_data = self.priority_false_data[:self.list_max_size//2]
+            self.priority_false_confidence = self.priority_false_confidence[:self.list_max_size//2]
         self.priority_false_length = len(self.priority_false_data)
         self._set_batch_num()
         self.counter = 0
@@ -260,7 +271,7 @@ class SetDataset():
                 self.shuffled_indices_false)
         true_batch = self._get_minibatch(
             self.true_index(),
-            self.true_data,
+            self.true_data, # self.true_confidence here?
             self.data_batchsize,
             self.shuffled_indices_true)
         # print(torch.max(true_batch[0]))
@@ -280,7 +291,7 @@ class SetDataset():
         data = self.transform(data)
 
         
-        return data, labels, sample_confidence
+        return data, labels  #, sample_confidence
 
     def true_index(self):
         return (self.counter*self.data_batchsize) % self.true_length
