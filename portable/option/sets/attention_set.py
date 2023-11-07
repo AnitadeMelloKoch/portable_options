@@ -1,5 +1,6 @@
 import logging 
 import numpy as np 
+from scipy import stats
 import torch 
 import os
 from portable.option.memory import SetDataset
@@ -66,8 +67,10 @@ class AttentionSet():
         # Saved feature mean and sd during initial training
         self.saved_ftr_mean = None
         self.saved_ftr_sd = None
+        self.saved_ftr_n = 0
         self.this_ftr_mean = None
         self.this_ftr_sd = None
+        self.this_ftr_n = 0
 
         
     def save(self, path):
@@ -92,20 +95,24 @@ class AttentionSet():
     def add_data(self,
                  positive_data=[],
                  negative_data=[],
-                 priority_negative_data=[]):
+                 priority_negative_data=[],
+                 positive_confidence=[],
+                 negative_confidence=[],
+                 priority_negative_confidence=[]):
         assert isinstance(positive_data, list)
         assert isinstance(negative_data, list)
         assert isinstance(priority_negative_data, list)
 
         if len(positive_data) > 0:
-            self.dataset.add_true_data(positive_data)
+            self.dataset.add_true_data(positive_data, positive_confidence)
             #TODO: compared stored and new sample to calculate sample_confidence
         
         if len(negative_data) > 0:
-            self.dataset.add_false_data(negative_data)
+            self.dataset.add_false_data(negative_data, negative_confidence)
 
         if len(priority_negative_data) > 0:
-            self.dataset.add_priority_false_data(priority_negative_data)
+            self.dataset.add_priority_false_data(priority_negative_data, 
+                                                 priority_negative_confidence)
 
     def add_data_from_files(self,
                             positive_files,
@@ -121,7 +128,7 @@ class AttentionSet():
     
     def train(self,
               epochs,
-              save_ftr_mean_sd=False):
+              save_ftr_distribution=False):
 
         self.move_to_gpu()
         self.classifier.train()
@@ -213,11 +220,13 @@ class AttentionSet():
                                                                             loss[idx]/counter,
                                                                             classifier_acc[idx]/counter))
         temp_ftr_sd = (temp_ftr_SST/(running_n-1))**0.5
-        if save_ftr_mean_sd:
+        if save_ftr_distribution:
             self.saved_ftr_mean = temp_ftr_mean
             self.saved_ftr_sd = temp_ftr_sd
+            self.saved_ftr_n = running_n
         self.this_ftr_mean = temp_ftr_mean
         self.this_ftr_sd = temp_ftr_sd
+        self.this_ftr_n = running_n
 
     def vote(self, x):
         self.classifier.eval()
@@ -263,8 +272,29 @@ class AttentionSet():
         self.confidences.update_successes(success_count)
         self.confidences.update_failures(failure_count)
 
-    def get_saved_ftr_mean_sd(self):
-        return self.saved_ftr_mean, self.saved_ftr_sd
+    def get_saved_ftr_distrbution(self):
+        return self.saved_ftr_mean, self.saved_ftr_sd, self.saved_ftr_n
 
-    def get_this_ftr_mean_sd(self):
-        return self.this_ftr_mean, self.this_ftr_sd
+    def get_this_ftr_mean_distribution(self):
+        return self.this_ftr_mean, self.this_ftr_sd, self.this_ftr_n
+
+    def compute_confidence(self, data=[]):
+        if len(data) > 0:
+            # what will data look like?
+            pass
+        # if not given input, use saved feature distribution
+        # Calculate p-values for each feature
+        SE_diff = np.sqrt(self.saved_ftr_sd**2/self.saved_ftr_n + 
+                          self.this_ftr_sd**2/self.this_ftr_n)
+        # low z-score indicates similar samples
+        z_stat = (self.saved_ftr_mean - self.this_ftr_mean) / SE_diff
+        # low z-score --> high p-value
+        p_value = stats.norm.sf(np.abs(z_stat))*2  # Two-tailed
+
+        # cutoff to get one number ?
+        samp_conf_mean = np.mean(p_value) # all medium conf vs. some high some low? WANT high conf and low sd
+        samp_conf_sd = np.std(p_value)
+        bonus = 0
+        if (samp_conf_mean) > 0.6 and (samp_conf_sd) < 0.2:
+            bonus = 0.1
+        return samp_conf_mean + bonus
