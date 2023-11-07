@@ -65,11 +65,11 @@ class AttentionSet():
         self.crossentropy = torch.nn.CrossEntropyLoss()
 
         # Saved feature mean and sd during initial training
-        self.saved_ftr_mean = None
-        self.saved_ftr_sd = None
+        self.saved_ftr_mean = np.array([])
+        self.saved_ftr_sd = np.array([])
         self.saved_ftr_n = 0
-        self.this_ftr_mean = None
-        self.this_ftr_sd = None
+        self.this_ftr_mean = np.array([])
+        self.this_ftr_sd = np.array([])
         self.this_ftr_n = 0
 
         
@@ -153,8 +153,8 @@ class AttentionSet():
                 masks = self.classifier.get_attention_masks()
 
                 # Compute features post mask 
-                # convert to numpy array? is it torch tensor type?
-                x_post_mask = masks*x
+                # Need to convert `x_post_mask` to numpy array? is it torch tensor type?
+                x_post_mask = torch.numpy(x) * torch.numpy(masks)
 
                 for batch_x_idx in range(x_post_mask.shape[0]):
                     running_n += 1
@@ -215,7 +215,7 @@ class AttentionSet():
                                                                             l1_losses[idx]/counter,
                                                                             loss[idx]/counter,
                                                                             classifier_acc[idx]/counter))
-        temp_ftr_sd = (temp_ftr_SST/(running_n-1))**0.5
+        temp_ftr_sd = (temp_ftr_SST/(running_n))**0.5
         if save_ftr_distribution:
             self.saved_ftr_mean = temp_ftr_mean
             self.saved_ftr_sd = temp_ftr_sd
@@ -276,8 +276,11 @@ class AttentionSet():
 
     def sample_confidence(self, data=[]):
         # Assume given input is data_list
+        # Currnet function: one sample, w/ n observations. Get one confidence value
+        # TODO: figure out data_list type, how many samples is one element?
         if len(data) > 0:
             # assume each data is a 1-d numpy array length = feature_size
+            # could be torch tensor type? if so, need to convert
             data_matrix = np.vstack(data)
             given_mean = np.mean(data_matrix, axis=0)
             given_sd = np.std(data_matrix, axis=0)
