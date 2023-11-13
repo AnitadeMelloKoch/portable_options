@@ -101,6 +101,7 @@ class AttentionSet():
         assert isinstance(priority_negative_data, list)
 
         if len(positive_data) > 0:
+            # pass the image through embedding, and calculate confidence
             self.dataset.add_true_data(positive_data, self.sample_confidence(positive_data))
         
         if len(negative_data) > 0:
@@ -144,7 +145,7 @@ class AttentionSet():
             counter = 0
             for _ in range(self.dataset.num_batches):
                 counter += 1
-                x, y = self.dataset.get_batch()
+                x, y = self.dataset.get_batch() # TODO: add the confidence value
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
@@ -152,8 +153,7 @@ class AttentionSet():
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
 
-                # Compute features post mask 
-                # Need to convert `x_post_mask` to numpy array? is it torch tensor type?
+                # Compute features post mask for running mean and sd
                 x_post_mask = torch.numpy(x) * torch.numpy(masks)
 
                 for batch_x_idx in range(x_post_mask.shape[0]):
@@ -219,7 +219,7 @@ class AttentionSet():
         if save_ftr_distribution:
             self.saved_ftr_mean = temp_ftr_mean
             self.saved_ftr_sd = temp_ftr_sd
-            self.saved_ftr_n = running_n
+            self.saved_ftr_n = running_n 
         self.this_ftr_mean = temp_ftr_mean
         self.this_ftr_sd = temp_ftr_sd
         self.this_ftr_n = running_n
@@ -275,32 +275,19 @@ class AttentionSet():
         return self.this_ftr_mean, self.this_ftr_sd, self.this_ftr_n
 
     def sample_confidence(self, data=[]):
-        # Assume given input is data_list
-        # Currnet function: one sample, w/ n observations. Get one confidence value
-        # TODO: figure out data_list type, how many samples is one element?
-        if len(data) > 0:
-            # assume each data is a 1-d numpy array length = feature_size
-            # could be torch tensor type? if so, need to convert
-            data_matrix = np.vstack(data)
-            given_mean = np.mean(data_matrix, axis=0)
-            given_sd = np.std(data_matrix, axis=0)
-            given_n = len(data)
-        # if not given input, use saved feature distribution
-        else:
-            given_mean, given_sd, given_n = self.get_this_ftr_distribution()
-
-        saved_mean, saved_sd, saved_n = self.get_saved_ftr_distrbution()
-        # Calculate p-values for each feature
-        SE_diff = np.sqrt(saved_sd**2/saved_n + given_sd**2/given_n)
-        # low z-score indicates similar samples
-        z_stat = (given_mean - saved_mean) / SE_diff
-        # low z-score --> high p-value
-        p_value = stats.norm.sf(np.abs(z_stat))*2  # Two-tailed
-
-        # cutoff to get one number ?
-        samp_conf_mean = np.mean(p_value) # all medium conf vs. some high some low? WANT high conf and low sd
-        samp_conf_sd = np.std(p_value)
-        bonus = 0
-        if (samp_conf_mean) > 0.6 and (samp_conf_sd) < 0.2:
-            bonus = 0.1
-        return samp_conf_mean + bonus
+        if len(data) == 0:
+            raise ValueError("No data given")
+            
+        confidence = np.zeros(len(data))
+        x = torch.tensor(data) 
+        if self.use_gpu:
+            x = x.to("cuda")
+        x = self.embedding.feature_extractor(x)
+        masks = self.classifier.get_attention_masks()
+        x_post_mask = torch.numpy(x) * torch.numpy(masks)
+        sds_away = np.abs(x_post_mask - self.saved_ftr_mean)/self.saved_ftr_sd
+        sd_variability = np.std(sds_away, axis=1)
+        # current implementation is just mean of sds away, and does not take into account the variability of sds away
+        confidence = np.flatten(np.mean(sds_away, axis=1)) 
+    
+        return confidence

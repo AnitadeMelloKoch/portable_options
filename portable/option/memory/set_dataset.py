@@ -16,6 +16,10 @@ class SetDataset():
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
         self.priority_false_data = torch.from_numpy(np.array([])).float()
+        
+        self.true_confidence = torch.from_numpy(np.array([])).float()
+        self.false_confidence = torch.from_numpy(np.array([])).float()
+        self.priority_false_confidence = torch.from_numpy(np.array([])).float()
 
         self.true_length = 0
         self.false_length = 0
@@ -31,9 +35,6 @@ class SetDataset():
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
 
-        self.true_confidence = torch.from_numpy(np.array([])).float()
-        self.false_confidence = torch.from_numpy(np.array([])).float()
-        self.priority_false_confidence = torch.from_numpy(np.array([])).float()
         
 
     @staticmethod
@@ -257,14 +258,20 @@ class SetDataset():
     def get_batch(self, shuffle_batch=True):
 
         if self.true_length == 0 or self.false_length == 0:
-            data, labels = self._unibatch()
+            data, labels, confidence = self._unibatch()
             data = self.transform(data)
-            return data, labels
+            return data, labels, confidence
 
         if self.priority_false_length > 0:
             normal_false = self._get_minibatch(
                 self.false_index(True),
                 self.false_data,
+                self.data_batchsize // 2,
+                self.shuffled_indices_false
+            )
+            normal_false_confidence = self._get_minibatch(
+                self.false_index(True),
+                self.false_confidence,
                 self.data_batchsize // 2,
                 self.shuffled_indices_false
             )
@@ -275,17 +282,34 @@ class SetDataset():
                 self.data_batchsize - self.data_batchsize//2,
                 self.shuffled_indices_false_priority
             )
+            priority_false_confidence = self._get_minibatch(
+                self.priority_false_index(),
+                self.priority_false_confidence,
+                self.data_batchsize - self.data_batchsize//2,
+                self.shuffled_indices_false_priority
+            )
             # print(torch.max(priority_false[0]))
             false_batch = self.concatenate(normal_false, priority_false)
+            false_confidence_batch = self.concatenate(normal_false_confidence, priority_false_confidence)
         else:
             false_batch = self._get_minibatch(
                 self.false_index(False),
                 self.false_data,
                 self.data_batchsize,
                 self.shuffled_indices_false)
+            false_confidence_batch = self._get_minibatch(
+                self.false_index(False),
+                self.false_confidence,
+                self.data_batchsize,
+                self.shuffled_indices_false)
         true_batch = self._get_minibatch(
             self.true_index(),
-            self.true_data, # self.true_confidence here?
+            self.true_data, 
+            self.data_batchsize,
+            self.shuffled_indices_true)
+        true_confidence_batch = self._get_minibatch(
+            self.true_index(),
+            self.true_confidence, 
             self.data_batchsize,
             self.shuffled_indices_true)
         # print(torch.max(true_batch[0]))
@@ -296,16 +320,17 @@ class SetDataset():
         self.counter += 1
 
         data = self.concatenate(false_batch, true_batch)
+        confidence = self.concatenate(false_confidence_batch, true_confidence_batch)
 
         if shuffle_batch is True:
             shuffle_idxs = torch.randperm(len(data))
             data = data[shuffle_idxs]
             labels = labels[shuffle_idxs]
+            confidence = confidence[shuffle_idxs]
 
         data = self.transform(data)
-
         
-        return data, labels  #, sample_confidence
+        return data, labels, confidence
 
     def true_index(self):
         return (self.counter*self.data_batchsize) % self.true_length
@@ -326,6 +351,12 @@ class SetDataset():
                 self.batchsize,
                 self.shuffled_indices_false
                 ) 
+            confidence = self._get_minibatch(
+                self.false_index(False), 
+                self.false_confidence, 
+                self.batchsize,
+                self.shuffled_indices_false
+                )
             labels = torch.from_numpy(np.array([0]*len(data)))
         else:
             data = self._get_minibatch(
@@ -334,9 +365,15 @@ class SetDataset():
                 self.batchsize,
                 self.shuffled_indices_true
                 )
+            confidence = self._get_minibatch(
+                self.true_index(), 
+                self.true_confidence, 
+                self.batchsize,
+                self.shuffled_indices_true
+                )
             labels = torch.from_numpy(np.array([1]*len(data)))
         
-        return data, labels
+        return data, labels, confidence
 
     @staticmethod
     def concatenate(arr1, arr2):
