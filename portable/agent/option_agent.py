@@ -1,7 +1,7 @@
 import gin 
 from pfrl import explorers
 from pfrl import replay_buffers
-from pfrl.replay_buffer import ReplayUpdater, batch_experiences
+from pfrl.replay_buffer import ReplayUpdater
 from pfrl.utils.batch_states import batch_states
 from pfrl.collections.prioritized import PrioritizedBuffer
 import numpy as np 
@@ -29,14 +29,16 @@ class OptionAgent():
                  final_exploration_frames,
                  discount_rate,
                  prioritized_replay_anneal_steps,
-                 summary_writer=None):
+                 summary_writer=None,
+                 video_generator=None):
         self.agent = OptionAgentModel(action_agent=action_agent,
                                       option_agent=option_agent,
                                       use_gpu=use_gpu,
                                       learning_rate=learning_rate,
                                       gamma=discount_rate,
                                       num_actions=num_actions,
-                                      summary_writer=summary_writer)
+                                      summary_writer=summary_writer,
+                                      video_generator=video_generator)
         self.use_gpu = use_gpu
         self.phi = phi
         self.batch_size = batch_size
@@ -49,6 +51,7 @@ class OptionAgent():
         self.final_exploration_frames = final_exploration_frames
         self.discount_rate = discount_rate
         self.num_actions = num_actions
+        self.video_generator = video_generator
         
         self.summary_writer = summary_writer
         
@@ -67,6 +70,17 @@ class OptionAgent():
             normalize_by_max="memory"
         )
         
+        # self.replay_updater = ReplayUpdater(
+        #     replay_buffer=self.replay_buffer,
+        #     update_func=self.update,
+        #     batchsize=batch_size,
+        #     episodic_update=False,
+        #     episodic_update_len=None,
+        #     n_times_update=1,
+        #     replay_start_size=warmup_steps,
+        #     update_interval=update_interval
+        # )
+        
         self.replay_updater = ReplayUpdater(
             replay_buffer=self.replay_buffer,
             update_func=self.update,
@@ -74,7 +88,7 @@ class OptionAgent():
             episodic_update=False,
             episodic_update_len=None,
             n_times_update=1,
-            replay_start_size=warmup_steps,
+            replay_start_size=50,
             update_interval=update_interval
         )
         
@@ -85,6 +99,7 @@ class OptionAgent():
             [math.pow(discount_rate, n) for n in range(100)]
         )
     
+    @staticmethod
     def batch_experiences(experiences, device, phi, gamma, batch_states=batch_states):
         """Takes a batch of k experiences each of which contains j
 
@@ -105,7 +120,10 @@ class OptionAgent():
         Returns:
             dict of batched transitions
         """
-
+        print("batch experiences")
+        print("device:", device)
+        print([elem[0]["option"] for elem in experiences])
+        
         batch_exp = {
             "state": batch_states([elem[0]["state"] for elem in experiences], device, phi),
             "action": torch.as_tensor(
@@ -153,11 +171,13 @@ class OptionAgent():
                 device = torch.device("cuda")
             else:
                 device = torch.device("cpu")
-            exp_batch = batch_experiences(experiences,
-                                          device=device,
-                                          phi=self.phi,
-                                          gamma=self.discount_rate,
-                                          batch_states=batch_states)
+            print("device:", device)
+            exp_batch = self.batch_experiences(experiences=experiences,
+                                               device=device,
+                                               phi=self.phi,
+                                               gamma=self.discount_rate,
+                                               batch_states=batch_states)
+            print("exp batch before option agent model:", exp_batch)
             # get weights for prioritized experience replay
             if has_weight:
                 exp_batch["weights"] = torch.tensor(
@@ -172,6 +192,7 @@ class OptionAgent():
             self.agent.train(exp_batch, errors_out, update_target_net)
             if has_weight:
                 assert isinstance(self.replay_buffer, replay_buffers.PrioritizedReplayBuffer)
+                print("errors out:",errors_out)
                 self.replay_buffer.update_errors(errors_out)
     
     def save(self, save_path):
@@ -196,6 +217,7 @@ class OptionAgent():
             )
         
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
+        
         
         if self.is_training:
             transition = {

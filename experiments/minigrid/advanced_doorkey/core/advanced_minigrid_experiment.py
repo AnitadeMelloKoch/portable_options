@@ -18,6 +18,8 @@ from portable.option.ensemble.custom_attention import AutoEncoder
 
 from portable.agent.option_agent import OptionAgent
 
+from experiments.experiment_logger import VideoGenerator
+
 @gin.configurable
 class AdvancedMinigridExperiment():
     def __init__(self,
@@ -41,7 +43,9 @@ class AdvancedMinigridExperiment():
                  policy_success_threshold=0.98,
                  use_gpu=True,
                  names=None,
-                 use_oracle_for_term=False,):
+                 use_oracle_for_term=False,
+                 termination_oracles=None,
+                 make_videos=False):
         
         
         self.training_seed = training_seed
@@ -97,6 +101,11 @@ class AdvancedMinigridExperiment():
         
         self.trial_data = []
         
+        if make_videos:
+            self.video_generator = VideoGenerator(os.path.join(self.base_dir, "videos"))
+        else:
+            self.video_generator = None
+        
         self.agent = OptionAgent(action_agent=action_agent,
                                  option_agent=option_agent,
                                  use_gpu=use_gpu,
@@ -105,18 +114,40 @@ class AdvancedMinigridExperiment():
         
         option_save_dirs = os.path.join(self.save_dir, 'options')
         
-        self.options = [AttentionOption(use_gpu=use_gpu,
-                                        log_dir=os.path.join(self.log_dir, 'option_'+str(x)),
-                                        markov_option_builder=markov_option_builder,
-                                        embedding=self.embedding,
-                                        policy_phi=policy_phi,
-                                        num_actions= num_primitive_actions,
-                                        dataset_transform_function=dataset_transform_function,
-                                        use_oracle_for_term=use_oracle_for_term,
-                                        save_dir=os.path.join(option_save_dirs, str(x)),
-                                        option_name=names[x] if names is not None else None) for x in range(num_options)]
+        if self.use_oracle_for_term:
+            assert termination_oracles is not None
+            assert len(termination_oracles) == self.num_options
+            
+            self.options = [AttentionOption(use_gpu=use_gpu,
+                                            log_dir=os.path.join(self.log_dir, 'option_'+str(x)),
+                                            markov_option_builder=markov_option_builder,
+                                            embedding=self.embedding,
+                                            policy_phi=policy_phi,
+                                            num_actions= num_primitive_actions,
+                                            dataset_transform_function=dataset_transform_function,
+                                            use_oracle_for_term=use_oracle_for_term,
+                                            termination_oracle=termination_oracles[x],
+                                            save_dir=os.path.join(option_save_dirs, str(x)),
+                                            video_generator=self.video_generator,
+                                            option_name=names[x] if names is not None else None) for x in range(num_options)]
+        else:
+            self.options = [AttentionOption(use_gpu=use_gpu,
+                                            log_dir=os.path.join(self.log_dir, 'option_'+str(x)),
+                                            markov_option_builder=markov_option_builder,
+                                            embedding=self.embedding,
+                                            policy_phi=policy_phi,
+                                            num_actions= num_primitive_actions,
+                                            dataset_transform_function=dataset_transform_function,
+                                            use_oracle_for_term=use_oracle_for_term,
+                                            save_dir=os.path.join(option_save_dirs, str(x)),
+                                            video_generator=self.video_generator,
+                                            option_name=names[x] if names is not None else None) for x in range(num_options)]
 
         self.global_option = global_option
+    
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
     
     def save(self):
         self.agent.save(self.save_dir)
@@ -229,10 +260,14 @@ class AdvancedMinigridExperiment():
         rewards = []
         steps = 0
         
+        if self.video_generator is not None:
+            self.video_generator.episode_start()
+        
         while not done:
             self.add_state_to_buffer(obs)
             next_obs, reward, done, action, option, info, step_num = self.run_one_step(env, obs, info)
             rewards.append(reward)
+            
             
             self.agent.observe(obs=obs,
                                action=action,
@@ -271,9 +306,16 @@ class AdvancedMinigridExperiment():
                                         action_mask,
                                         option_mask)
         
+        
         if action == 0:
             action = self.global_option.act(state)
+            
+            self._video_log("[global option] action selected: {}".format(action))
+            
             next_obs, reward, done, info = env.step(action)
+            
+            if self.video_generator is not None:
+                self.video_generator.make_image(state)
 
             return next_obs, [reward], done, 0, 0, info, 1
         else:
@@ -285,15 +327,15 @@ class AdvancedMinigridExperiment():
                 false_states = list(self.buffer)
             
             output = self.options[action_idx].run(env,
-                                                                               state,
-                                                                               info,
-                                                                               option_idx=option_idx,
-                                                                               eval=False,
-                                                                               false_states=false_states)
+                                                state,
+                                                info,
+                                                option_idx=option_idx,
+                                                eval=False,
+                                                false_states=false_states)
             
             next_obs, reward, done, info, steps = output
             
-            return next_obs, reward, done, action, option, info, steps
+            return next_obs, reward, done, action, option_idx, info, steps
             
     def run(self,
             make_env,
@@ -337,3 +379,6 @@ class AdvancedMinigridExperiment():
                 logging.info("Env Frames': {}".format(frames))
                 logging.info('Reward: {}'.format(undiscounted_return))
                 logging.info(100 * '-')
+                
+                if self.video_generator is not None:
+                    self.video_generator.episode_end("frames_{}".format(frames))

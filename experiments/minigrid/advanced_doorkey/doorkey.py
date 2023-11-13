@@ -360,12 +360,13 @@ if __name__ == "__main__":
                                                                    width=64,
                                                                    channel_num=3,
                                                                    action_vector_size=13,
-                                                                   num_options=10),
+                                                                   num_options=20),
                                             global_option=create_agent(7),
                                             num_options=12,
                                             markov_option_builder=create_markov_option,
                                             policy_phi=policy_phi,
-                                            names=names)
+                                            names=names,
+                                            termination_oracles=termination_oracles_doorkey)
     
     experiment.add_datafiles(initiation_positive_files=initiation_positive_files,
                              initiation_negative_files=initiation_negative_files,

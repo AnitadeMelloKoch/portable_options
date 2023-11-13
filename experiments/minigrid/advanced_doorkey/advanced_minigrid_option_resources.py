@@ -266,33 +266,33 @@ termination_negative_files = [
 
 def check_got_redkey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'red'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'red') for obj in env.unwrapped.carrying)
 
 def check_got_bluekey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'blue'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'blue') for obj in env.unwrapped.carrying)
 
 def check_got_greenkey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'green'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'green') for obj in env.unwrapped.carrying)
 
 def check_got_purplekey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'purple'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'purple') for obj in env.unwrapped.carrying)
 
 def check_got_yellowkey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'yellow'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'yellow') for obj in env.unwrapped.carrying)
 
 def check_got_greykey(env):
     if env.unwrapped.carrying is not None:
-        if env.unwrapped.carrying.type == 'key':
-            return env.unwrapped.carrying.color == 'grey'
+        if any(obj.type == 'key' for obj in env.unwrapped.carrying):
+            return any((obj.type == 'key' and obj.color == 'grey') for obj in env.unwrapped.carrying)
 
 def check_dooropen(env):
     door = env.get_door_obj()

@@ -13,7 +13,8 @@ class OptionAgentModel():
                  gamma,
                  num_actions,
                  
-                 summary_writer=None) -> None:
+                 summary_writer=None,
+                 video_generator=None) -> None:
         
         self.action_agent = action_agent
         self.option_agent = option_agent
@@ -23,6 +24,7 @@ class OptionAgentModel():
         self.num_actions = num_actions
         
         self.summary_writer = summary_writer
+        self.video_generator = video_generator
         
         self.target_action_agent = deepcopy(action_agent)
         self.target_action_agent.eval()
@@ -42,6 +44,7 @@ class OptionAgentModel():
         
         if self.use_gpu:
             self.option_agent.to("cuda")
+            self.target_option_agent.to("cuda")
         
     def save(self, save_path):
         self.option_agent.save(save_path)
@@ -88,7 +91,7 @@ class OptionAgentModel():
         # batch_pred_q_values_action = self.action_agent(batch_states)
         # batch_pred_values_action = batch_pred_q_values_action.gather(dim=1, index=batch_actions)
         
-        batch_next_state_q_values_action = self.target_action_agent(batch_next_states)
+        batch_next_state_q_values_action = self.target_action_agent.q_function(batch_next_states)
         batch_next_state_values_action = torch.argmax(batch_next_state_q_values_action, axis=1)
         # batch_q_target_action = batch_rewards + self.gamma*(1-batch_dones)*batch_next_state_values_action
         
@@ -105,21 +108,24 @@ class OptionAgentModel():
         
         # train option model
         action_vectors = np.zeros((len(batch_states), self.num_actions))
-        action_vectors[batch_actions] = 1
+        action_vectors[batch_actions.cpu().numpy()] = 1
         
         batch_pred_q_values_option = self.option_agent(action_vectors, batch_states)
+        batch_options = torch.unsqueeze(batch_options, dim=0)
+        
         batch_pred_values_option = batch_pred_q_values_option.gather(dim=1, index=batch_options)
         
         next_action_vectors = np.zeros((len(batch_next_states), self.num_actions))
-        next_action_vectors[batch_next_state_values_action] = 1
+        next_action_vectors[batch_next_state_values_action.cpu().numpy()] = 1
+        next_action_vectors = torch.from_numpy(next_action_vectors).to(batch_next_states.device)
         
         batch_next_state_q_values_option = self.target_option_agent(next_action_vectors, batch_next_states)
         batch_next_state_values_option = torch.argmax(batch_next_state_q_values_option, axis=1)
         batch_q_target_option = batch_rewards + self.gamma*(1-batch_dones)*batch_next_state_values_option
         
         td_loss_option = compute_q_learning_loss(exp_batch,
-                                                 batch_pred_values_option,
-                                                 batch_q_target_option,
+                                                 batch_pred_values_option.squeeze(),
+                                                 batch_q_target_option.squeeze(),
                                                  errors_out=errors_out)
         
         loss_option = td_loss_option.item()
@@ -129,7 +135,8 @@ class OptionAgentModel():
         self.option_optimizer.step()
         
         if update_target_network:
-            self.target_action_agent.load_state_dict(self.action_agent.state_dict())
+            self.target_action_agent = deepcopy(self.action_agent)
+            self.target_action_agent.eval()
             self.target_option_agent.load_state_dict(self.option_agent.state_dict())
         
         if self.summary_writer is not None:
@@ -141,6 +148,10 @@ class OptionAgentModel():
                                            self.timestep)
         
         self.timestep += 1
+    
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
     
     def predict_action(self, 
                        state,
@@ -154,23 +165,34 @@ class OptionAgentModel():
             action_q_values = self.action_agent.q_function(state)[0]
             action_q_values[np.logical_not(action_mask)] = -1e8
             
+            self._video_log("[option agent] action q values: {}".format(action_q_values))
+            
             rand_val = np.random.rand()
             
             if rand_val < epsilon:
+                self._video_log("[option agent] random select")
                 action = np.random.randint(0, len(action_q_values))
                 while not action_mask[action]:
                     action = np.random.randint(0, len(action_q_values))
             else:
+                self._video_log("[option agent] greedy select")
                 action = torch.argmax(action_q_values)
+            
+            self._video_log("[option agent] selected action: {}".format(action))
             
             action_vector = np.zeros(self.num_actions)
             action_vector[action] = 1
             option_q_values = self.option_agent([action_vector], state)[0]
             chosen_option_mask = option_mask[action]
+            
             if np.sum(chosen_option_mask) == 0:
                 return action, 0
             
-            chosen_option_mask = np.logical_not(chosen_option_mask.astype(bool))
+            chosen_option_mask = chosen_option_mask.astype(bool)
+            
+            
+            option_q_values[chosen_option_mask] = -1e8
+            self._video_log("[option agent] option q values: {}".format(option_q_values))
             
             if rand_val < epsilon:
                 option = np.random.randint(0, len(option_q_values))
@@ -179,5 +201,7 @@ class OptionAgentModel():
             else:
                 option_q_values[option_mask] = -1e8
                 option = torch.argmax(option_q_values)
+            
+            self._video_log("[option agent] chosen option: {}".format(option))
         
         return action, option

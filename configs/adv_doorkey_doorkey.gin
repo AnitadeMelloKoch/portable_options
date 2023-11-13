@@ -4,6 +4,11 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 import portable.agent.option_agent
 
+# FLAGS 
+AdvancedMinigridExperiment.use_oracle_for_term                      = True
+AdvancedMinigridExperiment.make_videos                              = True
+AttentionOption.update_options_from_success                         = False
+
 AdvancedMinigridExperiment.experiment_name                          = "doorkey"
 AdvancedMinigridExperiment.num_options                              = 12
 AdvancedMinigridExperiment.initiation_epochs                        = 100

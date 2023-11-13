@@ -67,15 +67,15 @@ class MarkovValueModel():
     def move_to_gpu(self):
         if self.use_gpu:
             self.recurrent_memory.to("cuda")
-            self.attentions.to("cuda")
-            self.q_networks.to("cuda")
-            self.target_q_networks.to("cuda")
+            self.attention.to("cuda")
+            self.q_network.to("cuda")
+            self.target_q_network.to("cuda")
 
     def move_to_cpu(self):
         self.recurrent_memory.to("cpu")
-        self.attentions.to("cpu")
-        self.q_networks.to("cpu")
-        self.target_q_networks.to("cpu")
+        self.attention.to("cpu")
+        self.q_network.to("cpu")
+        self.target_q_network.to("cpu")
     
     def save(self, path):
         if not os.path.exists(path):
@@ -159,11 +159,10 @@ class MarkovValueModel():
             embeddings = self.attention(embeddings)
             
             q_vals = self.q_network(embeddings)
-            action = q_vals.greedy_actions
+            action = torch.argmax(q_vals.q_values)
             value = q_vals.max
-        
         if return_q_values:
-            return action, action, value, q_vals.cpu().numpy()
+            return action, action, value, q_vals.q_values
         return action
 
 class MarkovAgent(Agent):
@@ -193,7 +192,7 @@ class MarkovAgent(Agent):
         super().__init__()
         
         self.use_gpu = use_gpu
-        self.phi = phi,
+        self.phi = phi
         self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
         self.buffer_length = buffer_length
         self.embedding = embedding
@@ -259,7 +258,7 @@ class MarkovAgent(Agent):
         self.replay_buffer_loaded = True
     
     def update_step(self):
-        self.step_number += 1
+        self.step_num += 1
 
     def train(self, epochs):
         if self.replay_buffer_loaded is False:
@@ -356,7 +355,7 @@ class MarkovAgent(Agent):
         
         if self.training:
             a = self.explorer.select_action(self.step_num,
-                                            greedy_action_func=action_selection_func)
+                                            greedy_action_func=lambda:action_selection_func(action))
         else:
             a = action_selection_func(action)
         

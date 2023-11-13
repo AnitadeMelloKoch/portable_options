@@ -32,7 +32,6 @@ class DoorKeyEnvOptionWrapper(Wrapper):
         self._find_objs()
     
     def _find_objs(self):
-        print('looking for objects')
         for x in range(self.env.unwrapped.width):
             for y in range(self.env.unwrapped.height):
                 cell = self.env.unwrapped.grid.get(x, y)
