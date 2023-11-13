@@ -1,6 +1,7 @@
 from typing import Tuple
 from gymnasium.core import Env, Wrapper 
-from minigrid.core.world_object import Door, Key
+from minigrid.core.world_object import Key
+from custom_minigrid.core.custom_world_object import CustomDoor
 from experiments.minigrid.utils import actions 
 import numpy as np 
 import matplotlib.pyplot as plt 
@@ -76,8 +77,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         if self.key_collected or self.door_unlocked or self.door_open:
             correct_key = self._get_door_key()
             key = self.env.unwrapped.grid.get(correct_key.position[0], correct_key.position[1])
-            self.env.unwrapped.carrying = key
-            self.env.unwrapped.carrying.cur_pos = np.array([-1, -1])
+            self.env.unwrapped.carrying.append(key)
+            key.cur_pos = np.array([-1, -1])
             self.env.unwrapped.grid.set(correct_key.position[0],
                                         correct_key.position[1],
                                         None)
@@ -116,7 +117,6 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         if type(obs) is np.ndarray:
             obs = torch.from_numpy(obs).float()
         
-        
         return obs, info
     
     
@@ -148,7 +148,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             self.door_colour = self.objects["door"].colour
             return
         
-        new_door = Door(self.door_colour, is_locked=True)
+        new_door = CustomDoor(self.door_colour, is_locked=True)
         
         self.env.unwrapped.grid.set(
             self.objects["door"].position[0],
@@ -236,12 +236,4 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             # plt.show(block=False)
             # input("continue?")
             return obs, 0, done, info
-        
-        
-        
-        
-        
-        
-
-
 

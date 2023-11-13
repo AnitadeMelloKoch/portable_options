@@ -38,6 +38,7 @@ class NNMarkovOption(MarkovOption):
                  use_gpu,
                  lr,
                  save_file,
+                 video_generator=None,
                  use_log=True):
         super().__init__(use_log)
         
@@ -70,6 +71,12 @@ class NNMarkovOption(MarkovOption):
         self.assimilation_min_interactions = assimilation_min_required_interactions
         self.assimilation_success_rate_required = assimilation_success_rate_required
         self.policy.store_buffer(save_file=self.save_file)
+        
+        self.video_generator = video_generator
+    
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
     
     @staticmethod
     def _get_save_paths(path):
@@ -109,6 +116,7 @@ class NNMarkovOption(MarkovOption):
         return torch.argmax(prediction) == 1
     
     def can_terminate(self, state):
+        self._video_log("[markov] Termination found")
         return np.array_equal(state, self.termination)
     
     def run(self,
@@ -130,8 +138,11 @@ class NNMarkovOption(MarkovOption):
                 states.append(state)
                 
                 action = self.policy.act(state)
+                self._video_log("[markov] action: {}".format(action))
                 
                 # print("PRIMITIVE ACTION: {}".format(action))
+                if self.video_generator is not None:
+                    self.video_generator.make_image(state)
                 
                 next_state, reward, done, info = env.step(action)
                 
@@ -158,6 +169,7 @@ class NNMarkovOption(MarkovOption):
                 if done or should_terminate:
                     if should_terminate:
                         self.log('[markov option] option chose to terminate')
+                        self._video_log("[markov] Markov option chose to terminate")
                         if not evaluate:
                             self._option_success({"states": states})
                         self.policy.store_buffer(save_file=self.save_file)
@@ -172,6 +184,7 @@ class NNMarkovOption(MarkovOption):
                         self.policy.move_to_cpu()
                         info["option_timed_out"] = False
                         self.log('[markov option] episode ended. option didnt')
+                        self._video_log("[markov] Environment ended.")
                         return next_state, rewards, done, info, steps
                 
                 state = next_state
@@ -204,6 +217,10 @@ class NNMarkovOption(MarkovOption):
         else:
             return False
     
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
+    
     def assimilate_run(self,
                        env,
                        state,
@@ -219,6 +236,10 @@ class NNMarkovOption(MarkovOption):
                 steps += 1
                 action = self.policy.act(state)
                 
+                self._video_log("[markov assim] Chosen action: {}".format(action))
+                
+                if self.video_generator is not None:
+                    self.video_generator.make_image(state)
                 next_state, reward, done, info = env.step(action)
                 
                 rewards.append(reward)
@@ -232,12 +253,14 @@ class NNMarkovOption(MarkovOption):
                 if done or should_terminate:
                     if should_terminate:
                         self.log('[assimilate test] Option chose to terminate')
+                        self._video_log("[markov assim] Option chose to terminate")
                         self.assimilation_performance.append(1)
                         
                         return next_state, rewards, done, info, steps
                     
                     if done:
                         self.log('[assimilate test] Episode ended but option did not conclude')
+                        self._video_log("[markov assim] Environment chose to end")
                         self.assimilation_performance.append(0)
                         return next_state, rewards, done, info, steps
                 

@@ -74,7 +74,9 @@ class AttentionOption():
                  termination_oracle=None,
                  original_initiation_function=None,
                  dataset_transform_function=None,
-                 option_name=None):
+                 option_name=None,
+                 video_generator=None,
+                 update_options_from_success=True):
         
         assert option_handling_method in OPTION_HANDLING_METHODS
         
@@ -83,6 +85,7 @@ class AttentionOption():
         
         self.name = option_name
         self.option_handling_method = option_handling_method
+        self.update_options_from_success = update_options_from_success
         
         self.policy = EnsembleAgent(use_gpu=use_gpu,
                                     warmup_steps=policy_warmup_steps,
@@ -145,6 +148,7 @@ class AttentionOption():
         self.original_initiation_function = original_initiation_function
         self.markov_idx = None
         self.max_instantiations = max_instantiations
+        self.video_generator = video_generator
         
         self.initiation_checked = False
         
@@ -155,7 +159,11 @@ class AttentionOption():
         policy_path, _, _, _ = self._get_save_paths()
         os.makedirs(policy_path, exist_ok=True)
         self.policy_buffer_save_file = os.path.join(policy_path, 'memory_buffer.pkl')
-        
+    
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
+    
     def _get_save_paths(self):
         policy = os.path.join(self.save_dir, 'policy')
         initiation = os.path.join(self.save_dir, 'initiation')
@@ -248,6 +256,7 @@ class AttentionOption():
             state = torch.from_numpy(state).float()
         
         vote_global, _, votes, conf = self.initiation.vote(state)
+        self._video_log("[port {}] port init votes: {}".format(self.name, votes.cpu().numpy()))
         # print("[{}] can initiate votes: {}".format(self.name, votes))
         
         local_vote = []
@@ -259,6 +268,7 @@ class AttentionOption():
                 local_vote.append(idx)
         
         self.markov_idx = local_vote
+        self._video_log("[port {}] possible markov: {}".format(self.name, local_vote))
         option_mask = np.zeros(self.max_instantiations)
         option_mask[local_vote] = 1
         
@@ -296,6 +306,7 @@ class AttentionOption():
             should_terminate = self.termination(env)
         else:
             should_terminate, _, votes, conf = self.termination.vote(next_state)
+            self._video_log("[port {}] term votes: {}".format(self.name, votes))
         return should_terminate
     
     def _continue_multi_inst_run(self,
@@ -306,7 +317,7 @@ class AttentionOption():
                                  eval,
                                  false_states):
         if len(self.markov_idx) != 0:
-            next_state, rewards, done, info, steps = self.markov_instantiations[self.markov_idx[option_idx]].run(env,
+            next_state, rewards, done, info, steps = self.markov_instantiations[option_idx].run(env,
                                                                                                                  state,
                                                                                                                  info,
                                                                                                                  eval)
@@ -330,9 +341,12 @@ class AttentionOption():
                     infos.append(info)
                     
                     action = self.policy.act(state)
-                    
+                    self._video_log("[port {}] action: {}".format(self.name, action))
+                    if self.video_generator is not None:
+                        self.video_generator.make_image(state)
                     next_state, reward, done, info = env.step(action)
                     should_terminate = self.can_terminate(env, next_state)
+                    self._video_log("[port {}] should terminate: {}".format(self.name, should_terminate))
                     steps += 1
                     rewards.append(reward)
                     
@@ -343,6 +357,7 @@ class AttentionOption():
                         self.policy.store_buffer(self.policy_buffer_save_file)
                         self.policy.move_to_cpu()
                         info["option_timed_out"] = False
+                        self._video_log("[port {}] Option complete".format(self.name))
                         return next_state, rewards, done, info, steps
                     
                     if should_terminate:
@@ -355,8 +370,10 @@ class AttentionOption():
                         
                         vote_global, _, votes, conf = self.initiation.vote(state)
                         if not vote_global:
+                            self._video_log("[port {}] Option complete".format(self.name))
                             return next_state, rewards, done, info, steps
             
+            self._video_log("[port {}] Option complete".format(self.name))
             return next_state, rewards, done, info, steps
     
     def bootstrap_policy(self,
@@ -457,6 +474,8 @@ class AttentionOption():
             warnings.warn("Max options created. Option is not being created.")
             return
         
+        self._video_log("[port {}] New instance created".format(self.name))
+        
         self.create_instance(states,
                              infos,
                              termination_state,
@@ -467,28 +486,30 @@ class AttentionOption():
     def _option_fail(self,
                      states):
         # option failed so we don't want to create a new instance
+        self._video_log("[port {}] Attempt failed".format(self.name))
         self.initiation.update_confidence(was_successful=False, votes=self.initiation.votes)
         self.initiation.add_data(negative_data=states)
     
     def update_option(self,
                       markov_option,
                       set_epochs):
-        logger.info("[update portable option] Updating option with given instance")
-        # Update confidences because we now know this was a success
-        self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
-        if not self.use_oracle_for_term:
-            self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
-        # replace replay buffer? maybe should do a random merge or something?
-        ########################################
-        #       TODO
-        #       Figure out what to do with replay buffer
-        #       Add data from markov option
-        self.policy.load_buffer(self.policy_buffer_save_file)
-        
-        self.policy = markov_option.policy
-        self.initiation.train(set_epochs)
-        if not self.use_oracle_for_term:
-            self.termination.train(set_epochs)
-        
-        self.save()
+        if self.update_options_from_success:
+            logger.info("[update portable option] Updating option with given instance")
+            # Update confidences because we now know this was a success
+            self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
+            if not self.use_oracle_for_term:
+                self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
+            # replace replay buffer? maybe should do a random merge or something?
+            ########################################
+            #       TODO
+            #       Figure out what to do with replay buffer
+            #       Add data from markov option
+            self.policy.load_buffer(self.policy_buffer_save_file)
+            
+            self.policy = markov_option.policy
+            self.initiation.train(set_epochs)
+            if not self.use_oracle_for_term:
+                self.termination.train(set_epochs)
+            
+            self.save()
 
