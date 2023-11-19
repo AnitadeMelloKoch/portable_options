@@ -114,6 +114,7 @@ class ClassifierExperiment():
         assert device_type in ["cpu", "cuda"]
 
         self.device = torch.device(device_type)
+        # Use Portable option
         self.option = Option(
             device=self.device,
             initiation_vote_function=get_vote_function(VOTE_FUNCTION_NAMES[0]),

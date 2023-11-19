@@ -145,7 +145,7 @@ class AttentionSet():
             counter = 0
             for _ in range(self.dataset.num_batches):
                 counter += 1
-                x, y = self.dataset.get_batch() # TODO: add the confidence value
+                x, y, sample_confidence = self.dataset.get_batch() 
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
@@ -286,7 +286,7 @@ class AttentionSet():
         masks = self.classifier.get_attention_masks()
         x_post_mask = torch.numpy(x) * torch.numpy(masks)
         sds_away = np.abs(x_post_mask - self.saved_ftr_mean)/self.saved_ftr_sd
-        sd_variability = np.std(sds_away, axis=1)
+        #sd_variability = np.std(sds_away, axis=1)
         # current implementation is just mean of sds away, and does not take into account the variability of sds away
         confidence = np.flatten(np.mean(sds_away, axis=1)) 
     

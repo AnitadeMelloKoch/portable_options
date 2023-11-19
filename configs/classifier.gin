@@ -1,0 +1,16 @@
+import experiments.classifier.core.classifier_experiment
+
+import portable.option.portable_option
+import portable.option.ensemble.custom_attention
+
+ClassifierExperiment.experiment_name                                = "classifier_sample_weight"
+ClassifierExperiment.use_gpu                                        = True
+ClassifierExperiment.classifier_train_epochs                        = 300
+
+AutoEncoder.num_input_channels                                      = 3
+AutoEncoder.feature_size                                            = 500
+AutoEncoder.image_height                                            = 200
+AutoEncoder.image_width                                             = 200
+
+
+
