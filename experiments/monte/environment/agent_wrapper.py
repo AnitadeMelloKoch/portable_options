@@ -3,7 +3,7 @@ from enum import IntEnum
 
 import cv2
 import skimage
-import gym
+import gymnasium as gym
 import torch
 import numpy as np
 from gym import spaces

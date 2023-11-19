@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 
 class MontezumaInfoWrapper(gym.Wrapper):
     def __init__(self, env):

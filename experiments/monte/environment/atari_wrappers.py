@@ -5,7 +5,7 @@ https://github.com/pfnet/pfrl/blob/master/pfrl/wrappers/atari_wrappers.py
 
 from collections import deque
 
-import gym
+import gymnasium as gym
 import numpy as np
 from gym import spaces
 import pfrl
