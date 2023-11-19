@@ -1,6 +1,7 @@
 import argparse
 import re
-from classifier.core.classifier_experiment import ClassifierExperiment
+#from classifier.core.classifier_experiment import ClassifierExperiment
+from . import ClassifierExperiment
 from portable.utils.utils import load_gin_configs
 from pathlib import Path
 import numpy as np
