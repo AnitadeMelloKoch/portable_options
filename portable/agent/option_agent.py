@@ -70,17 +70,6 @@ class OptionAgent():
             normalize_by_max="memory"
         )
         
-        # self.replay_updater = ReplayUpdater(
-        #     replay_buffer=self.replay_buffer,
-        #     update_func=self.update,
-        #     batchsize=batch_size,
-        #     episodic_update=False,
-        #     episodic_update_len=None,
-        #     n_times_update=1,
-        #     replay_start_size=warmup_steps,
-        #     update_interval=update_interval
-        # )
-        
         self.replay_updater = ReplayUpdater(
             replay_buffer=self.replay_buffer,
             update_func=self.update,
@@ -88,7 +77,7 @@ class OptionAgent():
             episodic_update=False,
             episodic_update_len=None,
             n_times_update=1,
-            replay_start_size=50,
+            replay_start_size=warmup_steps,
             update_interval=update_interval
         )
         
@@ -120,9 +109,6 @@ class OptionAgent():
         Returns:
             dict of batched transitions
         """
-        print("batch experiences")
-        print("device:", device)
-        print([elem[0]["option"] for elem in experiences])
         
         batch_exp = {
             "state": batch_states([elem[0]["state"] for elem in experiences], device, phi),
@@ -171,13 +157,11 @@ class OptionAgent():
                 device = torch.device("cuda")
             else:
                 device = torch.device("cpu")
-            print("device:", device)
             exp_batch = self.batch_experiences(experiences=experiences,
                                                device=device,
                                                phi=self.phi,
                                                gamma=self.discount_rate,
                                                batch_states=batch_states)
-            print("exp batch before option agent model:", exp_batch)
             # get weights for prioritized experience replay
             if has_weight:
                 exp_batch["weights"] = torch.tensor(
@@ -192,7 +176,6 @@ class OptionAgent():
             self.agent.train(exp_batch, errors_out, update_target_net)
             if has_weight:
                 assert isinstance(self.replay_buffer, replay_buffers.PrioritizedReplayBuffer)
-                print("errors out:",errors_out)
                 self.replay_buffer.update_errors(errors_out)
     
     def save(self, save_path):

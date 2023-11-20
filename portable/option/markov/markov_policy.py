@@ -357,7 +357,11 @@ class MarkovAgent(Agent):
             a = self.explorer.select_action(self.step_num,
                                             greedy_action_func=lambda:action_selection_func(action))
         else:
-            a = action_selection_func(action)
+            randval = np.random.rand()
+            if randval > 0.05:
+                a = action_selection_func(action)
+            else:
+                a = np.random.randint(0, self.num_actions)
         
         if return_ensemble_info:
             return a, actions, val

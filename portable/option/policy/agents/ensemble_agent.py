@@ -87,24 +87,46 @@ class EnsembleAgent(Agent):
         # Prioritized Replay
         # Anneal beta from beta0 to 1 throughout training
         # taken from https://github.com/pfnet/pfrl/blob/master/examples/atari/reproduction/rainbow/train_rainbow.py
-        self.replay_buffer = replay_buffers.PrioritizedReplayBuffer(
-            capacity=buffer_length,
-            alpha=0.5,  # Exponent of errors to compute probabilities to sample
-            beta0=0.4,  # Initial value of beta
-            betasteps=prioritized_replay_anneal_steps,  # Steps to anneal beta to 1
-            normalize_by_max="memory",  # method to normalize the weight
-        )
-        self.replay_updater = ReplayUpdater(
-            replay_buffer=self.replay_buffer,
-            update_func=self.update,
-            batchsize=batch_size,
-            episodic_update=False,
-            episodic_update_len=None,
-            n_times_update=1,
-            replay_start_size=warmup_steps,
-            update_interval=update_interval,
-        )
-        self.replay_buffer_loaded = True
+        # self.replay_buffer = replay_buffers.PrioritizedReplayBuffer(
+        #     capacity=buffer_length,
+        #     alpha=0.5,  # Exponent of errors to compute probabilities to sample
+        #     beta0=0.4,  # Initial value of beta
+        #     betasteps=prioritized_replay_anneal_steps,  # Steps to anneal beta to 1
+        #     normalize_by_max="memory",  # method to normalize the weight
+        # )
+        # we use a replay buffer for each policy
+        self.replay_buffers = [
+            replay_buffers.PrioritizedReplayBuffer(
+                capacity=buffer_length,
+                alpha=0.5,
+                beta0=0.4,
+                betasteps=prioritized_replay_anneal_steps,
+                normalize_by_max="memory"
+            ) for _ in range(self.num_modules)
+        ]
+        # self.replay_updater = ReplayUpdater(
+        #     replay_buffer=self.replay_buffer,
+        #     update_func=self.update,
+        #     batchsize=batch_size,
+        #     episodic_update=False,
+        #     episodic_update_len=None,
+        #     n_times_update=1,
+        #     replay_start_size=warmup_steps,
+        #     update_interval=update_interval,
+        # )
+        self.replay_updaters = [
+            ReplayUpdater(
+                replay_buffer=self.replay_buffers[i],
+                update_func=self.update,
+                batchsize=batch_size,
+                episodic_update=False,
+                episodic_update_len=None,
+                n_times_update=1,
+                replay_start_size=warmup_steps,
+                update_interval=update_interval 
+            ) for i in range(self.num_modules)
+        ]
+        self.replay_buffers_loaded = [True] * self.num_modules
     
     def initialize_new_policy(self):
 
@@ -125,45 +147,61 @@ class EnsembleAgent(Agent):
 
         return new_policy
     
+    def set_action_leader(self, idx):
+        self.value_ensemble.action_leader = idx
+    
+    def action_leader(self):
+        return self.value_ensemble.action_leader
+    
     def move_to_gpu(self):
         self.value_ensemble.move_to_gpu()
     
     def move_to_cpu(self):
         self.value_ensemble.move_to_cpu()
     
-    def store_buffer(self, save_file):
-        self.replay_buffer.save(save_file)
-        self.replay_buffer.memory = PrioritizedBuffer()
+    def store_buffer(self, save_folder):
+        action_leader = self.action_leader()
+        save_file = os.path.join(save_folder, '{}.pkl'.format(action_leader))
+        self.replay_buffers[action_leader].save(save_file)
+        self.replay_buffers[action_leader].memory = PrioritizedBuffer()
         
-        self.replay_buffer_loaded = False
+        self.replay_buffers_loaded[action_leader] = False
     
-    def load_buffer(self, save_file):
-        self.replay_buffer.load(save_file)
+    def load_buffer(self, save_folder):
+        action_leader = self.action_leader()
+        save_file = os.path.join(save_folder, '{}.pkl'.format(action_leader))
+        self.replay_buffers[action_leader].load(save_file)
         
-        self.replay_buffer_loaded = True
+        self.replay_buffers_loaded[action_leader] = True
     
     def update_step(self):
         self.step_number += 1
-        self.value_ensemble.step()
 
     def train(self, epochs):
-        if self.replay_buffer_loaded is False:
+        if self.replay_buffers_loaded[self.action_leader()] is False:
             raise Exception("replay buffer is not loaded")
-        if len(self.replay_buffer) < self.batch_size*epochs:
+        if len(self.replay_buffers[self.action_leader()]) < self.batch_size*epochs:
             return False
         
         for _ in range(epochs):
-            transitions = self.replay_buffer.sample(self.batch_size)
-            self.replay_updater.update_func(transitions)
+            transitions = self.replay_buffers[self.action_leader()].sample(self.batch_size)
+            self.replay_updaters[self.action_leader()].update_func(transitions)
 
         return True
 
-    def observe(self, obs, action, reward, next_obs, terminal, update_policy=True):
+    def observe(self, 
+                obs, 
+                action, 
+                reward, 
+                next_obs, 
+                terminal, 
+                update_policy=True,
+                update_bandit=True):
         """
         store the experience tuple into the replayreplay_buffer buffer
         and update the agent if necessary
         """
-        if self.replay_buffer_loaded is False:
+        if self.replay_buffers_loaded[self.action_leader()] is False:
             warnings.warn("Replay buffer is not loaded. This may not be intended.")
         
         self.update_step()
@@ -178,18 +216,33 @@ class EnsembleAgent(Agent):
                 "next_action": None,
                 "is_state_terminal": terminal,
             }
-            self.replay_buffer.append(**transition)
+            self.replay_buffers[self.action_leader()].append(**transition)
             if terminal:
-                self.replay_buffer.stop_current_episode()
+                self.replay_buffers[self.action_leader()].stop_current_episode()
 
             if update_policy is True:
-                self.replay_updater.update_if_necessary(self.step_number)
-            self.value_ensemble.update_accumulated_rewards(reward)
+                self.replay_updaters[self.action_leader()].update_if_necessary(self.step_number)
+            if update_bandit is True:
+                self.value_ensemble.step()
+                self.value_ensemble.update_accumulated_rewards(reward)
             
         # new episode
         if terminal:
             self.episode_number += 1
+    
+    def begin_rollout(self, buffer_folder, policy_leader=None, load_buffer=True):
+        if policy_leader is not None:
+            self.set_action_leader(policy_leader)
+        else:
             self.value_ensemble.update_leader()
+        
+        if load_buffer:
+            self.load_buffer(buffer_folder)
+        self.move_to_gpu()
+    
+    def end_rollout(self, buffer_folder):
+        self.store_buffer(buffer_folder)
+        self.move_to_cpu()
     
     def update(self, experiences, errors_out=None):
         """
@@ -208,7 +261,7 @@ class EnsembleAgent(Agent):
             errors_out (list or None): If set to a list, then TD-errors
                 computed from the given experiences are appended to the list.
         """
-        if self.replay_buffer_loaded is False:
+        if self.replay_buffers_loaded[self.action_leader()] is False:
             warnings.warn("Replay buffer is not loaded. This may not be intended.")
         
         if self.training:
@@ -238,8 +291,8 @@ class EnsembleAgent(Agent):
             self.value_ensemble.train(exp_batch, errors_out, update_target_net)
             # update prioritiy
             if has_weight:
-                assert isinstance(self.replay_buffer, replay_buffers.PrioritizedReplayBuffer)
-                self.replay_buffer.update_errors(errors_out)
+                assert isinstance(self.replay_buffers[self.action_leader()], replay_buffers.PrioritizedReplayBuffer)
+                self.replay_buffers[self.action_leader()].update_errors(errors_out)
 
     def act(self, obs, return_ensemble_info=False):
         """
@@ -249,7 +302,7 @@ class EnsembleAgent(Agent):
             return_ensemble_info (bool): when set to true, this function returns
                 (action_selected, actions_selected_by_each_learner, q_values_of_each_actions_selected)
         """
-        if self.replay_buffer_loaded is False:
+        if self.replay_buffers_loaded[self.action_leader()] is False:
             warnings.warn("Replay buffer is not loaded. This may not be intended.")
         
         if self.use_gpu:
@@ -258,8 +311,7 @@ class EnsembleAgent(Agent):
             device = torch.device("cpu")
         
         obs = batch_states([obs], device, self.phi)
-        action, actions, action_q_vals, _ = self.value_ensemble.predict_actions(obs, return_q_values=True)
-        
+        action, action_q_val = self.value_ensemble.predict_actions(obs, return_q_values=True)
         # action selection strategy
         action_selection_func = lambda a: a
         
@@ -270,13 +322,17 @@ class EnsembleAgent(Agent):
                 greedy_action_func=lambda: action_selection_func(action),
             )
         else:
-            a = action_selection_func(action)
+            randval = np.random.rand()
+            if randval > 0.05:
+                a = action_selection_func(action)
+            else:
+                a = np.random.randint(0, self.num_actions)
         if return_ensemble_info:
-            return a, actions, action_q_vals
+            return a, action_q_val
         return a
 
     def save(self, save_dir):
-        if self.replay_buffer_loaded is True:
+        if self.replay_buffers_loaded[self.action_leader()] is True:
             warnings.warn("Replay buffer is loaded. This may not be intended. Please save replay buffer separately")
         
         self.value_ensemble.save(save_dir)
@@ -284,6 +340,6 @@ class EnsembleAgent(Agent):
     def load(self, load_path):
         self.value_ensemble.load(load_path)
 
-        self.replay_buffer_loaded = False
+        self.replay_buffers_loaded = [False]*self.num_modules
         
         
