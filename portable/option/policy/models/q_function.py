@@ -21,7 +21,6 @@ class SingleSharedBias(nn.Module):
     def __call__(self, x):
         return x + self.bias.expand_as(x)
 
-
 class LinearQFunction(nn.Module):
     """
     Q function parametrized by soley linear layers

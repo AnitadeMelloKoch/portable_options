@@ -298,7 +298,7 @@ class AdvancedMinigridExperiment():
         option_mask = [np.ones(self.num_instances_per_option)]
         
         for option in self.options:
-            can_execute, available_options = option.can_initiate(state, info)
+            can_execute, available_options = option.can_initiate(state, info, env)
             action_mask.append(can_execute)
             option_mask.append(available_options)
         

@@ -158,7 +158,7 @@ class AttentionOption():
         
         policy_path, _, _, _ = self._get_save_paths()
         os.makedirs(policy_path, exist_ok=True)
-        self.policy_buffer_save_file = os.path.join(policy_path, 'memory_buffer.pkl')
+        self.policy_buffer_save_file = os.path.join(policy_path, 'memory_buffers')
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -250,8 +250,11 @@ class AttentionOption():
     
     def can_initiate(self,
                      state,
-                     info):
+                     info,
+                     env):
         logger.info("[portable option initiation] Checking if option can initiate")
+        
+        
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
         
@@ -274,6 +277,10 @@ class AttentionOption():
         
         self.initiation_checked = True
         
+        if self.use_oracle_for_term:
+            if self.can_terminate(env, state):
+                self._video_log("[port {}] in perfect termination. initiation being ignored")
+                return False, []
         return vote_global, option_mask
     
     def run(self,
@@ -328,8 +335,7 @@ class AttentionOption():
             states = []
             infos = []
             
-            self.policy.load_buffer(self.policy_buffer_save_file)
-            self.policy.move_to_gpu()
+            self.policy.begin_rollout(self.policy_buffer_save_file)
             if not self.use_oracle_for_term:
                 self.termination.move_to_gpu()
             
@@ -354,10 +360,13 @@ class AttentionOption():
                     self.policy.observe(state, action, reward, next_state, done or should_terminate)
                     
                     if done:
-                        self.policy.store_buffer(self.policy_buffer_save_file)
-                        self.policy.move_to_cpu()
+                        self.policy.end_rollout(self.policy_buffer_save_file)
+                        if not self.use_oracle_for_term:
+                            self.termination.move_to_cpu()
                         info["option_timed_out"] = False
-                        self._video_log("[port {}] Option complete".format(self.name))
+                        self._video_log("[port {}] Environment done".format(self.name))
+                        if self.video_generator is not None:
+                            self.video_generator.make_image(next_state)
                         return next_state, rewards, done, info, steps
                     
                     if should_terminate:
@@ -371,90 +380,97 @@ class AttentionOption():
                         vote_global, _, votes, conf = self.initiation.vote(state)
                         if not vote_global:
                             self._video_log("[port {}] Option complete".format(self.name))
+                            self.policy.end_rollout(self.policy_buffer_save_file)
+                            if not self.use_oracle_for_term:
+                                self.termination.move_to_cpu()
                             return next_state, rewards, done, info, steps
+                    
+                    state = next_state
+                    
             
             self._video_log("[port {}] Option complete".format(self.name))
+            self.policy.end_rollout(self.policy_buffer_save_file)
+            if not self.use_oracle_for_term:
+                self.termination.move_to_cpu()
             return next_state, rewards, done, info, steps
     
     def bootstrap_policy(self,
                          bootstrap_envs,
                          max_steps,
                          success_threshold):
-        ## initial policy train
-        step_number = 0
-        steps = []
-        episode_number = 0
-        total_reward = 0
-        rewards = []
-        success_queue_size = 100
-        # success_queue_size = 500
-        success_rates = deque(maxlen=success_queue_size)
-        logger.info("[option bootstrap] Bootstrapping option policy...")
-        logger.info("[option bootstrap] Success Threshold: {}".format(success_threshold))
-        logger.info("[option bootstrap] Max Steps: {}".format(max_steps))
-        
-        self.policy.move_to_gpu()
-        
-        env = random.choice(bootstrap_envs)
-        
-        rand_num = np.random.randint(low=0, high=5)
-        state, info = env.reset(agent_reposition_attempts=rand_num)
-        
-        while step_number < max_steps:
-            # action selection
-            action = self.policy.act(state)
+        for leader_idx in range(self.policy.num_modules):
+            print("[option bootstrap] Bootstrapping option policy {}".format(leader_idx))
+            ## initial policy train
+            step_number = 0
+            steps = []
+            episode_number = 0
+            total_reward = 0
+            rewards = []
+            # success_queue_size = 100
+            success_queue_size = 500
+            success_rates = deque(maxlen=success_queue_size)
+            logger.info("[option bootstrap] Bootstrapping option policy...")
+            logger.info("[option bootstrap] Success Threshold: {}".format(success_threshold))
+            logger.info("[option bootstrap] Max Steps: {}".format(max_steps))
             
-            # step
-            next_state, reward, done, info = env.step(action)
-            self.policy.observe(state, action, reward, next_state, done)
-            total_reward += reward 
-            step_number += 1
-            state = next_state
+            self.policy.begin_rollout(self.policy_buffer_save_file, leader_idx, load_buffer=False)
             
-            if done:
-                # check if env sent done signal and agent didn't die
-                success_rates.append(reward)
-                rewards.append(reward)
-                steps.append(step_number)
-                well_trained = len(success_rates) == success_queue_size \
-                    and np.mean(success_rates) >= success_threshold
-                
-                if well_trained:
-                    logger.info('[option bootstrap] Policy well trained')
-                    logger.info('[option bootstrap] Steps: {} Num episodes: {}'.format(step_number, episode_number))
-                    logger.info('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
-                    logger.info('============================================')
-                    
-                    print('[option bootstrap] Policy well trained')
-                    print('[option bootstrap] Steps: {} Num episodes: {}'.format(step_number, episode_number))
-                    print('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
-                    print('============================================')
-                    
-                    self.policy.store_buffer(self.policy_buffer_save_file)
-                    
-                    return step_number, total_reward, steps, rewards
-                
-                episode_number += 1
-                env = random.choice(bootstrap_envs)
-                
-                rand_num = np.random.randint(low=1, high=300)
-                state, info = env.reset(agent_reposition_attempts=rand_num)
+            env = random.choice(bootstrap_envs)
             
-                logger.info('[option bootstrap] {}/{} success rate {}'.format(step_number,
-                                                                                int(max_steps),
-                                                                                np.mean(success_rates)))
-                print('[option bootstrap] {}/{} success rate {}'.format(step_number,
-                                                                        int(max_steps),
-                                                                        np.mean(success_rates)))
-        logger.info('[option bootstrap] Policy did not reach well trained.')
-        logger.info('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
-        
-        print('[option bootstrap] Policy did not reach well trained.')
-        print('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
-        
-        self.policy.store_buffer(self.policy_buffer_save_file)
-        
-        return step_number, total_reward, steps, rewards
+            rand_num = np.random.randint(low=0, high=5)
+            state, info = env.reset(agent_reposition_attempts=rand_num)
+            
+            while step_number < max_steps:
+                # action selection
+                action = self.policy.act(state)
+                
+                # step
+                next_state, reward, done, info = env.step(action)
+                self.policy.observe(state, action, reward, next_state, done, update_bandit=False)
+                total_reward += reward 
+                step_number += 1
+                state = next_state
+                
+                if done:
+                    # check if env sent done signal and agent didn't die
+                    success_rates.append(reward)
+                    rewards.append(reward)
+                    steps.append(step_number)
+                    well_trained = len(success_rates) == success_queue_size \
+                        and np.mean(success_rates) >= success_threshold
+                    
+                    if well_trained:
+                        logger.info('[option bootstrap] Policy {} well trained'.format(leader_idx))
+                        logger.info('[option bootstrap] Steps: {} Num episodes: {}'.format(step_number, episode_number))
+                        logger.info('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
+                        logger.info('============================================')
+                        
+                        print('[option bootstrap] Policy {} well trained'.format(leader_idx))
+                        print('[option bootstrap] Steps: {} Num episodes: {}'.format(step_number, episode_number))
+                        print('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
+                        print('============================================')
+                        
+                        self.policy.end_rollout(self.policy_buffer_save_file)
+                        break
+                    
+                    episode_number += 1
+                    env = random.choice(bootstrap_envs)
+                    
+                    rand_num = np.random.randint(low=1, high=300)
+                    state, info = env.reset(agent_reposition_attempts=rand_num)
+                
+                    logger.info('[option bootstrap] Policy {} {}/{} success rate {}'.format(leader_idx,
+                                                                                            step_number,
+                                                                                            int(max_steps),
+                                                                                            np.mean(success_rates)))
+            if not well_trained:
+                logger.info('[option bootstrap] Policy {} did not reach well trained.'.format(leader_idx))
+                logger.info('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
+                
+                print('[option bootstrap] Policy {} did not reach well trained.'.format(leader_idx))
+                print('[option bootstrap] Final Success Rate: {}'.format(np.mean(success_rates)))
+
+            self.policy.end_rollout(self.policy_buffer_save_file)
     
     def initiation_update_confidence(self, was_successful, votes):
         self.initiation.update_confidence(was_successful, votes)
@@ -488,17 +504,18 @@ class AttentionOption():
         # option failed so we don't want to create a new instance
         self._video_log("[port {}] Attempt failed".format(self.name))
         self.initiation.update_confidence(was_successful=False, votes=self.initiation.votes)
-        self.initiation.add_data(negative_data=states)
+        if self.update_options_from_success:
+            self.initiation.add_data(negative_data=states)
     
     def update_option(self,
                       markov_option,
                       set_epochs):
+        logger.info("[update portable option] Updating option with given instance")
+        # Update confidences because we now know this was a success
+        self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
+        if not self.use_oracle_for_term:
+            self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
         if self.update_options_from_success:
-            logger.info("[update portable option] Updating option with given instance")
-            # Update confidences because we now know this was a success
-            self.initiation.update_confidence(was_successful=True, votes=markov_option.initiation_votes)
-            if not self.use_oracle_for_term:
-                self.termination.update_confidence(was_successful=True, votes=markov_option.termination_votes)
             # replace replay buffer? maybe should do a random merge or something?
             ########################################
             #       TODO

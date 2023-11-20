@@ -19,7 +19,10 @@ class VideoGenerator():
         os.makedirs(self.temp_path, exist_ok=True)
     
     def episode_end(self, video_name):
-        self.make_video(video_name)
+        try:
+            self.make_video(video_name)
+        except:
+            print("Video creation failed. Skipping for this episode....")
         self.clear_images()
     
     def add_line(self, line):
