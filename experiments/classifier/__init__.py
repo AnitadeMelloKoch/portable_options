@@ -1,1 +1,1 @@
-from .core.class_experiment import ClassifierExperiment
+from .core.classifier_experiment import ClassifierExperiment
