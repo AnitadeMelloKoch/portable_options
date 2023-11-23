@@ -24,7 +24,7 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
 '''
 
-load_gin_configs('/home/bingnan/portable_options/configs/classifier.gin', [])
+load_gin_configs('configs/classifier.gin', [])
   
 train_positive_files = []
 train_negative_files = []
@@ -36,7 +36,7 @@ train_negative_regex = r'.*_[0]_.*negative.*\.npy$'
 test_positive_regex = r'.*_[12]_.*positive.*\.npy$'
 test_negative_regex = r'.*_[12]_.*negative.*\.npy$'
 
-dataset_folder = Path('/home/bingnan/portable_options/resources/minigrid_images/').expanduser()
+dataset_folder = Path('resources/minigrid_images/')
 all_images = dataset_folder.glob('*.npy')
 
 train_positive_files = [np.load(f) for f in all_images if re.match(train_positive_regex, str(f))]
