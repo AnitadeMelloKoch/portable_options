@@ -34,10 +34,10 @@ if __name__ == "__main__":
     dataset_folder = Path('resources/minigrid_images/')
     all_images = dataset_folder.glob('*.npy')
 
-    train_positive_files = [np.load(f) for f in all_images if re.match(train_positive_regex, str(f))]
-    train_negative_files = [np.load(f) for f in all_images if re.match(train_negative_regex, str(f))]
-    test_positive_files = [np.load(f) for f in all_images if re.match(test_positive_regex, str(f))]
-    test_pnegative_files = [np.load(f) for f in all_images if re.match(test_negative_regex, str(f))]
+    train_positive_files = [f for f in all_images if re.match(train_positive_regex, str(f))]
+    train_negative_files = [f for f in all_images if re.match(train_negative_regex, str(f))]
+    test_positive_files = [f for f in all_images if re.match(test_positive_regex, str(f))]
+    test_pnegative_files = [f for f in all_images if re.match(test_negative_regex, str(f))]
 
 
     experiment = ClassifierExperiment(base_dir=args.base_dir,
