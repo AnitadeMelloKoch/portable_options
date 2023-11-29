@@ -61,16 +61,23 @@ class AttentionSet():
         self.optimizers = [
             torch.optim.Adam(self.classifier.attentions[idx].parameters(), lr=learning_rate) for idx in range(self.attention_num)
         ]
-        
-        self.crossentropy = torch.nn.CrossEntropyLoss()
 
-        # Saved feature mean and sd during initial training
-        self.saved_ftr_mean = np.array([])
-        self.saved_ftr_sd = np.array([])
-        self.saved_ftr_n = 0
-        self.this_ftr_mean = np.array([])
-        self.this_ftr_sd = np.array([])
-        self.this_ftr_n = 0
+        # TODO: remove and change to functional binary cross entropy w/ logits
+        self.crossentropy = torch.nn.CrossEntropyLoss()
+        #self.crossentropy = torch.nn.functional.binary_cross_entropy_with_logits
+        
+        # Initialize saved feature mean and var during initial training
+        self.ftr_mean = torch.zeros((self.attention_num, embedding.feature_size))
+        self.ftr_sd = torch.zeros((self.attention_num, embedding.feature_size))
+        self.ftr_M2 = torch.zeros((self.attention_num, embedding.feature_size))
+        self.ftr_n = torch.zeros(self.attention_num)
+        if self.use_gpu:
+            self.ftr_mean = self.ftr_mean.to("cuda")
+            self.ftr_sd = self.ftr_sd.to("cuda")
+            self.ftr_M2 = self.ftr_M2.to("cuda")
+            self.ftr_n = self.ftr_n.to("cuda")
+
+        self.stored_ftr_dist = False
 
         
     def save(self, path):
@@ -120,8 +127,11 @@ class AttentionSet():
         assert isinstance(priority_negative_files, list)
 
         self.dataset.add_true_files(positive_files)
+        #print("True files added: ", len(self.dataset.true_data))
         self.dataset.add_false_files(negative_files)
+        #print("False files added: ", len(self.dataset.false_data))
         self.dataset.add_priority_false_files(priority_negative_files)
+        #print("Priority false files added: ", len(self.dataset.priority_false_data))
     
     def train(self,
               epochs,
@@ -131,9 +141,8 @@ class AttentionSet():
         self.classifier.train()
 
         # Calculate running Mean and sd for features
-        temp_ftr_mean = np.zeros((self.embedding.feature_size))
-        temp_ftr_SST = np.zeros((self.embedding.feature_size))
-        running_n = 0
+        if save_ftr_distribution:
+            self.stored_ftr_dist = True
         
         for epoch in range(epochs):
             self.dataset.shuffle()
@@ -154,17 +163,9 @@ class AttentionSet():
                 masks = self.classifier.get_attention_masks()
 
                 # Compute features post mask for running mean and sd
-                x_post_mask = torch.numpy(x) * torch.numpy(masks)
-
-                for batch_x_idx in range(x_post_mask.shape[0]):
-                    running_n += 1
-                    this_row = x_post_mask[batch_x_idx]
-                    if running_n == 1:
-                        temp_ftr_mean = this_row
-                    else:
-                        prev_mean = temp_ftr_mean
-                        temp_ftr_mean = prev_mean + (this_row-prev_mean)/(running_n)
-                        temp_ftr_SST += (this_row-prev_mean)*(this_row-temp_ftr_mean)
+                if save_ftr_distribution:
+                    for mask_idx in range(len(masks)):
+                        self.update_ftr_dist(x*masks[mask_idx], mask_idx)
 
                 for attn_idx in range(self.attention_num):
                     b_loss = self.crossentropy(pred_y[attn_idx], y)
@@ -215,14 +216,9 @@ class AttentionSet():
                                                                             l1_losses[idx]/counter,
                                                                             loss[idx]/counter,
                                                                             classifier_acc[idx]/counter))
-        temp_ftr_sd = (temp_ftr_SST/(running_n))**0.5
         if save_ftr_distribution:
-            self.saved_ftr_mean = temp_ftr_mean
-            self.saved_ftr_sd = temp_ftr_sd
-            self.saved_ftr_n = running_n 
-        self.this_ftr_mean = temp_ftr_mean
-        self.this_ftr_sd = temp_ftr_sd
-        self.this_ftr_n = running_n
+            self.ftr_sd = self.get_ftr_distribution()[1]
+            
 
     def vote(self, x):
         self.classifier.eval()
@@ -268,26 +264,46 @@ class AttentionSet():
         self.confidences.update_successes(success_count)
         self.confidences.update_failures(failure_count)
 
-    def get_saved_ftr_distrbution(self):
-        return self.saved_ftr_mean, self.saved_ftr_sd, self.saved_ftr_n
 
-    def get_this_ftr_distribution(self):
-        return self.this_ftr_mean, self.this_ftr_sd, self.this_ftr_n
+    def update_ftr_dist(self, batch_data, mask_index):
+        self.ftr_n[mask_index] += batch_data.size(0)
+        delta = batch_data - self.ftr_mean[mask_index] 
+        self.ftr_mean[mask_index] += torch.sum(delta, dim=0) / self.ftr_n[mask_index]
+        delta2 = batch_data - self.ftr_mean[mask_index]
+        self.ftr_M2[mask_index] += torch.sum(delta * delta2, dim=0)
+
+
+    def get_ftr_distribution(self):
+        sd = torch.zeros_like(self.ftr_M2)
+        sd = (self.ftr_M2 / self.ftr_n.unsqueeze(1))**0.5
+        #valid_counts = self.ftr_n > 1
+        #sd[valid_counts] = (self.ftr_M2[valid_counts] / self.ftr_n[valid_counts].unsqueeze(1))**0.5
+        return self.ftr_mean, sd, self.ftr_n
+         
 
     def sample_confidence(self, data=[]):
         if len(data) == 0:
             raise ValueError("No data given")
-            
-        confidence = np.zeros(len(data))
-        x = torch.tensor(data) 
-        if self.use_gpu:
-            x = x.to("cuda")
-        x = self.embedding.feature_extractor(x)
+        
+        confidence = torch.zeros((len(data), self.attention_num))
         masks = self.classifier.get_attention_masks()
-        x_post_mask = torch.numpy(x) * torch.numpy(masks)
-        sds_away = np.abs(x_post_mask - self.saved_ftr_mean)/self.saved_ftr_sd
-        #sd_variability = np.std(sds_away, axis=1)
-        # current implementation is just mean of sds away, and does not take into account the variability of sds away
-        confidence = np.flatten(np.mean(sds_away, axis=1)) 
-    
+
+        for i in range(len(data)):
+            x = data[i].unsqueeze(0)
+            if self.use_gpu:
+                x = x.to("cuda")
+            x = self.embedding.feature_extractor(x)
+
+            for j in range(len(masks)):
+                this_mask = masks[j]
+                x_post_mask = x * this_mask
+                sds_away = torch.abs(x_post_mask - self.ftr_mean[j])/self.ftr_sd[j]
+                #sd_variability = torch.std(sds_away)
+                # TODO: maybe take into account the variability of sds away in the future
+                avg_sds_away = torch.mean(sds_away)
+                #confidence[i,j] = avg_sds_away
+                if avg_sds_away > 3:
+                    confidence[i,j] = 0
+                else: 
+                    confidence[i,j] = 1 - avg_sds_away/3
         return confidence

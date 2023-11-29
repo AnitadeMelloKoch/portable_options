@@ -3,8 +3,8 @@ import numpy as np
 import math
 import os
 import pickle
-from portable.utils import plot_state
 import random
+from portable.utils import plot_state
 
 class SetDataset():
     def __init__(
