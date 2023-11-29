@@ -127,11 +127,8 @@ class AttentionSet():
         assert isinstance(priority_negative_files, list)
 
         self.dataset.add_true_files(positive_files)
-        #print("True files added: ", len(self.dataset.true_data))
         self.dataset.add_false_files(negative_files)
-        #print("False files added: ", len(self.dataset.false_data))
         self.dataset.add_priority_false_files(priority_negative_files)
-        #print("Priority false files added: ", len(self.dataset.priority_false_data))
     
     def train(self,
               epochs,
@@ -145,6 +142,8 @@ class AttentionSet():
             self.stored_ftr_dist = True
         
         for epoch in range(epochs):
+            print("Epoch {}".format(epoch))
+            
             self.dataset.shuffle()
             loss = np.zeros(self.attention_num)
             classifier_losses = np.zeros(self.attention_num)
@@ -162,12 +161,11 @@ class AttentionSet():
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
 
-                # Compute features post mask for running mean and sd
-                if save_ftr_distribution:
-                    for mask_idx in range(len(masks)):
-                        self.update_ftr_dist(x*masks[mask_idx], mask_idx)
-
                 for attn_idx in range(self.attention_num):
+                    # Compute features post mask for running mean and sd
+                    if save_ftr_distribution:
+                        self.update_ftr_dist(x*masks[attn_idx], attn_idx)
+                    
                     b_loss = self.crossentropy(pred_y[attn_idx], y)
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
                     classifier_losses[attn_idx] += b_loss.item()

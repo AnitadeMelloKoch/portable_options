@@ -47,7 +47,7 @@ if __name__ == "__main__":
     experiment = ClassifierExperiment(base_dir=args.base_dir,
 				      seed=args.seed,
 				      experiment_name='sample confidence test -- minigrid',
-				      classifier_train_epochs=1,
+				      classifier_train_epochs=100,
 				      use_gpu=True)
     print("Adding train data...")
     experiment.add_train_data(train_positive_files, train_negative_files)
