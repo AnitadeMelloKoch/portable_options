@@ -53,8 +53,7 @@ class ClassificationHead(nn.Module):
             nn.Linear(input_dim//4, input_dim//8),
             nn.ReLU(),
             nn.BatchNorm1d(input_dim//8),
-            nn.Linear(input_dim//8, num_classes),
-            nn.Softmax(-1)
+            nn.Linear(input_dim//8, num_classes)
         )
         
     

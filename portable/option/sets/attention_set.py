@@ -1,8 +1,11 @@
+import os
 import logging 
+
 import numpy as np 
 from scipy import stats
 import torch 
-import os
+import torch.nn.functional as F
+
 from portable.option.memory import SetDataset
 from portable.option.ensemble.custom_attention import *
 from portable.option.sets.utils import BayesianWeighting
@@ -52,7 +55,7 @@ class AttentionSet():
         self.name = model_name
         
         self.classifier = AttentionEnsembleII(num_attention_heads=attention_module_num,
-                                              num_classes=2,
+                                              num_classes=1,
                                               embedding_size=embedding.feature_size)
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
@@ -65,8 +68,8 @@ class AttentionSet():
         ]
 
         # TODO: remove and change to functional binary cross entropy w/ logits
-        self.crossentropy = torch.nn.CrossEntropyLoss()
-        #self.crossentropy = torch.nn.functional.binary_cross_entropy_with_logits
+        #self.crossentropy = torch.nn.CrossEntropyLoss()
+        #self.crossentropy = F.binary_cross_entropy_with_logits
         
         # Initialize saved feature mean and var during initial training
         self.ftr_mean = torch.zeros((self.attention_num, embedding.feature_size))
@@ -146,7 +149,7 @@ class AttentionSet():
         for epoch in range(epochs):
             # Testing prints
             print("*** Epoch {} ***".format(epoch))
-            self.print_gpu_memory()            
+            self.print_gpu_memory()
             
             self.dataset.shuffle()
             loss = np.zeros(self.attention_num)
@@ -157,20 +160,41 @@ class AttentionSet():
             counter = 0
             for _ in range(self.dataset.num_batches):
                 counter += 1
-                x, y, sample_confidence = self.dataset.get_batch() 
+                x, y, sample_conf = self.dataset.get_batch() 
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
+                    sample_conf = sample_conf.to("cuda")
                 x = self.embedding.feature_extractor(x)
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
+
+                if sample_conf.dim() == 1: 
+                    # sample conf should have shape (attention_num, batch_size)
+                    # for data added from file, they have shape (batch_size) since attention_num unknown
+                    sample_conf = sample_conf.unsqueeze(0).repeat(self.attention_num, 1)
+
+                '''
+                print("x shape: {}".format(x.shape))
+                print("y shape: {}".format(y.shape))
+                print("sample_conf shape: {}".format(sample_conf.shape))
+                print("pred_y[0]: {}".format(pred_y[0]))
+                print("pred_y[0] shape: {}".format(pred_y[0].shape))
+                print("masks[0] shape: {}".format(masks[0].shape))
+                '''
 
                 for attn_idx in range(self.attention_num):
                     # Compute features post mask for running mean and sd
                     if save_ftr_distribution:
                         self.update_ftr_dist((x*masks[attn_idx]).detach(), attn_idx)
+
+                    #b_loss = self.crossentropy(pred_y[attn_idx], y)
                     
-                    b_loss = self.crossentropy(pred_y[attn_idx], y)
+                    b_loss = F.binary_cross_entropy_with_logits(
+                        pred_y[attn_idx].squeeze(), 
+                        y.float(), 
+                        weight=sample_conf[attn_idx])
+                    
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
                     classifier_losses[attn_idx] += b_loss.item()
                     div_loss = self.div_scale*divergence_loss(masks, attn_idx)
@@ -287,7 +311,7 @@ class AttentionSet():
         if len(data) == 0:
             raise ValueError("No data given")
         
-        confidence = torch.zeros((len(data), self.attention_num))
+        confidence = torch.zeros((self.attention_num, len(data)))
         masks = self.classifier.get_attention_masks()
 
         for i in range(len(data)):
@@ -305,9 +329,9 @@ class AttentionSet():
                 avg_sds_away = torch.mean(sds_away)
                 #confidence[i,j] = avg_sds_away
                 if avg_sds_away > 3:
-                    confidence[i,j] = 0
+                    confidence[j,i] = 0
                 else: 
-                    confidence[i,j] = 1 - avg_sds_away/3
+                    confidence[j,i] = 1 - avg_sds_away/3
         return confidence
 
     def print_gpu_memory(self):
