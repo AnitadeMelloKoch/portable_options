@@ -7,6 +7,8 @@ from portable.option.memory import SetDataset
 from portable.option.ensemble.custom_attention import *
 from portable.option.sets.utils import BayesianWeighting
 
+import subprocess
+
 logger = logging.getLogger(__name__)
 
 class AttentionSet():
@@ -142,7 +144,9 @@ class AttentionSet():
             self.stored_ftr_dist = True
         
         for epoch in range(epochs):
-            print("Epoch {}".format(epoch))
+            # Testing prints
+            print("*** Epoch {} ***".format(epoch))
+            self.print_gpu_memory()            
             
             self.dataset.shuffle()
             loss = np.zeros(self.attention_num)
@@ -164,7 +168,7 @@ class AttentionSet():
                 for attn_idx in range(self.attention_num):
                     # Compute features post mask for running mean and sd
                     if save_ftr_distribution:
-                        self.update_ftr_dist(x*masks[attn_idx], attn_idx)
+                        self.update_ftr_dist((x*masks[attn_idx]).detach(), attn_idx)
                     
                     b_loss = self.crossentropy(pred_y[attn_idx], y)
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
@@ -305,3 +309,13 @@ class AttentionSet():
                 else: 
                     confidence[i,j] = 1 - avg_sds_away/3
         return confidence
+
+    def print_gpu_memory(self):
+        allocated = torch.cuda.memory_allocated()
+        max_allocated = torch.cuda.max_memory_allocated()
+        print(f"Current GPU Memory usage: {allocated / 1024**3:.2f} GB")
+        print(f"Max GPU Memory usage: {max_allocated / 1024**3:.2f} GB")
+
+    def print_nvidia_smi(self):
+        result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE)
+        print(result.stdout.decode('utf-8'))
