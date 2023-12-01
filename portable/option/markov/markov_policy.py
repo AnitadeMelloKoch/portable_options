@@ -45,7 +45,7 @@ class MarkovValueModel():
             batch_first=True
         )
         
-        self.recurrent_memory.load_state_dict(initial_policy.recurrent_memory.state_dict())
+        self.recurrent_memory.load_state_dict(initial_policy.recurrent_memories[policy_idx].state_dict())
         
         self.attention = AttentionLayer(gru_hidden_size)
         self.q_network = LinearQFunction(in_features=gru_hidden_size,
@@ -125,7 +125,7 @@ class MarkovValueModel():
         # target q values
         with torch.no_grad():
             batch_next_state_q_all_actions = self.q_network(attn_next_state_embeddings)
-            next_state_values = batch_next_state_q_all_actions.max
+            next_state_values = torch.max(batch_next_state_q_all_actions.q_values, dim=-1)
             batch_q_target = batch_rewards + self.gamma*(1-batch_dones)*next_state_values
         
         td_loss = compute_q_learning_loss(exp_batch,

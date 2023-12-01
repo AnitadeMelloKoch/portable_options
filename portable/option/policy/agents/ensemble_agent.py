@@ -56,7 +56,7 @@ class EnsembleAgent(Agent):
         self.update_interval = update_interval
         self.num_actions = num_actions
         self.num_modules = num_modules
-        self.step_number = 0
+        self.step_numbers = [0]*self.num_modules
         self.episode_number = 0
         self.update_epochs_per_step = 1
         self.discount_rate = discount_rate
@@ -77,12 +77,12 @@ class EnsembleAgent(Agent):
         )
 
         # explorer
-        self.explorer = explorers.LinearDecayEpsilonGreedy(
+        self.explorers = [explorers.LinearDecayEpsilonGreedy(
             1.0,
             final_epsilon,
             final_exploration_frames,
             lambda: np.random.randint(num_actions),
-        )
+        ) for _ in range(num_modules)]
 
         # Prioritized Replay
         # Anneal beta from beta0 to 1 throughout training
@@ -175,7 +175,7 @@ class EnsembleAgent(Agent):
         self.replay_buffers_loaded[action_leader] = True
     
     def update_step(self):
-        self.step_number += 1
+        self.step_numbers[self.action_leader()] += 1
 
     def train(self, epochs):
         if self.replay_buffers_loaded[self.action_leader()] is False:
@@ -183,6 +183,7 @@ class EnsembleAgent(Agent):
         if len(self.replay_buffers[self.action_leader()]) < self.batch_size*epochs:
             return False
         
+
         for _ in range(epochs):
             transitions = self.replay_buffers[self.action_leader()].sample(self.batch_size)
             self.replay_updaters[self.action_leader()].update_func(transitions)
@@ -221,7 +222,7 @@ class EnsembleAgent(Agent):
                 self.replay_buffers[self.action_leader()].stop_current_episode()
 
             if update_policy is True:
-                self.replay_updaters[self.action_leader()].update_if_necessary(self.step_number)
+                self.replay_updaters[self.action_leader()].update_if_necessary(self.step_numbers[self.action_leader()])
             if update_bandit is True:
                 self.value_ensemble.step()
                 self.value_ensemble.update_accumulated_rewards(reward)
@@ -287,7 +288,7 @@ class EnsembleAgent(Agent):
                 if errors_out is None:
                     errors_out = []
             # actual update
-            update_target_net =  self.step_number % self.q_target_update_interval == 0
+            update_target_net =  self.step_numbers[self.action_leader()] % self.q_target_update_interval == 0
             self.value_ensemble.train(exp_batch, errors_out, update_target_net)
             # update prioritiy
             if has_weight:
@@ -317,8 +318,8 @@ class EnsembleAgent(Agent):
         
         # epsilon-greedy
         if self.training:
-            a = self.explorer.select_action(
-                self.step_number,
+            a = self.explorers[self.action_leader()].select_action(
+                self.step_numbers[self.action_leader()],
                 greedy_action_func=lambda: action_selection_func(action),
             )
         else:

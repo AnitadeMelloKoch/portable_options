@@ -47,7 +47,6 @@ class AdvancedMinigridExperiment():
                  termination_oracles=None,
                  make_videos=False):
         
-        
         self.training_seed = training_seed
         self.initiation_epochs=initiation_epochs
         self.termination_epochs=termination_epochs
@@ -62,12 +61,6 @@ class AdvancedMinigridExperiment():
         self.use_oracle_for_term = use_oracle_for_term
         
         "FIRST OPTION IS GLOBAL OPTION gives access to primitive skills"
-        #################################################
-        #                     TODO                      #
-        #################################################
-        #   Change policy bootstrap to only consider    # 
-        #                 one policy                    #
-        #################################################
         
         if self.use_gpu:
             self.embedding = AutoEncoder().to("cuda")
@@ -90,7 +83,8 @@ class AdvancedMinigridExperiment():
         os.makedirs(self.save_dir, exist_ok=True)
         
         self.writer = SummaryWriter(log_dir=self.log_dir)      
-        log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
+        log_file = os.path.join(self.log_dir, 
+                                "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.INFO)

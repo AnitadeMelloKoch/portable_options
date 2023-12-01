@@ -27,7 +27,7 @@ writer = SummaryWriter(log_dir=log_dir)
 dataset = SetDataset(batchsize=64)
 dataset.add_true_files(files)
 
-model = AutoEncoder(6, 8, 1000)
+model = AutoEncoder(6, 6000)
 mse = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
@@ -46,7 +46,6 @@ for epoch in range(5000):
     for b_idx in range(dataset.num_batches):
         counter_train += 1
         x, _ = dataset.get_batch()
-        print(x.shape)
         x = x.to(device)
         train_x = x
         pred = model(x)

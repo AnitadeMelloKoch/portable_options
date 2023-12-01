@@ -29,7 +29,29 @@ class AttentionLayer(nn.Module):
     def mask(self):
         # return self.softmax(self.attention_mask)
         return self.sigmoid(self.attention_mask)
+    
+
+class FactoredAttentionLayer(nn.Module):
+    def __init__(self,
+                 num_features):
+        super().__init__()
         
+        self.num_features = num_features
+        self.attention_mask = nn.Parameter(
+            torch.randn(1, num_features, 1),
+            requires_grad=True
+        )
+        self.sigmoid = nn.Sigmoid()
+        
+    def forward(self, x):
+        x = x*self.mask()
+        
+        return x
+    
+    def mask(self):
+        return self.sigmoid(self.attention_mask)
+
+
 class ClassificationHead(nn.Module):
     def __init__(self,
                  num_classes,
@@ -121,6 +143,7 @@ class PrintSize(nn.Module):
         print(x.shape)
         return x
 
+
 @gin.configurable
 class AutoEncoder(nn.Module):
     def __init__(self,
@@ -139,7 +162,8 @@ class AutoEncoder(nn.Module):
         #     self.width_mult = 38
         
         self.feature_size = feature_size
-        
+        self.num_input_channels = num_input_channels
+                
         self.encoder = nn.Sequential(
             nn.Conv2d(num_input_channels, 16, 3, padding=1),
             nn.ReLU(),
@@ -199,6 +223,30 @@ class AutoEncoder(nn.Module):
             x = self.decoder(x)
         
         return x
+
+class MockAutoEncoder(AutoEncoder):
+    def __init__(self, 
+                 num_input_channels=3, 
+                 feature_size=10, 
+                 image_height=84, 
+                 image_width=84):
+        super().__init__(num_input_channels, 
+                         feature_size, 
+                         image_height, 
+                         image_width)
+        
+        self.encoder = None
+        self.decoder_linear = None
+        self.decoder = None
+    
+    def forward(self, x):
+        return x
+    
+    def feature_extractor(self, x):
+        return x
+    
+    def masked_image(self, x, mask):
+        return x*mask
 
 def encoder_loss(x, y):
     loss = torch.mean(torch.abs(torch.sum(x, dim=(1,2,3))-torch.sum(y, dim=(1,2,3))))

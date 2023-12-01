@@ -21,7 +21,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  key_collected: bool=False,
                  door_unlocked: bool=False,
                  door_open: bool=False,
-                 time_limit: int=2000):
+                 time_limit: int=2000,
+                 image_input: bool=True):
         super().__init__(env)
         
         self.objects = {
@@ -34,6 +35,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.door_key_position = None
         self._timestep =  0
         self.time_limit = time_limit
+        self.image_input = image_input
         
         self.door = None
         
@@ -213,8 +215,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         info = self._modify_info_dict(info)
         if self._timestep >= self.time_limit:
             done = True
-        if np.max(obs) > 1:
-            obs = obs/255
+        if self.image_input:
+            if np.max(obs) > 1:
+                obs = obs/255
         if type(obs) is np.ndarray:
             obs = torch.from_numpy(obs).float()
         if self.check_option_complete(self):
