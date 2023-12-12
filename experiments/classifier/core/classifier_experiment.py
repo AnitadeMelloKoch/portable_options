@@ -30,17 +30,17 @@ class ClassifierExperiment():
         self.name = experiment_name
         self.base_dir = os.path.join(base_dir, self.name, str(self.seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
-
+        #self.plot_dir = os.path.join(self.base_dir, 'plots')
+        #self.save_dir = os.path.join(self.base_dir, 'checkpoints')
+        
+        os.makedirs(self.log_dir, exist_ok=True)
+        #os.makedirs(self.plot_dir, exist_ok=True)
+        #os.makedirs(self.save_dir, exist_ok=True)
+        
         log_file = os.path.join(self.log_dir, "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.INFO)
-        #self.plot_dir = os.path.join(self.base_dir, 'plots')
-        #self.save_dir = os.path.join(self.base_dir, 'checkpoints')
-        
-        #os.makedirs(self.log_dir, exist_ok=True)
-        #os.makedirs(self.plot_dir, exist_ok=True)
-        #os.makedirs(self.save_dir, exist_ok=True)
         
         if use_gpu:
             self.embedding = AutoEncoder().to("cuda")

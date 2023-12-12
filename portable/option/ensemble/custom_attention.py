@@ -57,8 +57,12 @@ class ClassificationHead(nn.Module):
         )
         
     
-    def forward(self, x):
+    def forward(self, x, softmax=False):
         x = self.network(x)
+        # Apply softmax to get probabilities (in case we are not pushing it through a loss function)
+        
+        # x = nn.functional.softmax(x, dim=1)
+        
         
         return x
 

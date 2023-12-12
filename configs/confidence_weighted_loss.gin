@@ -1,0 +1,16 @@
+import experiments.classifier.core.classifier_experiment
+
+import portable.option.portable_option
+import portable.option.ensemble.custom_attention
+
+ClassifierExperiment.experiment_name                                = "CLASSIFIER_sample_confidence_weighted_loss"
+ClassifierExperiment.use_gpu                                        = True
+ClassifierExperiment.classifier_train_epochs                        = 300
+
+AutoEncoder.num_input_channels                                      = 3
+AutoEncoder.feature_size                                            = 500
+AutoEncoder.image_height                                            = 64
+AutoEncoder.image_width                                             = 64
+
+
+

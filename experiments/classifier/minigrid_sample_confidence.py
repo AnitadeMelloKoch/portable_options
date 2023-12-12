@@ -6,6 +6,10 @@ from portable.utils.utils import load_gin_configs
 from pathlib import Path
 import numpy as np
 
+'''
+To run this experiment, use the following command:
+python -m experiments.classifier.minigrid_sample_confidence --base_dir experiments/classifier/ --seed 0 --config_file configs/classifier.gin
+'''
 
 # TODO: set up arg parser and config file, if needed
 if __name__ == "__main__":

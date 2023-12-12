@@ -245,7 +245,7 @@ class AttentionSet():
         if save_ftr_distribution:
             self.ftr_sd = self.get_ftr_distribution()[1]
             
-
+    # TODO: predict
     def vote(self, x):
         self.classifier.eval()
         
