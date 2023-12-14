@@ -98,7 +98,8 @@ class AdvancedMinigridFactoredExperiment():
                                       termination_oracle=termination_oracles,
                                       save_dir=self.save_dir,
                                       video_generator=self.video_generator,
-                                      option_name=names)
+                                      option_name=names,
+                                      factored_obs=True)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -119,7 +120,11 @@ class AdvancedMinigridFactoredExperiment():
         self.option.save()
     
     def run_episode(self,
-                    env):
+                    env,
+                    policy_idx,
+                    video_name):
+        
+        self.video_generator.episode_start()
         
         obs, info = env.reset()
         done = False
@@ -130,12 +135,15 @@ class AdvancedMinigridFactoredExperiment():
         if self.video_generator is not None:
             self.video_generator.episode_start()
         
-        while not done:
-            self.option.run(env, 
-                            obs, 
-                            info,
-                            eval=True,
-                            false_states=[])
+        
+        self.option.run(env, 
+                        obs, 
+                        info,
+                        eval=True,
+                        false_states=[],
+                        policy_leader=policy_idx)
+        
+        self.video_generator.episode_end(video_name)
             
             
             

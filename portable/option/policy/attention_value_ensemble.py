@@ -26,7 +26,8 @@ class AttentionValueEnsemble():
                  divergence_loss_scale=0.01,
                  
                  summary_writer=None,
-                 model_name='policy'):
+                 model_name='policy',
+                 factored_obs=False):
         
         self.attention_num = attention_module_num
         self.num_actions = num_actions
@@ -48,9 +49,14 @@ class AttentionValueEnsemble():
             ) for _ in range(self.attention_num)
         ])
         
-        self.attentions = nn.ModuleList(
-            [AttentionLayer(gru_hidden_size) for _ in range(self.attention_num)]
-        )
+        if factored_obs:
+            self.attentions = nn.ModuleList(
+                [FactoredAttentionLayer() for _ in range(self.attention_num)]
+            )
+        else:
+            self.attentions = nn.ModuleList(
+                [AttentionLayer(gru_hidden_size) for _ in range(self.attention_num)]
+            )
         self.q_networks = nn.ModuleList(
             [LinearQFunction(in_features=gru_hidden_size, 
                              n_actions=num_actions) for _ in range(self.attention_num)]
@@ -191,9 +197,7 @@ class AttentionValueEnsemble():
                                             batch_q_target,
                                             errors_out=errors_out)
         loss += td_loss
-        # print("td loss:", td_loss)
         
-        # print("total loss:", loss)
         # update
         self.optimizers[self.action_leader].zero_grad()
         loss.backward()

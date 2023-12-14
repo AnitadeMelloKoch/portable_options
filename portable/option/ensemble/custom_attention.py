@@ -31,14 +31,19 @@ class AttentionLayer(nn.Module):
         return self.sigmoid(self.attention_mask)
     
 
+@gin.configurable
 class FactoredAttentionLayer(nn.Module):
     def __init__(self,
-                 num_features):
+                 expansion_amount: list,
+                 num_features: int):
         super().__init__()
         
+        assert len(expansion_amount) == num_features
+        
         self.num_features = num_features
+        self.expansion_amount = torch.tensor(expansion_amount)
         self.attention_mask = nn.Parameter(
-            torch.randn(1, num_features, 1),
+            torch.randn(num_features),
             requires_grad=True
         )
         self.sigmoid = nn.Sigmoid()
@@ -49,7 +54,9 @@ class FactoredAttentionLayer(nn.Module):
         return x
     
     def mask(self):
-        return self.sigmoid(self.attention_mask)
+        mask = torch.repeat_interleave(self.attention_mask,
+                                       self.expansion_amount)
+        return self.sigmoid(mask.unsqueeze(0))
 
 
 class ClassificationHead(nn.Module):
@@ -224,6 +231,7 @@ class AutoEncoder(nn.Module):
         
         return x
 
+@gin.configurable
 class MockAutoEncoder(AutoEncoder):
     def __init__(self, 
                  num_input_channels=3, 

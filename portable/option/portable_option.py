@@ -78,7 +78,8 @@ class AttentionOption():
                  video_generator=None, # use oracle function instead of classifier to determine termination set
                  update_options_from_success=True, # update classifiers and policy of port when markov succeeds
                  assume_initiation_start=False, # assume you are starting in initiation set
-                 create_instances=True):
+                 create_instances=True,
+                 factored_obs=False):
         
         assert option_handling_method in OPTION_HANDLING_METHODS
         
@@ -107,7 +108,8 @@ class AttentionOption():
                                     num_modules=policy_attention_module_num,
                                     num_actions=num_actions,
                                     c=policy_c,
-                                    summary_writer=summary_writer)
+                                    summary_writer=summary_writer,
+                                    factored_obs=factored_obs)
 
         self.initiation = AttentionSet(use_gpu=use_gpu,
                                        embedding=embedding,
@@ -150,7 +152,7 @@ class AttentionOption():
         self.min_option_length = min_option_length
         self.min_success_rate = min_success_rate
         self.original_initiation_function = original_initiation_function
-        self.markov_idx = None
+        self.markov_idx = []
         self.max_instantiations = max_instantiations
         self.video_generator = video_generator
         
@@ -293,7 +295,8 @@ class AttentionOption():
             info,
             eval,
             false_states,
-            option_idx=None):
+            option_idx=None,
+            policy_leader=None):
         
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
@@ -308,7 +311,8 @@ class AttentionOption():
                                                  info,
                                                  option_idx,
                                                  eval,
-                                                 false_states)
+                                                 false_states,
+                                                 policy_leader)
         else:
             raise Exception("Option handling method not recognized")
         
@@ -327,8 +331,9 @@ class AttentionOption():
                                  info,
                                  option_idx,
                                  eval,
-                                 false_states):
-        if len(self.markov_idx) != 0 or option_idx is None:
+                                 false_states,
+                                 policy_leader):
+        if len(self.markov_idx) != 0 and option_idx is not None:
             next_state, rewards, done, info, steps = self.markov_instantiations[option_idx].run(env,
                                                                                                                  state,
                                                                                                                  info,
@@ -340,7 +345,8 @@ class AttentionOption():
             states = []
             infos = []
             
-            self.policy.begin_rollout(self.policy_buffer_save_file)
+            self.policy.begin_rollout(self.policy_buffer_save_file,
+                                      policy_leader=policy_leader)
             if not self.use_oracle_for_term:
                 self.termination.move_to_gpu()
             
@@ -352,9 +358,10 @@ class AttentionOption():
                     infos.append(info)
                     
                     action = self.policy.act(state)
-                    self._video_log("[port {}] action: {}".format(self.name, action))
+                    self._video_log("[port {}] policy {} action: {}".format(self.name, self.policy.action_leader(), action))
                     if self.video_generator is not None:
-                        self.video_generator.make_image(state)
+                        img = env.render()
+                        self.video_generator.make_image(img)
                     next_state, reward, done, info = env.step(action)
                     should_terminate = self.can_terminate(env, next_state)
                     self._video_log("[port {}] should terminate: {}".format(self.name, should_terminate))
@@ -371,7 +378,8 @@ class AttentionOption():
                         info["option_timed_out"] = False
                         self._video_log("[port {}] Environment done".format(self.name))
                         if self.video_generator is not None:
-                            self.video_generator.make_image(next_state)
+                            img = env.render()
+                            self.video_generator.make_image(img)
                         return next_state, rewards, done, info, steps
                     
                     if should_terminate:

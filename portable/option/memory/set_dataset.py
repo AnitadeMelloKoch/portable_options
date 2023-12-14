@@ -21,6 +21,15 @@ class SetDataset():
         self.true_length = 0
         self.false_length = 0
         self.priority_false_length = 0
+        
+        self.true_train_length = 0
+        self.false_train_length = 0
+        self.priority_false_train_length = 0
+        
+        self.true_test_length = 0
+        self.false_test_length = 0
+        self.priority_false_test_length = 0
+        
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
         self.pad = pad_func
@@ -235,11 +244,20 @@ class SetDataset():
         self.shuffled_indices_true = np.setdiff1d(range(self.true_length), self.validate_indicies_true)
         self.shuffled_indices_true = np.random.permutation(self.shuffled_indices_true)
         
+        self.true_train_length = len(self.shuffled_indices_true)
+        self.true_test_length = len(self.validate_indicies_true)
+        
         self.shuffled_indices_false = np.setdiff1d(range(self.false_length), self.validate_indicies_false)
         self.shuffled_indices_false = np.random.permutation(self.shuffled_indices_false)
         
+        self.false_train_length = len(self.shuffled_indices_false)
+        self.false_test_length = len(self.validate_indicies_false)
+        
         self.shuffled_indices_false_priority = np.setdiff1d(range(self.priority_false_length), self.validate_indicies_priority_false)
         self.shuffled_indices_false_priority = np.random.permutation(self.shuffled_indices_false_priority)
+        
+        self.priority_false_train_length = len(self.shuffled_indices_priority_false)
+        self.priority_false_test_length = len(self.validate_indicies_priority_false)
         
 
     @staticmethod
@@ -345,27 +363,27 @@ class SetDataset():
         return data, labels
 
     def true_index(self):
-        return (self.counter*self.data_batchsize) % self.true_length
+        return (self.counter*self.data_batchsize) % self.true_train_length
     
     def true_val_index(self):
-        return (self.counter*self.data_batchsize) % len(self.validate_indicies_true)
+        return (self.counter*self.data_batchsize) % self.true_test_length
 
     def false_index(self, use_priority_false):
         if use_priority_false:
-            return (self.counter*self.data_batchsize//2) % self.false_length
-        return (self.counter*self.data_batchsize) % self.false_length
+            return (self.counter*self.data_batchsize//2) % self.false_train_length
+        return (self.counter*self.data_batchsize) % self.false_train_length
 
     def false_val_index(self, use_priority_false):
         if use_priority_false:
-            return (self.counter*self.data_batchsize//2) % len(self.validate_indicies_false)
-        return (self.counter*self.data_batchsize) % len(self.validate_indicies_false)
+            return (self.counter*self.data_batchsize//2) % self.false_test_length
+        return (self.counter*self.data_batchsize) % len(self.false_test_length)
 
 
     def priority_false_index(self):
-        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_length
+        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_train_length
 
     def priority_false_val_index(self):
-        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % len(self.validate_indicies_priority_false)
+        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % len(self.priority_false_test_length)
 
     def _unibatch(self):
         if self.true_length == 0:

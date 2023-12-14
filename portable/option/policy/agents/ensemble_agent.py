@@ -41,7 +41,8 @@ class EnsembleAgent(Agent):
                 num_modules=8, 
                 num_actions=18,
                 c=100,
-                summary_writer=None):
+                summary_writer=None,
+                factored_obs=False):
         # vars
         self.use_gpu = use_gpu
         self.phi = phi

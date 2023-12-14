@@ -9,7 +9,7 @@ from experiments.minigrid.advanced_doorkey.advanced_minigrid_option_resources im
 
 import matplotlib.pyplot as plt 
 
-def make_random_getkey_env(train_colour, check_option_complete):
+def make_random_getkey_env(train_colour, check_option_complete, seed):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
     
@@ -22,7 +22,7 @@ def make_random_getkey_env(train_colour, check_option_complete):
     return AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
-            seed=training_seed,
+            seed=seed,
         ),
         check_option_complete=check_option_complete,
         door_colour=door_colour,
@@ -31,20 +31,26 @@ def make_random_getkey_env(train_colour, check_option_complete):
         image_input=False
     )
 
-training_envs = [
-    AdvancedDoorKeyPolicyTrainWrapper(
-        factored_environment_builder(
-            'AdvancedDoorKey-8x8-v0',
-            seed=training_seed
+def training_envs(seed):
+    training_envs = [
+        AdvancedDoorKeyPolicyTrainWrapper(
+            factored_environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=seed
+            ),
+            check_option_complete=check_got_redkey,
+            door_colour="red",
+            time_limit=50,
+            image_input=False
         ),
-        check_option_complete=check_got_redkey,
-        door_colour="red",
-        time_limit=50
-    ),
-    make_random_getkey_env("red", check_got_redkey),
-    make_random_getkey_env("red", check_got_redkey),
-    make_random_getkey_env("red", check_got_redkey)
-]
+        make_random_getkey_env("red", check_got_redkey, seed),
+        make_random_getkey_env("red", check_got_redkey, seed),
+        make_random_getkey_env("red", check_got_redkey, seed),
+        make_random_getkey_env("red", check_got_redkey, seed),
+        make_random_getkey_env("red", check_got_redkey, seed)
+    ]
+    
+    return training_envs
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -52,7 +58,6 @@ if __name__ == "__main__":
     parser.add_argument("--base_dir", type=str, required=True)
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--num_envs", type=int, required=True)
-    parser.add_argument("--frames_per_env", type=int, required=True)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
             ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
@@ -69,22 +74,27 @@ if __name__ == "__main__":
                                                     training_seed=training_seed,
                                                     experiment_seed=args.seed,
                                                     policy_phi=policy_phi,
-                                                    termination_oracles=check_got_redkey)
+                                                    termination_oracles=check_got_redkey,
+                                                    markov_option_builder=None)
     
-    experiment.train_policy(training_envs)
+    # experiment.load()
     
-    for _ in args.num_envs:
-        seed = random.randint(1, 1000)
-        
-        test_env = AdvancedDoorKeyPolicyTrainWrapper(
-            factored_environment_builder(
-                'AdvancedDoorKey-8x8-v0',
-                seed=seed
-            ),
-            check_option_complete=check_got_redkey,
-            door_colour="red",
-            time_limit=50
-        )
-        
-        experiment.run_episode(test_env)
+    for train_seed in range(10):
+        experiment.train_policy(training_envs(train_seed))
+        for _ in range(args.num_envs):
+            seed = random.randint(11, 1000)
+            for idx in range(experiment.option.policy.num_modules):
+                test_env = AdvancedDoorKeyPolicyTrainWrapper(
+                    factored_environment_builder(
+                        'AdvancedDoorKey-8x8-v0',
+                        seed=seed
+                    ),
+                    check_option_complete=check_got_redkey,
+                    door_colour="red",
+                    time_limit=50,
+                    image_input=False
+                )
+                experiment.run_episode(test_env,
+                                    idx,
+                                    "{}trains-seed{}policy{}".format(train_seed+1,seed, idx))
     
