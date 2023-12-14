@@ -1,6 +1,7 @@
 import torch
 import numpy as np 
 import torch.nn as nn
+import torch.nn.functional as F
 
 import matplotlib.pyplot as plt
 import gin
@@ -59,11 +60,9 @@ class ClassificationHead(nn.Module):
     
     def forward(self, x, softmax=False):
         x = self.network(x)
-        # Apply softmax to get probabilities (in case we are not pushing it through a loss function)
-        
-        # x = nn.functional.softmax(x, dim=1)
-        
-        
+        # Apply softmax to get probabilities (when not pushing through loss function w/ logits)
+        x = F.softmax(x, dim=1)
+    
         return x
 
 class AttentionSetII(nn.Module):

@@ -12,5 +12,7 @@ AutoEncoder.feature_size                                            = 500
 AutoEncoder.image_height                                            = 64
 AutoEncoder.image_width                                             = 64
 
+SetDataset.
+
 
 

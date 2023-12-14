@@ -191,8 +191,8 @@ class AttentionSet():
                     #b_loss = self.crossentropy(pred_y[attn_idx], y)
                     
                     b_loss = F.binary_cross_entropy_with_logits(
-                        pred_y[attn_idx].squeeze(), 
-                        y.float(), 
+                        input=pred_y[attn_idx].squeeze(), 
+                        target=y.float(), 
                         weight=sample_conf[attn_idx])
                     
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()

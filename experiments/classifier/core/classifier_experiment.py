@@ -120,6 +120,6 @@ class ClassifierExperiment():
         logging.info('test negative confidence sd: ' + str(torch.std(test_negative_confidence, dim=0)))
         logging.info('test negative confidence n: ' + str(len(test_negative_confidence)))
 
-    #future
+
     def classifier_weighted_experiment(self):
-        pass
+        
