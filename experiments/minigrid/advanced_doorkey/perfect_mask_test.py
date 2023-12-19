@@ -9,6 +9,9 @@ from experiments.minigrid.advanced_doorkey.advanced_minigrid_option_resources im
 
 import matplotlib.pyplot as plt 
 
+import torch.nn as nn
+from portable.option.ensemble.custom_attention import *
+
 def make_random_getkey_env(train_colour, check_option_complete, seed):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
@@ -54,6 +57,7 @@ def training_envs(seeds):
     
     return training_envs
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
@@ -71,6 +75,7 @@ if __name__ == "__main__":
     
     def policy_phi(x):
         x = x/torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
+
         return x
     
     experiment = AdvancedMinigridFactoredExperiment(base_dir=args.base_dir,
@@ -79,8 +84,6 @@ if __name__ == "__main__":
                                                     policy_phi=policy_phi,
                                                     termination_oracles=check_got_redkey,
                                                     markov_option_builder=None)
-    
-    # experiment.load()
     
     for train_seed in range(20):
         experiment.reset_option()

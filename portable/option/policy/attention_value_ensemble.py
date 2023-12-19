@@ -36,6 +36,7 @@ class AttentionValueEnsemble():
         self.div_scale = divergence_loss_scale
         self.summary_writer = summary_writer
         self.model_name = model_name
+        self.gru_hidden_size = gru_hidden_size
         
         self.embedding = embedding
         
@@ -48,6 +49,8 @@ class AttentionValueEnsemble():
                 batch_first=True
             ) for _ in range(self.attention_num)
         ])
+        
+        self.factored_obs = factored_obs
         
         if factored_obs:
             self.attentions = nn.ModuleList(
@@ -153,11 +156,17 @@ class AttentionValueEnsemble():
         
         loss = 0
         
+        
         state_embeddings = self.embedding.feature_extractor(batch_states)
         state_embeddings = state_embeddings.unsqueeze(1)
+        if self.factored_obs:
+            state_embeddings = self.apply_attention(state_embeddings)
         state_embeddings, _ = self.recurrent_memories[self.action_leader](state_embeddings)
         state_embeddings = state_embeddings.squeeze()
-        att_state_embeddings = self.apply_attention(state_embeddings)
+        if not self.factored_obs:
+            att_state_embeddings = self.apply_attention(state_embeddings)
+        else:
+            att_state_embeddings = state_embeddings
         
         
         masks = self.get_attention_masks()
@@ -173,10 +182,14 @@ class AttentionValueEnsemble():
         with torch.no_grad():
             next_state_embeddings = self.embedding.feature_extractor(batch_next_states)
             next_state_embeddings = next_state_embeddings.unsqueeze(1)
+            if self.factored_obs:
+                next_state_embeddings = self.apply_attention(next_state_embeddings)
             next_state_embeddings, _ = self.recurrent_memories[self.action_leader](next_state_embeddings)
             next_state_embeddings = next_state_embeddings.squeeze()
-            attn_next_state_embeddings = self.apply_attention(next_state_embeddings)
-        
+            if not self.factored_obs:
+                attn_next_state_embeddings = self.apply_attention(next_state_embeddings)
+            else:
+                attn_next_state_embeddings = next_state_embeddings
         # predicted q values
         state_attention = att_state_embeddings
         batch_pred_q_all_actions = self.q_networks[self.action_leader](state_attention)
@@ -231,9 +244,14 @@ class AttentionValueEnsemble():
             self.recurrent_memories[self.action_leader].flatten_parameters()
             embeddings = embeddings.unsqueeze(1)
             
+            if self.factored_obs:
+                embeddings = self.apply_attention(embeddings)
+            
             embeddings, _ = self.recurrent_memories[self.action_leader](embeddings)
             embeddings = embeddings.squeeze()
-            embeddings = self.apply_attention(embeddings)
+            if not self.factored_obs:
+                embeddings = self.apply_attention(embeddings)
+            embeddings = embeddings.unsqueeze(0)
             
             q_values = self.q_networks[self.action_leader](embeddings)
             q_values = q_values.q_values.squeeze()

@@ -74,7 +74,8 @@ class EnsembleAgent(Agent):
             c=c,
             num_actions=num_actions,
             divergence_loss_scale=divergence_loss_scale,
-            summary_writer=summary_writer
+            summary_writer=summary_writer,
+            factored_obs=factored_obs
         )
 
         # explorer

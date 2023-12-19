@@ -35,17 +35,26 @@ class AttentionLayer(nn.Module):
 class FactoredAttentionLayer(nn.Module):
     def __init__(self,
                  expansion_amount: list,
-                 num_features: int):
+                 num_features: int,
+                 mask_parameters=None):
         super().__init__()
         
         assert len(expansion_amount) == num_features
-        
+
         self.num_features = num_features
         self.expansion_amount = torch.tensor(expansion_amount)
-        self.attention_mask = nn.Parameter(
-            torch.randn(num_features),
-            requires_grad=True
-        )
+        if mask_parameters is None:
+            self.attention_mask = nn.Parameter(
+                torch.randn(num_features),
+                requires_grad=True
+            )
+            self.mask_given = False
+        else:
+            self.attention_mask = nn.Parameter(
+                torch.tensor(mask_parameters),
+                requires_grad=False
+            )
+            self.mask_given = True
         self.sigmoid = nn.Sigmoid()
         
     def forward(self, x):
@@ -55,8 +64,11 @@ class FactoredAttentionLayer(nn.Module):
     
     def mask(self):
         mask = torch.repeat_interleave(self.attention_mask,
-                                       self.expansion_amount)
-        return self.sigmoid(mask.unsqueeze(0))
+                                       self.expansion_amount.to(self.attention_mask.device))
+        if self.mask_given:
+            return mask.unsqueeze(0)
+        else:
+            return self.sigmoid(mask.unsqueeze(0))
 
 
 class ClassificationHead(nn.Module):
