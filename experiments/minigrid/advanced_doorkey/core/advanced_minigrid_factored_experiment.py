@@ -5,7 +5,7 @@ import random
 import gin 
 import torch 
 import lzma 
-import dill 
+import pickle 
 import numpy as np 
 import matplotlib.pyplot as plt 
 import pandas as pd 
@@ -58,6 +58,8 @@ class AdvancedMinigridFactoredExperiment():
         
         self.names=names
         self.embedding = MockAutoEncoder()
+        self.policy_phi=policy_phi
+        self.markov_option_builder=markov_option_builder
         
         set_seed(experiment_seed)
         self.seed = experiment_seed
@@ -100,10 +102,28 @@ class AdvancedMinigridFactoredExperiment():
                                       video_generator=self.video_generator,
                                       option_name=names,
                                       factored_obs=True)
+
+        self.rewards = [{}]*self.option.policy.num_modules
+        
+        self.steps = [{}]*self.option.policy.num_modules
     
     def _video_log(self, line):
         if self.video_generator is not None:
             self.video_generator.add_line(line)
+    
+    def reset_option(self):
+        self.option = AttentionOption(use_gpu=self.use_gpu,
+                                      log_dir=os.path.join(self.log_dir, 'option'),
+                                      markov_option_builder=self.markov_option_builder,
+                                      embedding=self.embedding,
+                                      policy_phi=self.policy_phi,
+                                      num_actions=self.num_primitive_actions,
+                                      use_oracle_for_term=self.use_oracle_for_term,
+                                      termination_oracle=self.termination_oracles,
+                                      save_dir=self.save_dir,
+                                      video_generator=self.video_generator,
+                                      option_name=self.names,
+                                      factored_obs=True)
     
     def save(self):
         self.option.save()
@@ -122,7 +142,8 @@ class AdvancedMinigridFactoredExperiment():
     def run_episode(self,
                     env,
                     policy_idx,
-                    video_name):
+                    video_name,
+                    num_train_envs):
         
         self.video_generator.episode_start()
         
@@ -136,12 +157,28 @@ class AdvancedMinigridFactoredExperiment():
             self.video_generator.episode_start()
         
         
-        self.option.run(env, 
+        _, rewards, _, _, steps = self.option.run(env, 
                         obs, 
                         info,
                         eval=True,
                         false_states=[],
                         policy_leader=policy_idx)
+        
+        if num_train_envs not in self.rewards[policy_idx]:
+            self.rewards[policy_idx][num_train_envs] = []
+        
+        self.rewards[policy_idx][num_train_envs].append(sum(rewards))
+        
+        if num_train_envs not in self.steps[policy_idx]:
+            self.steps[policy_idx][num_train_envs] = []
+        
+        self.steps[policy_idx][num_train_envs].append(steps)
+        
+        with open(os.path.join(self.save_dir, 'rewards.pkl'), 'wb') as fp:
+            pickle.dump(self.rewards, fp)
+        
+        with open(os.path.join(self.save_dir, 'steps.pkl'), 'wb') as fp:
+            pickle.dump(self.steps, fp)
         
         self.video_generator.episode_end(video_name)
             

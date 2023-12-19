@@ -31,24 +31,26 @@ def make_random_getkey_env(train_colour, check_option_complete, seed):
         image_input=False
     )
 
-def training_envs(seed):
-    training_envs = [
-        AdvancedDoorKeyPolicyTrainWrapper(
-            factored_environment_builder(
-                'AdvancedDoorKey-8x8-v0',
-                seed=seed
-            ),
-            check_option_complete=check_got_redkey,
-            door_colour="red",
-            time_limit=50,
-            image_input=False
-        ),
-        make_random_getkey_env("red", check_got_redkey, seed),
-        make_random_getkey_env("red", check_got_redkey, seed),
-        make_random_getkey_env("red", check_got_redkey, seed),
-        make_random_getkey_env("red", check_got_redkey, seed),
-        make_random_getkey_env("red", check_got_redkey, seed)
-    ]
+def training_envs(seeds):
+    print(seeds)
+    training_envs = []
+    for seed in seeds:
+        training_envs.append(AdvancedDoorKeyPolicyTrainWrapper(
+                factored_environment_builder(
+                    'AdvancedDoorKey-8x8-v0',
+                    seed=seed
+                ),
+                check_option_complete=check_got_redkey,
+                door_colour="red",
+                time_limit=50,
+                image_input=False
+            )
+        )
+        training_envs.append(make_random_getkey_env("red", check_got_redkey, seed))
+        training_envs.append(make_random_getkey_env("red", check_got_redkey, seed))
+        training_envs.append(make_random_getkey_env("red", check_got_redkey, seed))
+        training_envs.append(make_random_getkey_env("red", check_got_redkey, seed))
+        training_envs.append(make_random_getkey_env("red", check_got_redkey, seed))
     
     return training_envs
 
@@ -68,6 +70,7 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
+        x = x/torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
         return x
     
     experiment = AdvancedMinigridFactoredExperiment(base_dir=args.base_dir,
@@ -79,8 +82,9 @@ if __name__ == "__main__":
     
     # experiment.load()
     
-    for train_seed in range(10):
-        experiment.train_policy(training_envs(train_seed))
+    for train_seed in range(20):
+        experiment.reset_option()
+        experiment.train_policy(training_envs(range(train_seed + 1)))
         for _ in range(args.num_envs):
             seed = random.randint(11, 1000)
             for idx in range(experiment.option.policy.num_modules):
@@ -95,6 +99,7 @@ if __name__ == "__main__":
                     image_input=False
                 )
                 experiment.run_episode(test_env,
-                                    idx,
-                                    "{}trains-seed{}policy{}".format(train_seed+1,seed, idx))
+                                       idx,
+                                       "{}trains-seed{}policy{}".format(train_seed+1,seed, idx),
+                                       train_seed+1)
     
