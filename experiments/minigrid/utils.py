@@ -7,6 +7,7 @@ from gymnasium.core import Env, Wrapper, ObservationWrapper
 from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper, ReseedWrapper
 from enum import IntEnum
 import collections
+from enum import IntEnum
 
 class actions(IntEnum):
     LEFT        = 0
@@ -49,9 +50,6 @@ class MinigridInfoWrapper(Wrapper):
         info['terminated'] = terminated
         info['needs_reset'] = truncated  # pfrl needs this flag
         info['timestep'] = self._timestep # total number of timesteps in env
-        info['has_key'] = self.env.unwrapped.carrying is not None
-        if info['has_key']:
-            assert self.unwrapped.carrying.type == 'key', self.env.unwrapped.carrying
         info['door_open'] = determine_is_door_open(self)
         info['seed'] = self.env_seed
         return info
