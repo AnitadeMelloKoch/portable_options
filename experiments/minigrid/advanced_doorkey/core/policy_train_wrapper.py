@@ -1,7 +1,7 @@
 from typing import Tuple
 from gymnasium.core import Env, Wrapper 
 from minigrid.core.world_object import Key
-from custom_minigrid.core.custom_world_object import CustomDoor
+from custom_minigrid.core.custom_world_object import CustomDoor, CustomKey
 from experiments.minigrid.utils import actions 
 import numpy as np 
 import matplotlib.pyplot as plt 
@@ -161,7 +161,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.objects["door"] = DoorTuple(self.objects["door"].position,
                                                 self.door_colour)
         
-        new_key = Key(self.door_colour)
+        new_key = CustomKey(self.door_colour)
         keys = []
         
         for key in self.objects["keys"]:
@@ -174,7 +174,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 keys.append(KeyTuple(key.position,
                                      self.door_colour))
             elif key.colour == self.door_colour:
-                replace_key = Key(old_colour)
+                replace_key = CustomKey(old_colour)
                 self.env.unwrapped.grid.set(
                     key.position[0],
                     key.position[1],
@@ -199,7 +199,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             
             colour = self.key_colours[c_idx]
             
-            new_key = Key(colour)
+            new_key = CustomKey(colour)
             self.env.unwrapped.grid.set(
                 key.position[0],
                 key.position[1],
