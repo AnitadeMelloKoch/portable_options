@@ -61,8 +61,7 @@ class ClassificationHead(nn.Module):
     def forward(self, x, softmax=False):
         x = self.network(x)
         # Apply softmax to get probabilities (when not pushing through loss function w/ logits)
-        x = F.softmax(x, dim=1)
-    
+        x = torch.sigmoid(x)
         return x
 
 class AttentionSetII(nn.Module):

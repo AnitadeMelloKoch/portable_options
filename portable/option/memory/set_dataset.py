@@ -12,6 +12,7 @@ class SetDataset():
             batchsize=16,
             max_size=100000,
             pad_func=lambda x: x,
+            attention_num=8,
             create_validation_set=False,
             validation_set_size=0.3
         ):
@@ -26,6 +27,15 @@ class SetDataset():
         self.true_length = 0
         self.false_length = 0
         self.priority_false_length = 0
+
+        self.true_train_length = 0
+        self.false_train_length = 0
+        self.priority_false_train_length = 0
+
+        self.true_test_length = 0
+        self.false_test_length = 0
+        self.priority_false_test_length = 0
+        
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
         self.pad = pad_func
@@ -33,9 +43,11 @@ class SetDataset():
         self.num_batches = 0
         self.list_max_size = max_size//2
 
+        self.attention_num = attention_num
+
         self.shuffled_indices_true = None
         self.shuffled_indices_false = None
-        self.shuffled_indices_false_priority = None
+        self.shuffled_indices_priority_false = None
         
         self.validate = create_validation_set
         self.val_size = validation_set_size
@@ -129,7 +141,7 @@ class SetDataset():
             data = data.squeeze()
             self.true_data = self.concatenate(self.true_data, data)
             self.true_confidence = self.concatenate(self.true_confidence, 
-                                                    torch.ones(len(data)))
+                                                    torch.ones(len(data), self.attention_num))
         self.true_length = len(self.true_data)
         self._set_batch_num()
         self.counter = 0
@@ -150,8 +162,7 @@ class SetDataset():
             data = random.sample(data, 20)
             self.true_data = self.concatenate(self.true_data, data)
             self.true_confidence = self.concatenate(self.true_confidence, 
-                                                    torch.ones(len(data)))
-        self.true_length = len(self.true_data)
+                                                    torch.ones(len(data), self.attention_num))
         self._set_batch_num()
         self.shuffle()
         self.counter = 0
@@ -166,7 +177,7 @@ class SetDataset():
             data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
             self.false_confidence = self.concatenate(self.false_confidence, 
-                                                     torch.ones(len(data)))
+                                                     torch.ones(len(data), self.attention_num))
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.counter = 0
@@ -187,7 +198,7 @@ class SetDataset():
             data = random.sample(data, 20)
             self.false_data = self.concatenate(self.false_data, data)
             self.false_confidence = self.concatenate(self.false_confidence, 
-                                                     torch.ones(len(data)))
+                                                     torch.ones(len(data), self.attention_num))
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.shuffle()
@@ -203,7 +214,7 @@ class SetDataset():
             data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)
             self.priority_false_confidence = self.concatenate(self.priority_false_confidence, 
-                                                              torch.ones(len(data)))
+                                                              torch.ones(len(data), self.attention_num))
         self.priority_false_length = len(self.priority_false_data)
         self._set_batch_num()
         self.counter = 0
@@ -215,12 +226,15 @@ class SetDataset():
         self.shuffle()
 
     def add_true_data(self, data_list, conf_list):
+        # assert confidence shape
+        assert len(conf_list[0]) == self.attention_num
+
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
         confidence = torch.from_numpy(np.array(conf_list)).float()
         self.true_data = self.concatenate(data, self.true_data)
-        self.true_confidence = self.concatenate(confidence, self.true_confidence)
+        self.true_confidence = self.concatenate(confidence, self.true_confidence) 
         if len(self.true_data) > self.list_max_size:
             self.true_data = self.true_data[:self.list_max_size]
             self.true_confidence = self.true_confidence[:self.list_max_size]
@@ -230,6 +244,9 @@ class SetDataset():
         self.shuffle()
 
     def add_false_data(self, data_list, conf_list):
+        # assert confidence shape
+        assert len(conf_list[0]) == self.attention_num
+        
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
@@ -245,6 +262,9 @@ class SetDataset():
         self.shuffle()
 
     def add_priority_false_data(self, data_list, conf_list):
+        # assert confidence shape
+        assert len(conf_list[0]) == self.attention_num
+        
         data = torch.squeeze(
             torch.stack(data_list), 1
         )
@@ -262,12 +282,21 @@ class SetDataset():
     def shuffle(self):
         self.shuffled_indices_true = np.setdiff1d(range(self.true_length), self.validate_indicies_true)
         self.shuffled_indices_true = np.random.permutation(self.shuffled_indices_true)
+        
+        self.true_train_length = len(self.shuffled_indices_true)
+        self.true_test_length = len(self.validate_indicies_true)
 
         self.shuffled_indices_false = np.setdiff1d(range(self.false_length), self.validate_indicies_false)
         self.shuffled_indices_false = np.random.permutation(self.shuffled_indices_false)
 
-        self.shuffled_indices_false_priority = np.setdiff1d(range(self.priority_false_length), self.validate_indicies_priority_false)
-        self.shuffled_indices_false_priority = np.random.permutation(self.shuffled_indices_false_priority)
+        self.false_train_length = len(self.shuffled_indices_false)
+        self.false_test_length = len(self.validate_indicies_false)
+
+        self.shuffled_indices_priority_false = np.setdiff1d(range(self.priority_false_length), self.validate_indicies_priority_false)
+        self.shuffled_indices_priority_false = np.random.permutation(self.shuffled_indices_priority_false)
+
+        self.priority_false_train_length = len(self.shuffled_indices_priority_false)
+        self.priority_false_test_length = len(self.validate_indicies_priority_false)
         
 
     @staticmethod
@@ -307,13 +336,13 @@ class SetDataset():
                 self.priority_false_index(),
                 self.priority_false_data,
                 self.data_batchsize - self.data_batchsize//2,
-                self.shuffled_indices_false_priority
+                self.shuffled_indices_priority_false
             )
             priority_false_confidence = self._get_minibatch(
                 self.priority_false_index(),
                 self.priority_false_confidence,
                 self.data_batchsize - self.data_batchsize//2,
-                self.shuffled_indices_false_priority
+                self.shuffled_indices_priority_false
             )
             # print(torch.max(priority_false[0]))
             false_batch = self.concatenate(normal_false, priority_false)
@@ -354,7 +383,7 @@ class SetDataset():
             data = data[shuffle_idxs]
             labels = labels[shuffle_idxs]
             confidence = confidence[shuffle_idxs]
-
+            
         data = self.transform(data)
         
         if self.validate:
@@ -425,26 +454,26 @@ class SetDataset():
         return data, labels, confidence
 
     def true_index(self):
-        return (self.counter*self.data_batchsize) % self.true_length
+        return (self.counter*self.data_batchsize) % self.true_train_length
 
     def true_val_index(self):
-        return (self.counter*self.data_batchsize) % len(self.validate_indicies_true)
-
+        return (self.counter*self.data_batchsize) % self.true_test_length
+    
     def false_index(self, use_priority_false):
         if use_priority_false:
-            return (self.counter*self.data_batchsize//2) % self.false_length
-        return (self.counter*self.data_batchsize) % self.false_length
+            return (self.counter*self.data_batchsize//2) % self.false_train_length
+        return (self.counter*self.data_batchsize) % self.false_train_length
 
     def false_val_index(self, use_priority_false):
         if use_priority_false:
-            return (self.counter*self.data_batchsize//2) % len(self.validate_indicies_false)
-        return (self.counter*self.data_batchsize) % len(self.validate_indicies_false)
+            return (self.counter*self.data_batchsize//2) % self.false_test_length
+        return (self.counter*self.data_batchsize) % self.false_test_length
 
     def priority_false_index(self):
-        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_length
+        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_train_length
 
     def priority_false_val_index(self):
-        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % len(self.validate_indicies_priority_false)
+        return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_test_length
 
 
     def _unibatch(self):

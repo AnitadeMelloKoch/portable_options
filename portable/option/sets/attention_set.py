@@ -1,10 +1,12 @@
 import os
-import logging 
+import logging
+from traceback import print_tb 
 
 import numpy as np 
 from scipy import stats
 import torch 
 import torch.nn.functional as F
+from portable.option.ensemble import attention
 
 from portable.option.memory import SetDataset
 from portable.option.ensemble.custom_attention import *
@@ -44,7 +46,10 @@ class AttentionSet():
             padding_func = lambda x: x
         self.dataset = SetDataset(max_size=dataset_max_size, 
                                   batchsize=dataset_batch_size,
-                                  pad_func=padding_func)
+                                  pad_func=padding_func,
+                                  attention_num=attention_module_num,
+                                  create_validation_set=True,
+                                  validation_set_size=0.2)
         self.attention_num = attention_module_num
         self.alpha = beta_distribution_alpha
         self.beta = beta_distribution_beta
@@ -160,7 +165,7 @@ class AttentionSet():
             counter = 0
             for _ in range(self.dataset.num_batches):
                 counter += 1
-                x, y, sample_conf = self.dataset.get_batch() 
+                x, y, sample_conf, x_val, y_val, samp_conf_val = self.dataset.get_batch() 
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
@@ -169,19 +174,11 @@ class AttentionSet():
                 pred_y = self.classifier(x)
                 masks = self.classifier.get_attention_masks()
 
-                if sample_conf.dim() == 1: 
+                '''if sample_conf.dim() == 1: 
                     # sample conf should have shape (attention_num, batch_size)
-                    # for data added from file, they have shape (batch_size) since attention_num unknown
-                    sample_conf = sample_conf.unsqueeze(0).repeat(self.attention_num, 1)
+                    # for data added from file (conf=1), they have shape (batch_size) since attention_num unknown
+                    sample_conf = sample_conf.unsqueeze(0).repeat(self.attention_num, 1)'''
 
-                '''
-                print("x shape: {}".format(x.shape))
-                print("y shape: {}".format(y.shape))
-                print("sample_conf shape: {}".format(sample_conf.shape))
-                print("pred_y[0]: {}".format(pred_y[0]))
-                print("pred_y[0] shape: {}".format(pred_y[0].shape))
-                print("masks[0] shape: {}".format(masks[0].shape))
-                '''
 
                 for attn_idx in range(self.attention_num):
                     # Compute features post mask for running mean and sd
@@ -193,7 +190,8 @@ class AttentionSet():
                     b_loss = F.binary_cross_entropy_with_logits(
                         input=pred_y[attn_idx].squeeze(), 
                         target=y.float(), 
-                        weight=sample_conf[attn_idx])
+                        weight=sample_conf[:, attn_idx])
+
                     
                     pred_class = torch.argmax(pred_y[attn_idx], dim=1).detach()
                     classifier_losses[attn_idx] += b_loss.item()
@@ -245,7 +243,7 @@ class AttentionSet():
         if save_ftr_distribution:
             self.ftr_sd = self.get_ftr_distribution()[1]
             
-    # TODO: predict
+
     def vote(self, x):
         self.classifier.eval()
         
@@ -259,18 +257,18 @@ class AttentionSet():
         x = self.embedding.feature_extractor(x)
         with torch.no_grad():
             conf = self.confidences.weights()
-            pred_y = self.classifier(x,  concat_results=True)
-        
-        votes = torch.argmax(pred_y, axis=-1)[0]
-        
+            pred_y = self.classifier(x, concat_results=True).squeeze()
+
+        # NOTE: Current threshold for binary classification prob is 0.5 (not confidence threshold)
+        #       maybe can increase this in the future?
+        votes = (pred_y >= 0.5).int() 
         self.votes = votes
-        
         vote = False
-        
+
         for idx in range(self.attention_num):
-            if conf[idx] >= self.vote_threshold:
-                if votes[idx] == 1:
-                    vote = True
+            if conf[idx] >= self.vote_threshold: # if any attention head's prediction has high enough confidence
+                if votes[idx] == 1: # and this head says positive
+                    vote = True # then vote positive
         
         return vote, pred_y, votes, conf
         
@@ -305,16 +303,31 @@ class AttentionSet():
         #valid_counts = self.ftr_n > 1
         #sd[valid_counts] = (self.ftr_M2[valid_counts] / self.ftr_n[valid_counts].unsqueeze(1))**0.5
         return self.ftr_mean, sd, self.ftr_n
-         
+
+
+    def reset_ftr_dist(self):
+        self.ftr_mean = torch.zeros((self.attention_num, self.embedding.feature_size))
+        self.ftr_sd = torch.zeros((self.attention_num, self.embedding.feature_size))
+        self.ftr_M2 = torch.zeros((self.attention_num, self.embedding.feature_size))
+        self.ftr_n = torch.zeros(self.attention_num)
+        if self.use_gpu:
+            self.ftr_mean = self.ftr_mean.to("cuda")
+            self.ftr_sd = self.ftr_sd.to("cuda")
+            self.ftr_M2 = self.ftr_M2.to("cuda")
+            self.ftr_n = self.ftr_n.to("cuda")
+        self.stored_ftr_dist = False
+        
 
     def sample_confidence(self, data=[]):
         if len(data) == 0:
             raise ValueError("No data given")
         
-        confidence = torch.zeros((self.attention_num, len(data)))
-        masks = self.classifier.get_attention_masks()
+        confidence = torch.zeros((len(data), self.attention_num))
+        masks = self.classifier.get_attention_masks() # (attention_num, feature_size)
 
         for i in range(len(data)):
+            # np to torch tensor
+            #x = torch.from_numpy(data[i]).float().unsqueeze(0)
             x = data[i].unsqueeze(0)
             if self.use_gpu:
                 x = x.to("cuda")
@@ -323,22 +336,21 @@ class AttentionSet():
             for j in range(len(masks)):
                 this_mask = masks[j]
                 x_post_mask = x * this_mask
-                sds_away = torch.abs(x_post_mask - self.ftr_mean[j])/self.ftr_sd[j]
-                #sd_variability = torch.std(sds_away)
-                # TODO: maybe take into account the variability of sds away in the future
-                avg_sds_away = torch.mean(sds_away)
-                #confidence[i,j] = avg_sds_away
-                if avg_sds_away > 3:
-                    confidence[j,i] = 0
+                sds_away = torch.abs(x_post_mask - self.ftr_mean[j])/self.ftr_sd[j] 
+                #sd_variability = torch.std(sds_away), TODO: maybe can use variability of sds away in the future
+                avg_sds_away = torch.mean(sds_away) # avg sds away across features
+                # return shape: (num_data, num_attention)
+                if avg_sds_away > 2:
+                    confidence[i,j] = 0
                 else: 
-                    confidence[j,i] = 1 - avg_sds_away/3
+                    confidence[i,j] = 1 - avg_sds_away/2
         return confidence
 
     def print_gpu_memory(self):
         allocated = torch.cuda.memory_allocated()
         max_allocated = torch.cuda.max_memory_allocated()
         print(f"Current GPU Memory usage: {allocated / 1024**3:.2f} GB")
-        print(f"Max GPU Memory usage: {max_allocated / 1024**3:.2f} GB")
+        #print(f"Max GPU Memory usage: {max_allocated / 1024**3:.2f} GB")
 
     def print_nvidia_smi(self):
         result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE)
