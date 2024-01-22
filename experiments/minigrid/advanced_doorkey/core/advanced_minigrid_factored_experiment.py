@@ -15,6 +15,7 @@ from collections import deque
 
 from portable.option import AttentionOption
 from portable.option.ensemble.custom_attention import MockAutoEncoder
+from portable.option.memory import SetDataset
 
 from portable.agent.option_agent import OptionAgent
 
@@ -36,7 +37,6 @@ class AdvancedMinigridFactoredExperiment():
                  policy_success_threshold=0.98,
                  use_gpu=True,
                  names=None,
-                 use_oracle_for_term=True,
                  termination_oracles=None,
                  make_videos=False):
 
@@ -139,6 +139,46 @@ class AdvancedMinigridFactoredExperiment():
         
         self.option.save()
     
+    def add_datafiles(self,
+                      positive_files,
+                      negative_files):
+        
+        self.option.initiation.add_data_from_files(positive_files,
+                                                   negative_files)
+    
+    def train_classifier(self, epochs):
+        self.option.initiation.train(epochs)
+        print(self.option.initiation.classifier.get_attention_masks())
+    
+    def test_classifier(self,
+                        test_positive_files,
+                        test_negative_files):
+        
+        dataset = SetDataset(max_size=1e6,
+                             batchsize=64)
+        
+        dataset.add_true_files(test_positive_files)
+        dataset.add_false_files(test_negative_files)
+        
+        counter = 0
+        accuracy = []
+        loss = []
+        
+        for _ in range(dataset.num_batches):
+            counter += 1
+            x, y = dataset.get_batch()
+            l, acc = self.option.initiation.batch_pred(x,y)
+            
+            loss.append(l)
+            accuracy.append(acc)
+        
+        loss = np.array(loss)
+        loss = np.sum(loss)/counter
+        accuracy = np.array(accuracy)
+        accuracy = np.sum(accuracy)/counter
+        
+        return loss, accuracy
+    
     def run_episode(self,
                     env,
                     policy_idx,
@@ -155,7 +195,6 @@ class AdvancedMinigridFactoredExperiment():
         
         if self.video_generator is not None:
             self.video_generator.episode_start()
-        
         
         _, rewards, _, _, steps = self.option.run(env, 
                         obs, 

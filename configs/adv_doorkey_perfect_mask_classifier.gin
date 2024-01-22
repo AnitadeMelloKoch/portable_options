@@ -4,13 +4,12 @@ import portable.option.markov.nn_markov_option
 import portable.option.ensemble.custom_attention
 
 # FLAGS 
-AdvancedMinigridFactoredExperiment.use_oracle_for_term              = True
 AdvancedMinigridFactoredExperiment.make_videos                      = True
 AttentionOption.update_options_from_success                         = False
 AttentionOption.create_instances                                    = False
 AttentionOption.assume_initiation_start                             = True
 
-AdvancedMinigridFactoredExperiment.experiment_name                  = "factored_doorkey-1"
+AdvancedMinigridFactoredExperiment.experiment_name                  = "perfect-mask-classifier"
 AdvancedMinigridFactoredExperiment.policy_lr                        = 1e-4
 AdvancedMinigridFactoredExperiment.policy_max_steps                 = 2e6
 AdvancedMinigridFactoredExperiment.policy_success_threshold         = 0.9
@@ -52,5 +51,6 @@ AttentionOption.policy_divergence_loss_scale                        = 0
 
 FactoredAttentionLayer.num_features                                 = 10
 FactoredAttentionLayer.expansion_amount                             = [4,2,2,2,2,2,2,3,2,1]
+FactoredAttentionLayer.mask_parameters                              = [1,0,1,0,0,0,0,0,0,0]
 
 MockAutoEncoder.feature_size                                        = 22

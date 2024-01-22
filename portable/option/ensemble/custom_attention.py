@@ -108,10 +108,14 @@ class AttentionSetII(nn.Module):
     # single ensemble member
     def __init__(self,
                  embedding_size,
-                 num_classes):
+                 num_classes,
+                 factored_obs):
         super().__init__()
         
-        self.attention = AttentionLayer(embedding_size=embedding_size)
+        if factored_obs:
+            self.attention = FactoredAttentionLayer()
+        else:
+            self.attention = AttentionLayer(embedding_size=embedding_size)
         self.classification = ClassificationHead(num_classes,embedding_size)
         
     def forward(self, x):
@@ -124,12 +128,14 @@ class AttentionEnsembleII(nn.Module):
     def __init__(self,
                  num_attention_heads,
                  embedding_size,
-                 num_classes):
+                 num_classes,
+                 factored_obs):
         super().__init__()
         
         self.attentions = nn.ModuleList(
             AttentionSetII(embedding_size=embedding_size,
-                           num_classes=num_classes) for _ in range(num_attention_heads)
+                           num_classes=num_classes,
+                           factored_obs=factored_obs) for _ in range(num_attention_heads)
         )
         
         self.num_attention_heads = num_attention_heads

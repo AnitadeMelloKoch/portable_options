@@ -4,7 +4,6 @@ import numpy as np
 
 initiation_positive_files = [
         # 'resources/minigrid_images/adv_doorkey_8x8_random_states_purpledoor.npy',
-        'resources/procgen/coinrun_15.npy',
 ]
 
 initiation_negative_files = [

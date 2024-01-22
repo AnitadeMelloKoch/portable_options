@@ -48,9 +48,11 @@ AttentionOption.timeout                                             = 50
 AttentionOption.min_option_length                                   = 1
 AttentionOption.max_instantiations                                  = 20
 AttentionOption.option_handling_method                              = "continue-with-multi-instantiations"
+AttentionOption.policy_divergence_loss_scale                        = 0
 
 FactoredAttentionLayer.num_features                                 = 10
 FactoredAttentionLayer.expansion_amount                             = [4,2,2,2,2,2,2,3,2,1]
-FactoredAttentionLayer.mask_parameters                              = [1,0,1,0,0,0,0,1,0,1]
+FactoredAttentionLayer.mask_parameters                              = [1,1,1,1,1,1,1,1,1,1]
+#FactoredAttentionLayer.mask_parameters                              = [1,0,1,0,0,0,0,1,0,1]
 
 MockAutoEncoder.feature_size                                        = 22

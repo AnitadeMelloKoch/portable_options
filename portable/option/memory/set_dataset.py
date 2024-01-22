@@ -17,10 +17,12 @@ class SetDataset():
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
         self.priority_false_data = torch.from_numpy(np.array([])).float()
+        self.unlabelled_data = torch.from_numpy(np.array([])).float()
 
         self.true_length = 0
         self.false_length = 0
         self.priority_false_length = 0
+        self.unlabelled_data_length = 0
         
         self.true_train_length = 0
         self.false_train_length = 0
@@ -34,12 +36,14 @@ class SetDataset():
         self.data_batchsize = batchsize//2
         self.pad = pad_func
         self.counter = 0
+        self.unlabelled_counter = 0
         self.num_batches = 0
         self.list_max_size = max_size//2
 
         self.shuffled_indices_true = None
         self.shuffled_indices_false = None
         self.shuffled_indices_false_priority = None
+        self.shuffled_indices_unlabelled = None
         
         self.validate = create_validation_set
         self.validate_indicies_true = []
@@ -204,6 +208,18 @@ class SetDataset():
                                                     replace=False)
         self.shuffle()
 
+    def add_unlabelled_files(self, file_list):
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            self.unlabelled_data = self.concatenate(self.unlabelled_data, data)
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.unlabelled_counter = 0
+        self.shuffle()
+
+
     def add_true_data(self, data_list):
         data = torch.squeeze(
             torch.stack(data_list), 1
@@ -256,8 +272,10 @@ class SetDataset():
         self.shuffled_indices_false_priority = np.setdiff1d(range(self.priority_false_length), self.validate_indicies_priority_false)
         self.shuffled_indices_false_priority = np.random.permutation(self.shuffled_indices_false_priority)
         
-        self.priority_false_train_length = len(self.shuffled_indices_priority_false)
+        self.priority_false_train_length = len(self.shuffled_indices_false_priority)
         self.priority_false_test_length = len(self.validate_indicies_priority_false)
+        
+        self.shuffled_indices_unlabelled = np.random.permutation(range(self.unlabelled_data_length))
         
 
     @staticmethod
@@ -273,7 +291,6 @@ class SetDataset():
         return minibatch
 
     def get_batch(self, shuffle_batch=True):
-
         if self.true_length == 0 or self.false_length == 0:
             data, labels = self._unibatch()
             data = self.transform(data)
@@ -362,6 +379,17 @@ class SetDataset():
         
         return data, labels
 
+    def get_unlabelled_batch(self):
+        x = self._get_minibatch(self.unlabelled_index(),
+                                self.unlabelled_data,
+                                self.batchsize,
+                                self.shuffled_indices_unlabelled)
+        
+        self.unlabelled_counter += 1
+        x = self.transform(x)
+        
+        return x
+
     def true_index(self):
         return (self.counter*self.data_batchsize) % self.true_train_length
     
@@ -378,6 +406,8 @@ class SetDataset():
             return (self.counter*self.data_batchsize//2) % self.false_test_length
         return (self.counter*self.data_batchsize) % len(self.false_test_length)
 
+    def unlabelled_index(self):
+        return (self.unlabelled_counter*self.data_batchsize) % self.unlabelled_data_length
 
     def priority_false_index(self):
         return (self.counter*(self.data_batchsize - self.data_batchsize//2)) % self.priority_false_train_length

@@ -53,6 +53,7 @@ class AttentionOption():
                  policy_attention_module_num,
                  num_actions,
                  policy_c,
+                 policy_divergence_loss_scale,
                  
                  initiation_beta_distribution_alpha,
                  initiation_beta_distribution_beta,
@@ -109,7 +110,8 @@ class AttentionOption():
                                     num_actions=num_actions,
                                     c=policy_c,
                                     summary_writer=summary_writer,
-                                    factored_obs=factored_obs)
+                                    factored_obs=factored_obs,
+                                    divergence_loss_scale=policy_divergence_loss_scale)
 
         self.initiation = AttentionSet(use_gpu=use_gpu,
                                        embedding=embedding,
@@ -122,7 +124,8 @@ class AttentionOption():
                                        attention_module_num=initiation_attention_module_num,
                                        model_name="initiation",
                                        summary_writer=summary_writer,
-                                       padding_func=dataset_transform_function)
+                                       padding_func=dataset_transform_function,
+                                       factored_obs=factored_obs)
         self.initiation.move_to_gpu()
         if use_oracle_for_term:
             assert termination_oracle is not None
