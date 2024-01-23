@@ -1,4 +1,4 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_experiment import AdvancedMinigridFactoredDivDisExperiment
+from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import AdvancedMinigridFactoredDivDisClassifierExperiment
 import argparse 
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
         load_gin_configs(args.config_file, args.gin_bindings)
 
-        experiment = AdvancedMinigridFactoredDivDisExperiment(base_dir=args.base_dir,
+        experiment = AdvancedMinigridFactoredDivDisClassifierExperiment(base_dir=args.base_dir,
                                                                 seed=args.seed)
 
         experiment.add_datafiles(positive_train_files,

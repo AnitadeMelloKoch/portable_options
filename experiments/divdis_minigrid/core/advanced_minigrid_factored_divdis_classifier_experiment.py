@@ -13,7 +13,7 @@ from portable.option.divdis.divdis_classifier import DivDisClassifier, transform
 from portable.option.memory import SetDataset
 
 @gin.configurable 
-class AdvancedMinigridFactoredDivDisExperiment():
+class AdvancedMinigridFactoredDivDisClassifierExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
