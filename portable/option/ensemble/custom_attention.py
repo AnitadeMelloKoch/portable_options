@@ -29,7 +29,48 @@ class AttentionLayer(nn.Module):
     def mask(self):
         # return self.softmax(self.attention_mask)
         return self.sigmoid(self.attention_mask)
+    
+
+@gin.configurable
+class FactoredAttentionLayer(nn.Module):
+    def __init__(self,
+                 expansion_amount: list,
+                 num_features: int,
+                 mask_parameters=None):
+        super().__init__()
         
+        assert len(expansion_amount) == num_features
+
+        self.num_features = num_features
+        self.expansion_amount = torch.tensor(expansion_amount)
+        if mask_parameters is None:
+            self.attention_mask = nn.Parameter(
+                torch.randn(num_features),
+                requires_grad=True
+            )
+            self.mask_given = False
+        else:
+            self.attention_mask = nn.Parameter(
+                torch.tensor(mask_parameters),
+                requires_grad=False
+            )
+            self.mask_given = True
+        self.sigmoid = nn.Sigmoid()
+        
+    def forward(self, x):
+        x = x*self.mask()
+        
+        return x
+    
+    def mask(self):
+        mask = torch.repeat_interleave(self.attention_mask,
+                                       self.expansion_amount.to(self.attention_mask.device))
+        if self.mask_given:
+            return mask.unsqueeze(0)
+        else:
+            return self.sigmoid(mask.unsqueeze(0))
+
+
 class ClassificationHead(nn.Module):
     def __init__(self,
                  num_classes,
@@ -67,10 +108,14 @@ class AttentionSetII(nn.Module):
     # single ensemble member
     def __init__(self,
                  embedding_size,
-                 num_classes):
+                 num_classes,
+                 factored_obs):
         super().__init__()
         
-        self.attention = AttentionLayer(embedding_size=embedding_size)
+        if factored_obs:
+            self.attention = FactoredAttentionLayer()
+        else:
+            self.attention = AttentionLayer(embedding_size=embedding_size)
         self.classification = ClassificationHead(num_classes,embedding_size)
         
     def forward(self, x):
@@ -83,12 +128,14 @@ class AttentionEnsembleII(nn.Module):
     def __init__(self,
                  num_attention_heads,
                  embedding_size,
-                 num_classes):
+                 num_classes,
+                 factored_obs):
         super().__init__()
         
         self.attentions = nn.ModuleList(
             AttentionSetII(embedding_size=embedding_size,
-                           num_classes=num_classes) for _ in range(num_attention_heads)
+                           num_classes=num_classes,
+                           factored_obs=factored_obs) for _ in range(num_attention_heads)
         )
         
         self.num_attention_heads = num_attention_heads
@@ -121,6 +168,7 @@ class PrintSize(nn.Module):
         print(x.shape)
         return x
 
+
 @gin.configurable
 class AutoEncoder(nn.Module):
     def __init__(self,
@@ -139,7 +187,8 @@ class AutoEncoder(nn.Module):
         #     self.width_mult = 38
         
         self.feature_size = feature_size
-        
+        self.num_input_channels = num_input_channels
+                
         self.encoder = nn.Sequential(
             nn.Conv2d(num_input_channels, 16, 3, padding=1),
             nn.ReLU(),
@@ -199,6 +248,31 @@ class AutoEncoder(nn.Module):
             x = self.decoder(x)
         
         return x
+
+@gin.configurable
+class MockAutoEncoder(AutoEncoder):
+    def __init__(self, 
+                 num_input_channels=3, 
+                 feature_size=10, 
+                 image_height=84, 
+                 image_width=84):
+        super().__init__(num_input_channels, 
+                         feature_size, 
+                         image_height, 
+                         image_width)
+        
+        self.encoder = None
+        self.decoder_linear = None
+        self.decoder = None
+    
+    def forward(self, x):
+        return x
+    
+    def feature_extractor(self, x):
+        return x
+    
+    def masked_image(self, x, mask):
+        return x*mask
 
 def encoder_loss(x, y):
     loss = torch.mean(torch.abs(torch.sum(x, dim=(1,2,3))-torch.sum(y, dim=(1,2,3))))

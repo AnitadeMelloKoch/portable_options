@@ -1,7 +1,7 @@
 from typing import Tuple
 from gymnasium.core import Env, Wrapper 
 from minigrid.core.world_object import Key
-from custom_minigrid.core.custom_world_object import CustomDoor
+from custom_minigrid.core.custom_world_object import CustomDoor, CustomKey
 from experiments.minigrid.utils import actions 
 import numpy as np 
 import matplotlib.pyplot as plt 
@@ -21,7 +21,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  key_collected: bool=False,
                  door_unlocked: bool=False,
                  door_open: bool=False,
-                 time_limit: int=2000):
+                 time_limit: int=2000,
+                 image_input: bool=True):
         super().__init__(env)
         
         self.objects = {
@@ -34,6 +35,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.door_key_position = None
         self._timestep =  0
         self.time_limit = time_limit
+        self.image_input = image_input
         
         self.door = None
         
@@ -159,7 +161,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.objects["door"] = DoorTuple(self.objects["door"].position,
                                                 self.door_colour)
         
-        new_key = Key(self.door_colour)
+        new_key = CustomKey(self.door_colour)
         keys = []
         
         for key in self.objects["keys"]:
@@ -172,7 +174,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 keys.append(KeyTuple(key.position,
                                      self.door_colour))
             elif key.colour == self.door_colour:
-                replace_key = Key(old_colour)
+                replace_key = CustomKey(old_colour)
                 self.env.unwrapped.grid.set(
                     key.position[0],
                     key.position[1],
@@ -197,7 +199,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             
             colour = self.key_colours[c_idx]
             
-            new_key = Key(colour)
+            new_key = CustomKey(colour)
             self.env.unwrapped.grid.set(
                 key.position[0],
                 key.position[1],
@@ -213,8 +215,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         info = self._modify_info_dict(info)
         if self._timestep >= self.time_limit:
             done = True
-        if np.max(obs) > 1:
-            obs = obs/255
+        if self.image_input:
+            if np.max(obs) > 1:
+                obs = obs/255
         if type(obs) is np.ndarray:
             obs = torch.from_numpy(obs).float()
         if self.check_option_complete(self):

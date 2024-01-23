@@ -7,6 +7,7 @@ from gymnasium.core import Env, Wrapper, ObservationWrapper
 from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper, ReseedWrapper
 from enum import IntEnum
 import collections
+from enum import IntEnum
 
 class actions(IntEnum):
     LEFT        = 0
@@ -53,6 +54,60 @@ class MinigridInfoWrapper(Wrapper):
         info['seed'] = self.env_seed
         return info
 
+class FactoredObsWrapperDoorKey(Wrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+        self.colours = {
+            "blue": 0,
+            "red": 1,
+            "green": 2,
+            "grey": 3,
+            "yellow": 4,
+            "purple": 5
+        }
+    
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        split_idx = self.env.unwrapped.splitIdx
+        
+        objects = {
+            "door": [-1,-1,-1,-1],
+            "blue": [-1,-1],
+            "red": [-1,-1],
+            "green": [-1,-1],
+            "grey": [-1,-1],
+            "yellow": [-1,-1],
+            "purple": [-1,-1],
+            "agent": [-1,-1,-1],
+            "goal": [-1, -1],
+            "split": [-1]
+        }
+        
+        for x in range(self.env.unwrapped.width):
+            for y in range(self.env.unwrapped.height):
+                cell = self.env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "door":
+                        objects["door"] = [x, y, int(cell.is_open), self.colours[cell.color]]
+                    if cell.type == "key":
+                        objects[cell.color] = [x, y]
+                    if cell.type == "goal":
+                        objects["goal"] = [x, y]
+                
+        agent_pos = self.env.unwrapped.agent_pos
+        agent_dir = self.env.unwrapped.agent_dir
+        
+        objects["agent"] = [agent_pos[0], agent_pos[1], agent_dir]
+        objects["split"] = [split_idx]
+        
+        factored_obs = []
+        
+        for key in objects:
+            factored_obs += objects[key]
+        
+        factored_obs = np.array(factored_obs)
+        
+        return factored_obs, reward, terminated, truncated, info
 
 class ResizeObsWrapper(ObservationWrapper):
     """Resize the observation image to be (84, 84) and compatible with Atari."""
@@ -224,5 +279,18 @@ def process_data(array):
     d["max"] = np.amax(array)
     return d
 
-
+def factored_environment_builder(level_name='AdvancedDoorKey-8x8-v0',
+                                 seed=42,
+                                 max_steps=None):
+    if max_steps is not None and max_steps > 0:
+        env = gym.make(level_name, max_steps=max_steps,
+                       render_mode="rgb_array")
+    else:
+        env = gym.make(level_name,
+                       render_mode="rgb_array")
+    env = ReseedWrapper(env, seeds=[seed])
+    env = FactoredObsWrapperDoorKey(env)
+    env = MinigridInfoWrapper(env, seed)
+    
+    return env
 

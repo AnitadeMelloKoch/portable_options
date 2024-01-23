@@ -27,7 +27,8 @@ class AttentionSet():
                  
                  summary_writer=None,
                  model_name="classifier",
-                 padding_func=None):
+                 padding_func=None,
+                 factored_obs=False):
         
         self.embedding = embedding
         self.embedding.eval()
@@ -50,7 +51,8 @@ class AttentionSet():
         
         self.classifier = AttentionEnsembleII(num_attention_heads=attention_module_num,
                                               num_classes=2,
-                                              embedding_size=embedding.feature_size)
+                                              embedding_size=embedding.feature_size,
+                                              factored_obs=factored_obs)
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.attention_num)
@@ -111,6 +113,32 @@ class AttentionSet():
         self.dataset.add_false_files(negative_files)
         self.dataset.add_priority_false_files(priority_negative_files)
     
+    def batch_pred(self,
+                   x,
+                   y):
+        self.move_to_gpu()
+        
+        losses = np.zeros(self.attention_num)
+        accuracies = np.zeros(self.attention_num)
+        
+        if self.use_gpu:
+            x = x.to("cuda")
+            y = y.to("cuda")
+        
+        x = self.embedding.feature_extractor(x)
+        with torch.no_grad():
+            pred_y = self.classifier(x)
+            for attn_idx in range(self.attention_num):
+                loss = self.crossentropy(pred_y[attn_idx], y)
+                losses[attn_idx] = loss
+                pred_class = torch.argmax(pred_y[attn_idx], dim=1)
+                accuracies[attn_idx] += torch.sum(pred_class==y)/len(y)
+        
+        self.move_to_cpu()
+        
+        return losses, accuracies
+    
+
     def train(self,
               epochs):
         self.move_to_gpu()
@@ -138,7 +166,8 @@ class AttentionSet():
                     classifier_losses[attn_idx] += b_loss.item()
                     div_loss = self.div_scale*divergence_loss(masks, attn_idx)
                     div_losses[attn_idx] += div_loss.item()
-                    regulariser_loss = self.reg_scale*l1_loss(masks, attn_idx)
+                    # regulariser_loss = self.reg_scale*l1_loss(masks, attn_idx)
+                    regulariser_loss = 0
                     l1_losses[attn_idx] += regulariser_loss
                     b_loss += div_loss
                     b_loss += regulariser_loss
@@ -181,6 +210,8 @@ class AttentionSet():
                                                                             l1_losses[idx]/counter,
                                                                             loss[idx]/counter,
                                                                             classifier_acc[idx]/counter))
+        self.move_to_cpu()
+    
     def vote(self, x):
         self.classifier.eval()
         

@@ -67,6 +67,7 @@ class Option():
             timeout=50,
             min_option_length=5,
             original_initiation_function=lambda x:False,
+            policy_divergence_loss_scale=0.0005,
 
             log=True):
         
@@ -86,7 +87,8 @@ class Option():
             final_exploration_frames=final_exploration_frames,
             discount_rate=discount_rate,
             num_modules=policy_attention_module_num,
-            num_output_classes=policy_num_output_classes
+            num_output_classes=policy_num_output_classes,
+            divergence_loss_scale=policy_divergence_loss_scale
         )
 
         self.initiation = Set(

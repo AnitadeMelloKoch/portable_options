@@ -23,10 +23,11 @@ class AttentionValueEnsemble():
                  discount_rate=0.9,
                  c=100,
                  gru_hidden_size=128,
-                 divergence_loss_scale=0.005,
+                 divergence_loss_scale=0.01,
                  
                  summary_writer=None,
-                 model_name='policy'):
+                 model_name='policy',
+                 factored_obs=False):
         
         self.attention_num = attention_module_num
         self.num_actions = num_actions
@@ -35,6 +36,7 @@ class AttentionValueEnsemble():
         self.div_scale = divergence_loss_scale
         self.summary_writer = summary_writer
         self.model_name = model_name
+        self.gru_hidden_size = gru_hidden_size
         
         self.embedding = embedding
         
@@ -48,9 +50,16 @@ class AttentionValueEnsemble():
             ) for _ in range(self.attention_num)
         ])
         
-        self.attentions = nn.ModuleList(
-            [AttentionLayer(gru_hidden_size) for _ in range(self.attention_num)]
-        )
+        self.factored_obs = factored_obs
+        
+        if factored_obs:
+            self.attentions = nn.ModuleList(
+                [FactoredAttentionLayer() for _ in range(self.attention_num)]
+            )
+        else:
+            self.attentions = nn.ModuleList(
+                [AttentionLayer(gru_hidden_size) for _ in range(self.attention_num)]
+            )
         self.q_networks = nn.ModuleList(
             [LinearQFunction(in_features=gru_hidden_size, 
                              n_actions=num_actions) for _ in range(self.attention_num)]
@@ -90,14 +99,14 @@ class AttentionValueEnsemble():
         
         torch.save(self.q_networks.state_dict(), os.path.join(path, 'policy_networks.pt'))
         torch.save(self.attentions.state_dict(), os.path.join(path, 'attentions.pt'))
-        torch.save(self.recurrent_memory.state_dict(), os.path.join(path, 'gru.pt'))
+        torch.save(self.recurrent_memories.state_dict(), os.path.join(path, 'gru.pt'))
         self.upper_confidence_bound.save(os.path.join(path, 'upper_conf_bound'))
     
     def load(self, path):
         if os.path.exists(os.path.join(path, 'policy_networks.pt')):
             self.q_networks.load_state_dict(torch.load(os.path.join(path, 'policy_networks.pt')))
             self.attentions.load_state_dict(torch.load(os.path.join(path, 'attentions.pt')))
-            self.recurrent_memory.load_state_dict(torch.load(os.path.join(path, 'gru.pt')))
+            self.recurrent_memories.load_state_dict(torch.load(os.path.join(path, 'gru.pt')))
             self.upper_confidence_bound.load(os.path.join(path, 'upper_conf_bound'))
         else:
             print("NO PATH TO LOAD ATTENTION VALUE ENSEMBLE FROM")
@@ -121,6 +130,7 @@ class AttentionValueEnsemble():
     
     def apply_attention(self, x):
         attentioned_embedding = self.attentions[self.action_leader](x)
+        # print("mask:",self.attentions[self.action_leader].mask())
 
         return attentioned_embedding
     
@@ -132,6 +142,9 @@ class AttentionValueEnsemble():
         update both the embedding network and the value network by backproping
         the sumed divergence and q learning loss
         """
+        
+        # print("action leader:",self.action_leader)
+        
         self.q_networks.train()
         self.recurrent_memories[self.action_leader].flatten_parameters()
         
@@ -143,11 +156,18 @@ class AttentionValueEnsemble():
         
         loss = 0
         
+        
         state_embeddings = self.embedding.feature_extractor(batch_states)
         state_embeddings = state_embeddings.unsqueeze(1)
+        if self.factored_obs:
+            state_embeddings = self.apply_attention(state_embeddings)
         state_embeddings, _ = self.recurrent_memories[self.action_leader](state_embeddings)
         state_embeddings = state_embeddings.squeeze()
-        att_state_embeddings = self.apply_attention(state_embeddings)
+        if not self.factored_obs:
+            att_state_embeddings = self.apply_attention(state_embeddings)
+        else:
+            att_state_embeddings = state_embeddings
+        
         
         masks = self.get_attention_masks()
         
@@ -162,10 +182,14 @@ class AttentionValueEnsemble():
         with torch.no_grad():
             next_state_embeddings = self.embedding.feature_extractor(batch_next_states)
             next_state_embeddings = next_state_embeddings.unsqueeze(1)
+            if self.factored_obs:
+                next_state_embeddings = self.apply_attention(next_state_embeddings)
             next_state_embeddings, _ = self.recurrent_memories[self.action_leader](next_state_embeddings)
             next_state_embeddings = next_state_embeddings.squeeze()
-            attn_next_state_embeddings = self.apply_attention(next_state_embeddings)
-        
+            if not self.factored_obs:
+                attn_next_state_embeddings = self.apply_attention(next_state_embeddings)
+            else:
+                attn_next_state_embeddings = next_state_embeddings
         # predicted q values
         state_attention = att_state_embeddings
         batch_pred_q_all_actions = self.q_networks[self.action_leader](state_attention)
@@ -176,15 +200,16 @@ class AttentionValueEnsemble():
         with torch.no_grad():
             next_state_attention = attn_next_state_embeddings
             batch_next_state_q_all_actions = self.target_q_networks[self.action_leader](next_state_attention)
-            next_state_values = torch.argmax(batch_next_state_q_all_actions.q_values, dim=-1)
+            next_state_values, _ = torch.max(batch_next_state_q_all_actions.q_values, dim=-1)
             batch_q_target = batch_rewards + self.gamma*(1-batch_dones)*next_state_values
+            
             
         # loss
         td_loss = compute_q_learning_loss(exp_batch,
                                             batch_pred_q,
                                             batch_q_target,
                                             errors_out=errors_out)
-        loss += td_loss 
+        loss += td_loss
         
         # update
         self.optimizers[self.action_leader].zero_grad()
@@ -204,7 +229,7 @@ class AttentionValueEnsemble():
                                            l_div.item(),
                                            self.timestep[self.action_leader])
             self.summary_writer.add_scalar('{}/td_loss/{}'.format(self.model_name, self.action_leader),
-                                            td_losses[self.action_leader],
+                                            td_loss.item(),
                                             self.timestep[self.action_leader])
         self.timestep[self.action_leader] += 1
     
@@ -219,9 +244,14 @@ class AttentionValueEnsemble():
             self.recurrent_memories[self.action_leader].flatten_parameters()
             embeddings = embeddings.unsqueeze(1)
             
+            if self.factored_obs:
+                embeddings = self.apply_attention(embeddings)
+            
             embeddings, _ = self.recurrent_memories[self.action_leader](embeddings)
             embeddings = embeddings.squeeze()
-            embeddings = self.apply_attention(embeddings)
+            if not self.factored_obs:
+                embeddings = self.apply_attention(embeddings)
+            embeddings = embeddings.unsqueeze(0)
             
             q_values = self.q_networks[self.action_leader](embeddings)
             q_values = q_values.q_values.squeeze()

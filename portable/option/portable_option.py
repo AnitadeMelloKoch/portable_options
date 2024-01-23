@@ -53,6 +53,7 @@ class AttentionOption():
                  policy_attention_module_num,
                  num_actions,
                  policy_c,
+                 policy_divergence_loss_scale,
                  
                  initiation_beta_distribution_alpha,
                  initiation_beta_distribution_beta,
@@ -75,8 +76,11 @@ class AttentionOption():
                  original_initiation_function=None,
                  dataset_transform_function=None,
                  option_name=None,
-                 video_generator=None,
-                 update_options_from_success=True):
+                 video_generator=None, # use oracle function instead of classifier to determine termination set
+                 update_options_from_success=True, # update classifiers and policy of port when markov succeeds
+                 assume_initiation_start=False, # assume you are starting in initiation set
+                 create_instances=True,
+                 factored_obs=False):
         
         assert option_handling_method in OPTION_HANDLING_METHODS
         
@@ -86,6 +90,8 @@ class AttentionOption():
         self.name = option_name
         self.option_handling_method = option_handling_method
         self.update_options_from_success = update_options_from_success
+        self.assume_init_start = assume_initiation_start
+        self.should_create_instance = create_instances
         
         self.policy = EnsembleAgent(use_gpu=use_gpu,
                                     warmup_steps=policy_warmup_steps,
@@ -103,7 +109,9 @@ class AttentionOption():
                                     num_modules=policy_attention_module_num,
                                     num_actions=num_actions,
                                     c=policy_c,
-                                    summary_writer=summary_writer)
+                                    summary_writer=summary_writer,
+                                    factored_obs=factored_obs,
+                                    divergence_loss_scale=policy_divergence_loss_scale)
 
         self.initiation = AttentionSet(use_gpu=use_gpu,
                                        embedding=embedding,
@@ -116,7 +124,8 @@ class AttentionOption():
                                        attention_module_num=initiation_attention_module_num,
                                        model_name="initiation",
                                        summary_writer=summary_writer,
-                                       padding_func=dataset_transform_function)
+                                       padding_func=dataset_transform_function,
+                                       factored_obs=factored_obs)
         self.initiation.move_to_gpu()
         if use_oracle_for_term:
             assert termination_oracle is not None
@@ -146,7 +155,7 @@ class AttentionOption():
         self.min_option_length = min_option_length
         self.min_success_rate = min_success_rate
         self.original_initiation_function = original_initiation_function
-        self.markov_idx = None
+        self.markov_idx = []
         self.max_instantiations = max_instantiations
         self.video_generator = video_generator
         
@@ -157,8 +166,8 @@ class AttentionOption():
         os.makedirs(log_dir, exist_ok=True)
         
         policy_path, _, _, _ = self._get_save_paths()
-        os.makedirs(policy_path, exist_ok=True)
         self.policy_buffer_save_file = os.path.join(policy_path, 'memory_buffers')
+        os.makedirs(self.policy_buffer_save_file, exist_ok=True)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -287,14 +296,16 @@ class AttentionOption():
             env,
             state,
             info,
-            option_idx,
             eval,
-            false_states):
+            false_states,
+            option_idx=None,
+            policy_leader=None):
         
         if type(state) is np.ndarray:
             state = torch.from_numpy(state).float()
         
-        assert self.initiation_checked is True
+        if not self.assume_init_start:
+            assert self.initiation_checked is True
         self.initiation_checked = False
         
         if self.option_handling_method == OPTION_HANDLING_METHODS[0]:
@@ -303,7 +314,8 @@ class AttentionOption():
                                                  info,
                                                  option_idx,
                                                  eval,
-                                                 false_states)
+                                                 false_states,
+                                                 policy_leader)
         else:
             raise Exception("Option handling method not recognized")
         
@@ -322,8 +334,9 @@ class AttentionOption():
                                  info,
                                  option_idx,
                                  eval,
-                                 false_states):
-        if len(self.markov_idx) != 0:
+                                 false_states,
+                                 policy_leader):
+        if len(self.markov_idx) != 0 and option_idx is not None:
             next_state, rewards, done, info, steps = self.markov_instantiations[option_idx].run(env,
                                                                                                                  state,
                                                                                                                  info,
@@ -335,7 +348,8 @@ class AttentionOption():
             states = []
             infos = []
             
-            self.policy.begin_rollout(self.policy_buffer_save_file)
+            self.policy.begin_rollout(self.policy_buffer_save_file,
+                                      policy_leader=policy_leader)
             if not self.use_oracle_for_term:
                 self.termination.move_to_gpu()
             
@@ -347,9 +361,10 @@ class AttentionOption():
                     infos.append(info)
                     
                     action = self.policy.act(state)
-                    self._video_log("[port {}] action: {}".format(self.name, action))
+                    self._video_log("[port {}] policy {} action: {}".format(self.name, self.policy.action_leader(), action))
                     if self.video_generator is not None:
-                        self.video_generator.make_image(state)
+                        img = env.render()
+                        self.video_generator.make_image(img)
                     next_state, reward, done, info = env.step(action)
                     should_terminate = self.can_terminate(env, next_state)
                     self._video_log("[port {}] should terminate: {}".format(self.name, should_terminate))
@@ -366,7 +381,8 @@ class AttentionOption():
                         info["option_timed_out"] = False
                         self._video_log("[port {}] Environment done".format(self.name))
                         if self.video_generator is not None:
-                            self.video_generator.make_image(next_state)
+                            img = env.render()
+                            self.video_generator.make_image(img)
                         return next_state, rewards, done, info, steps
                     
                     if should_terminate:
@@ -377,13 +393,14 @@ class AttentionOption():
                                                  info,
                                                  false_states)
                         
-                        vote_global, _, votes, conf = self.initiation.vote(state)
-                        if not vote_global:
-                            self._video_log("[port {}] Option complete".format(self.name))
-                            self.policy.end_rollout(self.policy_buffer_save_file)
-                            if not self.use_oracle_for_term:
-                                self.termination.move_to_cpu()
-                            return next_state, rewards, done, info, steps
+                        if not self.assume_init_start:
+                            vote_global, _, votes, conf = self.initiation.vote(state)
+                            if not vote_global:
+                                self._video_log("[port {}] Option complete".format(self.name))
+                                self.policy.end_rollout(self.policy_buffer_save_file)
+                                if not self.use_oracle_for_term:
+                                    self.termination.move_to_cpu()
+                                return next_state, rewards, done, info, steps
                     
                     state = next_state
                     
@@ -492,11 +509,12 @@ class AttentionOption():
         
         self._video_log("[port {}] New instance created".format(self.name))
         
-        self.create_instance(states,
-                             infos,
-                             termination_state,
-                             termination_info,
-                             false_states)
+        if self.should_create_instance:
+            self.create_instance(states,
+                                infos,
+                                termination_state,
+                                termination_info,
+                                false_states)
         
     
     def _option_fail(self,

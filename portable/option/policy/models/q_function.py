@@ -35,6 +35,7 @@ class LinearQFunction(nn.Module):
         )
     
     def forward(self, x):
+        
         return self.q_func(x)
 
 

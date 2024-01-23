@@ -40,7 +40,7 @@ class VideoGenerator():
                    img):
         img = np.squeeze(img)
         # change channels to align with rgb layout
-        img = np.transpose(img, (1,2,0))
+        # img = np.transpose(img, (1,2,0))
         
         i = 0
         while os.path.exists(os.path.join(self.temp_path, "{}.png".format(i))):
