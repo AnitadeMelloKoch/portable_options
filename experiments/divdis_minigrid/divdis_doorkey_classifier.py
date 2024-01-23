@@ -6,10 +6,10 @@ import random
 
 positive_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_2_initiation_positive.npy"]
 negative_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_2_initiation_negative.npy"]
-unlabelled_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_2_initiation_positive.npy",
-                          "resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_2_initiation_negative.npy",
+unlabelled_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_1_initiation_positive.npy",
+                          "resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_0_initiation_negative.npy",
                           "resources/minigrid_factored/adv_doorkey_8x8_openyellowdoor_dooryellow_2_initiation_positive.npy",
-                          "resources/minigrid_factored/adv_doorkey_8x8_openyellowdoor_dooryellow_2_initiation_negative.npy"]
+                          "resources/minigrid_factored/adv_doorkey_8x8_openyellowdoor_dooryellow_1_initiation_negative.npy"]
 
 positive_test_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_3_initiation_positive.npy"]
 negative_test_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_3_initiation_negative.npy"]
@@ -41,4 +41,11 @@ if __name__ == "__main__":
                                               negative_test_files)
         
         print(accuracy)
+        
+        # true_stats, false_stats = experiment.explain_classifiers(unlabelled_train_files,
+        #                                                          7)
 
+        # print(true_stats[1]*torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7]))
+        # print(true_stats[0])
+        # print(false_stats[1]*torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7]))
+        # print(false_stats[0])

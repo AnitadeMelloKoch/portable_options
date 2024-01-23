@@ -16,6 +16,11 @@ MODEL_TYPE = [
     "small_cnn"
 ]
 
+def transform(x):
+    x = x*255
+    x = x/torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
+    return x
+
 @gin.configurable
 class DivDisClassifier():
     def __init__(self,
@@ -37,6 +42,7 @@ class DivDisClassifier():
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize)
+        self.dataset.set_transform_function(transform)
         self.learning_rate = learning_rate
         
         self.head_num = head_num
@@ -99,8 +105,10 @@ class DivDisClassifier():
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
+                # print(x)
                 
                 unlabelled_x = self.dataset.get_unlabelled_batch()
+                # print(unlabelled_x)
                 
                 if self.use_gpu:
                     x = x.to("cuda")

@@ -9,7 +9,7 @@ from portable.utils.utils import set_seed
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
-from portable.option.divdis.divdis_classifier import DivDisClassifier
+from portable.option.divdis.divdis_classifier import DivDisClassifier, transform
 from portable.option.memory import SetDataset
 
 @gin.configurable 
@@ -84,6 +84,8 @@ class AdvancedMinigridFactoredDivDisExperiment():
         dataset = SetDataset(max_size=1e6,
                              batchsize=64)
         
+        dataset.set_transform_function(transform)
+        
         dataset.add_true_files(test_positive_files)
         dataset.add_false_files(test_negative_files)
         
@@ -101,4 +103,41 @@ class AdvancedMinigridFactoredDivDisExperiment():
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
                 
         return accuracy/counter
+    
+    def explain_classifiers(self,
+                            test_data,
+                            test_head):
+        dataset = SetDataset(max_size=1e6,
+                             batchsize=64)
         
+        dataset.set_transform_function(transform)
+        
+        dataset.add_true_files(test_data)
+        
+        true_data = []
+        false_data = []
+        
+        for _ in range(dataset.num_batches):
+            x, _ = dataset.get_batch()
+            pred_y = self.classifier.predict(x)
+            pred_y = pred_y.cpu()
+            
+            pred_class = torch.argmax(pred_y[:,test_head,:], dim=1).detach()
+            
+            true_data += x[pred_class == 1]
+            false_data += x[pred_class == 0]
+        
+        if len(true_data) != 0:
+            true_data = torch.stack(true_data)
+        else:
+            true_data = torch.zeros(1,1)
+        if len(false_data) != 0:
+            false_data = torch.stack(false_data)
+        else:
+            false_data = torch.zeros(1,1)
+        
+        return torch.std_mean(true_data, dim=0), torch.std_mean(false_data, dim=0)
+        
+        
+    
+    
