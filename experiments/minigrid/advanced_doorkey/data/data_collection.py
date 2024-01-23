@@ -490,8 +490,11 @@ class GridEnv:
         target_row, target_col = key_loc
         potential_loc = [(target_row-1, target_col),(target_row+1, target_col),(target_row, target_col-1),(target_row, target_col+1)]
         facing_needed = ['d','u','r','l']
-        final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=self.wall_col) 
-                                                        and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
+        #final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=self.wall_col) 
+        #                                                and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
+        final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col) 
+                                              and all(loc != key_loc for key_loc in self.other_keys_loc))]
+
         loc_idx = potential_loc.index(final_loc[0])
         facing_needed = facing_needed[loc_idx]
         return final_loc[0], facing_needed
@@ -561,7 +564,7 @@ class GridEnv:
                 screen = self.env.render()
                 self.ax.imshow(screen)
                 plt.show(block=False)
-                plt.pause(0.2)
+                plt.pause(0.5)
             
             if init_positive is None:
                 user_input = input("Initiation: (y) positive (n) negative")
