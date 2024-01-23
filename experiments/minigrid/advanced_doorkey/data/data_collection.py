@@ -1,7 +1,3 @@
-import re
-from turtle import title
-
-from sklearn import base
 from experiments.minigrid.utils import environment_builder, actions
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import matplotlib.pyplot as plt 
@@ -10,32 +6,98 @@ import numpy as np
 from portable import agent 
 
 
+
 class MiniGridDataCollector:
-    def __init__(self, training_seed):
-        self.training_seed = training_seed
-        self.colours = ["red", "green", "blue", "purple", "yellow", "grey"]
-        self.tasks = ["get_key", "open_door"]
+    def __init__(self):
+        self.colors = ["red", "green", "blue", "purple", "yellow", "grey"]
+        self.tasks = ["get_key", "open_door", "get_diff_key"]
+        self.training_seed = None
 
+    
+    def collect_envs(self):
+        self.training_seed = int(input("Training seed: "))
         
-    def process_loc_input(self, input_str):
-        try:
-            # Split the input string by comma
-            row_str, col_str = input_str.split(',')
+        # Init env, not collected, just for visualisation
+        fig = plt.figure(num=1, clear=True)
+        ax = fig.add_subplot()
+        ax.set_title("Init visualisation to get agent, key, door locations")
+            
+        env = self.init_env('blue', ['red','grey','grey'])
+        state, _ = env.reset()
+        state = state.numpy()
+        screen = env.render()
+        ax.imshow(screen)
+        plt.show(block=False)
 
-            # Convert each part to an integer
-            row_num = int(row_str.strip())  # strip() removes any leading/trailing spaces
-            col_num = int(col_str.strip())
+        if self.training_seed == 0:
+            agent_loc = self.process_loc_input('4,3')
+            agent_facing = 'd'
+            num_keys = 3
+            target_key_loc = self.process_loc_input('4,2')
+            keys_loc = [target_key_loc]
+            keys_loc.append(self.process_loc_input('4,4'))
+            keys_loc.append(self.process_loc_input('1,6'))
+            
+            door_loc = self.process_loc_input('2,5')
+            #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
+            show_path = True 
+            show_turns = False
+        else:
+            # User input for agent, key, door locations, etc.
+            agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) || e.g. 5,4 || "
+                                                "NOTE: row increases down 1-6, col increases right 1-6. "))
+            agent_facing = input(f"Agent current facing: u/d/l/r. || e.g. u || NOTE: up, down, left, right ")
+            
+            num_keys = int(input("Number of keys: "))
+            correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location: (row_num, col_num)"))
+            target_key_loc = self.process_loc_input(input("Target key  location: (row_num, col_num) || NOTE: can be same as correct key"))
+            keys_loc = [correct_key_loc]
+            for i in range(num_keys-1):
+                keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location: (row_num, col_num) ")))
+                
+            door_loc = self.process_loc_input(input("Door location: (row_num, col_num) "))
+            #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
+            show_path = True if input("Show data collection path? (y/n) ") == "y" else False
+            show_turns = True if input("Show cell collection turns? (y/n) ") == "y" else False
 
-            return (row_num, col_num)
-        except ValueError:
-            # Handle the error if input is not in the expected format
-            print("Invalid input format. Please enter in the format 'row_num, col_num'.")
-            return None
-        except Exception as e:
-            # Handle any other unexpected errors
-            print(f"An error occurred: {e}")
-            return None
+        for t_idx in range(2):
+            task = self.tasks[t_idx]
+            
+            for c_idx in range(len(self.colors)):
+                # TODO: add different door key color pairs, only for get key task. change target key loc.
+                #       use drop / collect get diff color key and collect data, only use correct key to open door.
+                #     track dropped locations.
+                door_color = self.colors[c_idx]
+                key_color = door_color
+                other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
 
+                env = self.init_env(door_color, other_keys_colour)
+                grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+                               show_path, show_turns)
+                print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+                grid.collect_data()
+
+        task = self.tasks[2]
+        for c_idx in range(len(self.colors)):
+            # TODO: add different door key color pairs, only for get key task. change target key loc.
+            #       use drop / collect get diff color key and collect data, only use correct key to open door.
+            #     track dropped locations.
+            door_color = self.colors[c_idx]
+            key_color = door_color
+            
+            
+            for c_idx2 in range(len(self.colors)):
+                target_key_color = self.colors[c_idx2]
+                if target_key_color == door_color:
+                    continue
+                
+                other_keys_colour = [c for c in self.colors if c not in [door_color, target_key_color]]
+
+                env = self.init_env(door_color, other_keys_colour)
+                grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+                                show_path, show_turns)
+                print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+                grid.collect_data()
 
     def init_env(self, door_colour, other_keys_colour):
         env = environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed, grayscale=False)
@@ -56,70 +118,40 @@ class MiniGridDataCollector:
         
         return env
 
-    
-    def collect_env(self):
-        #TODO: finish
-        
-        # Init env, not collected, just for visualisation
-        env = self.init_env('blue', ['blue','blue','blue'])
-        state, _ = env.reset()
-        state = state.numpy()
-        screen = env.render()
-        ax.imshow(screen)
-        plt.show(block=False, title="Visualisation to get agent, key, door locations")
+                           
+    def process_loc_input(self, input_str):
+        try:
+            # Split the input string by comma
+            row_str, col_str = input_str.split(',')
 
-        
-        agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) || e.g. 5,4 || "
-                                            "NOTE: row increases down 1-6, col increases right 1-6. "))
-        agent_facing = input(f"Agent current facing: u/d/l/r. || e.g. u || NOTE: up, down, left, right ")
-        num_keys = int(input("Number of keys: "))
-        target_key_loc = self.process_loc_input(input("Target key location: (row_num, col_num) "))
-        keys_loc = [target_key_loc]
-        for i in range(num_keys-1):
-            keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location: (row_num, col_num) ")))
-        door_loc = self.process_loc_input(input("Door location: (row_num, col_num) "))
-        goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
-        show_turns = input("Show cell collection turns? (y/n) ")
-        show_path = input("Show data collection path? (y/n) ")
-        show_turns = True if show_turns == "y" else False
-        show_path = True if show_path == "y" else False
+            # Convert each part to an integer
+            row_num = int(row_str.strip())  # strip() removes any leading/trailing spaces
+            col_num = int(col_str.strip())
 
-        for t_idx in range(2):
-            task = self.tasks[t_idx]
-            for c_idx in range(len(self.colours)):
-                door_colour = self.colours[c_idx]
-                other_keys_colour = self.colours[:c_idx] + self.colours[c_idx+1:]
-
-                env = self.init_env(door_colour, other_keys_colour)
-                grid = GridEnv(env, task, agent_loc, agent_facing, keys_loc, door_loc, s)
-                
-               
-            
-
-
-
-
-        
-        
-        self.show = show
-        grid = GridEnv(env, task, agent_loc, agent_facing, keys_loc, door_loc, goal_loc, self.show)
-        grid.collect_data(task, show_move=False, show_turn=False)
-
-
-
-
-
-
+            return (row_num, col_num)
+        except ValueError:
+            # Handle the error if input is not in the expected format
+            print("Invalid input format. Please enter in the format 'row_num, col_num'.")
+            return None
+        except Exception as e:
+            # Handle any other unexpected errors
+            print(f"An error occurred: {e}")
+            return None
 
 
 class GridEnv:
-    def __init__(self, task, env, agent_loc, agent_facing, keys_loc, door_loc, show_path, show_turns, vis_title):
+    def __init__(self, env, task, training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, show_path, show_turns):
         self.task = task
+        self.training_seed = training_seed
+        
+        self.key_color = key_color
+        self.door_color = door_color
         
         self.agent_loc = agent_loc
         self.agent_facing = agent_facing
-        
-        self.target_key_loc = keys_loc[0]
+
+        self.target_key_loc = target_key_loc
+        self.correct_key_loc = keys_loc[0]
         self.other_keys_loc = keys_loc[1:]
         
         self.door_loc = door_loc
@@ -137,8 +169,9 @@ class GridEnv:
         self.show_turns = show_turns
         self.show_path = show_path
         
-        fig = plt.figure(num=1, clear=True, title=vis_title)
-        self.ax = fig.add_subplot()  
+        self.fig = plt.figure(num=1, clear=True)
+        self.ax = self.fig.add_subplot()  
+        self.ax.set_title(f"{task} task, {self.key_color} key, {self.door_color} door.")
 
         self.env = env
         self.state, _ = self.env.reset()
@@ -164,77 +197,239 @@ class GridEnv:
             print("Not saved to either")"""
 
 
-    def collect_data(self, task):
-        #TODO: finish
+    def collect_data(self):
+        #TODO: fix
         # Your existing collect_data code goes here, using self.env
-        if task.lower()==('get_key' or 'getkey'):
+        if self.task.lower()==('get_key' or 'getkey'):
             # SETUP
-            wall_col = door_loc[1]
-            target_key_loc = keys_loc[0]
-            other_keys = keys_loc[1:]
+            self.init_pos, self.term_pos = True, False
 
-            # GET TO TOP LEFT CORNER
-            facing = goto(agent_loc, (1,1), agent_facing, init_pos=True, term_pos=False, show=self.show_path)
-        
-            # SWEEP ROOM
-            loc, facing = sweep((1,1), (6,wall_col-1), facing, init_pos=True, term_pos=False, show=self.show_path) # agent end up in (6,1) facing down
-                
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+            
             # PICK UP KEY
-            key_loc, facing_needed = key_pick_loc(target_key_loc, other_keys, wall_col)
-            facing = goto(loc, key_loc, facing, init_pos=True, term_pos=False, show=show_move)
+            pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
+            self.go_to(pickup_loc)
+            self.turn_to(facing_needed)
+            self.init_pos, self.term_pos = False, True
+            self.perform_action(actions.PICKUP, 1)
+            
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
             
             # UNLOCK DOOR
-            # OPEN DOOR
+            unlock_loc = (self.door_loc[0], self.door_loc[1]-1)
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.perform_action(actions.TOGGLE, 1)
+            self.perform_action(actions.TOGGLE, 1)
 
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+            
+            # OPEN DOOR
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.perform_action(actions.TOGGLE, 1)
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+
+            # ENTER OTHER ROOM
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.forward(1)
+            self.collect_cell()
+            self.go_to((1, self.wall_col+1))
+
+            # SWEEP OTHER ROOM
+            self.sweep((1, self.wall_col+1), (6,6))
+            
             # SAVE IMAGES
             self.save_to_file()
             
-
         
-        elif task.lower()==('open_door' or 'opendoor'):
-
+        elif self.task.lower()==('open_door' or 'opendoor'):
             # SETUP
-            wall_col = door_loc[1]
+            self.init_pos, self.term_pos = False, False
 
-            # GET TO TOP LEFT CORNER
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
             
-            # SWEEP ROOM
             # PICK UP KEY
+            pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
+            self.go_to(pickup_loc)
+            self.turn_to(facing_needed)
+            self.init_pos, self.term_pos = True, False
+            self.perform_action(actions.PICKUP, 1)
+            
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+            
             # UNLOCK DOOR
+            unlock_loc = (self.door_loc[0], self.door_loc[1]-1)
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.init_pos, self.term_pos = False, True
+            self.perform_action(actions.TOGGLE, 1)
+            self.init_pos, self.term_pos = True, False
+            self.perform_action(actions.TOGGLE, 1)
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+            
             # OPEN DOOR
-            pass
-        
-        pass
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.init_pos, self.term_pos = False, True
+            self.perform_action(actions.TOGGLE, 1)
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+
+            # ENTER OTHER ROOM
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.forward(1)
+            self.collect_cell()
+            self.go_to((1, self.wall_col+1))
+
+            # SWEEP OTHER ROOM
+            self.sweep((1, self.wall_col+1), (6,6))
+            
+            # SAVE IMAGES
+            self.save_to_file()
+
+        elif self.task.lower()==('get_diff_key' or 'getdiffkey'):
+            ## LOCK & CLOSED
+            # SETUP
+            self.init_pos, self.term_pos = True, False
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+            
+            # PICK UP KEY
+            pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
+            self.go_to(pickup_loc)
+            self.turn_to(facing_needed)
+            self.init_pos, self.term_pos = False, True
+            self.perform_action(actions.PICKUP, 1)
+            
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+
+            # PICK UP CORRECT KEY
+            pickup_loc, facing_needed = self.key_pick_loc(self.correct_key_loc)
+            self.go_to(pickup_loc)
+            self.turn_to(facing_needed)
+            self.perform_action(actions.PICKUP, 1)
+            
+            ## UNLOCK DOOR
+            unlock_loc = (self.door_loc[0], self.door_loc[1]-1)
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.perform_action(actions.TOGGLE, 1)
+            self.perform_action(actions.TOGGLE, 1)
+
+            ## UNLOCKED & CLOSED
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+
+            ## UNLOCKED & OPEN
+            # OPEN DOOR
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.perform_action(actions.TOGGLE, 1)
+
+            # GET TO TOP LEFT CORNER & SWEEP ROOM
+            self.go_to((1,1))
+            self.sweep((1,1), (6,self.wall_col-1))
+
+            # ENTER OTHER ROOM
+            self.go_to(unlock_loc)
+            self.turn_to('r')
+            self.forward(1)
+            self.collect_cell()
+            self.go_to((1, self.wall_col+1))
+
+            # SWEEP OTHER ROOM
+            self.sweep((1, self.wall_col+1), (6,6))
+            
+            # SAVE IMAGES
+            self.save_to_file()
+
+        else:
+            raise ValueError("Task not recognised! Use either 'get_key' or 'open_door' or 'get_diff_key'")
 
 
 
-    def goto(self, loc_end, show):
+    def go_to(self, loc_end):
         dist_row = loc_end[0] - self.agent_loc[0]
         dist_col = loc_end[1] - self.agent_loc[1]
         #self.agent_facing = self.agent_facing  # Initialize facing_end with current facing direction
-        
-        # Vertical movement (up or down)
-        if dist_row > 0:  # Moving down
-            self.turn_direction('d', show)
-            self.perform_action(actions.FORWARD, dist_row, show=show)
-        elif dist_row < 0:  # Moving up
-            self.turn_direction('u', show)
-            self.perform_action(actions.FORWARD, -dist_row, show=show)
 
-        # Horizontal movement (left or right)
-        if dist_col > 0:  # Moving right
-            self.turn_direction('r', show)
-            self.perform_action(actions.FORWARD, dist_col, show=show)
-        elif dist_col < 0:  # Moving left
-            self.turn_direction('l', show)
-            self.perform_action(actions.FORWARD, -dist_col, show=show)
+        # check if agent is at wall col, then horizontal movement first, then vertical
+        if self.agent_loc[1] == self.wall_col:
+            # Vertical movement (up or down)
+            if dist_row > 0:  # Moving down
+                self.turn_to('d')
+                self.forward(dist_row)
+            elif dist_row < 0:  # Moving up
+                self.turn_to('u')
+                self.forward(-dist_row)
+
+            # Horizontal movement (left or right)
+            if dist_col > 0:  # Moving right
+                self.turn_to('r')
+                self.forward(dist_col)
+            elif dist_col < 0:  # Moving left
+                self.turn_to('l')
+                self.forward(-dist_col)
+                
+        else: # otherwise vertical movement first, then horizontal            
+            # Vertical movement (up or down)
+            if dist_row > 0:  # Moving down
+                self.turn_to('d')
+                self.forward(dist_row)
+            elif dist_row < 0:  # Moving up
+                self.turn_to('u')
+                self.forward(-dist_row)
+
+            # Horizontal movement (left or right)
+            if dist_col > 0:  # Moving right
+                self.turn_to('r')
+                self.forward(dist_col)
+            elif dist_col < 0:  # Moving left
+                self.turn_to('l')
+                self.forward(-dist_col)
+
+        # check if agent had arrived at target location correctly
+        if self.agent_loc != loc_end:
+            self.fig.savefig('experiments/minigrid/advanced_doorkey/data/go_to_error.png')
+            raise ValueError('Agent not at target location!')
 
 
-    def sweep(self, loc_start, loc_end, show):
-        #TODO: fix perform action
+    def sweep(self, loc_start, loc_end):
         # Calculate distances and directions
+        
         if self.agent_loc != loc_start:
+            self.fig.savefig('experiments/minigrid/advanced_doorkey/data/sweep_error.png')
             raise ValueError('Agent not at start location!')
+        
         dist_row, dist_col = abs(loc_end[0] - loc_start[0]), abs(loc_end[1] - loc_start[1])
         row_direction = 1 if loc_end[0] >= loc_start[0] else -1
         col_direction = 1 if loc_end[1] >= loc_start[1] else -1
@@ -243,89 +438,108 @@ class GridEnv:
 
         # Determine initial turn direction based on row direction
         initial_turn = 'd' if row_direction == 1 else 'u'
-        self.turn_direction(initial_turn, show)
+        self.turn_to(initial_turn)
 
         for _ in range(dist_row + 1):
             if cur_row % 2 == 1:  # odd row
                 # Adjust turning direction and movement based on col_direction
                 turn_action = actions.RIGHT if col_direction == 1 else actions.LEFT
-                self.perform_action(env, turn_action, 3, init_positive=init_pos, term_positive=term_pos, show=show)
+                self.perform_action(turn_action, 3, show=self.show_path)
+                self.agent_facing = 'r' if col_direction == 1 else 'l'
 
                 for _ in range(dist_col):
-                    self.perform_action(env, actions.FORWARD, 1, init_positive=init_pos, term_positive=term_pos, show=show)
-                    self.collect_cell(show)
+                    #TODO: update forward
+                    self.forward(1)
+                    self.collect_cell()
                     cur_col += col_direction
 
                 if cur_row != loc_end[0]:
-                    self.perform_action(env, turn_action, 1, init_positive=init_pos, term_positive=term_pos, show=show)
-                    self.perform_action(env, actions.FORWARD, 1, init_positive=init_pos, term_positive=term_pos, show=show)
+                    self.perform_action(turn_action, 1, show=self.show_path)
+                    self.agent_facing = 'd' if col_direction == 1 else 'u'
+                    self.forward(1)
                     cur_row += row_direction
 
             elif cur_row % 2 == 0:  # even row
                 # Adjust turning direction and movement based on col_direction
                 turn_action = actions.LEFT if col_direction == 1 else actions.RIGHT
-                self.perform_action(env, turn_action, 3, init_positive=init_pos, term_positive=term_pos, show=show)
+                self.perform_action(turn_action, 3, show=self.show_path)
+                self.agent_facing = 'l' if col_direction == 1 else 'r'
 
                 for _ in range(dist_col):
-                    self.perform_action(env, actions.FORWARD, 1, init_positive=init_pos, term_positive=term_pos, show=show)
-                    collect_cell(init_pos, term_pos, show)
+                    self.forward(1)
+                    self.collect_cell()
                     cur_col -= col_direction
 
                 if cur_row != loc_end[0]:
-                    self.perform_action(env, turn_action, 1, init_positive=init_pos, term_positive=term_pos, show=show)
-                    self.perform_action(env, actions.FORWARD, 1, init_positive=init_pos, term_positive=term_pos, show=show)
+                    self.perform_action(turn_action, 1, show=self.show_path)
+                    self.agent_facing = 'd' if col_direction == 1 else 'u'
+                    self.forward(1)
                     cur_row += row_direction
-
+                    
             else:
                 raise ValueError('sweep error')
 
-        # Determine final facing direction based on column direction
-        if col_direction == 1:
-            final_facing = 'r'
-        else:
-            final_facing = 'l'
-            
-        return (cur_row, cur_col), final_facing
+        if self.agent_loc[0] != loc_end[0]:
+            self.fig.savefig('experiments/minigrid/advanced_doorkey/data/sweep_error.png')
+            print(f"Agent row: {self.agent_loc[0]} | End row: {loc_end[0]}")
+            raise ValueError('Agent not at end row!')
 
-    def key_pick_loc(self, target_key_loc):
-        #TODO: fix
-        # Your existing key_pick_loc code goes here, using self.env
-        target_row, target_col = target_key_loc
+
+    def key_pick_loc(self, key_loc):
+        # return the loc agent should go to and facing needed to pick up target key
+        target_row, target_col = key_loc
         potential_loc = [(target_row-1, target_col),(target_row+1, target_col),(target_row, target_col-1),(target_row, target_col+1)]
-        facing_needed = ['u','d','l','r']
-        final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=wall_col) 
-                            and (loc!=other_keys_loc[0]) and (loc!=other_keys_loc[1]))]
+        facing_needed = ['d','u','r','l']
+        final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=self.wall_col) 
+                                                        and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
         loc_idx = potential_loc.index(final_loc[0])
         facing_needed = facing_needed[loc_idx]
         return final_loc[0], facing_needed
 
-    
-    def turn_direction(self, target_direction, show):
+    def forward(self, steps):
+        if steps < 0:
+            raise ValueError('steps must be positive')
+        
+        if self.agent_facing == 'u':
+            self.agent_loc = (self.agent_loc[0]-steps, self.agent_loc[1])
+        elif self.agent_facing == 'd':
+            self.agent_loc = (self.agent_loc[0]+steps, self.agent_loc[1])
+        elif self.agent_facing == 'l':
+            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]-steps)
+        elif self.agent_facing == 'r':
+            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]+steps)
+            
+        self.perform_action(actions.FORWARD, steps, show=self.show_path)
 
+        
+    def turn_to(self, target_direction):
         turn_map = {
             'l': {'r': 'turn around', 'u': 'right', 'd': 'left'},
             'r': {'l': 'turn around', 'u': 'left', 'd': 'right'},
             'u': {'d': 'turn around', 'l': 'left', 'r': 'right'},
             'd': {'u': 'turn around', 'l': 'right', 'r': 'left'}
         }
-
+                
         turn_action = turn_map.get(self.agent_facing, {}).get(target_direction, 'No turn needed')
+        self.agent_facing = target_direction
         
         if turn_action == 'right':
-            self.perform_action(actions.RIGHT, 1, show=show)
+            self.perform_action(actions.RIGHT, 1, show=self.show_path)
         elif turn_action == 'left':
-            self.perform_action(actions.LEFT, 1, show=show)
+            self.perform_action(actions.LEFT, 1, show=self.show_path)
         elif turn_action == 'turn around':
-            self.perform_action(actions.LEFT, 2, show=show)
+            self.perform_action(actions.LEFT, 2, show=self.show_path)
         else:
             print('No turn needed')
 
-        self.agent_facing = target_direction
+        if self.agent_facing != target_direction:
+            self.fig.savefig('experiments/minigrid/advanced_doorkey/data/turn_error.png')
+            raise ValueError('Agent not facing target direction!')
 
     
-    def collect_cell(self, show):
+    def collect_cell(self):
         # collect data for current cell, just turn to each direction and take a picture
-        self.perform_action(actions.RIGHT, 4, show=show)
+        self.perform_action(actions.RIGHT, 4, show=self.show_turns)
 
 
     def perform_action(self, action, steps, show=True, prompt=False):
@@ -368,30 +582,42 @@ class GridEnv:
                     print("Not saved to either")
         
             if init_positive is True:
-                print("in init set True")
                 self.init_positive_image.append(state)
+                init_msg = "in init set True"
             elif init_positive is False:
-                print("in init set False")
                 self.init_negative_image.append(state)
+                init_msg = "in init set False"
             else:
-                print("Not saved to either init")
+                init_msg = "Not saved to either init"
             
             if term_positive is True:
-                print("in term set True")
                 self.term_positive_image.append(state)
+                term_msg = "in term set True"
             elif term_positive is False:
-                print("in term set False")
                 self.term_negative_image.append(state)
+                term_msg = "in term set False"
             else:
-                print("Not saved to either term")
+                term_msg = "Not saved to either term"
+
+            # map agent facing to arrows
+            facing_map = {
+                'u': '^',
+                'd': 'v',
+                'l': '<',
+                'r': '>'
+            }
+            cur_facing = facing_map.get(self.agent_facing, 'No facing')
+            print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
 
 
     def save_to_file(self):
         # Task specific base name
         if self.task.lower()==('get_key' or 'getkey'):
-            base_file_name = "adv_doorkey_8x8_get{}key_door{}_{}".format(door_colour, door_colour, training_seed)
+            base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
         elif self.task.lower()==('open_door' or 'opendoor'):
-            base_file_name = "adv_doorkey_8x8_open{}door_door{}_{}".format(door_colour, door_colour, training_seed)
+            base_file_name = f"adv_doorkey_8x8_v2_open{self.door_color}door_door{self.door_color}_{self.training_seed}"
+        elif self.task.lower()==('get_diff_key' or 'getdiffkey'):
+            base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
         else:
             raise ValueError("Task not recognised! Use either")
 
@@ -415,235 +641,10 @@ class GridEnv:
 
 
 
+meta_data_collector = MiniGridDataCollector()
+meta_data_collector.collect_envs()
 
 
-
-
-
-
-
-
-
-
-
-
-###############################################################################################
-###############################################################################################
-###############################################################################################
-#---------------------------------------------------------------------------------------------#
-training_seed = 1
-colours = ["red", "green", "blue", "purple", "yellow", "grey"]
-# door_colour = 'grey'
-key_colour = 'purple'
-door_colour = 'red'
-
-SHOW_MOVE = True
-SHOW_TURN = False
-#---------------------------------------------------------------------------------------------#
-###############################################################################################
-###############################################################################################
-###############################################################################################
-
-env = environment_builder('AdvancedDoorKey-8x8-v0', seed=training_seed, grayscale=False)
-# env = AdvancedDoorKeyPolicyTrainWrapper(env,
-#                                         door_colour=door_colour)
-env = AdvancedDoorKeyPolicyTrainWrapper(env,
-                                        door_colour=door_colour,
-                                        key_colours=colours)
-                                                    #[key_colour,
-                                                     #"yellow",
-                                                     #"grey"
-                                                    # ])
-
-# env = AdvancedDoorKeyPolicyTrainWrapper(
-#     factored_environment_builder(
-#         'AdvancedDoorKey-8x8-v0',
-#         seed=training_seed
-#     ),
-#     door_colour=door_colour
-# )
-
-state, _ = env.reset()
-
-state = state.numpy()
-
-screen = env.render()
-ax.imshow(screen)
-plt.show(block=False)
-
-user_input = input("Initiation: (y) positive (n) negative ")
-if user_input == "y":
-    init_positive_image.append(state)
-elif user_input == "n":
-    init_negative_image.append(state)
-else:
-    print("Not saved to either")
-
-user_input = input("Termination: (y) positive (n) negative ")
-if user_input == "y":
-    term_positive_image.append(state)
-elif user_input == "n":
-    term_negative_image.append(state)
-else:
-    print("Not saved to either")
-    
-
-#######################################################################################################
-#######################################################################################################
-####                                        SEED 1                                                 ####
-#######################################################################################################
-#######################################################################################################
-
-self.perform_action(env, actions.LEFT, 3             , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 6            , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 1             , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=False, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 4             , init_positive=False, term_positive=False, show=False)
-
-#######################################################################################
-#######################################################################################
-##                                PICK UP KEY                                        ##
-#######################################################################################
-#######################################################################################
-
-self.perform_action(env, actions.PICKUP, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 2             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 2          , init_positive=True, term_positive=False, show=False)
-
-self.perform_action(env, actions.LEFT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 4            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 6            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1          , init_positive=True, term_positive=False, show=False)
-
-#######################################################################################
-#######################################################################################
-##                                UNLOCK DOOR                                        ##
-#######################################################################################
-#######################################################################################
-
-self.perform_action(env, actions.TOGGLE, 1            , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.TOGGLE, 1            , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 1             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 5           , init_positive=True, term_positive=False, show=False)
-
-self.perform_action(env, actions.LEFT, 3              , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 4             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.RIGHT, 6             , init_positive=True, term_positive=False, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=True, term_positive=False, show=False)
-
-
-#######################################################################################
-#######################################################################################
-##                                OPEN DOOR                                          ##
-#######################################################################################
-#######################################################################################
-
-self.perform_action(env, actions.TOGGLE, 1            , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 1             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 5           , init_positive=False, term_positive=True, show=False)
-
-self.perform_action(env, actions.LEFT, 3              , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 4             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.LEFT, 3              , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 3             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 1           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 6             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 2           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 4             , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.FORWARD, 3           , init_positive=False, term_positive=True, show=False)
-self.perform_action(env, actions.RIGHT, 6             , init_positive=False, term_positive=True, show=False)
-
-
-
-for _ in range(3):
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.RIGHT, 4         , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.RIGHT, 3         , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.RIGHT, 3         , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.RIGHT, 4         , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.LEFT, 3          , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.FORWARD, 1       , init_positive=False, term_positive=True, show=True)
-    self.perform_action(env, actions.LEFT, 3          , init_positive=False, term_positive=True, show=True)
-
-self.perform_action(env, actions.PICKUP, 1)
-# 64
-
-print(f'Saved {len(init_positive_image)} init positive, {len(init_negative_image)} init negative;{len(term_positive_image)} term positive, {len(term_negative_image)} term negative images.')
-
-print(init_positive_image[0].shape)
-print(init_positive_image[0])
-
-base_file_name = "adv_doorkey_8x8_open{}door_door{}_{}".format(door_colour, door_colour, training_seed)
-
-if len(init_positive_image) > 0:
-    np.save('resources/minigrid_images/{}_initiation_positive.npy'.format(base_file_name), init_positive_image)
-if len(init_negative_image) > 0:
-    np.save('resources/minigrid_images/{}_initiation_negative.npy'.format(base_file_name), init_negative_image)
-if len(term_positive_image) > 0:
-    np.save('resources/minigrid_images/{}_termination_positive.npy'.format(base_file_name), term_positive_image)
-if len(term_negative_image) > 0:
-    np.save('resources/minigrid_images/{}_termination_negative.npy'.format(base_file_name), term_negative_image)
 
 
 
