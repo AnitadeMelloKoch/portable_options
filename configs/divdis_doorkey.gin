@@ -1,4 +1,4 @@
-import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_experiment
+import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment
 import portable.option.divdis.divdis_classifier
 
 AdvancedMinigridFactoredDivDisExperiment.experiment_name                = "divdis_doorkey_classifier"

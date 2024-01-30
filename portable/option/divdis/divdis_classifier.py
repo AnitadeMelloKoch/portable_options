@@ -156,5 +156,15 @@ class DivDisClassifier():
         
         return pred_y
         
-    
+    def predict_idx(self, x, idx):
+        self.classifier.eval()
+        
+        if self.use_gpu:
+            x = x.to("cuda")
+        
+        with torch.no_grad():
+            pred_y = self.classifier(x)
+        
+        
+        return pred_y[:,idx,:]
     
