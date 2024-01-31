@@ -1,4 +1,4 @@
-from experiments.minigrid.utils import environment_builder, actions
+from experiments.minigrid.utils import environment_builder, actions, factored_environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import matplotlib.pyplot as plt 
 import numpy as np
@@ -9,112 +9,142 @@ from portable import agent
 
 class MiniGridDataCollector:
     def __init__(self):
+        self.env_mode = None
+        self.data_mode = None
+        
         self.colors = ["red", "green", "blue", "purple", "yellow", "grey"]
-        self.tasks = ["get_key", "open_door", "get_diff_key"]
+        self.tasks = ["get_key", "open_door"]
         self.training_seed = None
 
     
     def collect_envs(self):
         self.training_seed = int(input("Training seed: "))
+        self.env_mode = int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
+        self.data_mode = int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
         
-        # Init env, not collected, just for visualisation
-        fig = plt.figure(num=1, clear=True)
-        ax = fig.add_subplot()
-        ax.set_title("Init visualisation to get agent, key, door locations")
+        if self.data_mode == 1:
+            # Init env, not collected, just for visualisation
+            fig = plt.figure(num=1, clear=True)
+            ax = fig.add_subplot()
+            ax.set_title("Init visualisation to get agent, key, door locations")
+                
+            env = self.init_env('blue', ['red','grey','grey']) 
+            state, _ = env.reset()
+            state = state.numpy()
+            screen = env.render()
+            ax.imshow(screen)
+            plt.show(block=False)
             
-        env = self.init_env('blue', ['red','grey','grey'])
-        state, _ = env.reset()
-        state = state.numpy()
-        screen = env.render()
-        ax.imshow(screen)
-        plt.show(block=False)
+            if self.training_seed == 0:
+                agent_loc = self.process_loc_input('4,3')
+                agent_facing = 'd'
+                num_keys = 3
+                target_key_loc = self.process_loc_input('4,2')
+                keys_loc = [target_key_loc]
+                keys_loc.append(self.process_loc_input('4,4'))
+                keys_loc.append(self.process_loc_input('1,6'))
+                
+                door_loc = self.process_loc_input('2,5')
+                #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
+                show_path = True 
+                show_turns = False
+            else:
+                # User input for agent, key, door locations, etc.
+                agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
+                                                    " [NOTE: row increases down 1-6, col increases right 1-6]: "))
+                agent_facing = input(f"Agent current facing (u/d/l/r) [e.g. u] [NOTE: up, down, left, right]: ")
+                
+                num_keys = int(input("Number of keys: "))
+                #correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location (row_num, col_num): "))
+                target_key_loc = self.process_loc_input(input("Target key  location (row_num, col_num) [NOTE: can be same as correct key]: "))
+                keys_loc = [target_key_loc]
+                for i in range(num_keys-1):
+                    keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location (row_num, col_num): ")))
+                    
+                door_loc = self.process_loc_input(input("Door location (row_num, col_num): "))
+                #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
+                show_path = True if input("Show data collection path? (y/n): ") == "y" else False
+                show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
+        
+            for t_idx in range(2):
+                task = self.tasks[t_idx]
+                for c_idx in range(len(self.colors)):
+                    door_color = self.colors[c_idx]
+                    key_color = door_color
+                    other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
 
-        if self.training_seed == 0:
-            agent_loc = self.process_loc_input('4,3')
-            agent_facing = 'd'
-            num_keys = 3
-            target_key_loc = self.process_loc_input('4,2')
-            keys_loc = [target_key_loc]
-            keys_loc.append(self.process_loc_input('4,4'))
-            keys_loc.append(self.process_loc_input('1,6'))
+                    env = self.init_env(door_color, other_keys_colour)
+                    grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+                                show_path, show_turns)
+                    print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+                    grid.collect_data()
+
+                    
+        elif self.data_mode == 2:
+        
+            task = "get_diff_key"
+            print(f"Available colors: {self.colors}")
+            door_color = input("Door color: ")
+            key_color = input("Key color: ")
             
-            door_loc = self.process_loc_input('2,5')
-            #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
-            show_path = True 
-            show_turns = False
-        else:
+            # Init env, not collected, just for visualisation
+            fig = plt.figure(num=1, clear=True)
+            ax = fig.add_subplot()
+            ax.set_title("Init visualisation to get agent, key, door locations")
+
+            other_rand_colors = [c for c in self.colors if c not in [door_color, key_color]]
+            other_keys_colour = np.random.choice(other_rand_colors, size=2, replace=False)
+            other_keys_colour = list(other_keys_colour)
+            other_keys_colour.append(key_color)
+            other_keys_colour = other_keys_colour[::-1]
+            
+            env = self.init_env(door_color, other_keys_colour) 
+            state, _ = env.reset()
+            state = state.numpy()
+            screen = env.render()
+            ax.imshow(screen)
+            plt.show(block=False)
+            
             # User input for agent, key, door locations, etc.
-            agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) || e.g. 5,4 || "
-                                                "NOTE: row increases down 1-6, col increases right 1-6. "))
-            agent_facing = input(f"Agent current facing: u/d/l/r. || e.g. u || NOTE: up, down, left, right ")
+            agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
+                                                " [NOTE: row increases down 1-6, col increases right 1-6]: "))
+            agent_facing = input(f"Agent current facing (u/d/l/r) [e.g. u] [NOTE: up, down, left, right]: ")
             
             num_keys = int(input("Number of keys: "))
-            correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location: (row_num, col_num)"))
-            target_key_loc = self.process_loc_input(input("Target key  location: (row_num, col_num) || NOTE: can be same as correct key"))
+            correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location (row_num, col_num): "))
+            target_key_loc = self.process_loc_input(input("Target key  location (row_num, col_num) [NOTE: can be same as correct key]: "))
             keys_loc = [correct_key_loc]
             for i in range(num_keys-1):
-                keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location: (row_num, col_num) ")))
+                keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location (row_num, col_num): ")))
                 
-            door_loc = self.process_loc_input(input("Door location: (row_num, col_num) "))
+            door_loc = self.process_loc_input(input("Door location (row_num, col_num): "))
             #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
-            show_path = True if input("Show data collection path? (y/n) ") == "y" else False
-            show_turns = True if input("Show cell collection turns? (y/n) ") == "y" else False
-
-        for t_idx in range(2):
-            task = self.tasks[t_idx]
+            show_path = True if input("Show data collection path? (y/n): ") == "y" else False
+            show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
             
-            for c_idx in range(len(self.colors)):
-                # TODO: add different door key color pairs, only for get key task. change target key loc.
-                #       use drop / collect get diff color key and collect data, only use correct key to open door.
-                #     track dropped locations.
-                door_color = self.colors[c_idx]
-                key_color = door_color
-                other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
-
-                env = self.init_env(door_color, other_keys_colour)
-                grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
-                               show_path, show_turns)
-                print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
-                grid.collect_data()
-
-        task = self.tasks[2]
-        for c_idx in range(len(self.colors)):
-            # TODO: add different door key color pairs, only for get key task. change target key loc.
-            #       use drop / collect get diff color key and collect data, only use correct key to open door.
-            #     track dropped locations.
-            door_color = self.colors[c_idx]
-            key_color = door_color
+            env = self.init_env(door_color, other_keys_colour)
+            grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+                            show_path, show_turns)
+            print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+            grid.collect_data()
             
-            
-            for c_idx2 in range(len(self.colors)):
-                target_key_color = self.colors[c_idx2]
-                if target_key_color == door_color:
-                    continue
-                
-                other_keys_colour = [c for c in self.colors if c not in [door_color, target_key_color]]
+        else:
+            raise ValueError("Data collection mode not recognised! Use either 1 or 2")
 
-                env = self.init_env(door_color, other_keys_colour)
-                grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
-                                show_path, show_turns)
-                print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
-                grid.collect_data()
 
     def init_env(self, door_colour, other_keys_colour):
-        env = environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed, grayscale=False)
-        # env = AdvancedDoorKeyPolicyTrainWrapper(env,
-        #                                         door_colour=door_colour)
-     
-        env = AdvancedDoorKeyPolicyTrainWrapper(env,
+        if self.env_mode == 1:
+            env = environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed, grayscale=False)
+            env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
                                                 key_colours=other_keys_colour)
-        
-        # env = AdvancedDoorKeyPolicyTrainWrapper(
-        #     factored_environment_builder(
-        #         'AdvancedDoorKey-8x8-v0',
-        #         seed=training_seed
-        #     ),
-        #     door_colour=door_colour
-        # )
+        elif self.env_mode == 2:
+            env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed)
+            env = AdvancedDoorKeyPolicyTrainWrapper(env,
+                                                door_colour=door_colour,
+                                                key_colours=other_keys_colour)
+        else:
+            raise ValueError("Environment mode not recognised! Use either 1 or 2")
         
         return env
 
@@ -137,6 +167,7 @@ class MiniGridDataCollector:
             # Handle any other unexpected errors
             print(f"An error occurred: {e}")
             return None
+
 
 
 class GridEnv:
@@ -180,26 +211,8 @@ class GridEnv:
         self.ax.imshow(self.screen)
         plt.show(block=False)
 
-        """user_input = input("Initiation: (y) positive (n) negative ")
-        if user_input == "y":
-            self.init_positive_image.append(self.state)
-        elif user_input == "n":
-            self.init_negative_image.append(self.state)
-        else:
-            print("Not saved to either")
-
-        user_input = input("Termination: (y) positive (n) negative ")
-        if user_input == "y":
-            self.term_positive_image.append(self.state)
-        elif user_input == "n":
-            self.term_negative_image.append(self.state)
-        else:
-            print("Not saved to either")"""
-
 
     def collect_data(self):
-        #TODO: fix
-        # Your existing collect_data code goes here, using self.env
         if self.task.lower()==('get_key' or 'getkey'):
             # SETUP
             self.init_pos, self.term_pos = True, False
@@ -564,7 +577,7 @@ class GridEnv:
                 screen = self.env.render()
                 self.ax.imshow(screen)
                 plt.show(block=False)
-                plt.pause(0.5)
+                plt.pause(0.1)
             
             if init_positive is None:
                 user_input = input("Initiation: (y) positive (n) negative")
@@ -642,10 +655,10 @@ class GridEnv:
             np.save('resources/minigrid_images/{}_termination_negative.npy'.format(base_file_name), self.term_negative_image)
 
 
-
-
-meta_data_collector = MiniGridDataCollector()
-meta_data_collector.collect_envs()
+if __name__ == "__main__":
+        
+    meta_data_collector = MiniGridDataCollector()
+    meta_data_collector.collect_envs()
 
 
 
