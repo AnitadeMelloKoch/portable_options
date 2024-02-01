@@ -502,8 +502,7 @@ class GridEnv:
         facing_needed = ['d','u','r','l']
         #final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=self.wall_col) 
         #                                                and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
-        final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col) 
-                                              and all(loc != key_loc for key_loc in self.other_keys_loc))]
+        final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col))]
 
         loc_idx = potential_loc.index(final_loc[0])
         facing_needed = facing_needed[loc_idx]
