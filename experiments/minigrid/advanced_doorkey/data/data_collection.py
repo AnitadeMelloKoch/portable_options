@@ -3,10 +3,6 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import Adva
 import matplotlib.pyplot as plt 
 import numpy as np
 
-from portable import agent 
-
-
-
 class MiniGridDataCollector:
     def __init__(self):
         self.env_mode = None
@@ -65,10 +61,15 @@ class MiniGridDataCollector:
                 #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
                 show_path = True if input("Show data collection path? (y/n): ") == "y" else False
                 show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
-        
+
+            first_instance = True
             for t_idx in range(2):
                 task = self.tasks[t_idx]
                 for c_idx in range(len(self.colors)):
+                    if not first_instance:
+                        show_path = False
+                        show_turns = False
+
                     door_color = self.colors[c_idx]
                     key_color = door_color
                     other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
@@ -76,8 +77,11 @@ class MiniGridDataCollector:
                     env = self.init_env(door_color, other_keys_colour)
                     grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
+                    print(f'======START DATA COLLECTION======')
                     print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
                     grid.collect_data()
+                    first_instance = False
+
 
                     
         elif self.data_mode == 2:
@@ -114,7 +118,8 @@ class MiniGridDataCollector:
             correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location (row_num, col_num): "))
             target_key_loc = self.process_loc_input(input("Target key  location (row_num, col_num) [NOTE: can be same as correct key]: "))
             keys_loc = [correct_key_loc]
-            for i in range(num_keys-1):
+            for i in range(num_keys-2):
+
                 keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location (row_num, col_num): ")))
                 
             door_loc = self.process_loc_input(input("Door location (row_num, col_num): "))
@@ -393,18 +398,9 @@ class GridEnv:
     def go_to(self, loc_end):
         dist_row = loc_end[0] - self.agent_loc[0]
         dist_col = loc_end[1] - self.agent_loc[1]
-        #self.agent_facing = self.agent_facing  # Initialize facing_end with current facing direction
 
         # check if agent is at wall col, then horizontal movement first, then vertical
         if self.agent_loc[1] == self.wall_col:
-            # Vertical movement (up or down)
-            if dist_row > 0:  # Moving down
-                self.turn_to('d')
-                self.forward(dist_row)
-            elif dist_row < 0:  # Moving up
-                self.turn_to('u')
-                self.forward(-dist_row)
-
             # Horizontal movement (left or right)
             if dist_col > 0:  # Moving right
                 self.turn_to('r')
@@ -413,6 +409,16 @@ class GridEnv:
                 self.turn_to('l')
                 self.forward(-dist_col)
                 
+
+            # Vertical movement (up or down)
+            if dist_row > 0:  # Moving down
+                self.turn_to('d')
+                self.forward(dist_row)
+            elif dist_row < 0:  # Moving up
+                self.turn_to('u')
+                self.forward(-dist_row)
+
+
         else: # otherwise vertical movement first, then horizontal            
             # Vertical movement (up or down)
             if dist_row > 0:  # Moving down
@@ -505,8 +511,8 @@ class GridEnv:
         facing_needed = ['d','u','r','l']
         #final_loc = [loc for loc in potential_loc if ((loc[0]!=0) and (loc[0]!=7) and (loc[1]!=0) and (loc[1]!=self.wall_col) 
         #                                                and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
-        final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col) 
-                                              and all(loc != key_loc for key_loc in self.other_keys_loc))]
+        final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col))]
+
 
         loc_idx = potential_loc.index(final_loc[0])
         facing_needed = facing_needed[loc_idx]
@@ -574,10 +580,12 @@ class GridEnv:
             state = state.numpy()
             
             if show:
-                screen = self.env.render()
-                self.ax.imshow(screen)
-                plt.show(block=False)
-                plt.pause(0.1)
+                screen = self.env.render()    
+                self.ax.clear()  # Clear the axes
+                self.ax.imshow(screen)  # Update the image
+                plt.draw()  # Redraw only the necessary parts
+                plt.pause(0.005)  # Short pause for the update
+
             
             if init_positive is None:
                 user_input = input("Initiation: (y) positive (n) negative")
@@ -642,7 +650,10 @@ class GridEnv:
         print(f'Task: {self.task}')
         print(f'Initiation: {len(self.init_positive_image)} positive, {len(self.init_negative_image)} negative.')
         print(f'Termination: {len(self.term_positive_image)} positive, {len(self.term_negative_image)} negative.') 
-        print(f'Check image shape: {self.init_positive_image[0].shape}') 
+        print(f'Check saved image/state shape: {self.init_positive_image[0].shape}') 
+        print(f'Check one image/state: {self.init_positive_image[0]}')
+        print(f'Saved to file: {base_file_name}')
+
         
         # Save each set of images to file
         if len(self.init_positive_image) > 0:
@@ -656,7 +667,6 @@ class GridEnv:
 
 
 if __name__ == "__main__":
-        
     meta_data_collector = MiniGridDataCollector()
     meta_data_collector.collect_envs()
 
