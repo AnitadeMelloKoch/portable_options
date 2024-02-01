@@ -3,7 +3,6 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import Adva
 import matplotlib.pyplot as plt 
 import numpy as np
 
-
 class MiniGridDataCollector:
     def __init__(self):
         self.env_mode = None
@@ -70,6 +69,7 @@ class MiniGridDataCollector:
                     if not first_instance:
                         show_path = False
                         show_turns = False
+
                     door_color = self.colors[c_idx]
                     key_color = door_color
                     other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
@@ -81,6 +81,7 @@ class MiniGridDataCollector:
                     print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
                     grid.collect_data()
                     first_instance = False
+
 
                     
         elif self.data_mode == 2:
@@ -118,6 +119,7 @@ class MiniGridDataCollector:
             target_key_loc = self.process_loc_input(input("Target key  location (row_num, col_num) [NOTE: can be same as correct key]: "))
             keys_loc = [correct_key_loc]
             for i in range(num_keys-2):
+
                 keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location (row_num, col_num): ")))
                 
             door_loc = self.process_loc_input(input("Door location (row_num, col_num): "))
@@ -407,6 +409,7 @@ class GridEnv:
                 self.turn_to('l')
                 self.forward(-dist_col)
                 
+
             # Vertical movement (up or down)
             if dist_row > 0:  # Moving down
                 self.turn_to('d')
@@ -414,6 +417,7 @@ class GridEnv:
             elif dist_row < 0:  # Moving up
                 self.turn_to('u')
                 self.forward(-dist_row)
+
 
         else: # otherwise vertical movement first, then horizontal            
             # Vertical movement (up or down)
@@ -509,6 +513,7 @@ class GridEnv:
         #                                                and (loc!=self.other_keys_loc[0]) and (loc!=self.other_keys_loc[1]))]
         final_loc = [loc for loc in potential_loc if ((loc[0] != 0) and (loc[0] != 7) and (loc[1] != 0) and (loc[1] != self.wall_col))]
 
+
         loc_idx = potential_loc.index(final_loc[0])
         facing_needed = facing_needed[loc_idx]
         return final_loc[0], facing_needed
@@ -580,6 +585,7 @@ class GridEnv:
                 self.ax.imshow(screen)  # Update the image
                 plt.draw()  # Redraw only the necessary parts
                 plt.pause(0.005)  # Short pause for the update
+
             
             if init_positive is None:
                 user_input = input("Initiation: (y) positive (n) negative")
@@ -647,6 +653,7 @@ class GridEnv:
         print(f'Check saved image/state shape: {self.init_positive_image[0].shape}') 
         print(f'Check one image/state: {self.init_positive_image[0]}')
         print(f'Saved to file: {base_file_name}')
+
         
         # Save each set of images to file
         if len(self.init_positive_image) > 0:

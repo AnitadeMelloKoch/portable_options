@@ -129,6 +129,7 @@ class EnsembleAgent(Agent):
             ) for i in range(self.num_modules)
         ]
         self.replay_buffers_loaded = [True] * self.num_modules
+        super().__init__()
     
     def initialize_new_policy(self):
 
