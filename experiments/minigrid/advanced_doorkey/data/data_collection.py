@@ -3,9 +3,6 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import Adva
 import matplotlib.pyplot as plt 
 import numpy as np
 
-from portable import agent 
-
-
 
 class MiniGridDataCollector:
     def __init__(self):
@@ -76,6 +73,7 @@ class MiniGridDataCollector:
                     env = self.init_env(door_color, other_keys_colour)
                     grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
+                    print(f'======START DATA COLLECTION======')
                     print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
                     grid.collect_data()
 
@@ -393,18 +391,9 @@ class GridEnv:
     def go_to(self, loc_end):
         dist_row = loc_end[0] - self.agent_loc[0]
         dist_col = loc_end[1] - self.agent_loc[1]
-        #self.agent_facing = self.agent_facing  # Initialize facing_end with current facing direction
 
         # check if agent is at wall col, then horizontal movement first, then vertical
         if self.agent_loc[1] == self.wall_col:
-            # Vertical movement (up or down)
-            if dist_row > 0:  # Moving down
-                self.turn_to('d')
-                self.forward(dist_row)
-            elif dist_row < 0:  # Moving up
-                self.turn_to('u')
-                self.forward(-dist_row)
-
             # Horizontal movement (left or right)
             if dist_col > 0:  # Moving right
                 self.turn_to('r')
@@ -413,6 +402,14 @@ class GridEnv:
                 self.turn_to('l')
                 self.forward(-dist_col)
                 
+            # Vertical movement (up or down)
+            if dist_row > 0:  # Moving down
+                self.turn_to('d')
+                self.forward(dist_row)
+            elif dist_row < 0:  # Moving up
+                self.turn_to('u')
+                self.forward(-dist_row)
+
         else: # otherwise vertical movement first, then horizontal            
             # Vertical movement (up or down)
             if dist_row > 0:  # Moving down
@@ -574,10 +571,11 @@ class GridEnv:
             state = state.numpy()
             
             if show:
-                screen = self.env.render()
-                self.ax.imshow(screen)
-                plt.show(block=False)
-                plt.pause(0.1)
+                screen = self.env.render()    
+                self.ax.clear()  # Clear the axes
+                self.ax.imshow(screen)  # Update the image
+                plt.draw()  # Redraw only the necessary parts
+                plt.pause(0.005)  # Short pause for the update
             
             if init_positive is None:
                 user_input = input("Initiation: (y) positive (n) negative")
@@ -642,7 +640,8 @@ class GridEnv:
         print(f'Task: {self.task}')
         print(f'Initiation: {len(self.init_positive_image)} positive, {len(self.init_negative_image)} negative.')
         print(f'Termination: {len(self.term_positive_image)} positive, {len(self.term_negative_image)} negative.') 
-        print(f'Check image shape: {self.init_positive_image[0].shape}') 
+        print(f'Check saved image/state shape: {self.init_positive_image[0].shape}') 
+        print(f'Check one image/state: {self.init_positive_image[0]}')
         
         # Save each set of images to file
         if len(self.init_positive_image) > 0:
@@ -656,7 +655,6 @@ class GridEnv:
 
 
 if __name__ == "__main__":
-        
     meta_data_collector = MiniGridDataCollector()
     meta_data_collector.collect_envs()
 
