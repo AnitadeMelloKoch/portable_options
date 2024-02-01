@@ -62,10 +62,14 @@ class MiniGridDataCollector:
                 #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
                 show_path = True if input("Show data collection path? (y/n): ") == "y" else False
                 show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
-        
+
+            first_instance = True
             for t_idx in range(2):
                 task = self.tasks[t_idx]
                 for c_idx in range(len(self.colors)):
+                    if not first_instance:
+                        show_path = False
+                        show_turns = False
                     door_color = self.colors[c_idx]
                     key_color = door_color
                     other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
@@ -76,6 +80,7 @@ class MiniGridDataCollector:
                     print(f'======START DATA COLLECTION======')
                     print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
                     grid.collect_data()
+                    first_instance = False
 
                     
         elif self.data_mode == 2:
