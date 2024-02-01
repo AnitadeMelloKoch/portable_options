@@ -6,6 +6,7 @@ import portable.option.divdis.policy.policy_and_initiation
 FactoredAdvancedMinigridDivDisExperiment.use_gpu            = True
 FactoredAdvancedMinigridDivDisExperiment.experiment_name    = "divdis_doorkey_policy"
 FactoredAdvancedMinigridDivDisExperiment.make_videos        = True
+FactoredAdvancedMinigridDivDisExperiment.create_plots       = True
 
 DivDisOption.num_heads                                      = 4
 

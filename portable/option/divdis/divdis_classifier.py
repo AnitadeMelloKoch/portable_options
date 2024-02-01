@@ -10,6 +10,8 @@ from portable.option.divdis.models.small_cnn import SmallCNN
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.divdis import DivDisLoss
 
+logger = logging.getLogger(__name__)
+
 MODEL_TYPE = [
     "one_head_mlp",
     "multi_head_mlp",
@@ -137,13 +139,13 @@ class DivDisClassifier():
                 self.optimizer.step()
                 self.optimizer.zero_grad()
             
-            print("Epoch {}".format(epoch))
+            logger.info("Epoch {}".format(epoch))
             for idx in range(self.head_num):
-                print("head {}: labelled loss = {:.3f} labelled accuracy = {:.3f}".format(idx,
+                logger.info("head {}: labelled loss = {:.3f} labelled accuracy = {:.3f}".format(idx,
                                                                                           class_loss_tracker[idx]/counter,
                                                                                           class_acc_tracker[idx]/counter))
             
-            print("div loss = {:.3f}".format(div_loss_tracker/counter))
+            logger.info("div loss = {:.3f}".format(div_loss_tracker/counter))
         
     def predict(self, x):
         self.classifier.eval()

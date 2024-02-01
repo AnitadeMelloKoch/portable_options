@@ -2,21 +2,71 @@ from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_experime
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
-import numpy as np
 from experiments.minigrid.utils import factored_environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 from experiments.minigrid.advanced_doorkey.advanced_minigrid_option_resources import *
-from collections import deque
+import random
 
-positive_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_2_termination_positive.npy"]
-negative_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_2_termination_negative.npy"]
-unlabelled_train_files = ["resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_1_termination_positive.npy",
-                          "resources/minigrid_factored/adv_doorkey_8x8_openbluedoor_doorblue_0_termination_negative.npy",
-                          "resources/minigrid_factored/adv_doorkey_8x8_openyellowdoor_dooryellow_2_termination_positive.npy",
-                          "resources/minigrid_factored/adv_doorkey_8x8_openyellowdoor_dooryellow_1_termination_negative.npy"]
+def make_random_getkey_env(train_colour, seed):
+    colours = ["red", "green", "blue", "purple", "yellow", "grey"]
+    possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
+    
+    door_colour = random.choice(possible_key_colours)
+    possible_key_colours = list(filter(lambda c: c!= door_colour, possible_key_colours))
+    other_col = random.choice(possible_key_colours)
+    key_cols = [train_colour, other_col]
+    random.shuffle(key_cols)
+    
+    return AdvancedDoorKeyPolicyTrainWrapper(
+        factored_environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=seed,
+        ),
+        door_colour=door_colour,
+        key_colours=key_cols,
+        time_limit=50,
+        image_input=False
+    )
 
-positive_test_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_3_termination_positive.npy"]
-negative_test_files = ["resources/minigrid_factored/adv_doorkey_8x8_openreddoor_doorred_3_termination_negative.npy"]
+positive_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy"]
+negative_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_negative.npy"]
+unlabelled_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_termination_positive.npy",
+                          "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_0_termination_negative.npy",
+                          "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_termination_positive.npy",
+                          "resources/minigrid_images/adv_doorkey_8x8_v2_getyellowkey_dooryellow_1_termination_negative.npy"]
+
+positive_test_files = [
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_termination_positive.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_termination_positive.npy",
+                      ]
+negative_test_files = [
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_termination_negative.npy",
+    "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_termination_negative.npy",
+                      ]
+
+envs = [AdvancedDoorKeyPolicyTrainWrapper(
+                factored_environment_builder(
+                    'AdvancedDoorKey-8x8-v0',
+                    seed=3
+                ),
+                door_colour="red",
+                time_limit=50,
+                image_input=False
+            ),
+        make_random_getkey_env("red", 3),
+        make_random_getkey_env("red", 3),
+        make_random_getkey_env("red", 3),
+        ]
 
 
 if __name__ == "__main__":
@@ -46,69 +96,36 @@ if __name__ == "__main__":
                              negative_train_files,
                              unlabelled_train_files)
     
-    experiment.train_termination(10)
+    experiment.train_termination(100)
     
     accuracy = experiment.test_terminations(positive_test_files,
                                             negative_test_files)
     
-    env = AdvancedDoorKeyPolicyTrainWrapper(
-        factored_environment_builder(
-            'AdvancedDoorKey-8x8-v0',
-            seed=3
-        ),
-        check_option_complete=check_got_redkey,
-        time_limit=50,
-        image_input=False
-    )
+    print(accuracy)
     
-    total_steps = 0
-    option_rewards = deque(maxlen=100)
-    
-    while total_steps < 10e6:
-        steps, rewards = experiment.perfect_term_policy_train(env=env,
-                                                                     idx=0,
-                                                                     seed=3)
-        
-        total_steps += steps
-        option_rewards.append(sum(rewards))
-        
-        print("steps: {} average reward: {} total_reward: {}".format(total_steps,
-                                                                   np.mean(option_rewards),
-                                                                   np.sum(option_rewards)))
-                
-    
-    # for idx, acc in enumerate(accuracy):
-    #     print(idx, acc)
-    #     if acc > 0.6:
-    #         total_steps = 0
-    #         option_rewards = []
-    #         env = AdvancedDoorKeyPolicyTrainWrapper(
-    #             factored_environment_builder(
-    #                 'AdvancedDoorKey-8x8-v0',
-    #                 seed=3
-    #             ),
-    #             door_colour="red",
-    #             time_limit=200,
-    #             image_input=False
-    #         )
-    #         while total_steps < 1e6:
-    #             steps, option_rewards = experiment.run_rollout(env=env,
-    #                                                            idx=idx,
-    #                                                            seed=3,
-    #                                                            eval=False)
-    #             total_steps += steps
-    #             option_rewards.append(sum(option_rewards))
-                
-    #             print("idx {} steps: {} average reward: {}".format(idx,
-    #                                                                total_steps,
-    #                                                                np.mean(option_rewards)))
-                
-    #         steps, option_rewards = experiment.run_rollout(env=env,
-    #                                                        idx=idx,
-    #                                                        seed=3,
-    #                                                        eval=True)
+    for idx, acc in enumerate(accuracy):
+        print(idx, acc)
+        if acc > 0.6:
+            experiment.train_policy(max_steps=3e6,
+                                    min_performance=0.9,
+                                    envs=envs,
+                                    idx=idx,
+                                    seed=3)
+            env = AdvancedDoorKeyPolicyTrainWrapper(
+                factored_environment_builder(
+                    'AdvancedDoorKey-8x8-v0',
+                    seed=3
+                ),
+                door_colour="red",
+                time_limit=200,
+                image_input=False
+            )
             
-    #         print("[eval] steps: {} option rewards: {}".format(steps, option_rewards))
+            experiment.evaluate_policy(envs=[env],
+                                       trials_per_env=50,
+                                       idx=idx,
+                                       seed=3)
+            
 
 
 
