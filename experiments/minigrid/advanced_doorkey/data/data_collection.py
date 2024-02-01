@@ -112,7 +112,7 @@ class MiniGridDataCollector:
             correct_key_loc = self.process_loc_input(input("Correct key (unlocks door) location (row_num, col_num): "))
             target_key_loc = self.process_loc_input(input("Target key  location (row_num, col_num) [NOTE: can be same as correct key]: "))
             keys_loc = [correct_key_loc]
-            for i in range(num_keys-1):
+            for i in range(num_keys-2):
                 keys_loc.append(self.process_loc_input(input(f"Other Key {i+1} location (row_num, col_num): ")))
                 
             door_loc = self.process_loc_input(input("Door location (row_num, col_num): "))
@@ -641,6 +641,7 @@ class GridEnv:
         print(f'Termination: {len(self.term_positive_image)} positive, {len(self.term_negative_image)} negative.') 
         print(f'Check saved image/state shape: {self.init_positive_image[0].shape}') 
         print(f'Check one image/state: {self.init_positive_image[0]}')
+        print(f'Saved to file: {base_file_name}')
         
         # Save each set of images to file
         if len(self.init_positive_image) > 0:
