@@ -3,6 +3,7 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import Adva
 import matplotlib.pyplot as plt 
 import numpy as np
 
+
 class MiniGridDataCollector:
     def __init__(self):
         self.env_mode = None
@@ -24,7 +25,7 @@ class MiniGridDataCollector:
             ax = fig.add_subplot()
             ax.set_title("Init visualisation to get agent, key, door locations")
                 
-            env = self.init_env('blue', ['red','grey','grey']) 
+            env, _ = self.init_env('blue', ['red','grey','grey']) 
             state, _ = env.reset()
             state = state.numpy()
             screen = env.render()
@@ -74,8 +75,8 @@ class MiniGridDataCollector:
                     key_color = door_color
                     other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
 
-                    env = self.init_env(door_color, other_keys_colour)
-                    grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+                    env, env_type = self.init_env(door_color, other_keys_colour)
+                    grid = GridEnv(env, env_type, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
                     print(f'======START DATA COLLECTION======')
                     print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
@@ -102,7 +103,7 @@ class MiniGridDataCollector:
             other_keys_colour.append(key_color)
             other_keys_colour = other_keys_colour[::-1]
             
-            env = self.init_env(door_color, other_keys_colour) 
+            env, _ = self.init_env(door_color, other_keys_colour) 
             state, _ = env.reset()
             state = state.numpy()
             screen = env.render()
@@ -127,8 +128,8 @@ class MiniGridDataCollector:
             show_path = True if input("Show data collection path? (y/n): ") == "y" else False
             show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
             
-            env = self.init_env(door_color, other_keys_colour)
-            grid = GridEnv(env, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
+            env, env_type = self.init_env(door_color, other_keys_colour)
+            grid = GridEnv(env, env_type, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                             show_path, show_turns)
             print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
             grid.collect_data()
@@ -143,15 +144,18 @@ class MiniGridDataCollector:
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
                                                 key_colours=other_keys_colour)
+            env_type = 'minigrid'
         elif self.env_mode == 2:
             env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
-                                                key_colours=other_keys_colour)
+                                                key_colours=other_keys_colour,
+                                                image_input=False)
+            env_type = 'factored_minigrid'
         else:
             raise ValueError("Environment mode not recognised! Use either 1 or 2")
         
-        return env
+        return env, env_type
 
                            
     def process_loc_input(self, input_str):
@@ -176,7 +180,8 @@ class MiniGridDataCollector:
 
 
 class GridEnv:
-    def __init__(self, env, task, training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, show_path, show_turns):
+    def __init__(self, env, env_type, task, training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, show_path, show_turns):
+        self.env_type = env_type
         self.task = task
         self.training_seed = training_seed
         
@@ -635,6 +640,13 @@ class GridEnv:
 
 
     def save_to_file(self):
+        if self.env_type == 'minigrid':
+            save_dir = 'resources/minigrid_images'
+        elif self.env_type == 'factored_minigrid':
+            save_dir = 'resources/factored_minigrid_images'
+        else:
+            raise ValueError("Environment type not recognised! Use either 'minigrid' or 'factored_minigrid'")
+        
         # Task specific base name
         if self.task.lower()==('get_key' or 'getkey'):
             base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
@@ -643,7 +655,17 @@ class GridEnv:
         elif self.task.lower()==('get_diff_key' or 'getdiffkey'):
             base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
         else:
-            raise ValueError("Task not recognised! Use either")
+            raise ValueError("Task not recognised! Use either get_key, open_door, get_diff_key")
+
+        # Save each set of images to file
+        if len(self.init_positive_image) > 0:
+            np.save(f'{save_dir}/{base_file_name}_initiation_positive.npy', self.init_positive_image)
+        if len(self.init_negative_image) > 0:
+            np.save(f'{save_dir}/{base_file_name}_initiation_negative.npy', self.init_negative_image)
+        if len(self.term_positive_image) > 0:
+            np.save(f'{save_dir}/{base_file_name}_termination_positive.npy', self.term_positive_image)
+        if len(self.term_negative_image) > 0:
+            np.save(f'{save_dir}/{base_file_name}_termination_negative.npy', self.term_negative_image)
 
         # Print number of images collected
         print(f'===DATA COLLECTION SUMMARY===')
@@ -653,17 +675,6 @@ class GridEnv:
         print(f'Check saved image/state shape: {self.init_positive_image[0].shape}') 
         print(f'Check one image/state: {self.init_positive_image[0]}')
         print(f'Saved to file: {base_file_name}')
-
-        
-        # Save each set of images to file
-        if len(self.init_positive_image) > 0:
-            np.save('resources/minigrid_images/{}_initiation_positive.npy'.format(base_file_name), self.init_positive_image)
-        if len(self.init_negative_image) > 0:
-            np.save('resources/minigrid_images/{}_initiation_negative.npy'.format(base_file_name), self.init_negative_image)
-        if len(self.term_positive_image) > 0:
-            np.save('resources/minigrid_images/{}_termination_positive.npy'.format(base_file_name), self.term_positive_image)
-        if len(self.term_negative_image) > 0:
-            np.save('resources/minigrid_images/{}_termination_negative.npy'.format(base_file_name), self.term_negative_image)
 
 
 if __name__ == "__main__":
