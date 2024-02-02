@@ -25,7 +25,7 @@ class MiniGridDataCollector:
             ax = fig.add_subplot()
             ax.set_title("Init visualisation to get agent, key, door locations")
                 
-            env, _ = self.init_env('blue', ['red','grey','grey']) 
+            env, _ = self.init_env('blue', []) 
             state, _ = env.reset()
             state = state.numpy()
             screen = env.render()
@@ -75,7 +75,7 @@ class MiniGridDataCollector:
                     key_color = door_color
                     other_keys_colour = self.colors[:c_idx] + self.colors[c_idx+1:]
 
-                    env, env_type = self.init_env(door_color, other_keys_colour)
+                    env, env_type = self.init_env(door_color, [])
                     grid = GridEnv(env, env_type, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
                     print(f'======START DATA COLLECTION======')
@@ -98,7 +98,7 @@ class MiniGridDataCollector:
             ax.set_title("Init visualisation to get agent, key, door locations")
 
             other_rand_colors = [c for c in self.colors if c not in [door_color, key_color]]
-            other_keys_colour = np.random.choice(other_rand_colors, size=2, replace=False)
+            other_keys_colour = np.random.choice(other_rand_colors, size=4, replace=False)
             other_keys_colour = list(other_keys_colour)
             other_keys_colour.append(key_color)
             other_keys_colour = other_keys_colour[::-1]
