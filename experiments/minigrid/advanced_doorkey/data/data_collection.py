@@ -152,6 +152,7 @@ class MiniGridDataCollector:
                                                 key_colours=other_keys_colour,
                                                 image_input=False)
             env_type = 'factored_minigrid'
+
         else:
             raise ValueError("Environment mode not recognised! Use either 1 or 2")
         
