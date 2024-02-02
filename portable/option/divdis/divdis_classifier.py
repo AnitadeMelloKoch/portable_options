@@ -19,7 +19,6 @@ MODEL_TYPE = [
 ]
 
 def transform(x):
-    x = x*255
     x = x/torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
     return x
 

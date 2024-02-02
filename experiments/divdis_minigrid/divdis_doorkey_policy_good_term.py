@@ -96,7 +96,7 @@ if __name__ == "__main__":
                              negative_train_files,
                              unlabelled_train_files)
     
-    experiment.train_termination(100)
+    experiment.train_termination(50)
     
     accuracy = experiment.test_terminations(positive_test_files,
                                             negative_test_files)
