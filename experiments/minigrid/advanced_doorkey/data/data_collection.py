@@ -147,7 +147,8 @@ class MiniGridDataCollector:
             env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
-                                                key_colours=other_keys_colour)
+                                                key_colours=other_keys_colour,
+                                                image_input=False)
         else:
             raise ValueError("Environment mode not recognised! Use either 1 or 2")
         
