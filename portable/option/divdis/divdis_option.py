@@ -262,7 +262,8 @@ class DivDisOption():
                     self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
-                should_terminate = torch.argmax(self.terminations.predict_idx(next_state.unsqueeze(0), idx)) == 1
+                term_state = self.policy_phi(next_state).unsqueeze(0)
+                should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
                 steps += 1
                 
                 rewards.append(reward)

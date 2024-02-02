@@ -71,26 +71,28 @@ class FactoredObsWrapperDoorKey(Wrapper):
         split_idx = self.env.unwrapped.splitIdx
         
         objects = {
-            "door": [-1,-1,-1,-1],
-            "blue": [-1,-1],
-            "red": [-1,-1],
-            "green": [-1,-1],
-            "grey": [-1,-1],
-            "yellow": [-1,-1],
-            "purple": [-1,-1],
+            "door": [-1,-1,-1,-1,-1],
+            "key1": [-1, -1, -1],
+            "key2": [-1, -1, -1],
+            "key3": [-1, -1, -1],
+            "key4": [-1, -1, -1],
+            "key5": [-1, -1, -1],
             "agent": [-1,-1,-1],
             "goal": [-1, -1],
             "split": [-1]
         }
+        
+        key_num = 1
         
         for x in range(self.env.unwrapped.width):
             for y in range(self.env.unwrapped.height):
                 cell = self.env.unwrapped.grid.get(x,y)
                 if cell:
                     if cell.type == "door":
-                        objects["door"] = [x, y, int(cell.is_open), self.colours[cell.color]]
+                        objects["door"] = [x, y, int(cell.is_locked), int(cell.is_open), self.colours[cell.color]]
                     if cell.type == "key":
-                        objects[cell.color] = [x, y]
+                        objects["key{}".format(key_num)] = [x, y, self.colours[cell.color]]
+                        key_num += 1
                     if cell.type == "goal":
                         objects["goal"] = [x, y]
                 
