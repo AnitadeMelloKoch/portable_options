@@ -10,8 +10,8 @@ FactoredAdvancedMinigridDivDisExperiment.create_plots       = True
 
 DivDisOption.num_heads                                      = 4
 
-DivDisClassifier.learning_rate                              = 0.01
-DivDisClassifier.input_dim                                  = 22
+DivDisClassifier.learning_rate                              = 0.001
+DivDisClassifier.input_dim                                  = 26
 DivDisClassifier.num_classes                                = 2
 DivDisClassifier.diversity_weight                           = 0.01
 
@@ -25,6 +25,6 @@ PolicyWithInitiation.final_epsilon                          = 0.01
 PolicyWithInitiation.final_exploration_frames               = 1e5
 PolicyWithInitiation.batch_size                             = 32
 PolicyWithInitiation.num_actions                            = 7
-PolicyWithInitiation.policy_infeature_size                  = 22
+PolicyWithInitiation.policy_infeature_size                  = 26
 PolicyWithInitiation.q_hidden_size                          = 64
 PolicyWithInitiation.gru_hidden_size                        = 128

@@ -45,6 +45,7 @@ class DivDisOption():
             self.make_plots = True
             self.plot_dir = plot_dir
             self.term_states = []
+            self.missed_term_states = []
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -98,7 +99,8 @@ class DivDisOption():
                      env,
                      state,
                      info,
-                     seed):
+                     seed,
+                     perfect_term=lambda x: False):
         
         steps = 0
         rewards = []
@@ -143,10 +145,16 @@ class DivDisOption():
                 if self.make_plots:
                     np_next_state = list(next_state.cpu().numpy())
                     if np_next_state not in self.term_states:
-                        self.plot_term_state(img_state, img_next_state, idx)
+                        self.plot_term_state(img_state, img_next_state, idx, success=True)
                         self.term_states.append(np_next_state)
             else:
                 reward = 0
+                if self.make_plots:
+                    if perfect_term(env) is True:
+                        np_next_state = list(next_state.cpu().numpy())
+                        if np_next_state not in self.missed_term_states:
+                            self.plot_term_state(img_state, img_next_state, idx, success=False)
+                            self.missed_term_states.append(np_next_state)
             
             policy.observe(state,
                            action,
@@ -166,9 +174,12 @@ class DivDisOption():
         
         return state, info, steps, rewards, option_rewards, states, infos
     
-    def plot_term_state(self, state, next_state, idx):
+    def plot_term_state(self, state, next_state, idx, success):
         x = 0
-        plot_dir = os.path.join(self.plot_dir, str(idx))
+        if success is True:
+            plot_dir = os.path.join(self.plot_dir, "term_states", str(idx))
+        else:
+            plot_dir = os.path.join(self.plot_dir, "missed_states", str(idx))
         os.makedirs(plot_dir, exist_ok=True)
         while os.path.exists(os.path.join(plot_dir, "{}.png".format(x))):
             x += 1
