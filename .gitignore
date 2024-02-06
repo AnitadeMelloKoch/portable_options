@@ -3,6 +3,7 @@
 
 # results
 results/
+*.tar.gz
 
 # DS Store
 **/.DS_Store

@@ -34,6 +34,7 @@ class SetDataset():
         
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
+        self.unlabelled_batchsize = 0
         self.pad = pad_func
         self.counter = 0
         self.unlabelled_counter = 0
@@ -124,6 +125,8 @@ class SetDataset():
             self.num_batches = math.ceil(
                 max(self.true_length, self.priority_false_length)/(self.data_batchsize)
             )
+        
+        self.unlabelled_batchsize = self.unlabelled_data_length//self.num_batches
 
     def add_true_files(self, file_list):
         # load data from a file for true data
@@ -376,13 +379,12 @@ class SetDataset():
             
             return data, labels, data_val, labels_val
 
-        
         return data, labels
 
     def get_unlabelled_batch(self):
         x = self._get_minibatch(self.unlabelled_index(),
                                 self.unlabelled_data,
-                                self.batchsize,
+                                self.unlabelled_batchsize,
                                 self.shuffled_indices_unlabelled)
         
         self.unlabelled_counter += 1
