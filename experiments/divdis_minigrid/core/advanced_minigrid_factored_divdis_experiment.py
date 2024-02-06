@@ -74,8 +74,14 @@ class FactoredAdvancedMinigridDivDisExperiment():
                                   negative_files,
                                   unlabelled_files)
     
-    def train_termination(self, epochs):
-        self.option.terminations.train(epochs)
+    def train_termination(self, 
+                          epochs,
+                          test_positive_files,
+                          test_negative_files):
+        for epoch in range(epochs):
+            self.option.terminations.train(1, epoch)
+            self.test_terminations(test_positive_files,
+                                   test_negative_files)
     
     def run_rollout(self,
                     env,
@@ -83,9 +89,10 @@ class FactoredAdvancedMinigridDivDisExperiment():
                     info,
                     idx,
                     seed,
-                    eval):
+                    eval,
+                    perfect_term=lambda x: False):
         # run one environment rollout for a specific option
-        if eval:
+        if eval is True:
             if self.video_generator is not None:
                 self.video_generator.episode_start()
             
@@ -105,41 +112,77 @@ class FactoredAdvancedMinigridDivDisExperiment():
                                                                             env,
                                                                             obs,
                                                                             info,
-                                                                            seed)
+                                                                            seed,
+                                                                            perfect_term)
         
             return steps, option_rewards
 
     def test_terminations(self,
                           test_positive_files,
                           test_negative_files):
-        dataset = SetDataset(max_size=1e6,
-                             batchsize=64)
+        dataset_positive = SetDataset(max_size=1e6,
+                                      batchsize=64)
         
-        dataset.set_transform_function(transform)
+        dataset_negative = SetDataset(max_size=1e6,
+                                      batchsize=64)
         
-        dataset.add_true_files(test_positive_files)
-        dataset.add_false_files(test_negative_files)
+        dataset_positive.set_transform_function(transform)
+        dataset_negative.set_transform_function(transform)
+        
+        dataset_positive.add_true_files(test_positive_files)
+        dataset_negative.add_false_files(test_negative_files)
         
         counter = 0
         accuracy = np.zeros(self.option.terminations.head_num)
+        accuracy_pos = np.zeros(self.option.terminations.head_num)
+        accuracy_neg = np.zeros(self.option.terminations.head_num)
         
-        for _ in range(dataset.num_batches):
+        for _ in range(dataset_positive.num_batches):
             counter += 1
-            x, y = dataset.get_batch()
+            x, y = dataset_positive.get_batch()
             pred_y = self.option.terminations.predict(x)
             pred_y = pred_y.cpu()
             
             for idx in range(self.option.num_heads):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+        
+        accuracy_pos /= counter
+        
+        total_count = counter
+        counter = 0
+        
+        for _ in range(dataset_negative.num_batches):
+            counter += 1
+            x, y = dataset_negative.get_batch()
+            pred_y = self.option.terminations.predict(x)
+            pred_y = pred_y.cpu()
+            
+            for idx in range(self.option.num_heads):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+        
+        accuracy_neg /= counter
+        total_count += counter
+        
+        accuracy /= total_count
+        
+        weighted_acc = (accuracy_pos + accuracy_neg)/2
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.option.num_heads):
-            logging.info("idx:{} accuracy: {}".format(idx,
-                                                      accuracy[idx]/counter))
+            logging.info("idx:{} true accuracy: {} false accuracy: {} total accuracy: {} weighted accuracy: {}".format(
+                idx,
+                accuracy_pos[idx],
+                accuracy_neg[idx],
+                accuracy[idx],
+                weighted_acc[idx])
+            )
         logging.info("=================================================")
         
-        return accuracy/counter
+        return accuracy, weighted_acc
     
     def perfect_term_policy_train(self,
                                   env,
@@ -160,7 +203,8 @@ class FactoredAdvancedMinigridDivDisExperiment():
                      min_performance,
                      envs,
                      idx,
-                     seed):
+                     seed,
+                     perfect_term=lambda x: False):
         
         total_steps = 0
         option_rewards = deque(maxlen=200)
@@ -177,18 +221,19 @@ class FactoredAdvancedMinigridDivDisExperiment():
                                               info=info,
                                               idx=idx,
                                               seed=seed,
-                                              eval=False)
+                                              eval=False,
+                                              perfect_term=perfect_term)
             total_steps += steps
             option_rewards.append(sum(rewards))
             
-            if episode % 200 == 0:
+            if episode % 400 == 0:
                 logging.info("idx {} steps: {} average reward: {}".format(idx,
                                                                         total_steps,
                                                                         np.mean(option_rewards)))
 
             episode += 1
             
-            if len(option_rewards) == 200 and np.mean(option_rewards) > min_performance:
+            if total_steps > 800000 and np.mean(option_rewards) > min_performance:
                 logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
                                                                                                              np.mean(option_rewards),
                                                                                                              total_steps))

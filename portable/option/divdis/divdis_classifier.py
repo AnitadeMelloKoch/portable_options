@@ -19,8 +19,7 @@ MODEL_TYPE = [
 ]
 
 def transform(x):
-    x = x*255
-    x = x/torch.tensor([7,7,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
+    x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,  7,7,4,7,7,7])
     return x
 
 @gin.configurable
@@ -52,8 +51,8 @@ class DivDisClassifier():
         self.log_dir = log_dir
         
         self.classifier = OneHeadMLP(input_dim=input_dim,
-                                     num_classes=num_classes,
-                                     num_heads=head_num)
+                                       num_classes=num_classes,
+                                       num_heads=head_num)
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate)
@@ -91,10 +90,11 @@ class DivDisClassifier():
         self.dataset.add_unlabelled_files(unlabelled_files)
     
     def train(self,
-              epochs):
+              epochs,
+              start_offset=0):
         self.move_to_gpu()
         self.classifier.train()
-        for epoch in range(epochs):
+        for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0
             
@@ -118,7 +118,7 @@ class DivDisClassifier():
                     unlabelled_x = unlabelled_x.to("cuda")
                 
                 unlabelled_pred = self.classifier(unlabelled_x)
-                pred_y = self.classifier(x, logits=True)
+                pred_y = self.classifier(x)
                 labelled_loss = 0
                 for idx in range(self.head_num):
                     class_loss = self.ce_criterion(pred_y[ :,idx,:], y)
@@ -141,11 +141,11 @@ class DivDisClassifier():
             
             logger.info("Epoch {}".format(epoch))
             for idx in range(self.head_num):
-                logger.info("head {}: labelled loss = {:.3f} labelled accuracy = {:.3f}".format(idx,
+                logger.info("head {}: labelled loss = {} labelled accuracy = {}".format(idx,
                                                                                           class_loss_tracker[idx]/counter,
                                                                                           class_acc_tracker[idx]/counter))
             
-            logger.info("div loss = {:.3f}".format(div_loss_tracker/counter))
+            logger.info("div loss = {}".format(div_loss_tracker/counter))
         
     def predict(self, x):
         self.classifier.eval()
