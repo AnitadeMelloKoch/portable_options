@@ -74,8 +74,14 @@ class FactoredAdvancedMinigridDivDisExperiment():
                                   negative_files,
                                   unlabelled_files)
     
-    def train_termination(self, epochs):
-        self.option.terminations.train(epochs)
+    def train_termination(self, 
+                          epochs,
+                          test_positive_files,
+                          test_negative_files):
+        for epoch in range(epochs):
+            self.option.terminations.train(1, epoch)
+            self.test_terminations(test_positive_files,
+                                   test_negative_files)
     
     def run_rollout(self,
                     env,
@@ -175,16 +181,6 @@ class FactoredAdvancedMinigridDivDisExperiment():
                 weighted_acc[idx])
             )
         logging.info("=================================================")
-        print("============= Classifiers evaluated =============")
-        for idx in range(self.option.num_heads):
-            print("idx:{} true accuracy: {} false accuracy: {} total accuracy: {} weighted accuracy: {}".format(
-                idx,
-                accuracy_pos[idx],
-                accuracy_neg[idx],
-                accuracy[idx],
-                weighted_acc[idx])
-            )
-        print("=================================================")
         
         return accuracy, weighted_acc
     

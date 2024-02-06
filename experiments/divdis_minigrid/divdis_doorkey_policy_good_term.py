@@ -37,9 +37,9 @@ unlabelled_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_termination_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_termination_positive.npy",
-    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_termination_negative.npy",
-    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_negative.npy",
                           ]
 
 positive_test_files = [
@@ -93,7 +93,9 @@ if __name__ == "__main__":
                              negative_train_files,
                              unlabelled_train_files)
     
-    experiment.train_termination(200)
+    experiment.train_termination(20,
+                                 positive_test_files,
+                                 negative_test_files)
     
     total_acc, accuracy = experiment.test_terminations(positive_test_files,
                                             negative_test_files)
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     
     for idx, acc in enumerate(accuracy):
         print(idx, acc)
-        if acc > 0.5:
+        if acc > 0.55:
             for seed in range(3,10):
                 envs = [AdvancedDoorKeyPolicyTrainWrapper(
                                 factored_environment_builder(

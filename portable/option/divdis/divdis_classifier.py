@@ -51,8 +51,8 @@ class DivDisClassifier():
         self.log_dir = log_dir
         
         self.classifier = OneHeadMLP(input_dim=input_dim,
-                                     num_classes=num_classes,
-                                     num_heads=head_num)
+                                       num_classes=num_classes,
+                                       num_heads=head_num)
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate)
@@ -90,10 +90,11 @@ class DivDisClassifier():
         self.dataset.add_unlabelled_files(unlabelled_files)
     
     def train(self,
-              epochs):
+              epochs,
+              start_offset=0):
         self.move_to_gpu()
         self.classifier.train()
-        for epoch in range(epochs):
+        for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0
             
@@ -117,7 +118,7 @@ class DivDisClassifier():
                     unlabelled_x = unlabelled_x.to("cuda")
                 
                 unlabelled_pred = self.classifier(unlabelled_x)
-                pred_y = self.classifier(x, logits=True)
+                pred_y = self.classifier(x)
                 labelled_loss = 0
                 for idx in range(self.head_num):
                     class_loss = self.ce_criterion(pred_y[ :,idx,:], y)
