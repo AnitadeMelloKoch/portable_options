@@ -173,7 +173,7 @@ class FactoredAdvancedMinigridDivDisExperiment():
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.option.num_heads):
-            logging.info("idx:{} true accuracy: {} false accuracy: {} total accuracy: {} weighted accuracy: {}".format(
+            logging.info("idx:{:.4f} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],

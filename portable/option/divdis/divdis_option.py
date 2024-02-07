@@ -136,7 +136,8 @@ class DivDisOption():
             img_state = img_next_state
             img_next_state = env.render()
             term_state = self.policy_phi(next_state).unsqueeze(0)
-            should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
+            pred_y = self.terminations.predict_idx(term_state, idx)
+            should_terminate = torch.argmax(pred_y) == 1
             steps += 1
             rewards.append(reward)
             
@@ -145,7 +146,11 @@ class DivDisOption():
                 if self.make_plots:
                     np_next_state = list(next_state.cpu().numpy())
                     if np_next_state not in self.term_states:
-                        self.plot_term_state(img_state, img_next_state, idx, success=True)
+                        self.plot_term_state(img_state, 
+                                             img_next_state, 
+                                             idx, 
+                                             success=True,
+                                             pred_y=pred_y)
                         self.term_states.append(np_next_state)
             else:
                 reward = 0
@@ -153,7 +158,11 @@ class DivDisOption():
                     if perfect_term(env) is True:
                         np_next_state = list(next_state.cpu().numpy())
                         if np_next_state not in self.missed_term_states:
-                            self.plot_term_state(img_state, img_next_state, idx, success=False)
+                            self.plot_term_state(img_state, 
+                                                 img_next_state, 
+                                                 idx, 
+                                                 success=False,
+                                                 pred_y=pred_y)
                             self.missed_term_states.append(np_next_state)
             
             policy.observe(state,
@@ -174,8 +183,14 @@ class DivDisOption():
         
         return state, info, steps, rewards, option_rewards, states, infos
     
-    def plot_term_state(self, state, next_state, idx, success):
+    def plot_term_state(self, 
+                        state, 
+                        next_state, 
+                        idx, 
+                        success,
+                        pred_y):
         x = 0
+        pred_y = pred_y.squeeze().cpu().numpy()
         if success is True:
             plot_dir = os.path.join(self.plot_dir, "term_states", str(idx))
         else:
@@ -190,6 +205,10 @@ class DivDisOption():
         ax1.axis('off')
         ax2.imshow(next_state)
         ax2.axis('off')
+        fig.suptitle("Pred: [not term {:.4f}, is term{:.4f}]".format(
+            pred_y[0],
+            pred_y[1]
+        ))
         
         fig.savefig(plot_file)
         plt.close(fig)

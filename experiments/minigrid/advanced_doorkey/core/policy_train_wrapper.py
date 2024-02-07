@@ -123,6 +123,11 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
     
     
     def _find_objs(self):
+        self.objects = {
+            "keys": [],
+            "door": None,
+            "goal": None
+        }
         for x in range(self.env.unwrapped.width):
             for y in range(self.env.unwrapped.height):
                 cell = self.env.unwrapped.grid.get(x, y)
