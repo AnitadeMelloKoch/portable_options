@@ -146,7 +146,9 @@ class DivDisOption():
                 if self.make_plots:
                     np_next_state = list(next_state.cpu().numpy())
                     if np_next_state not in self.term_states:
-                        self.plot_term_state(img_state, 
+                        self.plot_term_state(state.cpu().numpy(),
+                                             img_state, 
+                                             next_state.cpu().numpy(),
                                              img_next_state, 
                                              idx, 
                                              success=True,
@@ -158,7 +160,9 @@ class DivDisOption():
                     if perfect_term(env) is True:
                         np_next_state = list(next_state.cpu().numpy())
                         if np_next_state not in self.missed_term_states:
-                            self.plot_term_state(img_state, 
+                            self.plot_term_state(state.cpu().numpy(),
+                                                 img_state, 
+                                                 next_state.cpu().numpy(),
                                                  img_next_state, 
                                                  idx, 
                                                  success=False,
@@ -185,7 +189,9 @@ class DivDisOption():
     
     def plot_term_state(self, 
                         state, 
-                        next_state, 
+                        img,
+                        next_state,
+                        next_img, 
                         idx, 
                         success,
                         pred_y):
@@ -201,9 +207,11 @@ class DivDisOption():
         plot_file = os.path.join(plot_dir, "{}.png".format(x))
         
         fig, (ax1, ax2) = plt.subplots(1,2)
-        ax1.imshow(state)
+        ax1.imshow(img)
+        ax1.set_title(f"{state[:len(state)//2]}\n{state[len(state)//2:]}", size=8)
         ax1.axis('off')
-        ax2.imshow(next_state)
+        ax2.imshow(next_img)
+        ax2.set_title(f"{next_state[:len(state)//2]}\n{next_state[len(state)//2:]}", size=8)
         ax2.axis('off')
         fig.suptitle("Pred: [not term {:.4f}, is term{:.4f}]".format(
             pred_y[0],
@@ -287,6 +295,7 @@ class DivDisOption():
                 
                 action = policy.act(state)
                 self._video_log("action: {}".format(action))
+                self._video_log("State representation: {}".format(state))
                 if self.video_generator is not None:
                     img = env.render()
                     self.video_generator.make_image(img)

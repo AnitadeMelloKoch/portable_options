@@ -36,6 +36,7 @@ class DivDisClassifier():
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
+                 unlabelled_dataset_batchsize=None,
                  
                  summary_writer=None,
                  model_name='classifier') -> None:
@@ -101,13 +102,13 @@ class DivDisClassifier():
             class_loss_tracker = np.zeros(self.head_num)
             class_acc_tracker = np.zeros(self.head_num)
             div_loss_tracker = 0
+            total_loss_tracker = 0
             
             self.dataset.shuffle()
             
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                
                 unlabelled_x = self.dataset.get_unlabelled_batch()
                 
                 if self.use_gpu:
@@ -132,6 +133,7 @@ class DivDisClassifier():
                 div_loss_tracker += div_loss.item()
                 
                 objective = labelled_loss + self.diversity_weight*div_loss
+                total_loss_tracker += objective.item()
                 
                 objective.backward()
                 self.optimizer.step()
@@ -144,6 +146,9 @@ class DivDisClassifier():
                                                                                           class_acc_tracker[idx]/counter))
             
             logger.info("div loss = {}".format(div_loss_tracker/counter))
+            logger.info("ensemble loss = {}".format(total_loss_tracker/counter))
+        
+        return total_loss_tracker/counter
         
     def predict(self, x):
         self.classifier.eval()

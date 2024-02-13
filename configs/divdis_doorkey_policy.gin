@@ -10,7 +10,7 @@ FactoredAdvancedMinigridDivDisExperiment.create_plots       = True
 
 DivDisOption.num_heads                                      = 4
 
-DivDisClassifier.learning_rate                              = 0.01
+DivDisClassifier.learning_rate                              = 0.001
 DivDisClassifier.input_dim                                  = 26
 DivDisClassifier.num_classes                                = 2
 DivDisClassifier.diversity_weight                           = 0.01
