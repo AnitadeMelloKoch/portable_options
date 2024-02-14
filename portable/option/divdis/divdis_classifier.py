@@ -43,7 +43,8 @@ class DivDisClassifier():
         
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
-                                  batchsize=dataset_batchsize)
+                                  batchsize=dataset_batchsize,
+                                  unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.dataset.set_transform_function(transform)
         self.learning_rate = learning_rate
         
@@ -54,6 +55,10 @@ class DivDisClassifier():
         self.classifier = OneHeadMLP(input_dim=input_dim,
                                        num_classes=num_classes,
                                        num_heads=head_num)
+        
+        # self.classifier = SmallCNN(num_input_channels=input_dim,
+        #                            num_classes=num_classes,
+        #                            num_heads=head_num)
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate)

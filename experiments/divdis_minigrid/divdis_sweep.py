@@ -72,15 +72,15 @@ if __name__ == "__main__":
                                                                unlabelled_files=unlabelled_train_files,
                                                                test_positive_files=positive_test_files,
                                                                test_negative_files=negative_test_files)
-    # experiment.sweep_class_div_weight(0.005,
-    #                                   0.015,
-    #                                   10,
-    #                                   5)
+    experiment.sweep_class_div_weight(0.005,
+                                      0.015,
+                                      10,
+                                      5)
     
-    # experiment.sweep_epochs(50, 
-    #                         300, 
-    #                         50,
-    #                         5)
+    experiment.sweep_epochs(50, 
+                            300, 
+                            50,
+                            5)
     
     experiment.sweep_ensemble_size(1, 
                                    10,

@@ -60,6 +60,13 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         self.train_positive_files = train_positive_files
         self.train_negative_files = train_negative_files
         self.unlabelled_files = unlabelled_files
+        
+        log_file = os.path.join(self.log_dir, 
+                                "{}.log".format(datetime.datetime.now()))
+        logging.basicConfig(filename=log_file, 
+                            format='%(asctime)s %(levelname)s: %(message)s',
+                            level=logging.INFO)
+        
     
     def test_terminations(self,
                           dataset_positive,
@@ -104,6 +111,17 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         accuracy /= total_count
         
         weighted_acc = (accuracy_pos + accuracy_neg)/2
+        
+        logging.info("============= Classifiers evaluated =============")
+        for idx in range(classifier.head_num):
+            logging.info("idx:{:.4f} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
+                idx,
+                accuracy_pos[idx],
+                accuracy_neg[idx],
+                accuracy[idx],
+                weighted_acc[idx])
+            )
+        logging.info("=================================================")
         
         # accuracy: accuracy over entire dataset 
         # weighted_acc: accuracy of pos&neg weighted equally
