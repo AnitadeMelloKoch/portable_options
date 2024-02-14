@@ -36,13 +36,15 @@ class DivDisClassifier():
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
+                 unlabelled_dataset_batchsize=None,
                  
                  summary_writer=None,
                  model_name='classifier') -> None:
         
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
-                                  batchsize=dataset_batchsize)
+                                  batchsize=dataset_batchsize,
+                                  unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.dataset.set_transform_function(transform)
         self.learning_rate = learning_rate
         
@@ -53,6 +55,10 @@ class DivDisClassifier():
         self.classifier = OneHeadMLP(input_dim=input_dim,
                                        num_classes=num_classes,
                                        num_heads=head_num)
+        
+        # self.classifier = SmallCNN(num_input_channels=input_dim,
+        #                            num_classes=num_classes,
+        #                            num_heads=head_num)
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate)
@@ -101,16 +107,14 @@ class DivDisClassifier():
             class_loss_tracker = np.zeros(self.head_num)
             class_acc_tracker = np.zeros(self.head_num)
             div_loss_tracker = 0
+            total_loss_tracker = 0
             
             self.dataset.shuffle()
             
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                # print(x)
-                
                 unlabelled_x = self.dataset.get_unlabelled_batch()
-                # print(unlabelled_x)
                 
                 if self.use_gpu:
                     x = x.to("cuda")
@@ -134,6 +138,7 @@ class DivDisClassifier():
                 div_loss_tracker += div_loss.item()
                 
                 objective = labelled_loss + self.diversity_weight*div_loss
+                total_loss_tracker += objective.item()
                 
                 objective.backward()
                 self.optimizer.step()
@@ -141,11 +146,14 @@ class DivDisClassifier():
             
             logger.info("Epoch {}".format(epoch))
             for idx in range(self.head_num):
-                logger.info("head {}: labelled loss = {} labelled accuracy = {}".format(idx,
+                logger.info("head {:.4f}: labelled loss = {:.4f} labelled accuracy = {:.4f}".format(idx,
                                                                                           class_loss_tracker[idx]/counter,
                                                                                           class_acc_tracker[idx]/counter))
             
             logger.info("div loss = {}".format(div_loss_tracker/counter))
+            logger.info("ensemble loss = {}".format(total_loss_tracker/counter))
+        
+        return total_loss_tracker/counter
         
     def predict(self, x):
         self.classifier.eval()
