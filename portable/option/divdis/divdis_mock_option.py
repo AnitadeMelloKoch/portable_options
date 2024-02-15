@@ -200,6 +200,7 @@ class DivDisMockOption():
                 logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
                                                                                                              np.mean(option_rewards),
                                                                                                              total_steps))
+                break
         
         self.save()
             
