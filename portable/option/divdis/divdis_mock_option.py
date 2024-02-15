@@ -54,9 +54,15 @@ class DivDisMockOption():
         return os.path.join(self.save_dir, 'termination')
     
     def save(self):
-        return
+        for idx, policies in self.policies:
+            for key in policies.keys():
+                policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, seed)))
     
     def load(self):
+        for idx, policies in self.policies:
+            for key in policies.keys():
+                policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, seed)))
+    
         return
         if os.path.exists(self._get_termination_save_path()):
             # print in green text
@@ -190,11 +196,12 @@ class DivDisMockOption():
                                                                           np.mean(option_rewards)))
             episode += 1
             
-            if total_steps > 800000 and np.mean(option_rewards) > min_performance:
+            if total_steps > 200000 and np.mean(option_rewards) > min_performance:
                 logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
                                                                                                              np.mean(option_rewards),
                                                                                                              total_steps))
-            
+        
+        self.save()
             
             
     def env_train_policy(self,

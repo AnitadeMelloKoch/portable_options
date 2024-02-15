@@ -98,6 +98,20 @@ class PolicyWithInitiation(Agent):
             update_interval=update_interval
         )
     
+    def save(self, path):
+        os.makedirs(path, exist_ok=True)
+        
+        torch.save(self.q_network.state_dict(), os.path.join(path, 'q_network.pt'))
+        torch.save(self.recurrent_memory.state_dict(), os.path.join(path, 'recurrent_mem.pt'))
+        self.replay_buffer.save(os.path.join(path, 'buffer.pkl'))
+    
+    def load(self, path):
+        assert os.path.exists(path)
+        
+        self.q_network.load_state_dict(torch.load(os.path.join(path, 'q_network.pt')))
+        self.recurrent_memory.load_state_dict(torch.load(os.path.join(path, 'recurrent_mem.pt')))
+        self.replay_buffer.load(os.path.join(path, 'buffer.pkl'))
+    
     def initialize_classifier(self, 
                                maxlen,
                                positive_examples):

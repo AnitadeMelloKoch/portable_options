@@ -47,11 +47,6 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         
         set_seed(seed)
         
-        self.meta_agent = OptionAgent(action_agent=action_agent,
-                                      option_agent=option_agent,
-                                      use_gpu=use_gpu,
-                                      phi=meta_policy_phi)
-        
         log_file = os.path.join(self.log_dir, 
                                 "{}.log".format(datetime.datetime.now()))
         logging.basicConfig(filename=log_file, 
@@ -63,6 +58,12 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             self.video_generator = VideoGenerator(os.path.join(self.base_dir, "videos"))
         else:
             self.video_generator = None
+        
+        self.meta_agent = OptionAgent(action_agent=action_agent,
+                                      option_agent=option_agent,
+                                      use_gpu=use_gpu,
+                                      phi=meta_policy_phi,
+                                      video_generator=self.video_generator)
         
         
         if option_policy_phi is None:
@@ -91,6 +92,10 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
     
     def load(self):
         pass
+    
+    def _video_log(self, line):
+        if self.video_generator is not None:
+            self.video_generator.add_line(line)
     
     def train_option_policies(self, 
                               train_envs_list, 
@@ -122,6 +127,11 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         
         return action_mask, option_masks
     
+    def save_image(self, env):
+        if self.video_generator is not None:
+            img = env.render()
+            self.video_generator.make_image(img)
+    
     def train_meta_agent(self,
                          env,
                          seed,
@@ -135,14 +145,22 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         
         while total_steps < max_steps:
             undiscounted_reward = 0
+            
+            if self.video_generator is not None:
+                self.video_generator.episode_start()
+            
+            obs, info = env.reset()
+            
+            
             while not done:
-                obs, info = env.reset()
-                
+                self.save_image(env)
                 action_mask, option_masks = self.get_masks_from_seed(seed)
                 
-                action, option = self.meta_agent.predict_action(obs,
-                                                                action_mask,
-                                                                option_masks)
+                action, option = self.meta_agent.act(obs,
+                                                     action_mask,
+                                                     option_masks)
+                
+                self._video_log("action: {} option: {}".format(action, option))
                 
                 if action < self.num_primitive_actions:
                     next_obs, reward, done, info = env.step(action)
@@ -169,9 +187,14 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                                                      total_steps,
                                                                                      undiscounted_reward))
             
+            if (undiscounted_reward > 0 or episode%100==0) and self.video_generator is not None:
+                self.video_generator.episode_end("episode_{}".format(episode))
+            
             undiscounted_rewards.append(undiscounted_reward)
             episode += 1
             episode_rewards.append(undiscounted_reward)
+            
+            self.plot_learning_curve(episode_rewards)
             
             if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
                 logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
