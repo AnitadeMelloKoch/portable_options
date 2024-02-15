@@ -191,7 +191,7 @@ class OptionAgentModel():
             chosen_option_mask = chosen_option_mask.astype(bool)
             
             
-            option_q_values[chosen_option_mask] = -1e8
+            option_q_values[not chosen_option_mask] = -1e8
             self._video_log("[option agent] option q values: {}".format(option_q_values))
             
             if rand_val < epsilon:

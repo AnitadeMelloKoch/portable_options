@@ -81,28 +81,69 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
     def test_classifier(self,
                         test_positive_files,
                         test_negative_files):
-        dataset = SetDataset(max_size=1e6,
-                             batchsize=64)
+        dataset_positive = SetDataset(max_size=1e6,
+                                      batchsize=64)
         
-        dataset.set_transform_function(transform)
+        dataset_negative = SetDataset(max_size=1e6,
+                                      batchsize=64)
         
-        dataset.add_true_files(test_positive_files)
-        dataset.add_false_files(test_negative_files)
+        # dataset_positive.set_transform_function(transform)
+        # dataset_negative.set_transform_function(transform)
+        
+        dataset_positive.add_true_files(test_positive_files)
+        dataset_negative.add_false_files(test_negative_files)
         
         counter = 0
         accuracy = np.zeros(self.classifier.head_num)
+        accuracy_pos = np.zeros(self.classifier.head_num)
+        accuracy_neg = np.zeros(self.classifier.head_num)
         
-        for _ in range(dataset.num_batches):
+        for _ in range(dataset_positive.num_batches):
             counter += 1
-            x, y = dataset.get_batch()
+            x, y = dataset_positive.get_batch()
             pred_y = self.classifier.predict(x)
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
-                
-        return accuracy/counter
+        
+        accuracy_pos /= counter
+        
+        total_count = counter
+        counter = 0
+        
+        for _ in range(dataset_negative.num_batches):
+            counter += 1
+            x, y = dataset_negative.get_batch()
+            pred_y = self.classifier.predict(x)
+            pred_y = pred_y.cpu()
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+        
+        accuracy_neg /= counter
+        total_count += counter
+        
+        accuracy /= total_count
+        
+        weighted_acc = (accuracy_pos + accuracy_neg)/2
+        
+        logging.info("============= Classifiers evaluated =============")
+        for idx in range(self.classifier.head_num):
+            logging.info("idx:{:.4f} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
+                idx,
+                accuracy_pos[idx],
+                accuracy_neg[idx],
+                accuracy[idx],
+                weighted_acc[idx])
+            )
+        logging.info("=================================================")
+        
+        return accuracy, weighted_acc
     
     def explain_classifiers(self,
                             test_data,
