@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from experiments.experiment_logger import VideoGenerator
-from portable.agent.option_agent import OptionAgent
+from portable.agent.model.ppo import ActionPPO, OptionPPO
+import math
 
 @gin.configurable
 class FactoredAdvancedMinigridDivDisMetaExperiment():
@@ -20,17 +21,19 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                  base_dir,
                  experiment_name,
                  seed,
-                 meta_policy_phi,
+                 option_policy_phi,
+                 option_agent_phi,
                  use_gpu,
-                 action_agent,
-                 option_agent,
+                 action_policy,
+                 action_vf,
+                 option_policy,
+                 option_vf,
                  terminations,
                  num_options,
                  num_primitive_actions,
                  discount_rate=0.9,
                  image_state=True,
-                 make_videos=False,
-                 option_policy_phi=None) -> None:
+                 make_videos=False):
         
         self.name = experiment_name,
         self.seed = seed 
@@ -59,21 +62,25 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         else:
             self.video_generator = None
         
-        self.meta_agent = OptionAgent(action_agent=action_agent,
-                                      option_agent=option_agent,
-                                      use_gpu=use_gpu,
-                                      phi=meta_policy_phi,
-                                      video_generator=self.video_generator)
+        self.meta_action_agent = ActionPPO(use_gpu=use_gpu,
+                                           policy=action_policy,
+                                           value_function=action_vf,
+                                           phi=option_policy_phi)
         
-        
-        if option_policy_phi is None:
-            option_policy_phi = meta_policy_phi
+        self.meta_option_agent = OptionPPO(use_gpu=use_gpu,
+                                           policy=option_policy,
+                                           value_function=option_vf,
+                                           phi=option_agent_phi)
         
         self.options = []
         
         assert len(terminations) == num_options
         self.num_options = num_options
         self.num_primitive_actions = num_primitive_actions
+        
+        self._cumulative_discount_vector = np.array(
+            [math.pow(discount_rate, n) for n in range(100)]
+        )
         
         for idx, termination_list in enumerate(terminations):
             self.options.append(DivDisMockOption(use_gpu=use_gpu,
@@ -88,10 +95,12 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         self.gamma = discount_rate
     
     def save(self):
-        pass
+        for option in self.options:
+            option.save()
     
     def load(self):
-        pass
+        for option in self.options:
+            option.load()
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -111,8 +120,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
     
     def get_masks_from_seed(self,
                             seed):
-        
-        action_mask = [False]*self.num_options
+        action_mask = [False]*(self.num_options+self.num_primitive_actions)
         option_masks = []
         
         for idx in range(self.num_primitive_actions):
@@ -127,6 +135,36 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         
         return action_mask, option_masks
     
+    def act(self, obs):
+        action, q_vals = self.meta_action_agent.act(obs)
+        option = self.meta_option_agent.act(obs, q_vals)
+        
+        return action, option, q_vals
+    
+    def observe(self, 
+                obs, 
+                q_vals, 
+                rewards, 
+                done):
+        
+        if len(rewards) > len(self._cumulative_discount_vector):
+            self._cumulative_discount_vector = np.array(
+                [math.pow(self.gamma, n) for n in range(len(rewards))]
+            )
+        
+        reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
+        
+        self.meta_action_agent.observe(obs,
+                                       reward,
+                                       done,
+                                       done)
+        
+        self.meta_option_agent.observe(obs,
+                                       q_vals,
+                                       reward,
+                                       done,
+                                       done)
+    
     def save_image(self, env):
         if self.video_generator is not None:
             img = env.render()
@@ -140,11 +178,11 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         total_steps = 0
         episode_rewards = deque(maxlen=200)
         episode = 0
-        done = False
         undiscounted_rewards = []
         
         while total_steps < max_steps:
             undiscounted_reward = 0
+            done = False
             
             if self.video_generator is not None:
                 self.video_generator.episode_start()
@@ -155,10 +193,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             while not done:
                 self.save_image(env)
                 action_mask, option_masks = self.get_masks_from_seed(seed)
-                
-                action, option = self.meta_agent.act(obs,
-                                                     action_mask,
-                                                     option_masks)
+                action, option, q_vals = self.act(obs)
                 
                 self._video_log("action: {} option: {}".format(action, option))
                 
@@ -168,20 +203,25 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                     rewards = [reward]
                     total_steps += 1
                 else:
-                    next_obs, info, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
-                                                                                                                        env,
-                                                                                                                        obs,
-                                                                                                                        info,
-                                                                                                                        seed)
+                    if (action_mask[action] is False) or (option_masks[action][option] is False):
+                        next_obs, reward, done, info = env.step(6)
+                        print(done)
+                        steps = 1
+                        rewards = [reward]
+                    else:
+                        next_obs, info, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
+                                                                                                                              env,
+                                                                                                                              obs,
+                                                                                                                              info,
+                                                                                                                              seed)
                     undiscounted_reward += np.sum(rewards)
                     total_steps += steps
                 
-                self.meta_agent.observe(obs,
-                                        action,
-                                        option,
-                                        rewards,
-                                        next_obs,
-                                        done)
+                    self.observe(obs,
+                                q_vals,
+                                rewards,
+                                done)
+                    obs = next_obs
             
             logging.info("Episode {} total steps: {} undiscounted reward: {}".format(episode,
                                                                                      total_steps,
@@ -195,6 +235,9 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             episode_rewards.append(undiscounted_reward)
             
             self.plot_learning_curve(episode_rewards)
+            
+            self.meta_action_agent.save(os.path.join(self.save_dir, "action_agent"))
+            self.meta_option_agent.save(os.path.join(self.save_dir, "option_agent"))
             
             if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
                 logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
@@ -210,6 +253,8 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         ax.set_ylabel("Sum Undiscounted Rewards")
         
         fig.savefig(os.path.join(self.plot_dir, "learning_curve.png"))
+        
+        plt.close(fig)
         
     
     def eval_meta_agent(self):

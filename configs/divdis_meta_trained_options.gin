@@ -1,32 +1,26 @@
 import portable.agent.model.linear_q
 import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_meta_experiment
-import portable.agent.option_agent
 import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
-
-LargeLinearQFunction.in_features                                    = 22
-LargeLinearQFunction.n_actions                                      = 7
-
-OptionLinearQFunction.in_features                                   = 22
-OptionLinearQFunction.action_vector_size                            = 10
-OptionLinearQFunction.num_options                                   = 2
+import portable.agent.model.ppo 
 
 FactoredAdvancedMinigridDivDisMetaExperiment.experiment_name        = "meta_policy_trained_options"
 FactoredAdvancedMinigridDivDisMetaExperiment.num_options            = 3
 FactoredAdvancedMinigridDivDisMetaExperiment.num_primitive_actions  = 7
 FactoredAdvancedMinigridDivDisMetaExperiment.use_gpu                = True
 
-OptionAgent.num_actions                                             = 13
-OptionAgent.batch_size                                              = 32
-OptionAgent.warmup_steps                                            = 1024
-OptionAgent.buffer_length                                           = 50000
-OptionAgent.update_interval                                         = 4
-OptionAgent.q_target_update_interval                                = 10
-OptionAgent.learning_rate                                           = 2.5e-4
-OptionAgent.final_epsilon                                           = 0.05
-OptionAgent.final_exploration_frames                                = 1e6
-OptionAgent.discount_rate                                           = 0.9
-OptionAgent.prioritized_replay_anneal_steps                         = 500000
+ActionPPO.learning_rate                                             = 2.5e-4
+ActionPPO.state_shape                                               = 26
+ActionPPO.final_epsilon                                             = 0.05
+ActionPPO.final_exploration_frames                                  = 1e6
+ActionPPO.num_actions                                               = 10
+
+OptionPPO.learning_rate                                             = 2.5e-4
+OptionPPO.state_dim                                                 = 26
+OptionPPO.action_num                                                = 10
+OptionPPO.final_epsilon                                             = 0.05
+OptionPPO.final_exploration_frames                                  = 1e6
+OptionPPO.num_options                                               = 2
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000

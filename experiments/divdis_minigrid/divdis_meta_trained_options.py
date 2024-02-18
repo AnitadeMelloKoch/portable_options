@@ -6,7 +6,7 @@ from experiments.minigrid.utils import factored_environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
-from portable.agent.model.linear_q import *
+from portable.agent.model.ppo import create_linear_policy, create_linear_vf
 
 def make_random_getkey_env(train_colour, seed, collect_key=False):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
@@ -134,8 +134,11 @@ if __name__ == "__main__":
 
         return x
     
-    action_agent = LargeLinearQFunction()
-    option_agent = OptionLinearQFunction()
+    def option_agent_phi(x):
+        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1])
+        
+        return x
+    
     terminations = [
         [PerfectGetKey("blue"),
          NeverCorrectGetKey("blue")],
@@ -147,10 +150,15 @@ if __name__ == "__main__":
     
     experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
-                                                              meta_policy_phi=policy_phi,
-                                                              action_agent=action_agent,
-                                                              option_agent=option_agent,
+                                                              option_policy_phi=policy_phi,
+                                                              option_agent_phi=option_agent_phi,
+                                                              action_policy=create_linear_policy(26, 10),
+                                                              action_vf=create_linear_vf(26),
+                                                              option_policy=create_linear_policy(36, 2),
+                                                              option_vf=create_linear_vf(36),
                                                               terminations=terminations)
+    
+    # experiment.load()
     
     experiment.train_option_policies(train_envs,
                                      env_seed,

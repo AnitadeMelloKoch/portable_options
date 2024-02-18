@@ -162,6 +162,7 @@ class OptionAgentModel():
         given a state, return a predicted action and option
         """
         with torch.no_grad():
+            self.action_agent.batch_act([state])
             action_q_values = self.action_agent.q_function(state)[0]
             action_q_values[np.logical_not(action_mask)] = -1e8
             

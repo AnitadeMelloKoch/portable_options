@@ -4,6 +4,7 @@ import numpy as np
 import gin 
 import random 
 import torch 
+import pickle
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
@@ -54,15 +55,24 @@ class DivDisMockOption():
         return os.path.join(self.save_dir, 'termination')
     
     def save(self):
+        os.makedirs(self.save_dir)
         for idx, policies in enumerate(self.policies):
             for key in policies.keys():
                 policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
+        
+            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx))) as f:
+                pickle.dump(policies.keys(), f)
     
     def load(self):
-        for idx, policies in self.policies:
-            for key in policies.keys():
+        for idx, policies in enumerate(self.policies):
+            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx))) as f:
+                keys = pickle.load(f)
+            for key in keys:
+                policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
+                                                     policy_phi=self.policy_phi)
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
-    
+            
+        
         return
         if os.path.exists(self._get_termination_save_path()):
             # print in green text
@@ -74,7 +84,8 @@ class DivDisMockOption():
     
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation())
+        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
+                                                            policy_phi=self.policy_phi))
     
     # def find_possible_policy(self, obs):
     #     policy_idxs = []
@@ -93,7 +104,7 @@ class DivDisMockOption():
     def find_possible_policies(self, seed):
         mask = [False]*self.num_heads
         for idx, policies in enumerate(self.policies):
-            if policies[seed] is not None:
+            if seed in policies.keys():
                 mask[idx] = True
         
         return mask
@@ -270,6 +281,7 @@ class DivDisMockOption():
             raise Exception("Policy has not been initialized. Train policy before evaluating")
         
         policy = self.policies[idx][seed]
+        policy.move_to_gpu()
         
         with evaluating(policy):
             while not (done or should_terminate):
@@ -283,8 +295,8 @@ class DivDisMockOption():
                     self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
-                term_state = self.policy_phi(next_state).unsqueeze(0)
-                should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
+                should_terminate = self.terminations[idx](state,
+                                                          env)
                 steps += 1
                 
                 rewards.append(reward)
