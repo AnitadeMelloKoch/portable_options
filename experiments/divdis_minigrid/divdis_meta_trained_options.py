@@ -24,7 +24,7 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         ),
         door_colour=door_colour,
         key_colours=key_cols,
-        time_limit=100,
+        time_limit=500,
         image_input=False,
         key_collected=collect_key
     )
@@ -38,26 +38,26 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="blue",
+        door_colour="red",
         time_limit=500,
         image_input=False
         ),
-        make_random_getkey_env("blue", env_seed),
-        make_random_getkey_env("blue", env_seed),
-        make_random_getkey_env("blue", env_seed),],
+        make_random_getkey_env("red", env_seed),
+        make_random_getkey_env("red", env_seed),
+        make_random_getkey_env("red", env_seed),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="blue",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         key_collected=True
         ),
-        make_random_getkey_env("blue", env_seed, True),
-        make_random_getkey_env("blue", env_seed, True),
-        make_random_getkey_env("blue", env_seed, True),],
+        make_random_getkey_env("red", env_seed, True),
+        make_random_getkey_env("red", env_seed, True),
+        make_random_getkey_env("red", env_seed, True),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -140,8 +140,8 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("blue"),
-         NeverCorrectGetKey("blue")],
+        [PerfectGetKey("red"),
+         NeverCorrectGetKey("red")],
         [PerfectGetKey("yellow"),
          NeverCorrectGetKey("yellow")],
         [PerfectGetKey("grey"),
@@ -164,15 +164,11 @@ if __name__ == "__main__":
                                      env_seed,
                                      1e6)
     
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(
-        factored_environment_builder(
-            'AdvancedDoorKey-8x8-v0',
-            seed=env_seed
-        ),
-        door_colour="blue",
-        time_limit=500,
-        image_input=False
-    )
+    meta_env = factored_environment_builder(
+                    'AdvancedDoorKey-8x8-v0',
+                    seed=env_seed,
+                    max_steps=int(1e4)
+                )
     
     experiment.train_meta_agent(meta_env,
                                 env_seed,

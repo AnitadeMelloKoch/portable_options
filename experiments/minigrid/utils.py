@@ -1,5 +1,6 @@
 import math
 import pickle
+from typing import Tuple
 import numpy as np
 from PIL import Image
 import gymnasium as gym
@@ -66,8 +67,12 @@ class FactoredObsWrapperDoorKey(Wrapper):
             "purple": 5
         }
     
-    def step(self, action):
-        obs, reward, terminated, truncated, info = self.env.step(action)
+    def reset(self, **kwargs):
+        obs, info = super().reset(**kwargs)
+        obs = self._get_factored_obs()
+        return obs, info
+    
+    def _get_factored_obs(self):
         split_idx = self.env.unwrapped.splitIdx
         
         objects = {
@@ -108,6 +113,13 @@ class FactoredObsWrapperDoorKey(Wrapper):
             factored_obs += objects[key]
         
         factored_obs = np.array(factored_obs)
+        
+        return factored_obs
+    
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        
+        factored_obs = self._get_factored_obs()
         
         return factored_obs, reward, terminated, truncated, info
 

@@ -232,7 +232,7 @@ class PolicyWithInitiation(Agent):
             device = torch.device("cpu")
         
         obs = batch_states([obs], device, self.phi)
-        obs = obs.unsqueeze(1)
+        obs = obs.unsqueeze(1).float()
         obs, _ = self.recurrent_memory(obs)
         obs = obs.squeeze(0)
         q_values = self.q_network(obs)

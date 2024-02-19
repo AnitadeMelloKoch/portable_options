@@ -324,7 +324,7 @@ class DivDisMockOption():
                 img = env.render()
                 self.video_generator.make_image(img)
             
-            return state, info, steps, rewards, option_rewards, states, infos
+            return state, info, done, steps, rewards, option_rewards, states, infos
     
 
 

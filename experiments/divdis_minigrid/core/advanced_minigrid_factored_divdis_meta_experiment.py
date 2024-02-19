@@ -189,10 +189,11 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             
             obs, info = env.reset()
             
-            
             while not done:
                 self.save_image(env)
                 action_mask, option_masks = self.get_masks_from_seed(seed)
+                if type(obs) == np.ndarray:
+                    obs = torch.from_numpy(obs).float()
                 action, option, q_vals = self.act(obs)
                 
                 self._video_log("action: {} option: {}".format(action, option))
@@ -205,11 +206,10 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                 else:
                     if (action_mask[action] is False) or (option_masks[action][option] is False):
                         next_obs, reward, done, info = env.step(6)
-                        print(done)
                         steps = 1
                         rewards = [reward]
                     else:
-                        next_obs, info, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
+                        next_obs, info, done, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
                                                                                                                               env,
                                                                                                                               obs,
                                                                                                                               info,
@@ -222,7 +222,6 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                 rewards,
                                 done)
                     obs = next_obs
-            
             logging.info("Episode {} total steps: {} undiscounted reward: {}".format(episode,
                                                                                      total_steps,
                                                                                      undiscounted_reward))

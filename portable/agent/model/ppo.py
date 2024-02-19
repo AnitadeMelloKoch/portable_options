@@ -266,7 +266,6 @@ class OptionPPO():
     
     def observe(self, obs, q_vals, reward, done, reset):
         obs = obs.unsqueeze(0)
-        q_vals = torch.from_numpy(q_vals)
         concat_input = torch.cat((obs, q_vals), dim=-1)
         reward = [reward]
         done = [done]
