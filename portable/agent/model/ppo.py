@@ -250,7 +250,6 @@ class OptionPPO():
     
     def act(self, obs, action):
         obs = obs.unsqueeze(0)
-        action = torch.from_numpy(action)
         concat_input = torch.cat((obs, action), dim=-1)
         q_vals = self.agent.batch_act(concat_input)
         q_vals = torch.from_numpy(q_vals)
