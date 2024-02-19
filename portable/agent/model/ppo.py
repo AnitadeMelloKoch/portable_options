@@ -162,6 +162,7 @@ class ActionPPO():
         self.step += 1
         obs = obs.unsqueeze(0)
         q_vals = self.agent.batch_act(obs)
+        q_vals = torch.from_numpy(q_vals)
         if self.agent.training:
             action = self.explorer.select_action(
                 self.step,
@@ -252,6 +253,7 @@ class OptionPPO():
         action = torch.from_numpy(action)
         concat_input = torch.cat((obs, action), dim=-1)
         q_vals = self.agent.batch_act(concat_input)
+        q_vals = torch.from_numpy(q_vals)
         self.step += 1
         if self.agent.training:
             a = self.explorer.select_action(
