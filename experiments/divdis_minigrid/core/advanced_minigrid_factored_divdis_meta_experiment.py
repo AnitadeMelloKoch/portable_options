@@ -257,8 +257,61 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         plt.close(fig)
         
     
-    def eval_meta_agent(self):
-        pass
+    def eval_meta_agent(self,
+                        env,
+                        seed,
+                        num_runs):
+        undiscounted_rewards = []
+        
+        with self.meta_action_agent.agent.eval_mode(), self.meta_option_agent.agent.eval_mode():
+            for run in range(num_runs):
+                undiscounted_reward = 0
+                done = False
+                rand_num = np.random.randint(low=0, high=100)
+                obs, info = env.reset(agent_reposition_attempts=rand_num)
+                while not done:
+                    self.save_image(env)
+                    action_mask, option_masks = self.get_masks_from_seed(seed)
+                    action, option, q_vals = self.act(obs)
+                    
+                    self._video_log("action: {} option: {}".format(action, option))
+                    self._video_log("action q values: {}".format(q_vals))
+                    
+                    if action < self.num_primitive_actions:
+                        next_obs, reward, done, info = env.step(action)
+                        undiscounted_reward += reward
+                        rewards = [reward]
+                        total_steps += 1
+                    else:
+                        if (action_mask[action] is False) or (option_masks[action][option] is False):
+                            next_obs, reward, done, info = env.step(6)
+                            print(done)
+                            steps = 1
+                            rewards = [reward]
+                        else:
+                            next_obs, info, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
+                                                                                                                                env,
+                                                                                                                                obs,
+                                                                                                                                info,
+                                                                                                                                seed)
+                        undiscounted_reward += np.sum(rewards)
+                        total_steps += steps
+                    
+                        self.observe(obs,
+                                    q_vals,
+                                    rewards,
+                                    done)
+                        obs = next_obs
+                
+                logging.info("Eval {} total steps: {} undiscounted reward: {}".format(run,
+                                                                                      total_steps,
+                                                                                      undiscounted_reward))
+            
+                if self.video_generator is not None:
+                    self.video_generator.episode_end("eval_{}".format(run))
+                
+                undiscounted_rewards.append(undiscounted_reward)
+            
     
     
     
