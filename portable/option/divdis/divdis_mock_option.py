@@ -60,12 +60,12 @@ class DivDisMockOption():
             for key in policies.keys():
                 policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         
-            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx))) as f:
+            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
                 pickle.dump(policies.keys(), f)
     
     def load(self):
         for idx, policies in enumerate(self.policies):
-            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx))) as f:
+            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                 keys = pickle.load(f)
             for key in keys:
                 policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
