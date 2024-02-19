@@ -61,7 +61,7 @@ class DivDisMockOption():
                 policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
-                pickle.dump(policies.keys(), f)
+                pickle.dump(list(policies.keys()), f)
     
     def load(self):
         for idx, policies in enumerate(self.policies):
