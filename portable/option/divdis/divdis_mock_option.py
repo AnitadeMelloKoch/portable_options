@@ -55,7 +55,7 @@ class DivDisMockOption():
         return os.path.join(self.save_dir, 'termination')
     
     def save(self):
-        os.makedirs(self.save_dir)
+        os.makedirs(self.save_dir, exist_ok=True)
         for idx, policies in enumerate(self.policies):
             for key in policies.keys():
                 policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
