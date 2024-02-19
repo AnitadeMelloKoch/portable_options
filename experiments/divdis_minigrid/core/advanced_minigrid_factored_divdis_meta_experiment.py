@@ -91,7 +91,10 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                  video_generator=self.video_generator,
                                                  plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx))))
         
-        self.num_heads = self.options[0].num_heads
+        if len(self.options) > 0:
+            self.num_heads = self.options[0].num_heads
+        else:
+            self.num_heads = 0
         self.gamma = discount_rate
     
     def save(self):
