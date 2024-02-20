@@ -22,7 +22,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  door_unlocked: bool=False,
                  door_open: bool=False,
                  time_limit: int=2000,
-                 image_input: bool=True):
+                 image_input: bool=True,
+                 keep_colour: str="",
+                 pickup_colour: str=""):
         super().__init__(env)
         
         self.objects = {
@@ -36,6 +38,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self._timestep =  0
         self.time_limit = time_limit
         self.image_input = image_input
+        self.keep_colour = keep_colour
+        self.pickup_colour = pickup_colour
         
         self.door = None
         
@@ -132,13 +136,18 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         return obs, info
     
     def random_start(self, 
-                     keep_colour=None,
+                     keep_colour="",
                      pickup_colour="",
                      force_door_closed=False):
         # randomly move+pick up keys in the environment
         # randomly open/unlock door
         
         split_idx = self.env.unwrapped.splitIdx
+        
+        if keep_colour == "":
+            keep_colour = self.keep_colour
+        if pickup_colour == "":
+            pickup_colour = self.pickup_colour
         
         all_pos = [key.position for key in self.objects["keys"]]
         

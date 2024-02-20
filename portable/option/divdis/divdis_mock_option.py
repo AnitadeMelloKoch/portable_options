@@ -21,6 +21,7 @@ class DivDisMockOption():
                  terminations,
                  
                  policy_phi,
+                 use_seed_for_initiation,
                  video_generator=None,
                  plot_dir=None):
         
@@ -28,14 +29,22 @@ class DivDisMockOption():
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
+        # this is for debugging. By using seed for initiation we do not need to 
+        # learn the initiation set and are assuming the initiation set is the seed
+        self.use_seed_for_initiation = use_seed_for_initiation
         
         self.terminations = terminations
         
         self.num_heads = len(terminations)
         
-        self.policies = [
-            {} for _ in range(self.num_heads)
-        ]
+        if self.use_seed_for_initiation:
+            self.policies = [
+                {} for _ in range(self.num_heads)
+            ]
+        else:
+            self.policies = [
+                [] for _ in range(self.num_heads)
+            ]
         
         self.initiable_policies = None
         self.video_generator = video_generator
@@ -69,39 +78,36 @@ class DivDisMockOption():
                 keys = pickle.load(f)
             for key in keys:
                 policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
-                                                     policy_phi=self.policy_phi)
+                                                     policy_phi=self.policy_phi,
+                                                     learn_initiation=(not self.use_seed_for_initiation))
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
-            
-        
-        return
-        if os.path.exists(self._get_termination_save_path()):
-            # print in green text
-            print("\033[92m {}\033[00m" .format("Termination model loaded"))
-            self.terminations.load(self._get_termination_save_path())
-        else:
-            # print in red text
-            print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
-    
+
     def add_policy(self, 
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
                                                             policy_phi=self.policy_phi))
     
-    # def find_possible_policy(self, obs):
-    #     policy_idxs = []
-        
-    #     for policies in self.policies:
-    #         idxs = []
-    #         for idx in range(len(policies)):
-    #             if policies[idx].can_initiate(obs):
-    #                 idxs.append(idx)
-    #         policy_idxs.append(idxs)
-        
-    #     self.initiable_policies = policy_idxs
-        
-    #     return policy_idxs
+    def find_possible_policy(self, *kwargs):
+        if self.use_seed_for_initiation:
+            return self._seed_possible_policies(*kwargs)
+        else:
+            return self._initiation_possible_policies(*kwargs)
     
-    def find_possible_policies(self, seed):
+    def _initiation_possible_policies(self, obs):
+        policy_idxs = []
+        
+        for policies in self.policies:
+            idxs = []
+            for idx in range(len(policies)):
+                if policies[idx].can_initiate(obs):
+                    idxs.append(idx)
+            policy_idxs.append(idxs)
+        
+        self.initiable_policies = policy_idxs
+        
+        return policy_idxs
+    
+    def _seed_possible_policies(self, seed):
         mask = [False]*self.num_heads
         for idx, policies in enumerate(self.policies):
             if seed in policies.keys():
@@ -113,15 +119,34 @@ class DivDisMockOption():
                       positive_files,
                       negative_files,
                       unlabelled_files):
+        # not needed for mock terminations
+        # should return and do nothing
         return
+    
+    def _get_policy(self, head_idx, option_idx):
+        if self.use_seed_for_initiation:
+            if option_idx not in self.policies[head_idx].keys():
+                self.policies[head_idx][option_idx] = self._get_new_policy()
+            return self.policies[head_idx][option_idx]
+        else:
+            if len(self.initiable_policies) > 0:
+                return self.policies[head_idx][self.initiable_policies[option_idx]]
+            else:
+                policy = self._get_new_policy()
+                self.policies[head_idx].append(policy)
+                return policy
+    
+    def _get_new_policy(self):
+        return PolicyWithInitiation(use_gpu=self.use_gpu,
+                                    policy_phi=self.policy_phi,
+                                    learn_initiation=(not self.use_seed_for_initiation))
     
     def train_policy(self, 
                      idx,
                      env,
                      state,
                      info,
-                     seed):
-        
+                     policy_idx):
         steps = 0
         rewards = []
         option_rewards = []
@@ -131,16 +156,7 @@ class DivDisMockOption():
         done = False
         should_terminate = False
         
-        # if seed not in self.initiable_policies[idx]:
-        #     self.initiable_policies[idx][seed] = PolicyWithInitiation()
-        
-        # policy = self.initiable_policies[idx][seed]
-        
-        if seed not in self.policies[idx].keys():
-            self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
-                                                            policy_phi=self.policy_phi)
-        
-        policy = self.policies[idx][seed]
+        policy = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
         
         while not (done or should_terminate):
@@ -185,13 +201,15 @@ class DivDisMockOption():
                          min_performance,
                          seed):
         total_steps = 0
-        option_rewards = deque(maxlen=200)
+        train_rewards = deque(maxlen=200)
+        eval_rewards = deque(maxlen=200)
         episode = 0
         
         while total_steps < max_steps:
             env = random.choice(envs)
             rand_num = np.random.randint(low=0, high=50)
-            obs, info = env.reset(agent_reposition_attempts=rand_num)
+            obs, info = env.reset(agent_reposition_attempts=rand_num,
+                                  random_start=True)
             
             _, _, steps, _, rewards, _, _ = self.train_policy(idx,
                                                               env,
@@ -199,23 +217,54 @@ class DivDisMockOption():
                                                               info,
                                                               seed)
             total_steps += steps
-            option_rewards.append(sum(rewards))
+            train_rewards.append(sum(rewards))
+            eval_run_rewards = self._get_eval_performance(idx,
+                                                          envs,
+                                                          1,
+                                                          seed)
+            eval_rewards.append(sum(eval_run_rewards))
             
             if episode % 400 == 0:
-                logging.info("idx {} steps: {} average reward: {}".format(idx,
+                logging.info("idx {} steps: {} average train reward: {} average eval reward".format(idx,
                                                                           total_steps,
-                                                                          np.mean(option_rewards)))
+                                                                          np.mean(train_rewards),
+                                                                          np.mean(eval_rewards)))
             episode += 1
             
-            if total_steps > 200000 and np.mean(option_rewards) > min_performance:
+            if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
                 logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
                                                                                                              np.mean(option_rewards),
                                                                                                              total_steps))
                 break
         
         self.save()
+    
+    def _get_eval_performance(self,
+                              idx,
+                              envs,
+                              num_runs,
+                              seed):
+        option_rewards = []
+        if self.video_generator:
+            self.video_generator.episode_start()
+        for _ in range(num_runs):
+            env = random.choice(envs)
+            rand_num = np.random.randint(low=0, high=100)
+            obs, info = env.reset(agent_reposition_attempts=rand_num,
+                                  random_start=True)
             
-            
+            _, _, _, _, _, run_rewards, _, _, = self.eval_policy(idx,
+                                                                 env,
+                                                                 obs,
+                                                                 info,
+                                                                 seed)
+            option_rewards.append(sum(run_rewards))
+        
+        if self.video_generator:
+            self.video_generator.episode_start()
+        
+        return option_rewards
+    
     def env_train_policy(self,
                          idx,
                          env,

@@ -4,7 +4,7 @@ import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
-FactoredAdvancedMinigridDivDisMetaExperiment.experiment_name        = "meta_policy_trained_options"
+FactoredAdvancedMinigridDivDisMetaExperiment.experiment_name        = "meta_policy_perfect_options"
 FactoredAdvancedMinigridDivDisMetaExperiment.num_options            = 3
 FactoredAdvancedMinigridDivDisMetaExperiment.num_primitive_actions  = 7
 FactoredAdvancedMinigridDivDisMetaExperiment.use_gpu                = True
@@ -21,7 +21,7 @@ OptionPPO.state_dim                                                 = 26
 OptionPPO.action_num                                                = 10
 OptionPPO.final_epsilon                                             = 0.05
 OptionPPO.final_exploration_frames                                  = 1e6
-OptionPPO.num_options                                               = 2
+OptionPPO.num_options                                               = 1
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000

@@ -89,7 +89,8 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                  terminations=termination_list,
                                                  policy_phi=option_policy_phi,
                                                  video_generator=self.video_generator,
-                                                 plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx))))
+                                                 plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
+                                                 use_seed_for_initiation=True))
         
         if len(self.options) > 0:
             self.num_heads = self.options[0].num_heads
@@ -200,6 +201,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                 action, option, q_vals = self.act(obs)
                 
                 self._video_log("action: {} option: {}".format(action, option))
+                self._video_log("action q vals: {}".format(q_vals))
                 
                 if action < self.num_primitive_actions:
                     next_obs, reward, done, info = env.step(action)
