@@ -186,12 +186,6 @@ class DivDisMockOption():
 
             state = next_state
         
-        # if should_terminate:
-        #     # should save positive examples and create classifier if it hasn't been
-        #     pass
-        # if done:
-        #     pass
-        
         return state, info, steps, rewards, option_rewards, states, infos
     
     def bootstrap_policy(self,
@@ -224,8 +218,8 @@ class DivDisMockOption():
                                                           seed)
             eval_rewards.append(sum(eval_run_rewards))
             
-            if episode % 400 == 0:
-                logging.info("idx {} steps: {} average train reward: {} average eval reward".format(idx,
+            if episode % 50 == 0:
+                logging.info("idx {} steps: {} average train reward: {} average eval reward {}".format(idx,
                                                                           total_steps,
                                                                           np.mean(train_rewards),
                                                                           np.mean(eval_rewards)))
@@ -233,7 +227,7 @@ class DivDisMockOption():
             
             if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
                 logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
-                                                                                                             np.mean(option_rewards),
+                                                                                                             np.mean(eval_rewards),
                                                                                                              total_steps))
                 break
         
