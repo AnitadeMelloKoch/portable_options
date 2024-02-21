@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from ..evaluators.utils import concatenate
 from evaluation.model_wrappers import EnsemblePolicyWrapper
 from portable.utils import set_player_ram
-from portable.utils.video_generator import VideoGenerator
+#from portable.utils.video_generator import VideoGenerator
 
 class AttentionEvaluatorPolicy():
     

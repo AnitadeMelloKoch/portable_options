@@ -27,14 +27,15 @@ class DivDisEvaluatorClassifier():
     def __init__(
             self,
             classifier,
-            plot_dir,
+            plot_dir=None,
             image_input=False,
             stack_size=2):
         
         self.classifier = classifier
 
         self.plot_dir = plot_dir
-        os.makedirs(self.plot_dir, exist_ok=True)
+        if self.plot_dir:
+            os.makedirs(self.plot_dir, exist_ok=True)
         
         self.head_num = self.classifier.head_num
         self.image_input = image_input
@@ -88,7 +89,7 @@ class DivDisEvaluatorClassifier():
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
                 states_fn = states[(labels == 1) & (labels_pred_head == 0)]
 
-                
+                self.ig_attr_test[head_idx]['all'] = self.integrated_gradients[head_idx].attribute(states, target=labels_pred_head)
                 self.ig_attr_test[head_idx]['true positive'] = self.integrated_gradients[head_idx].attribute(states_tp, target=1) if len(states_tp) > 0 else None
                 self.ig_attr_test[head_idx]['true negative'] = self.integrated_gradients[head_idx].attribute(states_tn, target=0) if len(states_tn) > 0 else None
                 self.ig_attr_test[head_idx]['false positive'] = self.integrated_gradients[head_idx].attribute(states_fp, target=1) if len(states_fp) > 0 else None
@@ -230,7 +231,7 @@ class DivDisEvaluatorClassifier():
 
     def _plot_attributions_factored(self, num_features=26):
 
-        fig, axes = plt.subplots(nrows=self.head_num+0, ncols=4, figsize=(30,8*(self.head_num)), sharey='row')
+        fig, axes = plt.subplots(nrows=self.head_num+0, ncols=5, figsize=(30,5*(self.head_num)), sharey='all')
         if self.head_num == 1:  # Ensure axes is iterable when there's only one subplot
             axes = [axes]
         # plt.subplots_adjust(wspace=0.1, hspace=0.1)
@@ -248,23 +249,33 @@ class DivDisEvaluatorClassifier():
 
         for i in range(self.head_num):
             ig_attr_head = self.ig_attr_test[i]
-            for j, attr_type in enumerate(['true positive', 'true negative', 'false positive', 'false negative']):
+            for j, attr_type in enumerate(['all','true positive','false positive','true negative','false negative']):
                 ax = axes[i, j]
                 ig_attr_test = ig_attr_head[attr_type]
                 
                 if ig_attr_test is not None:  # Check if attribution was calculated
                     ig_attr_test_sum = ig_attr_test.detach().to('cpu').numpy().sum(0)
+                    # normalize the sum of attributions by dividing by L1 norm
                     ig_attr_test_norm_sum = ig_attr_test_sum / np.linalg.norm(ig_attr_test_sum, ord=1) if np.linalg.norm(ig_attr_test_sum, ord=1) > 0 else ig_attr_test_sum
-                    ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#3388EE')
+                    if attr_type == 'all':
+                        ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#BB2233')
+                        ax.set_title(f'Head {i+1}, all')
+                    else:
+                        ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#3388EE')
+                        ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
+                    # ticks and labels
                     ax.set_xticks(x_axis_data)
                     ax.set_xticklabels(x_axis_data_labels, rotation='vertical')
-                    ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
                     ax.set_ylabel('Attributions')
+
                 else:
                     ax.text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
                     ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
-                    ax.set_xticks([])
-                    ax.set_yticks([])
+                    
+                # grids behind bars
+                ax.yaxis.grid(True, linestyle='--', linewidth=0.5, color='grey', alpha=0.7)
+                ax.xaxis.grid(True, linestyle='--', linewidth=0.5, color='grey', alpha=0.7)
+                ax.set_axisbelow(True)
 
         plt.tight_layout()
         plt.show()
@@ -309,3 +320,12 @@ class DivDisEvaluatorClassifier():
             
     def reset_test_dataset(self):
         self.test_dataset = SetDataset(max_size=1e6, batchsize=int(1e6))
+
+
+    def get_head_complexity(self):
+        head_complexity = []
+        for i in range(self.head_num):
+            ig_attr_test = self.ig_attr_test[i]['all']
+            ig_attr_test_std = ig_attr_test.detach().to('cpu').numpy().std(0)
+            head_complexity.append(ig_attr_test_std.mean())
+        return head_complexity

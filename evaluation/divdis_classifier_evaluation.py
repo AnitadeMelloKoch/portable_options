@@ -68,6 +68,8 @@ if __name__ == "__main__":
 
     evaluator.evaluate(num_sample=1e6, num_features=26)
 
+    print(f"Head complexity: {evaluator.get_head_complexity()}")
+
     #accuracy = experiment.test_classifier(positive_test_files,
     #                                          negative_test_files)
         
