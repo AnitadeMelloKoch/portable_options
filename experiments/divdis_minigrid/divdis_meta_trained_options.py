@@ -8,7 +8,11 @@ import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
 from portable.agent.model.ppo import create_linear_policy, create_linear_vf
 
-def make_random_getkey_env(train_colour, seed, collect_key=False):
+def make_random_getkey_env(train_colour, 
+                           seed, 
+                           collect_key=False, 
+                           keep_colour="",
+                           pickup_colour=""):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
     
@@ -26,7 +30,9 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         key_colours=key_cols,
         time_limit=500,
         image_input=False,
-        key_collected=collect_key
+        key_collected=collect_key,
+        keep_colour=keep_colour,
+        pickup_colour=pickup_colour
     )
 
 env_seed = 1
@@ -43,9 +49,9 @@ train_envs = [
         image_input=False,
         keep_colour="red"
         ),
-        make_random_getkey_env("red", env_seed),
-        make_random_getkey_env("red", env_seed),
-        make_random_getkey_env("red", env_seed),],
+        make_random_getkey_env("red", env_seed, keep_colour="red"),
+        make_random_getkey_env("red", env_seed, keep_colour="red"),
+        make_random_getkey_env("red", env_seed, keep_colour="red"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
@@ -54,11 +60,12 @@ train_envs = [
         door_colour="red",
         time_limit=500,
         image_input=False,
-        key_collected=True
+        key_collected=True,
+        pickup_colour="red"
         ),
-        make_random_getkey_env("red", env_seed, True),
-        make_random_getkey_env("red", env_seed, True),
-        make_random_getkey_env("red", env_seed, True),],
+        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -68,11 +75,12 @@ train_envs = [
         ),
         door_colour="yellow",
         time_limit=500,
-        image_input=False
+        image_input=False,
+        keep_colour="yellow"
         ),
-        make_random_getkey_env("yellow", env_seed),
-        make_random_getkey_env("yellow", env_seed),
-        make_random_getkey_env("yellow", env_seed),],
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
@@ -81,11 +89,12 @@ train_envs = [
         door_colour="yellow",
         time_limit=500,
         image_input=False,
-        key_collected=True
+        key_collected=True,
+        pickup_colour="yellow"
         ),
-        make_random_getkey_env("yellow", env_seed, True),
-        make_random_getkey_env("yellow", env_seed, True),
-        make_random_getkey_env("yellow", env_seed, True),],
+        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -95,11 +104,12 @@ train_envs = [
         ),
         door_colour="grey",
         time_limit=500,
-        image_input=False
+        image_input=False,
+        keep_colour="grey"
         ),
-        make_random_getkey_env("grey", env_seed),
-        make_random_getkey_env("grey", env_seed),
-        make_random_getkey_env("grey", env_seed),],
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
@@ -108,11 +118,12 @@ train_envs = [
         door_colour="grey",
         time_limit=500,
         image_input=False,
-        key_collected=True
+        key_collected=True,
+        pickup_colour="grey"
         ),
-        make_random_getkey_env("grey", env_seed, True),
-        make_random_getkey_env("grey", env_seed, True),
-        make_random_getkey_env("grey", env_seed, True),],
+        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),],
     ]
 ]
 
@@ -159,11 +170,11 @@ if __name__ == "__main__":
                                                               option_vf=create_linear_vf(36),
                                                               terminations=terminations)
     
-    experiment.load()
+    # experiment.load()
     
-    # experiment.train_option_policies(train_envs,
-    #                                  env_seed,
-    #                                  1e6)
+    experiment.train_option_policies(train_envs,
+                                     env_seed,
+                                     4e6)
     
     meta_env = factored_environment_builder(
                     'AdvancedDoorKey-8x8-v0',
