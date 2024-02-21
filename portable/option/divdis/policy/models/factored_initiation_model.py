@@ -35,11 +35,11 @@ class FactoredInitiationClassifier(InitiationClassifier):
 
     def optimistic_predict(self, state):
         assert isinstance(self.optimistic_classifier, (OneClassSVM, SVC))
-        return self.optimistic_classifier.predict([state])[0] == 1
+        return self.optimistic_classifier.predict([state.numpy()])[0] == 1
 
     def pessimistic_predict(self, state):
         assert isinstance(self.pessimistic_classifier, (OneClassSVM, SVC))
-        return self.pessimistic_classifier.predict([state])[0] == 1
+        return self.pessimistic_classifier.predict([state.numpy()])[0] == 1
     
     def is_initialized(self):
         return self.optimistic_classifier is not None and \
@@ -49,10 +49,12 @@ class FactoredInitiationClassifier(InitiationClassifier):
         return np.array([0., 0.])
 
     def add_positive_examples(self, obs_list):
-        self.positive_examples.append(obs_list)
+        obs_list = [x.numpy() for x in obs_list]
+        self.positive_examples.extend(obs_list)
 
     def add_negative_examples(self, obs_list):
-        self.negative_examples.append(obs_list)
+        obs_list = [x.numpy() for x in obs_list]
+        self.negative_examples.extend(obs_list)
 
     @staticmethod
     def construct_feature_matrix(examples):

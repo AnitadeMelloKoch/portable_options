@@ -129,8 +129,8 @@ class DivDisMockOption():
                 self.policies[head_idx][option_idx] = self._get_new_policy()
             return self.policies[head_idx][option_idx]
         else:
-            if len(self.initiable_policies) > 0:
-                return self.policies[head_idx][self.initiable_policies[option_idx]]
+            if len(self.initiable_policies[head_idx]) > 0:
+                return self.policies[head_idx][option_idx]
             else:
                 policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
@@ -146,7 +146,8 @@ class DivDisMockOption():
                      env,
                      state,
                      info,
-                     policy_idx):
+                     policy_idx,
+                     make_video=False):
         steps = 0
         rewards = []
         option_rewards = []
@@ -164,10 +165,20 @@ class DivDisMockOption():
             infos.append(info)
             
             action = policy.act(state)
+            if make_video and self.video_generator:
+                self._video_log("[option] action: {}".format(action))
+                self.video_generator.make_image(env.render())
             
             next_state, reward, done, info = env.step(action)
+            
             should_terminate = self.terminations[idx](state,
                                                       env)
+            
+            if make_video:
+                self._video_log("In termination: {}".format(should_terminate))
+                if policy.initiation.is_initialized():
+                    self._video_log("Initiation: {}".format(policy.initiation.pessimistic_predict(next_state)))
+            
             steps += 1
             rewards.append(reward)
             
@@ -185,6 +196,12 @@ class DivDisMockOption():
             option_rewards.append(reward)
 
             state = next_state
+        
+        if should_terminate and (not self.use_seed_for_initiation):
+            policy.add_data_initiation(positive_examples=states)
+        else:
+            policy.add_data_initiation(negative_examples=states)
+        policy.add_context_examples(states)
         
         return state, info, steps, rewards, option_rewards, states, infos
     
@@ -239,8 +256,6 @@ class DivDisMockOption():
                               num_runs,
                               seed):
         option_rewards = []
-        if self.video_generator:
-            self.video_generator.episode_start()
         for _ in range(num_runs):
             env = random.choice(envs)
             rand_num = np.random.randint(low=0, high=100)
@@ -251,11 +266,10 @@ class DivDisMockOption():
                                                                  env,
                                                                  obs,
                                                                  info,
-                                                                 seed)
+                                                                 seed,
+                                                                 make_video=False)
             option_rewards.append(sum(run_rewards))
         
-        if self.video_generator:
-            self.video_generator.episode_start()
         
         return option_rewards
     
@@ -309,7 +323,8 @@ class DivDisMockOption():
                     env,
                     state,
                     info,
-                    seed):
+                    seed,
+                    make_video=True):
         
         steps = 0
         rewards = []
@@ -332,8 +347,9 @@ class DivDisMockOption():
                 infos.append(info)
                 
                 action = policy.act(state)
-                self._video_log("action: {}".format(action))
-                if self.video_generator is not None:
+                if make_video:
+                    self._video_log("action: {}".format(action))
+                if self.video_generator is not None and make_video:
                     img = env.render()
                     self.video_generator.make_image(img)
                 
@@ -358,12 +374,13 @@ class DivDisMockOption():
                 option_rewards.append(reward)
                 state = next_state
             
-            if should_terminate:
-                self._video_log("policy hit termination")
-            if done:
-                self._video_log("environment terminated")
+            if make_video:
+                if should_terminate:
+                    self._video_log("policy hit termination")
+                if done:
+                    self._video_log("environment terminated")
             
-            if self.video_generator is not None:
+            if self.video_generator is not None and make_video:
                 img = env.render()
                 self.video_generator.make_image(img)
             

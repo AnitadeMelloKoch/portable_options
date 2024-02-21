@@ -260,21 +260,15 @@ class PolicyWithInitiation(Agent):
                 a = np.random.randint(0, self.num_actions)
         return a
     
-    def can_initiate(self, obs):
-        if self.initiation is not None:
-            return self.initiation.pessimistic_predict(obs)
-        else:
-            return True
-    
     def add_data_initiation(self,
-                            positive_examples,
-                            negative_examples):
+                            positive_examples=[],
+                            negative_examples=[]):
         if len(positive_examples) != 0:
             self.initiation.add_positive_examples(positive_examples)
         if len(negative_examples) != 0:
             self.initiation.add_negative_examples(negative_examples)
         
-        self.initiation.fit_initiation_classifier()
+        self.initiation.fit()
     
     def save(self, dir):
         os.makedirs(dir, exist_ok=True)

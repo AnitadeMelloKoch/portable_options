@@ -289,7 +289,6 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                     else:
                         if (action_mask[action] is False) or (option_masks[action][option] is False):
                             next_obs, reward, done, info = env.step(6)
-                            print(done)
                             steps = 1
                             rewards = [reward]
                         else:
