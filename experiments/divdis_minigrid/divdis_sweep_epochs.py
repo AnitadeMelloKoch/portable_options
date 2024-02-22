@@ -129,6 +129,6 @@ if __name__ == "__main__":
 
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)'''
     experiment.sweep_epochs(50, 
-                            300, 
-                            50,
+                            600, 
+                            100,
                             5)
