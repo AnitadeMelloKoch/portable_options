@@ -120,9 +120,9 @@ if __name__ == "__main__":
                 for s in seed:
                     for c in color:
                         if rs:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_open{c}door_door{c}_{s}_1_initiation_positive.npy"
+                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_1_initiation_positive.npy"
                         else:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_open{c}door_door{c}_{s}_initiation_positive.npy"
+                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_initiation_positive.npy"
                         combination_files.append(file_name)
                 variety_combinations.append((seed, color, rs))
                 all_combination_files.append(combination_files)

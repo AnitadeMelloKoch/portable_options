@@ -10,6 +10,7 @@ class SetDataset():
     def __init__(
             self, 
             batchsize=16,
+            unlabelled_batchsize=None,
             max_size=100000,
             pad_func=lambda x: x,
             create_validation_set=False
@@ -32,9 +33,16 @@ class SetDataset():
         self.false_test_length = 0
         self.priority_false_test_length = 0
         
+        if unlabelled_batchsize is not None:
+            self.dynamic_unlabelled_batchsize = False
+            self.unlabelled_batchsize = unlabelled_batchsize
+        else:
+            self.dynamic_unlabelled_batchsize = True
+            self.unlabelled_batchsize = 0
+            
+        
         self.batchsize = batchsize
         self.data_batchsize = batchsize//2
-        self.unlabelled_batchsize = 0
         self.pad = pad_func
         self.counter = 0
         self.unlabelled_counter = 0
@@ -126,12 +134,13 @@ class SetDataset():
                 max(self.true_length, self.priority_false_length)/(self.data_batchsize)
             )
         
-        self.unlabelled_batchsize = self.unlabelled_data_length//self.num_batches
+        if self.dynamic_unlabelled_batchsize is True:
+            self.unlabelled_batchsize = self.unlabelled_data_length//self.num_batches
 
     def add_true_files(self, file_list):
         # load data from a file for true data
         for file in file_list:
-            data = np.load(file)
+            data = np.load(file, allow_pickle=True)
             data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
