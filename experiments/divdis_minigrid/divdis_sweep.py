@@ -82,8 +82,8 @@ if __name__ == "__main__":
                                       5)
     
     experiment.sweep_epochs(50, 
-                            300, 
-                            50,
+                            600, 
+                            100,
                             5)
     
     experiment.sweep_ensemble_size(1, 
