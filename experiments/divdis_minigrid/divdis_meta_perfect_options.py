@@ -111,11 +111,11 @@ if __name__ == "__main__":
                                                               option_vf=create_linear_vf(36),
                                                               terminations=terminations)
     
-    # experiment.load()
+    experiment.load()
     
-    experiment.train_option_policies(train_envs,
-                                     env_seed,
-                                     4e6)
+    # experiment.train_option_policies(train_envs,
+    #                                  env_seed,
+    #                                  4e6)
     
     meta_env = factored_environment_builder(
                     'AdvancedDoorKey-8x8-v0',
