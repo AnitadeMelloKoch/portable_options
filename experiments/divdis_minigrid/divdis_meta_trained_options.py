@@ -60,12 +60,11 @@ train_envs = [
         door_colour="red",
         time_limit=500,
         image_input=False,
-        key_collected=True,
         pickup_colour="red"
         ),
-        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),
-        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),
-        make_random_getkey_env("red", env_seed, True, pickup_colour="red"),],
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -89,12 +88,11 @@ train_envs = [
         door_colour="yellow",
         time_limit=500,
         image_input=False,
-        key_collected=True,
         pickup_colour="yellow"
         ),
-        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),
-        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),
-        make_random_getkey_env("yellow", env_seed, True, pickup_colour="yellow"),],
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -118,12 +116,11 @@ train_envs = [
         door_colour="grey",
         time_limit=500,
         image_input=False,
-        key_collected=True,
         pickup_colour="grey"
         ),
-        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),
-        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),
-        make_random_getkey_env("grey", env_seed, True, pickup_colour="grey"),],
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),],
     ]
 ]
 
@@ -174,7 +171,7 @@ if __name__ == "__main__":
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     4e6)
+                                     1e7)
     
     meta_env = factored_environment_builder(
                     'AdvancedDoorKey-8x8-v0',

@@ -166,7 +166,6 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 self.env.unwrapped.grid.set(pos[0], pos[1], None)
                 
             else:
-                
                 new_pos_found = False
                 while new_pos_found is False:
                     new_pos = (np.random.randint(1, split_idx), np.random.randint(1,7))
@@ -174,6 +173,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                         new_pos_found = True
                 
                 key_obj = self.env.unwrapped.grid.get(pos[0], pos[1])
+                # if key_obj is None:
+                #     continue
                 self.env.unwrapped.grid.set(pos[0], pos[1], None)
                 key_obj.cur_pos = np.array([new_pos[0], new_pos[1]])
                 self.env.unwrapped.grid.set(new_pos[0], new_pos[1], key_obj)
