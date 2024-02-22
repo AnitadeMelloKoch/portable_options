@@ -11,7 +11,7 @@ colours = ["red", "green", "blue", "purple", "yellow", "grey"]
 # fig, ax = plt.subplots()
 
 
-seed = 5
+seed = 11
 
 for colour in colours:
     states = []
@@ -24,7 +24,7 @@ for colour in colours:
                                                 image_input=False)
         
         obs, _ = env.reset(random_start=True,
-                        pickup_colour=colour,
+                        keep_colour=colour,
                         agent_reposition_attempts=repos_attempts)
         
         states.append(obs.numpy())
@@ -34,7 +34,7 @@ for colour in colours:
     print(states.shape)
     print(len(states))
 
-    np.save("resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{}key_door{}_{}_1_termination_positive.npy".format(colour, colour, seed)
+    np.save("resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{}key_door{}_{}_1_termination_negative.npy".format(colour, colour, seed)
             , states)
 
 

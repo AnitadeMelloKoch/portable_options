@@ -132,7 +132,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             option_masks.append([False]*self.num_heads)
         
         for idx, option in enumerate(self.options):
-            option_mask = option.find_possible_policies(seed)
+            option_mask = option.find_possible_policy(seed)
             option_masks.append(option_mask)
             if any(option_mask):
                 action_mask[self.num_primitive_actions+idx] = True
