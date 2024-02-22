@@ -1,6 +1,8 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_sweep_experiment import FactoredAdvancedMinigridDivDisSweepExperiment
 import argparse 
+from datetime import datetime
+
 from portable.utils.utils import load_gin_configs
+from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_sweep_experiment import FactoredAdvancedMinigridDivDisSweepExperiment
 
 positive_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy",
@@ -76,36 +78,58 @@ if __name__ == "__main__":
                                                                unlabelled_files=unlabelled_train_files,
                                                                test_positive_files=positive_test_files,
                                                                test_negative_files=negative_test_files)
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping class div weight...")
     experiment.sweep_class_div_weight(0.005,
                                       0.015,
                                       10,
                                       5)
-    
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping epochs...")
     experiment.sweep_epochs(50, 
                             600, 
                             100,
                             5)
-    
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping ensemble size...")
     experiment.sweep_ensemble_size(1, 
                                    20,
                                    5)
-    
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping div batch size...")
     experiment.sweep_div_batch_size(16,
                                     400,
                                     16,
                                     5)
-    
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping learning rate...")
     experiment.sweep_lr(0.001,
                         0.015,
                         10,
                         5)
 
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping div overlap...")
     experiment.sweep_div_overlap(0,
                                  1,
                                  4,
                                  5)
 
-    # Sweep variety
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping div variety...")
+    
     seed_var = [[0],[1,2],[1,2,3,4]]
     color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]
     rs_var = [False, True]

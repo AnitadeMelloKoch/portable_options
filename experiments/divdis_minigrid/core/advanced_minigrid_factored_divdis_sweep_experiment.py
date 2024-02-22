@@ -544,7 +544,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                 unlabelled_num = len(self.unlabelled_files)
                 unlabelled_files = random.sample(self.unlabelled_files, int(unlabelled_num*(1-overlap)))
                 train_files = self.train_positive_files + self.train_negative_files
-                unlabelled_files.append(random.sample(train_files, int(unlabelled_num*overlap)))
+                unlabelled_files += random.sample(train_files, int(unlabelled_num*overlap))
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=unlabelled_files)
