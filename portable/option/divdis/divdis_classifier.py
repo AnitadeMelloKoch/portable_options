@@ -33,6 +33,7 @@ class DivDisClassifier():
                  input_dim,
                  num_classes,
                  diversity_weight,
+                 unlabelled_dataset_batchsize=None,
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
@@ -42,7 +43,8 @@ class DivDisClassifier():
         
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
-                                  batchsize=dataset_batchsize)
+                                  batchsize=dataset_batchsize,
+                                  unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.dataset.set_transform_function(transform)
         self.learning_rate = learning_rate
         
