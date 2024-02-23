@@ -131,5 +131,5 @@ if __name__ == "__main__":
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)'''
     experiment.sweep_div_overlap(0,
                                  1,
-                                 4,
+                                 5,
                                  5)
