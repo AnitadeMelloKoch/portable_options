@@ -144,7 +144,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
              plot_title,
              x_label):
         
-        fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 4))
         
         accuracies = np.array(accuracies)
         losses = np.array(losses)
