@@ -118,13 +118,6 @@ if __name__ == "__main__":
                         10,
                         5)
 
-    now = datetime.now()
-    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{formatted_now}] Sweeping div overlap...")
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 4,
-                                 5)
 
     now = datetime.now()
     formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -152,3 +145,13 @@ if __name__ == "__main__":
                 all_combination_files.append(combination_files)
 
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)
+
+
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping div overlap...")
+    experiment.sweep_div_overlap(0,
+                                 1,
+                                 4,
+                                 5)

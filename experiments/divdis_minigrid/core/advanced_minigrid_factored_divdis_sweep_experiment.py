@@ -148,6 +148,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         
         accuracies = np.array(accuracies)
         losses = np.array(losses)
+        complexities = np.array(complexities)
         
         acc_mean = np.mean(accuracies, axis=1)
         acc_std = np.std(accuracies, axis=1)

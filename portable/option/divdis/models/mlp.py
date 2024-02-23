@@ -36,7 +36,7 @@ class OneHeadMLP(nn.Module):
             if logits:
                 y = self.model[idx](x)
             else:
-                y = F.softmax(self.model[idx](x))
+                y = F.softmax(self.model[idx](x), dim=-1)
             pred[:,idx,:] = y
         
         return pred
