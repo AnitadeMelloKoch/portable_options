@@ -131,4 +131,4 @@ if __name__ == "__main__":
     experiment.sweep_lr(0.001,
                         0.015,
                         10,
-                        5)
+                        10)

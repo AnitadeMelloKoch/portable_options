@@ -131,4 +131,4 @@ if __name__ == "__main__":
     experiment.sweep_epochs(50, 
                             600, 
                             100,
-                            5)
+                            10)

@@ -131,4 +131,4 @@ if __name__ == "__main__":
     experiment.sweep_div_batch_size(16,
                                     400,
                                     16,
-                                    5)
+                                    10)

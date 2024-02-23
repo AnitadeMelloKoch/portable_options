@@ -128,5 +128,7 @@ if __name__ == "__main__":
                 variety_combinations.append((seed, color, rs))
                 all_combination_files.append(combination_files)
 
-
-    experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)
+    print(all_combination_files)
+    print(variety_combinations)
+    
+    experiment.sweep_div_variety(variety_combinations, all_combination_files, 10)

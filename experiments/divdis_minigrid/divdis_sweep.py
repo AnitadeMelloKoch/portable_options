@@ -82,9 +82,9 @@ if __name__ == "__main__":
     now = datetime.now()
     formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{formatted_now}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(0.005,
-                                      0.015,
-                                      10,
+    experiment.sweep_class_div_weight(0.001,
+                                      0.03,
+                                      15,
                                       5)
 
     now = datetime.now()
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{formatted_now}] Sweeping ensemble size...")
     experiment.sweep_ensemble_size(1, 
-                                   20,
+                                   25,
                                    5)
 
     now = datetime.now()
@@ -118,6 +118,15 @@ if __name__ == "__main__":
                         10,
                         5)
 
+
+    now = datetime.now()
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{formatted_now}] Sweeping div overlap...")
+    experiment.sweep_div_overlap(0,
+                                 1,
+                                 5,
+                                 5)
+    
 
     now = datetime.now()
     formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -144,14 +153,6 @@ if __name__ == "__main__":
                 variety_combinations.append((seed, color, rs))
                 all_combination_files.append(combination_files)
 
+
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)
 
-
-
-    now = datetime.now()
-    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{formatted_now}] Sweeping div overlap...")
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 4,
-                                 5)
