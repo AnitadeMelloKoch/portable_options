@@ -267,7 +267,8 @@ class DivDisMockOption():
                                                                  obs,
                                                                  info,
                                                                  seed,
-                                                                 make_video=False)
+                                                                 make_video=False,
+                                                                 max_steps=500)
             option_rewards.append(sum(run_rewards))
         
         
@@ -324,7 +325,8 @@ class DivDisMockOption():
                     state,
                     info,
                     seed,
-                    make_video=True):
+                    make_video=True,
+                    max_steps=1e6):
         
         steps = 0
         rewards = []
@@ -342,7 +344,7 @@ class DivDisMockOption():
         policy.move_to_gpu()
         
         with evaluating(policy):
-            while not (done or should_terminate):
+            while not (done or should_terminate or (steps >= max_steps)):
                 states.append(state)
                 infos.append(info)
                 

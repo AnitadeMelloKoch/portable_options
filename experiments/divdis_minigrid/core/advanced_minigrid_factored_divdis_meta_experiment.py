@@ -218,7 +218,8 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                                                                                               env,
                                                                                                                               obs,
                                                                                                                               info,
-                                                                                                                              seed)
+                                                                                                                              seed,
+                                                                                                                              max_steps=500)
                     undiscounted_reward += np.sum(rewards)
                     total_steps += steps
                 
