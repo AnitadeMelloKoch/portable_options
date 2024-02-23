@@ -77,8 +77,9 @@ class DivDisEvaluatorClassifier():
             states, labels = self.test_dataset.get_batch() # should be all data, since batchsize is max_size
             i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
 
-            print(states.shape, labels.shape)
-            print(i0, i1)
+            #print(states.shape, labels.shape)
+            #print(i0, i1)
+
             all_states[i0:i1] = states.numpy()
             all_labels[i0:i1] = labels.numpy()
 
@@ -86,8 +87,8 @@ class DivDisEvaluatorClassifier():
                 states = states.to('cuda')
                 labels = labels.to('cuda')
 
-            print(f'states shape, device: {states.shape}, {states.device}')
-            print(f'labels shape, device: {labels.shape}, {labels.device}')
+            #print(f'states shape, device: {states.shape}, {states.device}')
+            #print(f'labels shape, device: {labels.shape}, {labels.device}')
                  
             labels_pred = self.classifier.predict(states).detach() # (batch_size, head_num, num_classes)
             labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
@@ -113,10 +114,8 @@ class DivDisEvaluatorClassifier():
                 print(torch.cuda.memory_allocated() / 1e9, 'GB')
                 print(torch.cuda.memory_reserved() / 1e9, 'GB')
 
-        
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
         
-        # TODO: fix confusion matrix and classification report for batched data
         if plot:
             for head_idx in range(self.head_num):
                 labels_pred_head = all_labels_pred[:, head_idx]
