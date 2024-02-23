@@ -127,6 +127,7 @@ class FactoredAdvancedMinigridDivDisInitiationExperiment():
                                                                           np.mean(option_rewards)))
 
             episode += 1
+        self.save()
 
 
 
