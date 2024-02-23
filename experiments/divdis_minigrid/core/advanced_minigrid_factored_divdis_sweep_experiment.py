@@ -120,10 +120,10 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
     def head_complexity(self, classifier):
-        evaluator = DivDisEvaluatorClassifier(classifier, self.plot_dir)
+        evaluator = DivDisEvaluatorClassifier(classifier, batch_size=1000, base_dir=self.base_dir)
         evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
         evaluator.test_dataset.set_transform_function(transform)
-        evaluator.evaluate(num_sample=1e6, num_features=26)
+        evaluator.evaluate(num_features=26)
         return evaluator.get_head_complexity()
 
     def save_results_dict(self,

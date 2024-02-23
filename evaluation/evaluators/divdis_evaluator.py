@@ -8,6 +8,7 @@ import torch
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 import pandas as pd
 import seaborn as sns
+import multiprocess as mp
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory.set_dataset import SetDataset
@@ -57,7 +58,8 @@ class DivDisEvaluatorClassifier():
         self.test_dataset.add_false_files(false_files)
 
 
-    def evaluate(self, num_features=26, plot=False):
+    def evaluate(self, test_sample_size=0.1, num_features=26, plot=False):
+        
         if self.image_input:
             raise NotImplementedError
 
@@ -71,8 +73,8 @@ class DivDisEvaluatorClassifier():
                               'true negative':[],
                               'false negative':[]} for _ in range(self.head_num)]
 
-        for i in range(self.test_dataset.num_batches):
-            print(f'Batch {i+1}/{self.test_dataset.num_batches}')
+        for i in range(int(self.test_dataset.num_batches*test_sample_size)): # only 10% of the test data, since attributions take too long
+            #print(f'Batch {i+1}/{self.test_dataset.num_batches}')
             
             states, labels = self.test_dataset.get_batch() # should be all data, since batchsize is max_size
             i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
@@ -94,6 +96,10 @@ class DivDisEvaluatorClassifier():
             labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
             all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
 
+            '''with mp.Pool(processes=self.head_num) as pool:
+                pool.starmap(_attributions_factored, 
+                            [(self.ig_attr_test[i], self.integrated_gradients[i], states, labels, labels_pred[:,i], i) for i in range(self.head_num)])'''
+                
             for head_idx in range(self.head_num):
                 # get the predictions for the head
                 labels_pred_head = labels_pred[:, head_idx]
@@ -110,9 +116,9 @@ class DivDisEvaluatorClassifier():
                 self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
                 self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
 
-                print(f'Head {head_idx+1} done')
-                print(torch.cuda.memory_allocated() / 1e9, 'GB')
-                print(torch.cuda.memory_reserved() / 1e9, 'GB')
+                #print(f'Head {head_idx+1} done')
+                #print(torch.cuda.memory_allocated() / 1e9, 'GB')
+                #print(torch.cuda.memory_reserved() / 1e9, 'GB')
 
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
         
@@ -131,6 +137,7 @@ class DivDisEvaluatorClassifier():
             self._plot_attributions_factored(num_features)
             self._plot_cm_cr()
         
+
 
     '''
     def evaluate_old(self, num_images):
@@ -360,3 +367,21 @@ class DivDisEvaluatorClassifier():
             ig_attr_test_std = ig_attr_test.std(0)
             head_complexity.append(ig_attr_test_std.mean())
         return head_complexity
+
+
+def _attributions_factored(ig_attr, ig, states, labels, labels_pred_head, head_idx):
+    # attributions
+    states_tp = states[(labels == 1) & (labels_pred_head == 1)]
+    states_tn = states[(labels == 0) & (labels_pred_head == 0)]
+    states_fp = states[(labels == 0) & (labels_pred_head == 1)]
+    states_fn = states[(labels == 1) & (labels_pred_head == 0)]
+
+    ig_attr['all'].append(ig.attribute(states, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
+    ig_attr['true positive'].append(ig.attribute(states_tp, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
+    ig_attr['true negative'].append(ig.attribute(states_tn, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
+    ig_attr['false positive'].append(ig.attribute(states_fp, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
+    ig_attr['false negative'].append(ig.attribute(states_fn, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
+
+    print(f'Head {head_idx+1} done')
+    print(torch.cuda.memory_allocated() / 1e9, 'GB')
+    print(torch.cuda.memory_reserved() / 1e9, 'GB')

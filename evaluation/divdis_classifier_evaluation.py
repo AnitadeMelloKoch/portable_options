@@ -1,15 +1,15 @@
-from ast import Div
-import os
 import argparse
-from portable.option.divdis.divdis_classifier import DivDisClassifier
-from portable.utils.utils import load_gin_configs
+import os
+import random
 
-import torch 
-import random 
+import multiprocess as mp
+import torch
 
 from evaluation.evaluators import DivDisEvaluatorClassifier
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import AdvancedMinigridFactoredDivDisClassifierExperiment
-
+from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import \
+    AdvancedMinigridFactoredDivDisClassifierExperiment
+from portable.option.divdis.divdis_classifier import DivDisClassifier
+from portable.utils.utils import load_gin_configs
 
 '''positive_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
 negative_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_negative.npy"]
@@ -112,11 +112,13 @@ if __name__ == "__main__":
     classifier.add_data(positive_train_files,
                         negative_train_files,
                         unlabelled_train_files)
-    classifier.train(100)
+    classifier.train(50)
+
+    mp.set_start_method('spawn')
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
-                    batch_size=10000,
+                    batch_size=800,
                     base_dir=args.base_dir)
 
     evaluator.add_test_files(positive_test_files, negative_test_files)
