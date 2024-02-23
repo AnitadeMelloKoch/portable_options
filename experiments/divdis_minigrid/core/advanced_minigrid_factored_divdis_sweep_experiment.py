@@ -123,7 +123,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         evaluator = DivDisEvaluatorClassifier(classifier, batch_size=1000, base_dir=self.base_dir)
         evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
         evaluator.test_dataset.set_transform_function(transform)
-        evaluator.evaluate(num_features=26)
+        evaluator.evaluate(test_sample_size=0.25, num_features=26)
         return evaluator.get_head_complexity()
 
     def save_results_dict(self,

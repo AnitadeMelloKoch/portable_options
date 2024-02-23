@@ -73,6 +73,8 @@ class DivDisEvaluatorClassifier():
                               'true negative':[],
                               'false negative':[]} for _ in range(self.head_num)]
 
+        self.test_dataset.shuffle()
+
         for i in range(int(self.test_dataset.num_batches*test_sample_size)): # only 10% of the test data, since attributions take too long
             #print(f'Batch {i+1}/{self.test_dataset.num_batches}')
             

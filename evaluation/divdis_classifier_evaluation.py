@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
-                    batch_size=800,
+                    batch_size=1000,
                     base_dir=args.base_dir)
 
     evaluator.add_test_files(positive_test_files, negative_test_files)
