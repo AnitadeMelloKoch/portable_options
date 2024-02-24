@@ -25,6 +25,35 @@ class BaseTermination():
         return self.check_term(state, env)
         
 
+class PerfectDoorOpen(BaseTermination):
+    def __init__(self, door_colour=None):
+        super().__init__()
+        self.door_colour = door_colour
+        self.x = None
+        self.y = None
+    
+    def get_door(self, env):
+        if self.x and self.y:
+            cell = env.unwrapped.grid.get(self.x, self.y)
+            if cell:
+                if cell.type == "door":
+                    return cell
+        
+        for x in range(env.unwrapped.width):
+            for y in range(env.unwrapped.height):
+                cell = env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "door":
+                        self.x = x
+                        self.y = y
+                        return cell
+    
+    def check_term(self, state, env):
+        door = self.get_door(env)
+        if self.door_colour:
+            return door.is_open and (door.color == self.door_colour)
+        return door.is_open
+
 class PerfectGetKey(BaseTermination):
     def __init__(self, key_colour):
         self.key_colour = key_colour

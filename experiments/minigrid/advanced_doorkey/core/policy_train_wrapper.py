@@ -24,7 +24,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  time_limit: int=2000,
                  image_input: bool=True,
                  keep_colour: str="",
-                 pickup_colour: str=""):
+                 pickup_colour: str="",
+                 force_door_closed=False):
         super().__init__(env)
         
         self.objects = {
@@ -49,6 +50,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.key_collected = key_collected
         self.door_unlocked = door_unlocked
         self.door_open = door_open
+        self.force_door_closed = force_door_closed
         
     
     def _modify_info_dict(self, info):
@@ -148,6 +150,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             keep_colour = self.keep_colour
         if pickup_colour == "":
             pickup_colour = self.pickup_colour
+        if force_door_closed is False:
+            force_door_closed = self.force_door_closed
         
         all_pos = [key.position for key in self.objects["keys"]]
         
