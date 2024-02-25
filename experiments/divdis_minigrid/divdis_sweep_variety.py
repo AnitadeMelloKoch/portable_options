@@ -109,26 +109,24 @@ if __name__ == "__main__":
     # Sweep variety
     seed_var = [[0],[1,2],[1,2,3,4]]
     color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]
+    variety_names = ['low','medium','high']
     rs_var = [False, True]
     variety_combinations = []
     all_combination_files = []
     
-    for seed in seed_var:
-        for color in color_var:
-            for rs in rs_var:
+    for seed_idx in range(len(seed_var)):
+        for color_idx in range(len(color_var)):
+            for rs_idx in range(len(rs_var)):
                 # 3*3*2 = 18 combinations
                 combination_files = []
-                for s in seed:
-                    for c in color:
-                        if rs:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_1_initiation_positive.npy"
+                for s in seed_var[seed_idx]:
+                    for c in color_var[color_idx]:
+                        if rs_var[rs_idx]:
+                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_1_termination_positive.npy"
                         else:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_initiation_positive.npy"
+                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_termination_positive.npy"
                         combination_files.append(file_name)
-                variety_combinations.append((seed, color, rs))
                 all_combination_files.append(combination_files)
-
-    print(all_combination_files)
-    print(variety_combinations)
-    
+                variety_combinations.append(f'{variety_names[seed_idx]},{variety_names[color_idx]},{"included" if rs_var[rs_idx] else "none"}')
+        
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 10)

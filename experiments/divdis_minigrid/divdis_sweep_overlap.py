@@ -76,6 +76,10 @@ if __name__ == "__main__":
                                                                unlabelled_files=unlabelled_train_files,
                                                                test_positive_files=positive_test_files,
                                                                test_negative_files=negative_test_files)
+    experiment.sweep_div_overlap(0,
+                                 1,
+                                 5,
+                                 10)
     '''
     experiment.sweep_class_div_weight(0.005,
                                       0.015,
@@ -129,7 +133,3 @@ if __name__ == "__main__":
                 all_combination_files.append(combination_files)
 
     experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)'''
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 5,
-                                 10)
