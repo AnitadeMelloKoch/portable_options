@@ -72,7 +72,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="yellow",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         keep_colour="yellow"
@@ -85,7 +85,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="yellow",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         pickup_colour="yellow"
@@ -100,7 +100,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="grey",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         keep_colour="grey"
@@ -113,7 +113,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="grey",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         pickup_colour="grey"
