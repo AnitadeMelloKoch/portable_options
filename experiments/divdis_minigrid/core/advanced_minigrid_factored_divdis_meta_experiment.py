@@ -195,9 +195,9 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             
             while not done:
                 self.save_image(env)
-                action_mask, option_masks = self.get_masks_from_seed(seed)
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
+                action_mask, option_masks = self.get_masks_from_seed(seed)
                 action, option, q_vals = self.act(obs)
                 
                 self._video_log("action: {} option: {}".format(action, option))
@@ -270,17 +270,23 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
         
         with self.meta_action_agent.agent.eval_mode(), self.meta_option_agent.agent.eval_mode():
             for run in range(num_runs):
+                total_steps = 0
                 undiscounted_reward = 0
                 done = False
-                rand_num = np.random.randint(low=0, high=100)
-                obs, info = env.reset(agent_reposition_attempts=rand_num)
+                if self.video_generator is not None:
+                    self.video_generator.episode_start()
+                obs, info = env.reset()
                 while not done:
                     self.save_image(env)
+                    if type(obs) == np.ndarray:
+                        obs = torch.from_numpy(obs).float()
                     action_mask, option_masks = self.get_masks_from_seed(seed)
                     action, option, q_vals = self.act(obs)
                     
-                    self._video_log("action: {} option: {}".format(action, option))
-                    self._video_log("action q values: {}".format(q_vals))
+                    self._video_log("[meta] action: {} option: {}".format(action, option))
+                    self._video_log("[meta] action q values")
+                    for idx in range(len(q_vals[0])):
+                        self._video_log("[meta] action {} value {}".format(idx, q_vals[0][idx]))
                     
                     if action < self.num_primitive_actions:
                         next_obs, reward, done, info = env.step(action)
@@ -289,15 +295,17 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                         total_steps += 1
                     else:
                         if (action_mask[action] is False) or (option_masks[action][option] is False):
+                            self._video_log("[meta] action+option not executable. Perform no-op")
                             next_obs, reward, done, info = env.step(6)
                             steps = 1
                             rewards = [reward]
                         else:
-                            next_obs, info, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
-                                                                                                                                env,
-                                                                                                                                obs,
-                                                                                                                                info,
-                                                                                                                                seed)
+                            self._video_log("[meta] selected option {}".format(action-self.num_primitive_actions))
+                            next_obs, info, done, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
+                                                                                                                                  env,
+                                                                                                                                  obs,
+                                                                                                                                  info,
+                                                                                                                                  seed)
                         undiscounted_reward += np.sum(rewards)
                         total_steps += steps
                     

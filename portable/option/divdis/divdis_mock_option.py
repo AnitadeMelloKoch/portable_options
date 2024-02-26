@@ -348,9 +348,11 @@ class DivDisMockOption():
                 states.append(state)
                 infos.append(info)
                 
-                action = policy.act(state)
+                action, q_vals = policy.act(state, return_q=True)
                 if make_video:
-                    self._video_log("action: {}".format(action))
+                    self._video_log("[option] action: {}".format(action))
+                    for x in range(len(q_vals[0])):
+                        self._video_log("[option] action {} value {}".format(x, q_vals[0][x]))
                 if self.video_generator is not None and make_video:
                     img = env.render()
                     self.video_generator.make_image(img)
@@ -381,6 +383,8 @@ class DivDisMockOption():
                     self._video_log("policy hit termination")
                 if done:
                     self._video_log("environment terminated")
+                if steps >= max_steps:
+                    self._video_log("option timed out")
             
             if self.video_generator is not None and make_video:
                 img = env.render()

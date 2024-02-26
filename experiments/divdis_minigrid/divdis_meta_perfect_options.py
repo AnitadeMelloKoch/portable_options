@@ -51,7 +51,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="yellow",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         keep_colour="yellow"
@@ -63,7 +63,7 @@ train_envs = [
             'AdvancedDoorKey-8x8-v0',
             seed=env_seed
         ),
-        door_colour="grey",
+        door_colour="red",
         time_limit=500,
         image_input=False,
         keep_colour="grey"
@@ -104,6 +104,7 @@ if __name__ == "__main__":
         return x
     
     def option_agent_phi(x):
+        # x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1])
         x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1])
         
         return x
@@ -125,6 +126,16 @@ if __name__ == "__main__":
                                                               option_vf=create_linear_vf(37),
                                                               terminations=terminations)
     
+    # experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
+    #                                                           seed=args.seed,
+    #                                                           option_policy_phi=policy_phi,
+    #                                                           option_agent_phi=option_agent_phi,
+    #                                                           action_policy=create_linear_policy(26, 10),
+    #                                                           action_vf=create_linear_vf(26),
+    #                                                           option_policy=create_linear_policy(36, 1),
+    #                                                           option_vf=create_linear_vf(36),
+    #                                                           terminations=terminations)
+    
     # experiment.load()
     
     experiment.train_option_policies(train_envs,
@@ -142,6 +153,8 @@ if __name__ == "__main__":
                                 2e8,
                                 0.7)
     
-    
+    experiment.eval_meta_agent(meta_env,
+                               env_seed,
+                               1)
     
     

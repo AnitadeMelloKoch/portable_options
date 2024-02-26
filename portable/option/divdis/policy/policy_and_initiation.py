@@ -235,7 +235,7 @@ class PolicyWithInitiation(Agent):
         if update_target_network:
             self.target_q_network.load_state_dict(self.q_network.state_dict())
     
-    def act(self, obs):
+    def act(self, obs, return_q=False):
         if self.use_gpu:
             device = torch.device("cuda")
         else:
@@ -258,7 +258,7 @@ class PolicyWithInitiation(Agent):
                 a = q_values.greedy_actions
             else:
                 a = np.random.randint(0, self.num_actions)
-        return a
+        return a, q_values.q_values if return_q else a 
     
     def add_data_initiation(self,
                             positive_examples=[],
