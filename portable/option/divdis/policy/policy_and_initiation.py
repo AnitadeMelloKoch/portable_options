@@ -258,7 +258,9 @@ class PolicyWithInitiation(Agent):
                 a = q_values.greedy_actions
             else:
                 a = np.random.randint(0, self.num_actions)
-        return a, q_values.q_values if return_q else a 
+        if return_q is True:
+            return a, q_values.q_values
+        return a
     
     def add_data_initiation(self,
                             positive_examples=[],
