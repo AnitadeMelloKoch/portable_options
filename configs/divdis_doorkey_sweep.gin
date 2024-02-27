@@ -12,3 +12,4 @@ FactoredAdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.15  # 
 DivDisClassifier.input_dim                                            = 26
 DivDisClassifier.num_classes                                          = 2
 
+

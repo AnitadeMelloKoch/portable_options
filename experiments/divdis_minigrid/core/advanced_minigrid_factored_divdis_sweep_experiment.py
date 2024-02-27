@@ -22,6 +22,7 @@ from evaluation.evaluators import DivDisEvaluatorClassifier
 
 
 
+
 @gin.configurable
 class FactoredAdvancedMinigridDivDisSweepExperiment():
     def __init__(self,
@@ -38,6 +39,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                  test_positive_files,
                  test_negative_files,
                  evaluation_sample_size):
+
         
         self.experiment_name = experiment_name
         self.use_gpu = use_gpu
@@ -67,12 +69,14 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
 
         self.test_positive_files = test_positive_files
         self.test_negative_files = test_negative_files
+
         
         self.train_positive_files = train_positive_files
         self.train_negative_files = train_negative_files
         self.unlabelled_files = unlabelled_files
 
         self.evaluation_sample_size = evaluation_sample_size
+
     
     def test_terminations(self,
                           dataset_positive,
@@ -129,6 +133,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         evaluator.evaluate(test_sample_size=self.evaluation_sample_size, num_features=26)
         return evaluator.get_head_complexity()
 
+
     def save_results_dict(self,
                           save_dict,
                           file_name):
@@ -183,12 +188,12 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                 ax.set_xticks(x_axis_data)
                 ax.set_xticklabels(x_ticks, rotation=25, ha='right')
             
+
         fig.suptitle(plot_title)
         fig.tight_layout()
         
         fig.savefig(plot_file)
         plt.close(fig)
-
     
     def sweep_class_div_weight(self,
                                start_weight,
@@ -204,6 +209,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         results_loss = []
         # 2D array for multiple seeds
         results_comp = []
+
         
         weights = np.linspace(start_weight, end_weight, num_samples)
         
@@ -212,6 +218,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
             weight_acc = []
             weight_loss = []
             weight_comp = []
+
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
@@ -247,6 +254,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         self.save_results_dict(save_dict,
                                "weights_sweep.pkl")
 
+
         self.plot(os.path.join(self.plot_dir, "div_weight_sweep.png"),
                   results_weight,
                   results_acc,
@@ -255,6 +263,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                   "Sweep over Diversity Weight",
                   "Diversity Weight")
         
+
     
     def sweep_epochs(self,
                      start_epochs,
@@ -270,6 +279,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         results_loss = []
         # 2D array for multiple seeds
         results_comp = []
+
         
         
         for epochs in tqdm(range(start_epochs, end_epochs+1, step_size), desc="epochs", position=0):
@@ -277,6 +287,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
             epoch_acc = []
             epoch_loss = []
             epoch_comp = []
+
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
@@ -313,6 +324,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         self.save_results_dict(save_dict,
                                "epochs_sweep.pkl")
                     
+
         self.plot(os.path.join(self.plot_dir, "epoch_sweep.png"),
                   results_epoch,
                   results_acc,
@@ -321,6 +333,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                   "Sweep over Train Epochs",
                   "Train Epochs")
         
+
     
     def sweep_ensemble_size(self,
                             start_size,
@@ -334,6 +347,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         results_loss = []
         # 2D array for multiple seeds
         results_comp = []
+
         
         for num_heads in tqdm(range(start_size, end_size+1), desc="size", position=0):
             results_size.append(num_heads)
@@ -341,6 +355,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
             size_loss = []
             size_comp = []
             
+
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
                 classifier = DivDisClassifier(use_gpu=self.use_gpu,
@@ -373,6 +388,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                      "complexities": results_comp}
         self.save_results_dict(save_dict,
                                "size_sweep.pkl")
+
         
         self.plot(os.path.join(self.plot_dir, "ensemble_size_sweep.png"),
                   results_size,
@@ -383,6 +399,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                   "No. Ensemble Members")
 
         
+
     def sweep_div_batch_size(self,
                              start_batchsize,
                              end_batchsize,
@@ -396,12 +413,14 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         results_loss = []
         # 2D array for multiple seeds
         results_comp = []
+
         
         for batch_size in tqdm(range(start_batchsize, end_batchsize+1, batch_stepsize), desc="batch_sizes", position=0):
             results_batchsize.append(batch_size)
             batch_acc = []
             batch_loss = []
             batch_comp = []
+
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
@@ -438,6 +457,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         self.save_results_dict(save_dict,
                                "batch_sweep.pkl")
         
+
         self.plot(os.path.join(self.plot_dir, "batch_sweep.png"),
                   results_batchsize,
                   results_acc,
@@ -446,6 +466,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                   "Sweep over Unlabelled Dataset Batchsize",
                   "Batchsize")
         
+
     
     def sweep_lr(self,
                  start_lr,
@@ -460,6 +481,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         results_loss = []
         # 2d array for multiple seeds
         results_comp = []
+
         
         lrs = np.linspace(start_lr, end_lr, num_samples)
         
@@ -468,6 +490,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
             lr_acc = []
             lr_loss = []
             lr_comp = []
+
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
@@ -503,6 +526,7 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
         self.save_results_dict(save_dict,
                                "lr_sweep.pkl")
                 
+
         self.plot(os.path.join(self.plot_dir, "lr_sweep.png"),
                   results_lr,
                   results_acc,
@@ -642,5 +666,6 @@ class FactoredAdvancedMinigridDivDisSweepExperiment():
                   "Sweep over Unlabelled Variety",
                   "Unlabelled Variety (seed, color, random state)",
                   categorical=True)
+
     
     

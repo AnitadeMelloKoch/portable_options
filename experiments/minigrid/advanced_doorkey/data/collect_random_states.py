@@ -11,6 +11,7 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import \
 from experiments.minigrid.utils import (environment_builder,
                                         factored_environment_builder)
 
+
 if __name__ == '__main__':
     # colours = ["red", "green", "blue", "purple", "yellow"]
     # fig, ax = plt.subplots()
@@ -61,6 +62,7 @@ if __name__ == '__main__':
 
     with Pool() as p:
         p.map(partial(collect_seed, termination=True), seeds)
+
 
     with Pool() as p:
         p.map(partial(collect_seed, termination=False), seeds)

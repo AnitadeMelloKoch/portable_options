@@ -29,20 +29,31 @@ def make_random_getkey_env(train_colour, seed):
 
 positive_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_1_termination_positive.npy",
     ]
 negative_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_1_termination_negative.npy",
     ]
 unlabelled_train_files = [
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_termination_positive.npy",
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_termination_negative.npy",
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_termination_positive.npy",
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_positive.npy",
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_termination_negative.npy",
-    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_termination_negative.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_1_termination_positive.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_1_1_termination_negative.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_1_1_termination_negative.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_1_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_1_termination_positive.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_2_1_termination_negative.npy",
+    # "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_1_1_termination_negative.npy",
                           ]
 
 positive_test_files = [
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_1_termination_positive.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_1_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_positive.npy",
@@ -52,6 +63,13 @@ positive_test_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_termination_positive.npy",
                       ]
 negative_test_files = [
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_1_termination_negative.npy",
+    "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_1_termination_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_negative.npy",
@@ -93,7 +111,7 @@ if __name__ == "__main__":
                              negative_train_files,
                              unlabelled_train_files)
     
-    experiment.train_termination(20,
+    experiment.train_termination(100,
                                  positive_test_files,
                                  negative_test_files)
     
