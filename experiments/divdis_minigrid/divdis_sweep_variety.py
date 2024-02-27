@@ -76,36 +76,7 @@ if __name__ == "__main__":
                                                                unlabelled_files=unlabelled_train_files,
                                                                test_positive_files=positive_test_files,
                                                                test_negative_files=negative_test_files)
-    '''
-    experiment.sweep_class_div_weight(0.005,
-                                      0.015,
-                                      10,
-                                      5)
     
-    experiment.sweep_epochs(50, 
-                            300, 
-                            50,
-                            5)
-    
-    experiment.sweep_ensemble_size(1, 
-                                   20,
-                                   5)
-    
-    experiment.sweep_div_batch_size(16,
-                                    400,
-                                    16,
-                                    5)
-    
-    experiment.sweep_lr(0.001,
-                        0.015,
-                        10,
-                        5)
-
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 4,
-                                 5)
-    '''
     # Sweep variety
     seed_var = [[0],[1,2],[1,2,3,4]]
     color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]

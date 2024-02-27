@@ -80,56 +80,5 @@ if __name__ == "__main__":
                             1000, 
                             100,
                             10)
-    '''experiment.sweep_class_div_weight(0.005,
-                                      0.015,
-                                      10,
-                                      5)
     
-    experiment.sweep_epochs(50, 
-                            300, 
-                            50,
-                            5)
-    
-    experiment.sweep_ensemble_size(1, 
-                                   20,
-                                   5)
-    
-    experiment.sweep_div_batch_size(16,
-                                    400,
-                                    16,
-                                    5)
-    
-    experiment.sweep_lr(0.001,
-                        0.015,
-                        10,
-                        5)
-
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 4,
-                                 5)
-
-    # Sweep variety
-    seed_var = [[0],[1,2],[1,2,3,4]]
-    color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]
-    rs_var = [False, True]
-    variety_combinations = []
-    all_combination_files = []
-    
-    for seed in seed_var:
-        for color in color_var:
-            for rs in rs_var:
-                # 3*3*2 = 18 combinations
-                combination_files = []
-                for s in seed:
-                    for c in color:
-                        if rs:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_open{c}door_door{c}_{s}_1_initiation_positive.npy"
-                        else:
-                            file_name = f"resources/factored_minigrid_images/adv_doorkey_8x8_v2_open{c}door_door{c}_{s}_initiation_positive.npy"
-                        combination_files.append(file_name)
-                variety_combinations.append((seed, color, rs))
-                all_combination_files.append(combination_files)
-
-    experiment.sweep_div_variety(variety_combinations, all_combination_files, 5)'''
 

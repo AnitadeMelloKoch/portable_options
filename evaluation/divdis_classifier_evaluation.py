@@ -114,8 +114,6 @@ if __name__ == "__main__":
                         unlabelled_train_files)
     classifier.train(50)
 
-    mp.set_start_method('spawn')
-
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
                     batch_size=1000,

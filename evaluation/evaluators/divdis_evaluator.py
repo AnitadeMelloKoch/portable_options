@@ -8,7 +8,6 @@ import torch
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 import pandas as pd
 import seaborn as sns
-import multiprocess as mp
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory.set_dataset import SetDataset
@@ -98,9 +97,6 @@ class DivDisEvaluatorClassifier():
             labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
             all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
 
-            '''with mp.Pool(processes=self.head_num) as pool:
-                pool.starmap(_attributions_factored, 
-                            [(self.ig_attr_test[i], self.integrated_gradients[i], states, labels, labels_pred[:,i], i) for i in range(self.head_num)])'''
                 
             for head_idx in range(self.head_num):
                 # get the predictions for the head
@@ -370,20 +366,3 @@ class DivDisEvaluatorClassifier():
             head_complexity.append(ig_attr_test_std.mean())
         return head_complexity
 
-
-def _attributions_factored(ig_attr, ig, states, labels, labels_pred_head, head_idx):
-    # attributions
-    states_tp = states[(labels == 1) & (labels_pred_head == 1)]
-    states_tn = states[(labels == 0) & (labels_pred_head == 0)]
-    states_fp = states[(labels == 0) & (labels_pred_head == 1)]
-    states_fn = states[(labels == 1) & (labels_pred_head == 0)]
-
-    ig_attr['all'].append(ig.attribute(states, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
-    ig_attr['true positive'].append(ig.attribute(states_tp, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
-    ig_attr['true negative'].append(ig.attribute(states_tn, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
-    ig_attr['false positive'].append(ig.attribute(states_fp, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
-    ig_attr['false negative'].append(ig.attribute(states_fn, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
-
-    print(f'Head {head_idx+1} done')
-    print(torch.cuda.memory_allocated() / 1e9, 'GB')
-    print(torch.cuda.memory_reserved() / 1e9, 'GB')
