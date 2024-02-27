@@ -27,19 +27,22 @@ class DivDisEvaluatorClassifier():
     def __init__(
             self,
             classifier,
-            plot_dir,
+            batch_size=64,
+            base_dir=None,
             image_input=False,
             stack_size=2):
         
         self.classifier = classifier
 
-        self.plot_dir = plot_dir
-        os.makedirs(self.plot_dir, exist_ok=True)
+        self.base_dir = base_dir
+        self.plot_dir = os.path.join(self.base_dir, 'plots')
+        if self.plot_dir:
+            os.makedirs(self.plot_dir, exist_ok=True)
         
         self.head_num = self.classifier.head_num
         self.image_input = image_input
 
-        self.test_dataset = SetDataset(max_size=1e6, batchsize=int(1e6))
+        self.test_dataset = SetDataset(max_size=1e6, batchsize=batch_size)
         
         self.stack_size = stack_size
         
@@ -53,52 +56,86 @@ class DivDisEvaluatorClassifier():
         self.test_dataset.add_true_files(true_files)
         self.test_dataset.add_false_files(false_files)
 
+
+    def evaluate(self, test_sample_size=0.1, num_features=26, plot=False):
         
-    def evaluate(self, num_sample, num_features=26):
-        if self.image_input is False:
+        if self.image_input:
+            raise NotImplementedError
+
+        num_test_states = self.test_dataset.batchsize * self.test_dataset.num_batches
+        all_states = np.zeros((num_test_states, num_features))
+        all_labels = np.zeros((num_test_states, ))
+        all_labels_pred = np.zeros((num_test_states, self.head_num))
+        self.ig_attr_test = [{'all':[],
+                              'true positive':[],
+                              'false positive':[],
+                              'true negative':[],
+                              'false negative':[]} for _ in range(self.head_num)]
+
+        self.test_dataset.shuffle()
+
+        for i in range(int(self.test_dataset.num_batches*test_sample_size)): # only 10% of the test data, since attributions take too long
+            #print(f'Batch {i+1}/{self.test_dataset.num_batches}')
+            
             states, labels = self.test_dataset.get_batch() # should be all data, since batchsize is max_size
+            i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
+
+            #print(states.shape, labels.shape)
+            #print(i0, i1)
+
+            all_states[i0:i1] = states.numpy()
+            all_labels[i0:i1] = labels.numpy()
+
             if self.classifier.use_gpu:
                 states = states.to('cuda')
                 labels = labels.to('cuda')
-            if num_sample < len(states):
-                rand_idx = random.sample(range(len(states)), num_sample)
-                states = states[rand_idx]
-                labels = labels[rand_idx]            
-            with torch.no_grad():
-                labels_pred = self.classifier.predict(states) # (batch_size, head_num, num_classes)
-                labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
 
+            #print(f'states shape, device: {states.shape}, {states.device}')
+            #print(f'labels shape, device: {labels.shape}, {labels.device}')
+                 
+            labels_pred = self.classifier.predict(states).detach() # (batch_size, head_num, num_classes)
+            labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
+            all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
+
+                
             for head_idx in range(self.head_num):
                 # get the predictions for the head
                 labels_pred_head = labels_pred[:, head_idx]
-                
-                # add sklearn confusion matrix and classification report
-                cm = confusion_matrix(labels.to('cpu').numpy(), labels_pred_head.to('cpu').numpy())
-                self.confusion_matrices[head_idx] = cm
-                
-                report = classification_report(labels.to('cpu').numpy(), 
-                                               labels_pred_head.to('cpu').numpy(),
-                                               output_dict=True)
-                report_df = pd.DataFrame(report).transpose()
-                self.classification_reports[head_idx] = report_df
-
+            
                 # attributions
                 states_tp = states[(labels == 1) & (labels_pred_head == 1)]
                 states_tn = states[(labels == 0) & (labels_pred_head == 0)]
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
                 states_fn = states[(labels == 1) & (labels_pred_head == 0)]
 
-                
-                self.ig_attr_test[head_idx]['true positive'] = self.integrated_gradients[head_idx].attribute(states_tp, target=1) if len(states_tp) > 0 else None
-                self.ig_attr_test[head_idx]['true negative'] = self.integrated_gradients[head_idx].attribute(states_tn, target=0) if len(states_tn) > 0 else None
-                self.ig_attr_test[head_idx]['false positive'] = self.integrated_gradients[head_idx].attribute(states_fp, target=1) if len(states_fp) > 0 else None
-                self.ig_attr_test[head_idx]['false negative'] = self.integrated_gradients[head_idx].attribute(states_fn, target=0) if len(states_fn) > 0 else None
+                self.ig_attr_test[head_idx]['all'].append(self.integrated_gradients[head_idx].attribute(states, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true positive'].append(self.integrated_gradients[head_idx].attribute(states_tp, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true negative'].append(self.integrated_gradients[head_idx].attribute(states_tn, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
+
+                #print(f'Head {head_idx+1} done')
+                #print(torch.cuda.memory_allocated() / 1e9, 'GB')
+                #print(torch.cuda.memory_reserved() / 1e9, 'GB')
+
+        self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
+        
+        if plot:
+            for head_idx in range(self.head_num):
+                labels_pred_head = all_labels_pred[:, head_idx]
+                cm = confusion_matrix(all_labels, labels_pred_head)
+                self.confusion_matrices[head_idx] = cm
             
+                report = classification_report(all_labels, 
+                                            labels_pred_head,
+                                            output_dict=True)
+                report_df = pd.DataFrame(report).transpose()
+                self.classification_reports[head_idx] = report_df
+
             self._plot_attributions_factored(num_features)
             self._plot_cm_cr()
+        
 
-        if self.image_input is True:
-            raise NotImplementedError
 
     '''
     def evaluate_old(self, num_images):
@@ -230,12 +267,12 @@ class DivDisEvaluatorClassifier():
 
     def _plot_attributions_factored(self, num_features=26):
 
-        fig, axes = plt.subplots(nrows=self.head_num+0, ncols=4, figsize=(30,8*(self.head_num)), sharey='row')
+        fig, axes = plt.subplots(nrows=self.head_num+0, ncols=5, figsize=(30,5*(self.head_num)), sharey='all')
         if self.head_num == 1:  # Ensure axes is iterable when there's only one subplot
             axes = [axes]
         # plt.subplots_adjust(wspace=0.1, hspace=0.1)
 
-        x_axis_data = np.arange(26)
+        x_axis_data = np.arange(num_features)
         #x_axis_data_labels = list(map(lambda idx: feature_names[idx], x_axis_data))
         x_axis_data_labels = ['door_x', 'door_y', 'door_locked', 'door_open', 'door_color', 
                               'key1_x', 'key1_y', 'key1_color', 
@@ -248,23 +285,33 @@ class DivDisEvaluatorClassifier():
 
         for i in range(self.head_num):
             ig_attr_head = self.ig_attr_test[i]
-            for j, attr_type in enumerate(['true positive', 'true negative', 'false positive', 'false negative']):
-                ax = axes[i, j]
+            for j, attr_type in enumerate(['all','true positive','false positive','true negative','false negative']):
+                ax = axes[i,j]
                 ig_attr_test = ig_attr_head[attr_type]
                 
-                if ig_attr_test is not None:  # Check if attribution was calculated
-                    ig_attr_test_sum = ig_attr_test.detach().to('cpu').numpy().sum(0)
+                if len(ig_attr_test) > 0:  # Check if attribution was calculated, should be non-empty
+                    ig_attr_test_sum = ig_attr_test.sum(0)
+                    # normalize the sum of attributions by dividing by L1 norm
                     ig_attr_test_norm_sum = ig_attr_test_sum / np.linalg.norm(ig_attr_test_sum, ord=1) if np.linalg.norm(ig_attr_test_sum, ord=1) > 0 else ig_attr_test_sum
-                    ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#3388EE')
+                    if attr_type == 'all':
+                        ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#BB2233')
+                        ax.set_title(f'Head {i+1}, all')
+                    else:
+                        ax.bar(x_axis_data, ig_attr_test_norm_sum, width=0.6, align='center', alpha=0.8, color='#3388EE')
+                        ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
+                    # ticks and labels
                     ax.set_xticks(x_axis_data)
                     ax.set_xticklabels(x_axis_data_labels, rotation='vertical')
-                    ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
                     ax.set_ylabel('Attributions')
+
                 else:
                     ax.text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
                     ax.set_title(f'Head {i+1}, {attr_type.replace("_", " ").capitalize()}')
-                    ax.set_xticks([])
-                    ax.set_yticks([])
+                    
+                # grids behind bars
+                ax.yaxis.grid(True, linestyle='--', linewidth=0.5, color='grey', alpha=0.7)
+                ax.xaxis.grid(True, linestyle='--', linewidth=0.5, color='grey', alpha=0.7)
+                ax.set_axisbelow(True)
 
         plt.tight_layout()
         plt.show()
@@ -309,3 +356,13 @@ class DivDisEvaluatorClassifier():
             
     def reset_test_dataset(self):
         self.test_dataset = SetDataset(max_size=1e6, batchsize=int(1e6))
+
+
+    def get_head_complexity(self):
+        head_complexity = []
+        for i in range(self.head_num):
+            ig_attr_test = self.ig_attr_test[i]['all']
+            ig_attr_test_std = ig_attr_test.std(0)
+            head_complexity.append(ig_attr_test_std.mean())
+        return head_complexity
+
