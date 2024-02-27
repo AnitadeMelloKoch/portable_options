@@ -25,7 +25,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  image_input: bool=True,
                  keep_colour: str="",
                  pickup_colour: str="",
-                 force_door_closed=False):
+                 force_door_closed=False,
+                 force_door_open=False):
         super().__init__(env)
         
         self.objects = {
@@ -51,6 +52,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.door_unlocked = door_unlocked
         self.door_open = door_open
         self.force_door_closed = force_door_closed
+        self.force_door_open = force_door_open
         
     
     def _modify_info_dict(self, info):
@@ -79,7 +81,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
               random_start=False,
               keep_colour="",
               pickup_colour="",
-              force_door_closed=False):
+              force_door_closed=False,
+              force_door_open=False):
         
         obs, info = self.env.reset()
         
@@ -114,7 +117,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         if random_start is True:
             self.random_start(keep_colour=keep_colour,
                               pickup_colour=pickup_colour,
-                              force_door_closed=force_door_closed)
+                              force_door_closed=force_door_closed,
+                              force_door_open=force_door_open)
         
         self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
         
@@ -140,7 +144,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
     def random_start(self, 
                      keep_colour="",
                      pickup_colour="",
-                     force_door_closed=False):
+                     force_door_closed=False,
+                     force_door_open=False):
         # randomly move+pick up keys in the environment
         # randomly open/unlock door
         
@@ -152,6 +157,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             pickup_colour = self.pickup_colour
         if force_door_closed is False:
             force_door_closed = self.force_door_closed
+        if force_door_open is False:
+            force_door_open = self.force_door_open
         
         all_pos = [key.position for key in self.objects["keys"]]
         
@@ -186,13 +193,13 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         
         if force_door_closed is False:
             randval = np.random.rand()
-            if randval < 0.6:
+            if randval < 0.6 or force_door_open:
                 door = self.env.unwrapped.grid.get(
                     self.objects["door"].position[0],
                     self.objects["door"].position[1],
                 )
                 door.is_locked = False
-                if randval < 0.3:
+                if randval < 0.3 or force_door_open:
                     door.is_open = True
         self._find_objs()
     

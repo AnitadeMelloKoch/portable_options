@@ -81,6 +81,42 @@ train_envs = [
         pickup_colour="red",
         force_door_closed=True
         )],
+    ],
+    [
+        [AdvancedDoorKeyPolicyTrainWrapper(
+            factored_environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=env_seed
+            ),
+            door_colour="red",
+            time_limit=100,
+            image_input=False,
+            force_door_open=True
+        )]
+    ],
+    [
+        [AdvancedDoorKeyPolicyTrainWrapper(
+            factored_environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=env_seed
+            ),
+            door_colour="red",
+            time_limit=100,
+            image_input=False,
+            force_door_open=True
+        )]
+    ],
+    [
+        [AdvancedDoorKeyPolicyTrainWrapper(
+            factored_environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=env_seed
+            ),
+            door_colour="red",
+            time_limit=100,
+            image_input=False,
+            force_door_open=True
+        )]
     ]
 ]
 
@@ -104,7 +140,7 @@ if __name__ == "__main__":
         return x
     
     def option_agent_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1])
+        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
         
         return x
     
@@ -112,17 +148,20 @@ if __name__ == "__main__":
         [PerfectGetKey("red")],
         [PerfectGetKey("yellow")],
         [PerfectGetKey("grey")],
-        [PerfectDoorOpen()]
+        [PerfectDoorOpen()],
+        [PerfectAtLocation(4,4)],
+        [PerfectAtLocation(5,5)],
+        [PerfectAtLocation(6,6)],
     ]
     
     experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               option_agent_phi=option_agent_phi,
-                                                              action_policy=create_linear_policy(26, 11),
+                                                              action_policy=create_linear_policy(26, 14),
                                                               action_vf=create_linear_vf(26),
-                                                              option_policy=create_linear_policy(37, 1),
-                                                              option_vf=create_linear_vf(37),
+                                                              option_policy=create_linear_policy(40, 1),
+                                                              option_vf=create_linear_vf(40),
                                                               terminations=terminations)
     
     

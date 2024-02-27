@@ -198,13 +198,14 @@ class DivDisMockOption():
 
             state = next_state
         
-        if should_terminate and (not self.use_seed_for_initiation):
-            policy.add_data_initiation(positive_examples=states)
-        else:
-            policy.add_data_initiation(negative_examples=states)
-        policy.add_context_examples(states)
+        if not self.use_seed_for_initiation:
+            if should_terminate:
+                policy.add_data_initiation(positive_examples=states)
+            else:
+                policy.add_data_initiation(negative_examples=states)
+            policy.add_context_examples(states)
         
-        return state, info, steps, rewards, option_rewards, states, infos
+        return state, info, done, steps, rewards, option_rewards, states, infos
     
     def bootstrap_policy(self,
                          idx,
@@ -223,7 +224,7 @@ class DivDisMockOption():
             obs, info = env.reset(agent_reposition_attempts=rand_num,
                                   random_start=True)
             
-            _, _, steps, _, rewards, _, _ = self.train_policy(idx,
+            _, _, _, steps, _, rewards, _, _ = self.train_policy(idx,
                                                               env,
                                                               obs,
                                                               info,

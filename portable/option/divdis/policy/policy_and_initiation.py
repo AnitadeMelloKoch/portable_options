@@ -110,6 +110,7 @@ class PolicyWithInitiation(Agent):
     
     def can_initiate(self, obs):
         in_context = self.context.predict(obs)
+        print(self.initiation.pessimistic_predict(obs))
         if (self.interactions < self.bootstrap_init_timesteps) or (in_context is False):
             return in_context
         else:
@@ -210,12 +211,14 @@ class PolicyWithInitiation(Agent):
         batch_dones = exp_batch['is_state_terminal']
         
         batch_obs = batch_obs.unsqueeze(1)
+        batch_obs = batch_obs.float()
         batch_obs, _ = self.recurrent_memory(batch_obs)
         batch_obs = batch_obs.squeeze()
         batch_pred_q_all_actions = self.q_network(batch_obs)
         batch_pred_q = batch_pred_q_all_actions.evaluate_actions(batch_actions)
         
         with torch.no_grad():
+            batch_next_obs = batch_next_obs.float()
             batch_next_obs = batch_next_obs.unsqueeze(1)
             batch_next_obs, _ = self.recurrent_memory(batch_next_obs)
             batch_next_obs = batch_next_obs.squeeze()

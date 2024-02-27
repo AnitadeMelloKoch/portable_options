@@ -110,3 +110,14 @@ class RandomGetKey(BaseTermination):
             self.seen_states[state] = term
             return term
 
+class PerfectAtLocation(BaseTermination):
+    def __init__(self,
+                 x,
+                 y):
+        super().__init__()
+        self.x = x 
+        self.y = y
+    
+    def check_term(self, state, env):
+        return (state[20] == self.x and state[21] == self.y)
+    

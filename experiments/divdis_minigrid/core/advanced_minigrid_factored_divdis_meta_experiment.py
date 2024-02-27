@@ -73,7 +73,6 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                            phi=option_agent_phi)
         
         self.options = []
-        
         assert len(terminations) == num_options
         self.num_options = num_options
         self.num_primitive_actions = num_primitive_actions
