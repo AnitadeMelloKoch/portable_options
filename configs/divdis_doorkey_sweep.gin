@@ -1,13 +1,13 @@
 import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_sweep_experiment
 import portable.option.divdis.divdis_classifier 
 
-FactoredAdvancedMinigridDivDisSweepExperiment.experiment_name         = "sweeps_debug"
+FactoredAdvancedMinigridDivDisSweepExperiment.experiment_name         = "sweeps_v2"
 FactoredAdvancedMinigridDivDisSweepExperiment.use_gpu                 = True
 FactoredAdvancedMinigridDivDisSweepExperiment.default_epochs          = 100   # default was 100
 FactoredAdvancedMinigridDivDisSweepExperiment.default_div_weight      = 0.01
 FactoredAdvancedMinigridDivDisSweepExperiment.default_div_lr          = 0.001
 FactoredAdvancedMinigridDivDisSweepExperiment.default_num_heads       = 4
-FactoredAdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.25  # 0.25 on cluster, 0.15 on local
+FactoredAdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.15  # 0.25 on cluster, 0.15 on local
   
 DivDisClassifier.input_dim                                            = 26
 DivDisClassifier.num_classes                                          = 2
