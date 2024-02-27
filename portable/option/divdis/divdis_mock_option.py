@@ -147,6 +147,7 @@ class DivDisMockOption():
                      state,
                      info,
                      policy_idx,
+                     max_steps=1e6,
                      make_video=False):
         steps = 0
         rewards = []
@@ -160,7 +161,7 @@ class DivDisMockOption():
         policy = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
         
-        while not (done or should_terminate):
+        while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
             infos.append(info)
             

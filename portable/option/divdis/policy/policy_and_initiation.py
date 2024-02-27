@@ -278,6 +278,7 @@ class PolicyWithInitiation(Agent):
         torch.save(self.q_network.state_dict(), os.path.join(dir, 'policy.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
         self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
+        np.save(os.path.join(dir, "step_number.npy"), self.step_number)
     
     def load(self, dir):
         if os.path.exists(os.path.join(dir, "policy.pt")):
@@ -286,6 +287,7 @@ class PolicyWithInitiation(Agent):
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
             self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
+            self.step_number = np.load(os.path.join(dir, "step_number.npy"))
         else:
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     

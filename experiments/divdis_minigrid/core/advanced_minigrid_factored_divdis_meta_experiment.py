@@ -214,12 +214,13 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                         steps = 1
                         rewards = [reward]
                     else:
-                        next_obs, info, done, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
-                                                                                                                              env,
-                                                                                                                              obs,
-                                                                                                                              info,
-                                                                                                                              seed,
-                                                                                                                              max_steps=500)
+                        next_obs, info, done, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].train_policy(option,
+                                                                                                                                     env,
+                                                                                                                                     obs,
+                                                                                                                                     info,
+                                                                                                                                     seed,
+                                                                                                                                     max_steps=100,
+                                                                                                                                     make_video=True)
                     undiscounted_reward += np.sum(rewards)
                     total_steps += steps
                 
@@ -232,7 +233,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                                                      total_steps,
                                                                                      undiscounted_reward))
             
-            if (undiscounted_reward > 0 or episode%100==0) and self.video_generator is not None:
+            if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
                 self.video_generator.episode_end("episode_{}".format(episode))
             
             undiscounted_rewards.append(undiscounted_reward)

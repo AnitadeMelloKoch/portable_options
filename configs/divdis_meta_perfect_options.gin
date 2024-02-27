@@ -15,12 +15,13 @@ ActionPPO.state_shape                                               = 26
 ActionPPO.final_epsilon                                             = 0.05
 ActionPPO.final_exploration_frames                                  = 1e7
 ActionPPO.num_actions                                               = 11
+ActionPPO.update_interval                                           = 100
 
 OptionPPO.learning_rate                                             = 2.5e-4
 OptionPPO.state_dim                                                 = 26
 OptionPPO.action_num                                                = 11
 OptionPPO.final_epsilon                                             = 0.05
-OptionPPO.final_exploration_frames                                  = 1e6
+OptionPPO.final_exploration_frames                                  = 1e7
 OptionPPO.num_options                                               = 1
 
 PolicyWithInitiation.warmup_steps                                   = 1024
