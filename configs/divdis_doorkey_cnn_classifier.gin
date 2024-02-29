@@ -1,0 +1,11 @@
+
+from experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_experiment import AdvancedMinigridDivDisClassifierExperiment
+from portable.option.divdis.divdis_classifier import DivDisClassifier
+
+AdvancedMinigridDivDisClassifierExperiment.experiment_name                = "divdis_classifier"
+AdvancedMinigridDivDisClassifierExperiment.use_gpu                        = True
+AdvancedMinigridDivDisClassifierExperiment.classifier_head_num            = 8
+AdvancedMinigridDivDisClassifierExperiment.classifier_learning_rate       = 0.01
+AdvancedMinigridDivDisClassifierExperiment.classifier_input_dim           = 3 # should be 3 or (64,64,3)
+AdvancedMinigridDivDisClassifierExperiment.classifier_num_classes         = 2
+AdvancedMinigridDivDisClassifierExperiment.classifier_diversity_weight    = 0.01

@@ -18,9 +18,6 @@ MODEL_TYPE = [
     "small_cnn"
 ]
 
-def transform(x):
-    x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,  7,7,4,7,7,7])
-    return x
 
 @gin.configurable
 class DivDisClassifier():
@@ -45,20 +42,19 @@ class DivDisClassifier():
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize,
                                   unlabelled_batchsize=unlabelled_dataset_batchsize)
-        self.dataset.set_transform_function(transform)
         self.learning_rate = learning_rate
         
         self.head_num = head_num
         
         self.log_dir = log_dir
         
-        self.classifier = OneHeadMLP(input_dim=input_dim,
-                                       num_classes=num_classes,
-                                       num_heads=head_num)
+        # self.classifier = OneHeadMLP(input_dim=input_dim,
+        #                                num_classes=num_classes,
+        #                                num_heads=head_num)
         
-        # self.classifier = SmallCNN(num_input_channels=input_dim,
-        #                            num_classes=num_classes,
-        #                            num_heads=head_num)
+        self.classifier = SmallCNN(num_input_channels=input_dim,
+                                   num_classes=num_classes,
+                                   num_heads=head_num)
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate)
