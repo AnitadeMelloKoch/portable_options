@@ -50,9 +50,10 @@ if __name__ == "__main__":
                                  negative_train_files,
                                  unlabelled_train_files)
 
-        experiment.train_classifier(200)
+        experiment.train_classifier(100)
         
         accuracy = experiment.test_classifier(positive_test_files,
                                               negative_test_files)
         
-        print(accuracy)
+        print(f"Total Accuracy: {accuracy[0]}")
+        print(f"Weighted Accuracy: {accuracy[1]}")

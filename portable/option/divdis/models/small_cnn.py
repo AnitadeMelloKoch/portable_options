@@ -18,28 +18,31 @@ class SmallCNN(nn.Module):
                  num_classes,
                  num_heads):
         super().__init__()
-        
+
         self.model = nn.ModuleList([nn.Sequential(
-            nn.Conv2d(in_channels=num_input_channels,
-                      out_channels=32,
-                      kernel_size=(3,3),
-                      stride=1),
+            nn.LazyConv2d(out_channels=32, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2,2)),
-            nn.Conv2d(in_channels=32,
-                      out_channels=64,
-                      kernel_size=(3,3)),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(kernel_size=5, stride=2),
+            
+            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2,2)),
+            nn.LeakyReLU(),
+            nn.MaxPool2d(kernel_size=5, stride=2),
+            
+            #nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            #nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=2, stride=2),
+            
             nn.Flatten(),
             nn.LazyLinear(1000),
-            nn.ReLU(),
+            nn.LeakyReLU(),
+
             nn.LazyLinear(100),
-            nn.ReLU(),
+            nn.LeakyReLU(),
+            
             nn.LazyLinear(num_classes)
-        ) for _ in range(num_heads)])
+            ) for _ in range(num_heads)])
         
         self.num_heads = num_heads
         self.num_classes = num_classes
@@ -51,7 +54,7 @@ class SmallCNN(nn.Module):
             if logits:
                 y = self.model[idx](x)
             else:
-                y = F.softmax(self.model[idx](x))
+                y = F.softmax(self.model[idx](x), dim=-1)
             pred[:,idx,:] = y
         
         # print(pred)

@@ -137,7 +137,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.classifier.head_num):
-            logging.info("idx:{:.4f} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
+            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],
