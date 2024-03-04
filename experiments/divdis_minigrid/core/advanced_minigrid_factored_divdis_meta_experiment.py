@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from experiments.experiment_logger import VideoGenerator
 from portable.agent.model.ppo import ActionPPO, OptionPPO
+from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
 import math
 
 @gin.configurable
@@ -71,6 +72,8 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                            policy=option_policy,
                                            value_function=option_vf,
                                            phi=option_agent_phi)
+        
+        self.intrinsic_reward = TabularCount(1)
         
         self.options = []
         assert len(terminations) == num_options
@@ -156,6 +159,8 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
             )
         
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
+        intrinsic_reward = self.intrinsic_reward.get_bonus(obs)
+        reward += intrinsic_reward
         
         self.meta_action_agent.observe(obs,
                                        reward,
@@ -220,14 +225,14 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                                                                                                      seed,
                                                                                                                                      max_steps=100,
                                                                                                                                      make_video=True)
-                    undiscounted_reward += np.sum(rewards)
-                    total_steps += steps
+                undiscounted_reward += np.sum(rewards)
+                total_steps += steps
                 
-                    self.observe(obs,
-                                q_vals,
-                                rewards,
-                                done)
-                    obs = next_obs
+                self.observe(obs,
+                            q_vals,
+                            rewards,
+                            done)
+                obs = next_obs
             logging.info("Episode {} total steps: {} undiscounted reward: {}".format(episode,
                                                                                      total_steps,
                                                                                      undiscounted_reward))
