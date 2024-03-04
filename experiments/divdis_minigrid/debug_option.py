@@ -42,7 +42,7 @@ train_envs = [
         door_colour="red",
         time_limit=500,
         image_input=False,
-        keep_colour="grey"
+        force_door_open=True,
         )],
     ]
 ]
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("grey")],
+        [PerfectAtLocation(2,3)],
     ]
     
     experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,

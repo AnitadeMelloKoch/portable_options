@@ -212,7 +212,8 @@ class DivDisMockOption():
                          envs,
                          max_steps,
                          min_performance,
-                         seed):
+                         seed,
+                         agent_start_positions=[]):
         total_steps = 0
         train_rewards = deque(maxlen=200)
         eval_rewards = deque(maxlen=200)
@@ -221,8 +222,13 @@ class DivDisMockOption():
         while total_steps < max_steps:
             env = random.choice(envs)
             rand_num = np.random.randint(low=0, high=50)
+            if len(agent_start_positions) > 0:
+                agent_position = random.choice(agent_start_positions)
+            else:
+                agent_position = None
             obs, info = env.reset(agent_reposition_attempts=rand_num,
-                                  random_start=True)
+                                  random_start=True,
+                                  agent_position=agent_position)
             
             _, _, _, steps, _, rewards, _, _ = self.train_policy(idx,
                                                               env,

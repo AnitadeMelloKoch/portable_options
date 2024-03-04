@@ -21,6 +21,7 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
             seed=seed,
+            factored_type=2
         ),
         door_colour=door_colour,
         key_colours=key_cols,
@@ -37,7 +38,8 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
-            seed=env_seed
+            seed=env_seed,
+            factored_type=2
         ),
         door_colour="red",
         time_limit=100,
@@ -49,7 +51,8 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
-            seed=env_seed
+            seed=env_seed,
+            factored_type=2
         ),
         door_colour="red",
         time_limit=100,
@@ -61,7 +64,8 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
-            seed=env_seed
+            seed=env_seed,
+            factored_type=2
         ),
         door_colour="red",
         time_limit=100,
@@ -73,7 +77,9 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
         factored_environment_builder(
             'AdvancedDoorKey-8x8-v0',
-            seed=env_seed
+            seed=env_seed,
+            factored_type=2
+            
         ),
         door_colour="red",
         time_limit=100,
@@ -86,10 +92,11 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
             factored_environment_builder(
                 'AdvancedDoorKey-8x8-v0',
-                seed=env_seed
+                seed=env_seed,
+                factored_type=2
             ),
             door_colour="red",
-            time_limit=100,
+            time_limit=300,
             image_input=False,
             force_door_open=True
         )]
@@ -98,10 +105,11 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
             factored_environment_builder(
                 'AdvancedDoorKey-8x8-v0',
-                seed=env_seed
+                seed=env_seed,
+                factored_type=2
             ),
             door_colour="red",
-            time_limit=100,
+            time_limit=300,
             image_input=False,
             force_door_open=True
         )]
@@ -110,10 +118,11 @@ train_envs = [
         [AdvancedDoorKeyPolicyTrainWrapper(
             factored_environment_builder(
                 'AdvancedDoorKey-8x8-v0',
-                seed=env_seed
+                seed=env_seed,
+                factored_type=2
             ),
             door_colour="red",
-            time_limit=100,
+            time_limit=300,
             image_input=False,
             force_door_open=True
         )]
@@ -135,12 +144,12 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7])
+        x = x/torch.tensor([7,7,1,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7])
 
         return x
     
     def option_agent_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
+        x = x/torch.tensor([7,7,1,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
         
         return x
     
@@ -149,8 +158,8 @@ if __name__ == "__main__":
         [PerfectGetKey("yellow")],
         [PerfectGetKey("grey")],
         [PerfectDoorOpen()],
-        [PerfectAtLocation(4,4)],
-        [PerfectAtLocation(5,5)],
+        [PerfectAtLocation(4,1)],
+        [PerfectAtLocation(5,3)],
         [PerfectAtLocation(6,6)],
     ]
     
@@ -158,10 +167,10 @@ if __name__ == "__main__":
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               option_agent_phi=option_agent_phi,
-                                                              action_policy=create_linear_policy(26, 14),
-                                                              action_vf=create_linear_vf(26),
-                                                              option_policy=create_linear_policy(40, 1),
-                                                              option_vf=create_linear_vf(40),
+                                                              action_policy=create_linear_policy(23, 14),
+                                                              action_vf=create_linear_vf(23),
+                                                              option_policy=create_linear_policy(37, 1),
+                                                              option_vf=create_linear_vf(37),
                                                               terminations=terminations)
     
     

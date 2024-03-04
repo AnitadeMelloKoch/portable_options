@@ -56,7 +56,7 @@ class MinigridInfoWrapper(Wrapper):
         return info
 
 class FactoredObsWrapperDoorKey(Wrapper):
-    def __init__(self, env: Env):
+    def __init__(self, env: Env, type: int=1):
         super().__init__(env)
         self.colours = {
             "blue": 0,
@@ -66,13 +66,17 @@ class FactoredObsWrapperDoorKey(Wrapper):
             "yellow": 4,
             "purple": 5
         }
+        self.type = type
     
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
-        obs = self._get_factored_obs()
+        if self.type == 1:
+            obs = self._get_factored_obs1()
+        if self.type == 2:
+            obs = self._get_factored_obs2()
         return obs, info
     
-    def _get_factored_obs(self):
+    def _get_factored_obs1(self):
         split_idx = self.env.unwrapped.splitIdx
         
         objects = {
@@ -116,10 +120,55 @@ class FactoredObsWrapperDoorKey(Wrapper):
         
         return factored_obs
     
+    def _get_factored_obs2(self):
+        split_idx = self.env.unwrapped.splitIdx
+        
+        objects = {
+            "door": [-1,-1,-1,-1,-1],
+            "blue": [-1,-1],
+            "red": [-1,-1],
+            "green": [-1,-1],
+            "grey": [-1,-1],
+            "yellow": [-1,-1],
+            "purple": [-1,-1],
+            "agent": [-1,-1,-1],
+            "goal": [-1, -1],
+            "split": [-1]
+        }
+        
+        for x in range(self.env.unwrapped.width):
+            for y in range(self.env.unwrapped.height):
+                cell = self.env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "door":
+                        objects["door"] = [x, y, int(cell.is_locked), int(cell.is_open), self.colours[cell.color]]
+                    if cell.type == "key":
+                        objects[cell.color] = [x, y]
+                    if cell.type == "goal":
+                        objects["goal"] = [x, y]
+                
+        agent_pos = self.env.unwrapped.agent_pos
+        agent_dir = self.env.unwrapped.agent_dir
+        
+        objects["agent"] = [agent_pos[0], agent_pos[1], agent_dir]
+        objects["split"] = [split_idx]
+        
+        factored_obs = []
+        
+        for key in objects:
+            factored_obs += objects[key]
+        
+        factored_obs = np.array(factored_obs)
+        
+        return factored_obs
+    
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         
-        factored_obs = self._get_factored_obs()
+        if self.type == 1:
+            factored_obs = self._get_factored_obs1()
+        if self.type == 2:
+            factored_obs = self._get_factored_obs2()
         
         return factored_obs, reward, terminated, truncated, info
 
@@ -295,7 +344,8 @@ def process_data(array):
 
 def factored_environment_builder(level_name='AdvancedDoorKey-8x8-v0',
                                  seed=42,
-                                 max_steps=None):
+                                 max_steps=None,
+                                 factored_type=1):
     if max_steps is not None and max_steps > 0:
         env = gym.make(level_name, max_steps=max_steps,
                        render_mode="rgb_array")
@@ -303,7 +353,7 @@ def factored_environment_builder(level_name='AdvancedDoorKey-8x8-v0',
         env = gym.make(level_name,
                        render_mode="rgb_array")
     env = ReseedWrapper(env, seeds=[seed])
-    env = FactoredObsWrapperDoorKey(env)
+    env = FactoredObsWrapperDoorKey(env, type=factored_type)
     env = MinigridInfoWrapper(env, seed)
     
     return env

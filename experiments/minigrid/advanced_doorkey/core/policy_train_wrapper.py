@@ -82,7 +82,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
               keep_colour="",
               pickup_colour="",
               force_door_closed=False,
-              force_door_open=False):
+              force_door_open=False,
+              agent_position=None):
         
         obs, info = self.env.reset()
         
@@ -120,7 +121,10 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                               force_door_closed=force_door_closed,
                               force_door_open=force_door_open)
         
-        self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
+        if agent_position is None:
+            self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
+        else:
+            self.env.unwrapped.agent_pos = agent_position
         
         obs, _, _, info = self.env.step(actions.LEFT)
         obs, _, _, info = self.env.step(actions.RIGHT)
