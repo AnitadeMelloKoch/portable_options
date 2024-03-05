@@ -211,7 +211,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                     next_obs, reward, done, info = env.step(action)
                     undiscounted_reward += reward
                     rewards = [reward]
-                    total_steps += 1
+                    # total_steps += 1
                 else:
                     if (action_mask[action] is False) or (option_masks[action][option] is False):
                         next_obs, reward, done, info = env.step(6)
@@ -226,7 +226,7 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                                                                                                                                      max_steps=100,
                                                                                                                                      make_video=True)
                 undiscounted_reward += np.sum(rewards)
-                total_steps += steps
+                total_steps += 1
                 
                 self.observe(obs,
                             q_vals,

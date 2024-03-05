@@ -181,7 +181,8 @@ if __name__ == "__main__":
     meta_env = factored_environment_builder(
                     'AdvancedDoorKey-8x8-v0',
                     seed=env_seed,
-                    max_steps=int(1e4)
+                    max_steps=int(1e4),
+                    factored_type=2
                 )
     
     experiment.train_meta_agent(meta_env,
