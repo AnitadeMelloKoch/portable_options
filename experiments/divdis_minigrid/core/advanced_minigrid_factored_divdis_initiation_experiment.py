@@ -92,6 +92,8 @@ class FactoredAdvancedMinigridDivDisInitiationExperiment():
         if generate_video and self.video_generator is not None:
             self.video_generator.episode_end("train")
         
+        print("reward: ", sum(option_rewards))
+        
         return steps, option_rewards
     
     def train(self,
