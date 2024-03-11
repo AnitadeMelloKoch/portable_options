@@ -17,12 +17,11 @@ class MiniGridDataCollector:
         self.training_seed = None
 
 
-    def collect_envs(self):
-        self.training_seed = int(input("Training seed: "))
-        self.env_mode = int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
-        self.data_mode = int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
-        self.manual_input_data = True if input("Manual input data? (y/n): ") == "y" else False
-        self.manual_input_data = False
+    def collect_envs(self, training_seed=None, env_mode=None, data_mode=None, manual_input_data=None):
+        self.training_seed = int(input("Training seed: ")) if training_seed is None else training_seed
+        self.env_mode = env_mode or int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
+        self.data_mode = data_mode or int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
+        self.manual_input_data = (True if input("Manual input data? (y/n): ") == "y" else False) if manual_input_data is None else manual_input_data
         
         if self.data_mode == 1:
             # Init env, not collected, just for visualisation
@@ -709,7 +708,11 @@ class GridEnv:
 
 if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
-    meta_data_collector.collect_envs()
+    for i in range(12):
+        meta_data_collector.collect_envs(training_seed=i, 
+                                         env_mode=1, 
+                                         data_mode=1, 
+                                         manual_input_data=False)
 
 
 
