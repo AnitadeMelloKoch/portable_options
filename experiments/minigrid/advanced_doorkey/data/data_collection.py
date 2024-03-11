@@ -156,7 +156,8 @@ class MiniGridDataCollector:
             env = environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed, grayscale=False)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
-                                                key_colours=other_keys_colour)
+                                                key_colours=other_keys_colour,
+                                                image_input=True)
             #env = FactoredObsWrapperDoorKey(env)
             env_type = 'minigrid'
         elif self.env_mode == 2:
@@ -705,7 +706,7 @@ if __name__ == "__main__":
     
     if USE_MP:
         import multiprocess as mp
-        with mp.Pool(len(seeds_to_collect)) as p:
+        with mp.Pool() as p:
             collect_imgs = lambda seed: meta_data_collector.collect_envs(seed, env_mode=1, data_mode=1, manual_input_data=False)
             p.map(collect_imgs, seeds_to_collect)
 
