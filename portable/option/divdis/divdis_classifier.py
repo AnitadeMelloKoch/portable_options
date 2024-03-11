@@ -48,10 +48,6 @@ class DivDisClassifier():
         
         self.log_dir = log_dir
         
-        # self.classifier = OneHeadMLP(input_dim=input_dim,
-        #                                num_classes=num_classes,
-        #                                num_heads=head_num)
-        
         self.classifier = SmallCNN(num_input_channels=input_dim,
                                    num_classes=num_classes,
                                    num_heads=head_num)
