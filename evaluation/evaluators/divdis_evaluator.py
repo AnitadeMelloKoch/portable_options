@@ -58,10 +58,10 @@ class DivDisEvaluatorClassifier():
 
 
     def evaluate(self, test_sample_size=0.1, num_features=26, plot=False):
-
         num_batches_sampled = int(self.test_dataset.num_batches*test_sample_size)
         num_test_states = self.test_dataset.batchsize * num_batches_sampled
         #all_states = np.zeros((num_test_states, num_features))
+
         all_labels = np.zeros((num_test_states, ))
         all_labels_pred = np.zeros((num_test_states, self.head_num))
         self.ig_attr_test = [{'all':[],
@@ -78,6 +78,7 @@ class DivDisEvaluatorClassifier():
             i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
 
             #all_states[i0:i1] = states.numpy()
+
             all_labels[i0:i1] = labels.numpy()
 
             if self.classifier.use_gpu:
@@ -87,6 +88,7 @@ class DivDisEvaluatorClassifier():
             labels_pred = self.classifier.predict(states).detach() # (batch_size, head_num, num_classes)
             labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
             #all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
+
                 
             for head_idx in range(self.head_num):
                 # get the predictions for the head
@@ -114,7 +116,6 @@ class DivDisEvaluatorClassifier():
 
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
 
-
         if plot:
             for head_idx in range(self.head_num):
                 labels_pred_head = all_labels_pred[:, head_idx]
@@ -131,6 +132,7 @@ class DivDisEvaluatorClassifier():
             #self._plot_attributions() # TODO: implement image attributions
             self._plot_attributions_factored(num_features) if not self.image_input else None
         
+
 
     '''
     def evaluate_old(self, num_images):
@@ -363,3 +365,4 @@ class DivDisEvaluatorClassifier():
             ig_attr_test_std = ig_attr_test.std(0)
             head_complexity.append(ig_attr_test_std.mean())
         return head_complexity
+

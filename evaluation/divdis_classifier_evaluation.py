@@ -25,6 +25,7 @@ negative_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}
 
 '''
 positive_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
+
 negative_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_negative.npy"]
 unlabelled_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_1_initiation_positive.npy",
                           "resources/factored_minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_0_initiation_negative.npy",
@@ -51,6 +52,7 @@ negative_test_files = [
                       ]'''
 
 '''
+
 positive_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_1_termination_positive.npy",
@@ -108,6 +110,7 @@ negative_test_files = [
                       ]
 '''
 
+
 def factored_transform(x):
     x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5, 7,7,4,7,7,7])
     return x
@@ -127,13 +130,14 @@ if __name__ == "__main__":
     classifier.add_data(positive_train_files,
                         negative_train_files,
                         unlabelled_train_files)
-    classifier.train(100)
+    classifier.train(50)
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
                     image_input=True,
                     batch_size=32,
                     base_dir=args.base_dir)
+
 
 
 
