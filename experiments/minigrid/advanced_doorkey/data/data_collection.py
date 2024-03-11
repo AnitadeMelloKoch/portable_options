@@ -1,7 +1,7 @@
 import os
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 from experiments.minigrid.utils import FactoredObsWrapperDoorKey, environment_builder, actions, factored_environment_builder
@@ -57,9 +57,6 @@ class MiniGridDataCollector:
             else: # default to auto collection
                 # agent info
                 agent_loc = info['player_pos'][::-1] 
-
-                print(env.unwrapped.agent_dir)
-                
                 facing_map = {
                     0: 'r',
                     1: 'd',
@@ -67,8 +64,6 @@ class MiniGridDataCollector:
                     3: 'u'
                 }
                 agent_facing = facing_map.get(env.unwrapped.agent_dir, None)
-                print(f'Agent location: {agent_loc}, Agent facing: {agent_facing}')
-
 
                 # keys and door info
                 door_color = info['door'].colour
@@ -97,8 +92,8 @@ class MiniGridDataCollector:
                     env, env_type = self.init_env(door_color, [])
                     grid = GridEnv(env, env_type, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
-                    print(f'======START DATA COLLECTION======')
-                    print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+                    #print(f'======START DATA COLLECTION======')
+                    print(f"Collecting seed: {self.training_seed}; task: {task} , {door_color} door, {door_color} key.")
                     grid.collect_data()
                     first_instance = False
 
@@ -289,7 +284,7 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
-            if self.agent_loc[1] > self.wall_col+1:
+            if self.agent_loc[1] >= self.wall_col+1:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
@@ -348,7 +343,7 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
-            if self.agent_loc[1] > self.wall_col+1:
+            if self.agent_loc[1] >= self.wall_col+1:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
@@ -412,7 +407,7 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
-            if self.agent_loc[1] > self.wall_col+1:
+            if self.agent_loc[1] >= self.wall_col+1:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
@@ -564,7 +559,6 @@ class GridEnv:
         }
                 
         turn_action = turn_map.get(self.agent_facing, {}).get(target_direction, 'No turn needed')
-        #self.agent_facing = target_direction
         
         if turn_action == 'right':
             self.perform_action(actions.RIGHT, 1, show=self.show_path)
@@ -572,8 +566,6 @@ class GridEnv:
             self.perform_action(actions.LEFT, 1, show=self.show_path)
         elif turn_action == 'turn around':
             self.perform_action(actions.LEFT, 2, show=self.show_path)
-        else:
-            print('No turn needed')
 
         if self.agent_facing != target_direction:
             self.fig.savefig('experiments/minigrid/advanced_doorkey/data/turn_error.png')
@@ -654,8 +646,7 @@ class GridEnv:
                 'r': '>'
             }
             cur_facing = facing_map.get(self.agent_facing, 'No facing')
-            print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
-            #pause = input("Press enter to continue")
+            #print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
 
     def update_agent_info(self):
         self.agent_loc = self.env.unwrapped.agent_pos[::-1]
@@ -708,12 +699,22 @@ class GridEnv:
 
 if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
-    for i in range(12):
-        meta_data_collector.collect_envs(training_seed=i, 
-                                         env_mode=1, 
-                                         data_mode=1, 
-                                         manual_input_data=False)
+    
+    seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    USE_MP = True
+    
+    if USE_MP:
+        import multiprocess as mp
+        with mp.Pool(len(seeds_to_collect)) as p:
+            collect_imgs = lambda seed: meta_data_collector.collect_envs(seed, env_mode=1, data_mode=1, manual_input_data=False)
+            p.map(collect_imgs, seeds_to_collect)
 
+    else:
+        from tqdm import tqdm
+        for seed in tqdm(seeds_to_collect):
+            meta_data_collector.collect_envs(seed, 1, 1, False)
+        
+    
 
 
 
