@@ -162,6 +162,7 @@ class OptionAgentModel():
         given a state, return a predicted action and option
         """
         with torch.no_grad():
+            self.action_agent.batch_act([state])
             action_q_values = self.action_agent.q_function(state)[0]
             action_q_values[np.logical_not(action_mask)] = -1e8
             
@@ -191,7 +192,7 @@ class OptionAgentModel():
             chosen_option_mask = chosen_option_mask.astype(bool)
             
             
-            option_q_values[chosen_option_mask] = -1e8
+            option_q_values[not chosen_option_mask] = -1e8
             self._video_log("[option agent] option q values: {}".format(option_q_values))
             
             if rand_val < epsilon:

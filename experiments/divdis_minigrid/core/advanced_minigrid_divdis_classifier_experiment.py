@@ -1,19 +1,22 @@
-import logging 
-import datetime 
-import os 
-import gin 
-import pickle 
-import numpy as np 
-import matplotlib.pyplot as plt 
-from portable.utils.utils import set_seed 
-from torch.utils.tensorboard import SummaryWriter
-import torch
+import datetime
+import logging
+import os
+import pickle
 
-from portable.option.divdis.divdis_classifier import DivDisClassifier, transform
+import gin
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.utils.tensorboard import SummaryWriter
+
+from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory import SetDataset
+from portable.utils.utils import set_seed
+
+
 
 @gin.configurable 
-class AdvancedMinigridFactoredDivDisClassifierExperiment():
+class AdvancedMinigridDivDisClassifierExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
@@ -134,7 +137,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.classifier.head_num):
-            logging.info("idx:{:.4f} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
+            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],
@@ -150,9 +153,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
                             test_head):
         dataset = SetDataset(max_size=1e6,
                              batchsize=64)
-        
-        dataset.set_transform_function(transform)
-        
+                
         dataset.add_true_files(test_data)
         
         true_data = []

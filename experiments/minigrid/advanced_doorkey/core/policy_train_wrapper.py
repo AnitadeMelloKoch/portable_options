@@ -22,7 +22,11 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                  door_unlocked: bool=False,
                  door_open: bool=False,
                  time_limit: int=2000,
-                 image_input: bool=True):
+                 image_input: bool=True,
+                 keep_colour: str="",
+                 pickup_colour: str="",
+                 force_door_closed=False,
+                 force_door_open=False):
         super().__init__(env)
         
         self.objects = {
@@ -36,6 +40,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self._timestep =  0
         self.time_limit = time_limit
         self.image_input = image_input
+        self.keep_colour = keep_colour
+        self.pickup_colour = pickup_colour
         
         self.door = None
         
@@ -45,6 +51,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.key_collected = key_collected
         self.door_unlocked = door_unlocked
         self.door_open = door_open
+        self.force_door_closed = force_door_closed
+        self.force_door_open = force_door_open
         
     
     def _modify_info_dict(self, info):
@@ -73,7 +81,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
               random_start=False,
               keep_colour="",
               pickup_colour="",
-              force_door_closed=False):
+              force_door_closed=False,
+              force_door_open=False):
         
         obs, info = self.env.reset()
         
@@ -108,7 +117,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         if random_start is True:
             self.random_start(keep_colour=keep_colour,
                               pickup_colour=pickup_colour,
-                              force_door_closed=force_door_closed)
+                              force_door_closed=force_door_closed,
+                              force_door_open=force_door_open)
         
         self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
         
@@ -132,13 +142,23 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         return obs, info
     
     def random_start(self, 
-                     keep_colour=None,
+                     keep_colour="",
                      pickup_colour="",
-                     force_door_closed=False):
+                     force_door_closed=False,
+                     force_door_open=False):
         # randomly move+pick up keys in the environment
         # randomly open/unlock door
         
         split_idx = self.env.unwrapped.splitIdx
+        
+        if keep_colour == "":
+            keep_colour = self.keep_colour
+        if pickup_colour == "":
+            pickup_colour = self.pickup_colour
+        if force_door_closed is False:
+            force_door_closed = self.force_door_closed
+        if force_door_open is False:
+            force_door_open = self.force_door_open
         
         all_pos = [key.position for key in self.objects["keys"]]
         
@@ -157,7 +177,6 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 self.env.unwrapped.grid.set(pos[0], pos[1], None)
                 
             else:
-                
                 new_pos_found = False
                 while new_pos_found is False:
                     new_pos = (np.random.randint(1, split_idx), np.random.randint(1,7))
@@ -165,6 +184,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                         new_pos_found = True
                 
                 key_obj = self.env.unwrapped.grid.get(pos[0], pos[1])
+                # if key_obj is None:
+                #     continue
                 self.env.unwrapped.grid.set(pos[0], pos[1], None)
                 key_obj.cur_pos = np.array([new_pos[0], new_pos[1]])
                 self.env.unwrapped.grid.set(new_pos[0], new_pos[1], key_obj)
@@ -172,13 +193,13 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         
         if force_door_closed is False:
             randval = np.random.rand()
-            if randval < 0.6:
+            if randval < 0.6 or force_door_open:
                 door = self.env.unwrapped.grid.get(
                     self.objects["door"].position[0],
                     self.objects["door"].position[1],
                 )
                 door.is_locked = False
-                if randval < 0.3:
+                if randval < 0.3 or force_door_open:
                     door.is_open = True
         self._find_objs()
     

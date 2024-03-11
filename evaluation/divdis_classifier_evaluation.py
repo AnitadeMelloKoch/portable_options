@@ -2,16 +2,30 @@ import argparse
 import os
 import random
 
-import multiprocess as mp
 import torch
 
 from evaluation.evaluators import DivDisEvaluatorClassifier
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import \
-    AdvancedMinigridFactoredDivDisClassifierExperiment
+#from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import \
+#    AdvancedMinigridFactoredDivDisClassifierExperiment
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.utils.utils import load_gin_configs
 
-'''positive_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
+
+color = 'grey'
+task = f'open{color}door'
+init_term = 'initiation'
+
+base_img_dir = 'resources/minigrid_images/'
+positive_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_positive.npy"]
+negative_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_negative.npy"]
+unlabelled_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
+positive_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_positive.npy" for s in [3,4,5,6,7,8,9,10]]
+negative_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_negative.npy" for s in [3,4,5,6,7,8,9,10]]
+
+
+'''
+positive_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
+
 negative_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_negative.npy"]
 unlabelled_train_files = ["resources/factored_minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_1_initiation_positive.npy",
                           "resources/factored_minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_0_initiation_negative.npy",
@@ -36,6 +50,8 @@ negative_test_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_8_initiation_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_9_initiation_negative.npy",
                       ]'''
+
+'''
 
 positive_train_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy",
@@ -92,8 +108,10 @@ negative_test_files = [
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_10_termination_negative.npy",
     "resources/factored_minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_11_termination_negative.npy",
                       ]
+'''
 
-def transform(x):
+
+def factored_transform(x):
     x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5, 7,7,4,7,7,7])
     return x
 
@@ -116,28 +134,17 @@ if __name__ == "__main__":
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
-                    batch_size=1000,
+                    image_input=True,
+                    batch_size=32,
                     base_dir=args.base_dir)
 
+
+
+
     evaluator.add_test_files(positive_test_files, negative_test_files)
-    evaluator.test_dataset.set_transform_function(transform)
+    #evaluator.test_dataset.set_transform_function(factored_transform)
 
-    evaluator.evaluate(num_features=26, plot=True)
+    evaluator.evaluate(1.0)
 
-    print(f"Head complexity: {evaluator.get_head_complexity()}")
-
-    #accuracy = experiment.test_classifier(positive_test_files,
-    #                                          negative_test_files)
-        
-    #print(accuracy)
-
-
-    # evaluator_termination = AttentionEvaluatorClassifier(
-    #     args.term_plot_dir,
-    #     args.term_classifier_dir
-    # )
-
-    # evaluator_termination.add_true_from_files(termination_positive_files)
-    # evaluator_termination.add_false_from_files(termination_negative_files)
-
-    # evaluator_termination.evaluate_attentions(10)
+    # print head complexity
+    print(evaluator.get_head_complexity())

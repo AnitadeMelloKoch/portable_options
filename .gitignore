@@ -146,4 +146,5 @@ dmypy.json
 resources/
 runs/
 debugging/
+temp/
 temp.py

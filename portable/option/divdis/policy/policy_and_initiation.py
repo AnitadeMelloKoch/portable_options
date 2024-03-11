@@ -12,7 +12,8 @@ import torch.nn as nn
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
-from portable.option.divdis.policy.models.factored_initiation_model import PositionInitiationClassifier
+from portable.option.divdis.policy.models.factored_initiation_model import FactoredInitiationClassifier
+from portable.option.divdis.policy.models.factored_context_model import FactoredContextClassifier
 
 @gin.configurable
 class PolicyWithInitiation(Agent):
@@ -31,6 +32,10 @@ class PolicyWithInitiation(Agent):
                  policy_infeature_size,
                  policy_phi,
                  gru_hidden_size,
+                 learn_initiation,
+                 max_len_init_classifier=500,
+                 max_len_context_classifier=500,
+                 steps_to_bootstrap_init_classifier=1000,
                  q_hidden_size=64,
                  model_type=None,
                  discount_rate=0.9,
@@ -48,6 +53,9 @@ class PolicyWithInitiation(Agent):
         self.final_exploration_frames = final_exploration_frames
         self.gamma = discount_rate
         self.num_actions = num_actions
+        self.learn_initiation = learn_initiation
+        self.bootstrap_init_timesteps = steps_to_bootstrap_init_classifier
+        self.interactions = 0
         
         self.step_number = 0
         
@@ -67,8 +75,10 @@ class PolicyWithInitiation(Agent):
         self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) + list(self.recurrent_memory.parameters()),
                                            lr=learning_rate)
         
-        # need to get initiation set
-        self.initiation = None
+        # classifier to determine if in initiation classifier
+        self.initiation = FactoredInitiationClassifier(maxlen=max_len_init_classifier)
+        # classifier to determine if state is part of existing context
+        self.context = FactoredContextClassifier(maxlen=max_len_context_classifier)
         
         self.phi = policy_phi
         
@@ -98,14 +108,29 @@ class PolicyWithInitiation(Agent):
             update_interval=update_interval
         )
     
-    def initialize_classifier(self, 
-                               maxlen,
-                               positive_examples):
-        classifier = PositionInitiationClassifier(maxlen=maxlen)
-        classifier.add_positive_examples(positive_examples)
-        classifier.fit_initiation_classifier()
+    def can_initiate(self, obs):
+        in_context = self.context.predict(obs)
+        print(self.initiation.pessimistic_predict(obs))
+        if (self.interactions < self.bootstrap_init_timesteps) or (in_context is False):
+            return in_context
+        else:
+            return self.initiation.pessimistic_predict(obs)
+    
+    def add_init_examples(self, 
+                          positive_examples=[],
+                          negative_examples=[]):
+        if len(positive_examples) > 0:
+            self.initiation.add_positive_examples(positive_examples)
+        if len(negative_examples) > 0:
+            self.initiation.add_negative_examples(negative_examples)
         
-        return classifier
+        self.initiation.fit()
+        self.interactions += 1
+    
+    def add_context_examples(self, positive_examples):
+        self.context.add_positive_examples(positive_examples)
+        
+        self.context.fit()
     
     def move_to_gpu(self):
         self.q_network.to("cuda")
@@ -186,12 +211,14 @@ class PolicyWithInitiation(Agent):
         batch_dones = exp_batch['is_state_terminal']
         
         batch_obs = batch_obs.unsqueeze(1)
+        batch_obs = batch_obs.float()
         batch_obs, _ = self.recurrent_memory(batch_obs)
         batch_obs = batch_obs.squeeze()
         batch_pred_q_all_actions = self.q_network(batch_obs)
         batch_pred_q = batch_pred_q_all_actions.evaluate_actions(batch_actions)
         
         with torch.no_grad():
+            batch_next_obs = batch_next_obs.float()
             batch_next_obs = batch_next_obs.unsqueeze(1)
             batch_next_obs, _ = self.recurrent_memory(batch_next_obs)
             batch_next_obs = batch_next_obs.squeeze()
@@ -211,14 +238,14 @@ class PolicyWithInitiation(Agent):
         if update_target_network:
             self.target_q_network.load_state_dict(self.q_network.state_dict())
     
-    def act(self, obs):
+    def act(self, obs, return_q=False):
         if self.use_gpu:
             device = torch.device("cuda")
         else:
             device = torch.device("cpu")
         
         obs = batch_states([obs], device, self.phi)
-        obs = obs.unsqueeze(1)
+        obs = obs.unsqueeze(1).float()
         obs, _ = self.recurrent_memory(obs)
         obs = obs.squeeze(0)
         q_values = self.q_network(obs)
@@ -234,29 +261,27 @@ class PolicyWithInitiation(Agent):
                 a = q_values.greedy_actions
             else:
                 a = np.random.randint(0, self.num_actions)
+        if return_q is True:
+            return a, q_values.q_values
         return a
     
-    def can_initiate(self, obs):
-        if self.initiation is not None:
-            return self.initiation.optimistic_predict(obs)
-        else:
-            return True
-    
     def add_data_initiation(self,
-                            positive_examples,
-                            negative_examples):
+                            positive_examples=[],
+                            negative_examples=[]):
         if len(positive_examples) != 0:
             self.initiation.add_positive_examples(positive_examples)
         if len(negative_examples) != 0:
             self.initiation.add_negative_examples(negative_examples)
         
-        self.initiation.fit_initiation_classifier()
+        self.initiation.fit()
     
     def save(self, dir):
         os.makedirs(dir, exist_ok=True)
         
         torch.save(self.q_network.state_dict(), os.path.join(dir, 'policy.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
+        self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
+        np.save(os.path.join(dir, "step_number.npy"), self.step_number)
     
     def load(self, dir):
         if os.path.exists(os.path.join(dir, "policy.pt")):
@@ -264,6 +289,8 @@ class PolicyWithInitiation(Agent):
             self.q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
+            self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
+            self.step_number = np.load(os.path.join(dir, "step_number.npy"))
         else:
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     

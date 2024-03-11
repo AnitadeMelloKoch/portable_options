@@ -6,10 +6,10 @@ import random
 
 positive_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
 negative_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_negative.npy"]
-unlabelled_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_1_initiation_positive.npy",
-                          "resources/minigrid_images/adv_doorkey_8x8_v2_openbluedoor_doorblue_0_initiation_negative.npy",
+unlabelled_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_1_initiation_positive.npy",
+                          "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_1_initiation_negative.npy",
                           "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_2_initiation_positive.npy",
-                          "resources/minigrid_images/adv_doorkey_8x8_v2_openyellowdoor_dooryellow_1_initiation_negative.npy"]
+                          "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_2_initiation_negative.npy"]
 
 positive_test_files = [
     "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_3_initiation_positive.npy",
@@ -44,13 +44,13 @@ if __name__ == "__main__":
         load_gin_configs(args.config_file, args.gin_bindings)
 
         experiment = AdvancedMinigridFactoredDivDisClassifierExperiment(base_dir=args.base_dir,
-                                                                seed=args.seed)
+                                                                        seed=args.seed)
 
         experiment.add_datafiles(positive_train_files,
                                  negative_train_files,
                                  unlabelled_train_files)
 
-        experiment.train_classifier(50)
+        experiment.train_classifier(200)
         
         accuracy = experiment.test_classifier(positive_test_files,
                                               negative_test_files)

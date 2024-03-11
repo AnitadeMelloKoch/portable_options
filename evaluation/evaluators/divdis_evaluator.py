@@ -27,9 +27,9 @@ class DivDisEvaluatorClassifier():
     def __init__(
             self,
             classifier,
+            image_input=False,
             batch_size=64,
             base_dir=None,
-            image_input=False,
             stack_size=2):
         
         self.classifier = classifier
@@ -58,12 +58,10 @@ class DivDisEvaluatorClassifier():
 
 
     def evaluate(self, test_sample_size=0.1, num_features=26, plot=False):
-        
-        if self.image_input:
-            raise NotImplementedError
+        num_batches_sampled = int(self.test_dataset.num_batches*test_sample_size)
+        num_test_states = self.test_dataset.batchsize * num_batches_sampled
+        #all_states = np.zeros((num_test_states, num_features))
 
-        num_test_states = self.test_dataset.batchsize * self.test_dataset.num_batches
-        all_states = np.zeros((num_test_states, num_features))
         all_labels = np.zeros((num_test_states, ))
         all_labels_pred = np.zeros((num_test_states, self.head_num))
         self.ig_attr_test = [{'all':[],
@@ -73,29 +71,23 @@ class DivDisEvaluatorClassifier():
                               'false negative':[]} for _ in range(self.head_num)]
 
         self.test_dataset.shuffle()
-
-        for i in range(int(self.test_dataset.num_batches*test_sample_size)): # only 10% of the test data, since attributions take too long
+        for i in range(num_batches_sampled): # attributions take too long, sample a subset of the test data
             #print(f'Batch {i+1}/{self.test_dataset.num_batches}')
             
             states, labels = self.test_dataset.get_batch() # should be all data, since batchsize is max_size
             i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
 
-            #print(states.shape, labels.shape)
-            #print(i0, i1)
+            #all_states[i0:i1] = states.numpy()
 
-            all_states[i0:i1] = states.numpy()
             all_labels[i0:i1] = labels.numpy()
 
             if self.classifier.use_gpu:
                 states = states.to('cuda')
                 labels = labels.to('cuda')
-
-            #print(f'states shape, device: {states.shape}, {states.device}')
-            #print(f'labels shape, device: {labels.shape}, {labels.device}')
-                 
+            
             labels_pred = self.classifier.predict(states).detach() # (batch_size, head_num, num_classes)
             labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
-            all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
+            #all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
 
                 
             for head_idx in range(self.head_num):
@@ -103,6 +95,10 @@ class DivDisEvaluatorClassifier():
                 labels_pred_head = labels_pred[:, head_idx]
             
                 # attributions
+                '''states_tp = states[np.where((labels == 1) & (labels_pred_head == 1))[0]]
+                states_tn = states[np.where((labels == 0) & (labels_pred_head == 1))[0]]
+                states_fp = states[np.where((labels == 0) & (labels_pred_head == 1))[0]]
+                states_fn = states[np.where((labels == 1) & (labels_pred_head == 0))[0]]'''
                 states_tp = states[(labels == 1) & (labels_pred_head == 1)]
                 states_tn = states[(labels == 0) & (labels_pred_head == 0)]
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
@@ -119,7 +115,7 @@ class DivDisEvaluatorClassifier():
                 #print(torch.cuda.memory_reserved() / 1e9, 'GB')
 
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
-        
+
         if plot:
             for head_idx in range(self.head_num):
                 labels_pred_head = all_labels_pred[:, head_idx]
@@ -132,8 +128,9 @@ class DivDisEvaluatorClassifier():
                 report_df = pd.DataFrame(report).transpose()
                 self.classification_reports[head_idx] = report_df
 
-            self._plot_attributions_factored(num_features)
             self._plot_cm_cr()
+            #self._plot_attributions() # TODO: implement image attributions
+            self._plot_attributions_factored(num_features) if not self.image_input else None
         
 
 
@@ -266,6 +263,7 @@ class DivDisEvaluatorClassifier():
     '''
 
     def _plot_attributions_factored(self, num_features=26):
+        assert self.image_input is False, "Not implemented for image input"
 
         fig, axes = plt.subplots(nrows=self.head_num+0, ncols=5, figsize=(30,5*(self.head_num)), sharey='all')
         if self.head_num == 1:  # Ensure axes is iterable when there's only one subplot
@@ -362,6 +360,8 @@ class DivDisEvaluatorClassifier():
         head_complexity = []
         for i in range(self.head_num):
             ig_attr_test = self.ig_attr_test[i]['all']
+            n = ig_attr_test.shape[0]
+            ig_attr_test = ig_attr_test.reshape(n, -1)
             ig_attr_test_std = ig_attr_test.std(0)
             head_complexity.append(ig_attr_test_std.mean())
         return head_complexity

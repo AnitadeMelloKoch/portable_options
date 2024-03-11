@@ -247,8 +247,8 @@ class OptionAgent():
         
         obs = batch_states([obs], device, self.phi)
         action, option = self.agent.predict_action(obs,
-                                                                     action_mask,
-                                                                     option_mask,
-                                                                     self.compute_epsilon())
+                                                   action_mask,
+                                                   option_mask,
+                                                   self.compute_epsilon())
         
         return action, option
