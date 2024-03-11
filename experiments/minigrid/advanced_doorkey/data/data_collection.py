@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
-from experiments.minigrid.utils import environment_builder, actions, factored_environment_builder
+from experiments.minigrid.utils import FactoredObsWrapperDoorKey, environment_builder, actions, factored_environment_builder
 
 
 class MiniGridDataCollector:
@@ -21,7 +21,7 @@ class MiniGridDataCollector:
         self.training_seed = int(input("Training seed: "))
         self.env_mode = int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
         self.data_mode = int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
-        #self.manual_input_data = True if input("Manual input data? (y/n): ") == "y" else False
+        self.manual_input_data = True if input("Manual input data? (y/n): ") == "y" else False
         self.manual_input_data = False
         
         if self.data_mode == 1:
@@ -58,8 +58,18 @@ class MiniGridDataCollector:
             else: # default to auto collection
                 # agent info
                 agent_loc = info['player_pos'][::-1] 
-                #agent_facing = info['player_dir']
-                agent_facing = input(f"Agent current facing (u/d/l/r): ") 
+
+                print(env.unwrapped.agent_dir)
+                
+                facing_map = {
+                    0: 'r',
+                    1: 'd',
+                    2: 'l',
+                    3: 'u'
+                }
+                agent_facing = facing_map.get(env.unwrapped.agent_dir, None)
+                print(f'Agent location: {agent_loc}, Agent facing: {agent_facing}')
+
 
                 # keys and door info
                 door_color = info['door'].colour
@@ -153,6 +163,7 @@ class MiniGridDataCollector:
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
                                                 key_colours=other_keys_colour)
+            #env = FactoredObsWrapperDoorKey(env)
             env_type = 'minigrid'
         elif self.env_mode == 2:
             env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed)
@@ -167,7 +178,7 @@ class MiniGridDataCollector:
         
         return env, env_type
 
-                           
+
     def process_loc_input(self, input_str):
         try:
             # Split the input string by comma
@@ -279,6 +290,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] > self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -336,6 +349,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] > self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -398,6 +413,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] > self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -536,27 +553,6 @@ class GridEnv:
     def forward(self, steps):
         if steps < 0:
             raise ValueError('steps must be positive')
-        
-        if self.agent_facing == 'u':
-            end_row = self.agent_loc[0] - steps if self.agent_loc[0] - steps >= 1 else 1
-            self.agent_loc = (end_row, self.agent_loc[1])
-        elif self.agent_facing == 'd':
-            end_row = self.agent_loc[0] + steps if self.agent_loc[0] + steps <= 6 else 6
-            self.agent_loc = (self.agent_loc[0]+steps, self.agent_loc[1])
-        elif self.agent_facing == 'l':
-            if self.agent_loc[0] == self.door_loc[0]:
-                end_col = self.agent_loc[1] - steps if self.agent_loc[1] - steps >= 1 else 1
-            if self.agent_loc[0] == self.door_loc[0]:
-                end_col = self.agent_loc[1] - steps if self.agent_loc[1] - steps >= 1 else 1
-            end_col = self.agent_loc[1] - steps if self.agent_loc[1] - steps >= 1 else 1
-            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]-steps)
-        elif self.agent_facing == 'r':
-            if self.agent_loc[0] == self.door_loc[0]:
-                end_col = self.agent_loc[1] + steps if self.agent_loc[1] + steps <= 6 else 6
-
-                end_col = self.agent_loc[1] + steps if self.agent_loc[1] + steps <= self.wall_col-1 else self.wall_col-1
-            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]+steps)
-            
         self.perform_action(actions.FORWARD, steps, show=self.show_path)
 
         
@@ -569,7 +565,7 @@ class GridEnv:
         }
                 
         turn_action = turn_map.get(self.agent_facing, {}).get(target_direction, 'No turn needed')
-        self.agent_facing = target_direction
+        #self.agent_facing = target_direction
         
         if turn_action == 'right':
             self.perform_action(actions.RIGHT, 1, show=self.show_path)
@@ -602,7 +598,7 @@ class GridEnv:
             
         for _ in range(steps):
             
-            state, _, terminated, _  = self.env.step(action)
+            state, _, terminated, info  = self.env.step(action)
             state = state.numpy()
             
             if show:
@@ -649,6 +645,8 @@ class GridEnv:
             else:
                 term_msg = "Not saved to either term"
 
+            # update agent location & facing
+            self.update_agent_info()
             # map agent facing to arrows
             facing_map = {
                 'u': '^',
@@ -658,6 +656,17 @@ class GridEnv:
             }
             cur_facing = facing_map.get(self.agent_facing, 'No facing')
             print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
+            #pause = input("Press enter to continue")
+
+    def update_agent_info(self):
+        self.agent_loc = self.env.unwrapped.agent_pos[::-1]
+        facing_map = {
+                    0: 'r',
+                    1: 'd',
+                    2: 'l',
+                    3: 'u'
+                }
+        self.agent_facing = facing_map.get(self.env.unwrapped.agent_dir, None)
 
 
     def save_to_file(self):

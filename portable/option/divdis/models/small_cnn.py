@@ -20,28 +20,39 @@ class SmallCNN(nn.Module):
         super().__init__()
 
         self.model = nn.ModuleList([nn.Sequential(
-            nn.LazyConv2d(out_channels=32, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(kernel_size=5, stride=2),
-            
-            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(kernel_size=5, stride=2),
-            
-            #nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            # v1
+            #nn.LazyConv2d(out_channels=32, kernel_size=3, stride=2, padding=0),
+            #nn.BatchNorm2d(32),
             #nn.ReLU(),
-            #nn.MaxPool2d(kernel_size=2, stride=2),
+            #nn.MaxPool2d(kernel_size=5, stride=2),
             
-            nn.Flatten(),
-            nn.LazyLinear(1000),
-            nn.LeakyReLU(),
+            #nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=0),
+            #nn.BatchNorm2d(64),
+            #nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=5, stride=2),
 
-            nn.LazyLinear(100),
-            nn.LeakyReLU(),
+            # v2
+            nn.LazyConv2d(out_channels=32, kernel_size=5, stride=2, padding=0),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2),
             
+            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=0),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            #nn.MaxPool2d(kernel_size=4, stride=2),
+            nn.AvgPool2d(kernel_size=, stride=1), #global average pooling
+            
+            nn.Flatten(),           
+            nn.LazyLinear(750),
+            #nn.BatchNorm1d(750),
+            nn.ReLU(),
+            nn.Dropout(0.10),
+            nn.LazyLinear(100),
+            #nn.BatchNorm1d(100),
+            nn.ReLU(),
             nn.LazyLinear(num_classes)
+            
             ) for _ in range(num_heads)])
         
         self.num_heads = num_heads

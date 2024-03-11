@@ -4,31 +4,17 @@ from portable.utils.utils import load_gin_configs
 import torch 
 import random 
 
-positive_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_positive.npy"]
-negative_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_initiation_negative.npy"]
-unlabelled_train_files = ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_1_initiation_positive.npy",
-                          "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_1_initiation_negative.npy",
-                          "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_2_initiation_positive.npy",
-                          "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_2_initiation_negative.npy"]
+color = 'grey'
+task = f'get{color}key'
+init_term = 'termination'
 
-positive_test_files = [
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_3_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_4_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_5_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_6_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_7_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_8_initiation_positive.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_9_initiation_positive.npy",
-                      ]
-negative_test_files = [
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_3_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_4_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_5_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_6_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_7_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_8_initiation_negative.npy",
-    "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_9_initiation_negative.npy",
-                      ]
+base_img_dir = 'resources/minigrid_images/'
+positive_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_positive.npy"]
+negative_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_negative.npy"]
+unlabelled_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
+positive_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_positive.npy" for s in [3,4,5,6,7,8,9,10]]
+negative_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_negative.npy" for s in [3,4,5,6,7,8,9,10]]
+
 if __name__ == "__main__":
         parser = argparse.ArgumentParser()
 

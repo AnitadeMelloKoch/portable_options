@@ -1,13 +1,13 @@
-import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment
+#import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment
 import portable.option.divdis.divdis_classifier
 #from portable.option.divdis.divdis_classifier import DivDisClassifier
 
 
 #DivDisClassifier.experiment_name                = "factored_divdis_classifier"
-DivDisClassifier.log_dir                        = 'evaluation/divdis/logs'
+DivDisClassifier.log_dir                        = 'runs/divdis_evaluation_image'
 DivDisClassifier.use_gpu                        = True
-DivDisClassifier.head_num                       = 8
-DivDisClassifier.learning_rate                  = 0.01
-DivDisClassifier.input_dim                      = 26
+DivDisClassifier.head_num                       = 6
+DivDisClassifier.learning_rate                  = 0.001
+DivDisClassifier.input_dim                      = 3
 DivDisClassifier.num_classes                    = 2
-DivDisClassifier.diversity_weight               = 0
+DivDisClassifier.diversity_weight               = 0.001
