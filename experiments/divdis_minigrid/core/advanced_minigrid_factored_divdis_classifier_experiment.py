@@ -18,13 +18,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
                  base_dir,
                  experiment_name,
                  seed,
-                 use_gpu,
-                 
-                 classifier_head_num,
-                 classifier_learning_rate,
-                 classifier_input_dim,
-                 classifier_num_classes,
-                 classifier_diversity_weight):
+                 use_gpu):
         
         self.seed = seed 
         self.base_dir = base_dir
@@ -37,13 +31,12 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         self.plot_dir = os.path.join(self.base_dir, 'plots')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
+        os.makedirs(self.save_dir, exist_ok=True)
+        
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
-                                           log_dir=self.log_dir,
-                                           head_num=classifier_head_num,
-                                           learning_rate=classifier_learning_rate,
-                                           input_dim=classifier_input_dim,
-                                           num_classes=classifier_num_classes,
-                                           diversity_weight=classifier_diversity_weight)
+                                           log_dir=self.log_dir)
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         log_file = os.path.join(self.log_dir,
@@ -56,10 +49,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.experiment_name, self.seed))
         logging.info("======== HYPERPARAMETERS ========")
         logging.info("Seed: {}".format(seed))
-        logging.info("Head num: {}".format(classifier_head_num))
-        logging.info("Learning rate: {}".format(classifier_learning_rate))
-        logging.info("Diversity weight: {}".format(classifier_diversity_weight))
-    
+
     def save(self):
         self.classifier.save(path=self.save_dir)
     
@@ -180,5 +170,65 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         return torch.std_mean(true_data, dim=0), torch.std_mean(false_data, dim=0)
         
         
+    
+    def test_confidences(self,
+                         test_positive_files,
+                         test_negative_files):
+        
+        accuracy = [[] for _ in range(self.classifier.head_num)]
+        rolling_accuracy = [[] for _ in range(self.classifier.head_num)]
+        confidence = [[] for _ in range(self.classifier.head_num)]
+        
+        test_dataset = SetDataset(max_size=1e6,
+                                batchsize=16)
+        test_dataset.set_transform_function(transform)
+        test_dataset.add_true_files(test_positive_files)
+        test_dataset.add_false_files(test_negative_files)
+        
+        batch_counter = 0
+        for _ in range(test_dataset.num_batches):
+            batch_counter += 1
+            b_x, b_y = test_dataset.get_batch()
+            for x, y in zip(b_x, b_y):
+                pred_y, votes, conf = self.classifier.predict(x)
+                pred_y = pred_y.cpu()
+                for idx in range(self.classifier.head_num):
+                    pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                    acc = int((pred_class==y).item())
+                    rolling_accuracy[idx].append(acc)
+                    idx_conf = conf[idx]
+                    confidence[idx].append(idx_conf)
+                    accuracy[idx].append(np.mean(rolling_accuracy[idx]))
+                    self.classifier.update_confidence(y==1,
+                                                      votes[0])
+        
+        for idx in range(self.classifier.head_num):
+            plot_file_name = os.path.join(self.plot_dir, 'head_{}.png'.format(idx))
+            self.plot(plot_file_name,
+                      accuracy[idx],
+                      confidence[idx],
+                      'Results')
+        
+    
+    def plot(self,
+             plot_file,
+             accuracies,
+             confidences,
+             
+             plot_title):
+        
+        fig, ax = plt.subplots()
+        ax.plot(accuracies, label='Accuracy')
+        ax.plot(confidences, label='Confidence')
+        
+        ax.legend()
+        
+        fig.suptitle(plot_title)
+        fig.tight_layout()
+        
+        fig.savefig(plot_file)
+        plt.close(fig)
+        
+    
     
     
