@@ -22,7 +22,7 @@ OptionPPO.state_dim                                                 = 23
 OptionPPO.action_num                                                = 14
 OptionPPO.final_epsilon                                             = 0.05
 OptionPPO.final_exploration_frames                                  = 1e7
-OptionPPO.num_options                                               = 1
+OptionPPO.num_options                                               = 2
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
@@ -31,7 +31,7 @@ PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
 PolicyWithInitiation.final_epsilon                                  = 0.01
-PolicyWithInitiation.final_exploration_frames                       = 5e4
+PolicyWithInitiation.final_exploration_frames                       = 5e8
 PolicyWithInitiation.batch_size                                     = 32
 PolicyWithInitiation.num_actions                                    = 7
 PolicyWithInitiation.policy_infeature_size                          = 23

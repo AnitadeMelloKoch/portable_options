@@ -33,7 +33,6 @@ class FactoredAdvancedMinigridDivDisMetaExperiment():
                  num_options,
                  num_primitive_actions,
                  discount_rate=0.9,
-                 image_state=True,
                  make_videos=False):
         
         self.name = experiment_name,

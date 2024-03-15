@@ -154,13 +154,20 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("red")],
-        [PerfectGetKey("yellow")],
-        [PerfectGetKey("grey")],
-        [PerfectDoorOpen()],
-        [PerfectAtLocation(4,1)],
-        [PerfectAtLocation(5,3)],
-        [PerfectAtLocation(6,6)],
+        [PerfectGetKey("red"),
+         NeverCorrectGetKey("red")],
+        [PerfectGetKey("yellow"),
+         NeverCorrectGetKey("yellow")],
+        [PerfectGetKey("grey"),
+         NeverCorrectGetKey("grey")],
+        [PerfectDoorOpen(),
+         PerfectDoorOpen()],
+        [PerfectAtLocation(4,1),
+         PerfectAtLocation(4,1)],
+        [PerfectAtLocation(5,3),
+         PerfectAtLocation(5,3)],
+        [PerfectAtLocation(6,6),
+         PerfectAtLocation(6,6)],
     ]
     
     experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,

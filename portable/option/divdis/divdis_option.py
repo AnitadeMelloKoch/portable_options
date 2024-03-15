@@ -191,7 +191,7 @@ class DivDisOption():
             policy.add_data_initiation(negative_examples=states)
         policy.add_context_examples(states)
         
-        return state, info, steps, rewards, option_rewards, states, infos
+        return state, info, done, steps, rewards, option_rewards, states, infos
     
     def plot_term_state(self, 
                         state, 
