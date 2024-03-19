@@ -32,9 +32,9 @@ class MiniGridDataCollector:
             env, _ = self.init_env('blue', []) 
             state, info = env.reset()
             state = state.numpy()
-            screen = env.render()
-            ax.imshow(screen)
-            plt.show(block=False)
+            #screen = env.render()
+            #ax.imshow(screen)
+            #plt.show(block=False)
             
             if self.manual_input_data is True:
                 # User input for agent, key, door locations, etc.
@@ -119,9 +119,9 @@ class MiniGridDataCollector:
             env, _ = self.init_env(door_color, other_keys_colour) 
             state, _ = env.reset()
             state = state.numpy()
-            screen = env.render()
-            ax.imshow(screen)
-            plt.show(block=False)
+            #screen = env.render()
+            #ax.imshow(screen)
+            #plt.show(block=False)
             
             # User input for agent, key, door locations, etc.
             agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
@@ -233,9 +233,9 @@ class GridEnv:
         self.env = env
         self.state, _ = self.env.reset()
         self.state = self.state.numpy()
-        self.screen = self.env.render()
-        self.ax.imshow(self.screen)
-        plt.show(block=False)
+        #self.screen = self.env.render()
+        #self.ax.imshow(self.screen)
+        #plt.show(block=False)
 
 
     def collect_data(self):
@@ -593,12 +593,12 @@ class GridEnv:
             state, _, terminated, info  = self.env.step(action)
             state = state.numpy()
             
-            if show:
-                screen = self.env.render()    
-                self.ax.clear()  # Clear the axes
-                self.ax.imshow(screen)  # Update the image
-                plt.draw()  # Redraw only the necessary parts
-                plt.pause(0.005)  # Short pause for the update
+            #if show:
+                #screen = self.env.render()    
+                #self.ax.clear()  # Clear the axes
+                #self.ax.imshow(screen)  # Update the image
+                #plt.draw()  # Redraw only the necessary parts
+                #plt.pause(0.005)  # Short pause for the update
 
             
             if init_positive is None:
@@ -701,7 +701,7 @@ class GridEnv:
 if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
     
-    seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14]
     USE_MP = True
     
     if USE_MP:
