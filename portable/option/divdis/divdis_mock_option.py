@@ -250,11 +250,11 @@ class DivDisMockOption():
                                                                           np.mean(eval_rewards)))
             episode += 1
             
-            if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
-                logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
-                                                                                                             np.mean(eval_rewards),
-                                                                                                             total_steps))
-                break
+            # if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
+            #     logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
+            #                                                                                                  np.mean(eval_rewards),
+            #                                                                                                  total_steps))
+            #     break
         
         self.save()
     

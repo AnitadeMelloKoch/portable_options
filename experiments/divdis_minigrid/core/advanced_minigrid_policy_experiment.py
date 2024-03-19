@@ -125,7 +125,16 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                                         np.mean(train_rewards)))
         option.save()
     
+    def evaluate_wasserstein_diff_policies_mock_option(self,
+                                                       env,
+                                                       env_seed,
+                                                       terminations):
+        pass
     
-    
+    def evaluate_wasserstein_one_policy_mock_option(self,
+                                                    env,
+                                                    env_seed,
+                                                    terminations):
+        pass
 
 

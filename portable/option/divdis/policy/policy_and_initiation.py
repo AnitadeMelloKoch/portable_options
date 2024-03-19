@@ -12,6 +12,7 @@ import torch.nn as nn
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
+from portable.option.divdis.policy.models.cnn_q_function import CNNQFunction
 from portable.option.divdis.policy.models.factored_initiation_model import FactoredInitiationClassifier
 from portable.option.divdis.policy.models.factored_context_model import FactoredContextClassifier
 
@@ -37,7 +38,7 @@ class PolicyWithInitiation(Agent):
                  max_len_context_classifier=500,
                  steps_to_bootstrap_init_classifier=1000,
                  q_hidden_size=64,
-                 model_type=None,
+                 image_input=True,
                  discount_rate=0.9,
                  initiation_maxlen=100):
         super().__init__()
@@ -59,11 +60,25 @@ class PolicyWithInitiation(Agent):
         
         self.step_number = 0
         
-        # model type should determine policy model
-        # for now it is not
+        self.image_input = image_input
+        if image_input:
+            self.cnn = nn.Sequential(
+                nn.LazyConv2d(out_channels=16, kernel_size=3, stride=1),
+                nn.LazyBatchNorm2d(),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                
+                nn.LazyConv2d(out_channels=32, kernel_size=3, stride=1),
+                nn.LazyBatchNorm2d(),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2),
+                
+                nn.Flatten()
+            )
+        
         self.q_network = LinearQFunction(in_features=gru_hidden_size,
-                                      n_actions=num_actions,
-                                      hidden_size=q_hidden_size)
+                                         n_actions=num_actions,
+                                         hidden_size=q_hidden_size)
         
         self.recurrent_memory = nn.GRU(input_size=policy_infeature_size,
                                        hidden_size=gru_hidden_size,
@@ -72,7 +87,9 @@ class PolicyWithInitiation(Agent):
         self.target_q_network = deepcopy(self.q_network)
         self.target_q_network.eval()
         
-        self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) + list(self.recurrent_memory.parameters()),
+        self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) \
+            + list(self.recurrent_memory.parameters())\
+                + list(self.cnn.parameters()),
                                            lr=learning_rate)
         
         # classifier to determine if in initiation classifier
@@ -134,11 +151,15 @@ class PolicyWithInitiation(Agent):
     
     def move_to_gpu(self):
         self.q_network.to("cuda")
+        if self.image_input:
+            self.cnn.to("cuda")
         self.target_q_network.to("cuda")
         self.recurrent_memory.to("cuda")
     
     def move_to_cpu(self):
         self.q_network.to("cpu")
+        if self.image_input:
+            self.cnn.to("cpu")
         self.target_q_network.to("cpu")
         self.recurrent_memory.to("cpu")
     
@@ -210,8 +231,10 @@ class PolicyWithInitiation(Agent):
         batch_next_obs = exp_batch['next_state']
         batch_dones = exp_batch['is_state_terminal']
         
-        batch_obs = batch_obs.unsqueeze(1)
         batch_obs = batch_obs.float()
+        if self.image_input:
+            batch_obs = self.cnn(batch_obs)
+        batch_obs = batch_obs.unsqueeze(1)
         batch_obs, _ = self.recurrent_memory(batch_obs)
         batch_obs = batch_obs.squeeze()
         batch_pred_q_all_actions = self.q_network(batch_obs)
@@ -219,6 +242,8 @@ class PolicyWithInitiation(Agent):
         
         with torch.no_grad():
             batch_next_obs = batch_next_obs.float()
+            if self.image_input:
+                batch_next_obs = self.cnn(batch_next_obs)
             batch_next_obs = batch_next_obs.unsqueeze(1)
             batch_next_obs, _ = self.recurrent_memory(batch_next_obs)
             batch_next_obs = batch_next_obs.squeeze()
@@ -245,6 +270,8 @@ class PolicyWithInitiation(Agent):
             device = torch.device("cpu")
         
         obs = batch_states([obs], device, self.phi)
+        if self.image_input:
+            obs = self.cnn(obs)
         obs = obs.unsqueeze(1).float()
         obs, _ = self.recurrent_memory(obs)
         obs = obs.squeeze(0)
@@ -279,6 +306,8 @@ class PolicyWithInitiation(Agent):
         os.makedirs(dir, exist_ok=True)
         
         torch.save(self.q_network.state_dict(), os.path.join(dir, 'policy.pt'))
+        if self.image_input:
+            torch.save(self.cnn.state_dict(), os.path.join(dir, 'cnn.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
         self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         np.save(os.path.join(dir, "step_number.npy"), self.step_number)
@@ -287,6 +316,8 @@ class PolicyWithInitiation(Agent):
         if os.path.exists(os.path.join(dir, "policy.pt")):
             print("\033[92m {}\033[00m" .format("Policy model loaded"))
             self.q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
+            if self.image_input:
+                self.cnn.load_state_dict(torch.load(os.path.join(dir, 'cnn.pt')))
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
             self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))

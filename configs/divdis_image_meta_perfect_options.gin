@@ -1,0 +1,39 @@
+import portable.agent.model.linear_q
+import experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_meta_experiment
+import portable.option.divdis.divdis_mock_option
+import portable.option.divdis.policy.policy_and_initiation
+import portable.agent.model.ppo 
+
+FactoredAdvancedMinigridDivDisMetaExperiment.experiment_name        = "meta_image_policy_perfect_options"
+FactoredAdvancedMinigridDivDisMetaExperiment.num_options            = 7
+FactoredAdvancedMinigridDivDisMetaExperiment.num_primitive_actions  = 7
+FactoredAdvancedMinigridDivDisMetaExperiment.use_gpu                = True
+FactoredAdvancedMinigridDivDisMetaExperiment.make_videos            = True
+
+ActionPPO.learning_rate                                             = 2.5e-4
+ActionPPO.state_shape                                               = 23
+ActionPPO.final_epsilon                                             = 0.05
+ActionPPO.final_exploration_frames                                  = 1e7
+ActionPPO.num_actions                                               = 14
+ActionPPO.update_interval                                           = 100
+
+OptionPPO.learning_rate                                             = 2.5e-4
+OptionPPO.state_dim                                                 = 23
+OptionPPO.action_num                                                = 14
+OptionPPO.final_epsilon                                             = 0.05
+OptionPPO.final_exploration_frames                                  = 1e7
+OptionPPO.num_options                                               = 2
+
+PolicyWithInitiation.warmup_steps                                   = 1024
+PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
+PolicyWithInitiation.buffer_length                                  = 50000
+PolicyWithInitiation.update_interval                                = 4
+PolicyWithInitiation.q_target_update_interval                       = 10
+PolicyWithInitiation.learning_rate                                  = 2.5e-4
+PolicyWithInitiation.final_epsilon                                  = 0.01
+PolicyWithInitiation.final_exploration_frames                       = 5e6
+PolicyWithInitiation.batch_size                                     = 32
+PolicyWithInitiation.num_actions                                    = 7
+PolicyWithInitiation.policy_infeature_size                          = 6272
+PolicyWithInitiation.q_hidden_size                                  = 128
+PolicyWithInitiation.gru_hidden_size                                = 512
