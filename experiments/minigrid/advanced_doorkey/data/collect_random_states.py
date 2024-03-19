@@ -2,7 +2,6 @@ import random
 from functools import partial
 import matplotlib.pyplot as plt
 import numpy as np
-from multiprocess import Pool
 from tqdm import tqdm
 
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import \
@@ -17,7 +16,7 @@ if __name__ == '__main__':
         
         for colour in colours:
             states = []
-            for _ in range(2000):
+            for _ in tqdm(range(1000)):
                 repos_attempts = np.random.randint(low=0, high=1000)
                 env = environment_builder('AdvancedDoorKey-8x8-v0', seed=seed, grayscale=False)
                 #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
@@ -55,12 +54,20 @@ if __name__ == '__main__':
 
     # multiprocessing
     seeds = [0,1,2,3,4,5,6,7,8,9,10,11]
+    USE_MP = True
+    if USE_MP:
+        import multiprocess as mp
+        with mp.Pool() as p:
+            p.map(partial(collect_seed, termination=True), seeds)
 
-    with Pool() as p:
-        p.map(partial(collect_seed, termination=True), seeds)
-
-    with Pool() as p:
-        p.map(partial(collect_seed, termination=False), seeds)
+        with mp.Pool() as p:
+            p.map(partial(collect_seed, termination=False), seeds)
+        
+    else:
+        for seed in tqdm(seeds):
+            collect_seed(seed, termination=True)
+            collect_seed(seed, termination=False)
+    
 
     
 
