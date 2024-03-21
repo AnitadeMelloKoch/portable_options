@@ -53,8 +53,8 @@ if __name__ == "__main__":
 
 
     print(f"[{formatted_time()}] Sweeping learning rate...")
-    experiment.sweep_lr(1e-6, # 0.00001
-                        5e-2,
+    experiment.sweep_lr(-6, # 0.00001
+                        -2,
                         10,
                         NUM_SEEDS)
 

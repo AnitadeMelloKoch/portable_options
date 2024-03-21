@@ -53,8 +53,8 @@ if __name__ == "__main__":
 
     
     print(f"[{formatted_time()}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(1e-6,
-                                      5e-2,
+    experiment.sweep_class_div_weight(-6,
+                                      -2,
                                       10,
                                       NUM_SEEDS)
 
