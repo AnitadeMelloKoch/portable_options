@@ -6,14 +6,12 @@ from tqdm import tqdm
 
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import \
     AdvancedDoorKeyPolicyTrainWrapper
-from experiments.minigrid.utils import (environment_builder,
-                                        factored_environment_builder)
+from experiments.minigrid.utils import environment_builder, factored_environment_builder
 
 if __name__ == '__main__':
 
-    def collect_seed(seed, initiation=None, termination=None):
-        colours = ["red", "green", "blue", "purple", "yellow", "grey"]
-        
+    def collect_seed(seed, task, initiation=None, termination=None):
+        colours = ["red", "green", "blue", "purple", "yellow", "grey"]        
         for colour in colours:
             states = []
             for _ in tqdm(range(1000)):
@@ -23,28 +21,43 @@ if __name__ == '__main__':
                 env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                         door_colour=colour,
                                                         image_input=True)
-                
-                if (initiation is True) or (termination is False): # init pos, term neg
-                    obs, _ = env.reset(random_start=True, 
-                                       keep_colour=colour,
-                                       agent_reposition_attempts=repos_attempts)
-                elif (initiation is False) or (termination is True): # init neg, term pos
-                    obs, _ = env.reset(random_start=True, 
-                                       pickup_colour=colour,
-                                       agent_reposition_attempts=repos_attempts)
+
+                # for get key
+                if task == "get_key":
+                    if (initiation is True) or (termination is False): # key presnet; can get key: init pos, term neg
+                        obs, _ = env.reset(random_start=True, 
+                                        keep_colour=colour,
+                                        agent_reposition_attempts=repos_attempts)
+                    elif (initiation is False) or (termination is True): # key not presnet; cant get key:init neg, term pos
+                        obs, _ = env.reset(random_start=True, 
+                                        pickup_colour=colour,
+                                        agent_reposition_attempts=repos_attempts)
+
+                    
+                elif task == "open_door":
+                    if (initiation is True) or (termination is False): # door closed; can open door: init pos, term neg
+                        obs, _ = env.reset(random_start=True, 
+                                        force_door_closed=True,
+                                        agent_reposition_attempts=repos_attempts)
+                    elif (initiation is False) or (termination is True): # door open; cant open door: init neg, term pos
+                        obs, _ = env.reset(random_start=True, 
+                                        force_door_open=True,
+                                        agent_reposition_attempts=repos_attempts)
                 else:
-                    raise ValueError("initiation and termination cannot be the same")
-                
+                    raise ValueError("task must be either 'get_key' or 'open_door'")
+                    
+                    
                 states.append(obs.numpy())
 
             states = np.array(states)
             base_dir = "resources/minigrid_images/" 
+            task_name = f"get{colour}key" if task == "get_key" else f"open{colour}door"
             if (initiation is True) or (termination is False): # init pos, term neg
-                np.save(base_dir+"adv_doorkey_8x8_v2_get{}key_door{}_{}_1_initiation_positive.npy".format(colour, colour, seed), states)
-                np.save(base_dir+"adv_doorkey_8x8_v2_get{}key_door{}_{}_1_termination_negative.npy".format(colour, colour, seed), states)
+                np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_initiation_positive.npy", states)
+                np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_termination_negative.npy", states)
             elif (initiation is False) or (termination is True): # init neg, term pos
-                np.save(base_dir+"adv_doorkey_8x8_v2_get{}key_door{}_{}_1_initiation_negative.npy".format(colour, colour, seed), states)
-                np.save(base_dir+"adv_doorkey_8x8_v2_get{}key_door{}_{}_1_termination_positive.npy".format(colour, colour, seed), states)
+                np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_initiation_negative.npy", states)
+                np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_termination_positive.npy", states)
             else:
                 raise ValueError("initiation and termination cannot be the same")
 
@@ -58,15 +71,15 @@ if __name__ == '__main__':
     if USE_MP:
         import multiprocess as mp
         with mp.Pool() as p:
-            p.map(partial(collect_seed, termination=True), seeds)
+            p.map(partial(collect_seed, task='open_door', termination=True), seeds)
 
         with mp.Pool() as p:
-            p.map(partial(collect_seed, termination=False), seeds)
+            p.map(partial(collect_seed, task='open_door', termination=False), seeds)
         
     else:
         for seed in tqdm(seeds):
-            collect_seed(seed, termination=True)
-            collect_seed(seed, termination=False)
+            collect_seed(seed, task='open_door', termination=True)
+            collect_seed(seed, task='open_door', termination=False)
     
 
     

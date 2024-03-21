@@ -30,6 +30,7 @@ class DivDisClassifier():
                  input_dim,
                  num_classes,
                  diversity_weight,
+                 l2_reg_weight=0,
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
@@ -51,9 +52,16 @@ class DivDisClassifier():
         self.classifier = SmallCNN(num_input_channels=input_dim,
                                    num_classes=num_classes,
                                    num_heads=head_num)
+        #self.classifier = torch.compile(
+        #                        SmallCNN(num_input_channels=input_dim,
+        #                                    num_classes=num_classes,
+        #                                    num_heads=head_num))
+        
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
-                                          lr=learning_rate)
+                                          lr=learning_rate,
+                                          weight_decay=l2_reg_weight
+                                          )
         
         self.divdis_criterion = DivDisLoss(heads=head_num)
         self.ce_criterion = torch.nn.CrossEntropyLoss()

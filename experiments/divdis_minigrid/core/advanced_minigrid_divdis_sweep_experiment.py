@@ -32,11 +32,14 @@ class AdvancedMinigridDivDisSweepExperiment():
                  default_div_weight,
                  default_div_lr,
                  default_num_heads,
+                 default_l2_reg_weight,
+                 
                  train_positive_files,
                  train_negative_files,
                  unlabelled_files,
                  test_positive_files,
                  test_negative_files,
+                 
                  evaluation_sample_size):
 
         
@@ -54,6 +57,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         self.default_div_weight = default_div_weight
         self.default_div_lr = default_div_lr
         self.default_num_heads = default_num_heads
+        self.default_l2_reg_weight = default_l2_reg_weight
         
         self.dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
@@ -125,7 +129,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
     def head_complexity(self, classifier):
-        evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=32, base_dir=self.base_dir)
+        evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=64, base_dir=self.base_dir)
         evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
         #evaluator.test_dataset.set_transform_function(transform)
         evaluator.evaluate(test_sample_size=self.evaluation_sample_size)
@@ -230,6 +234,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         
         fig.savefig(plot_file)
         plt.close(fig)
+
     
     def sweep_class_div_weight(self,
                                start_weight,
@@ -246,7 +251,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_comp = []
 
         
-        weights = np.linspace(start_weight, end_weight, num_samples)
+        weights = np.logspace(start_weight, end_weight, num_samples)
         
         for weight in tqdm(weights, desc="weights", position=0):
             results_weight.append(weight)
@@ -262,7 +267,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=weight,
                                               head_num=self.default_num_heads,
-                                              learning_rate=self.default_div_lr)
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -335,7 +341,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
-                                              learning_rate=self.default_div_lr)
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -392,7 +399,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_comp = []
 
         
-        for num_heads in tqdm(range(start_size, end_size+1), desc="size", position=0):
+        for num_heads in tqdm(range(start_size, end_size+1, step=2), desc="size", position=0):
             results_size.append(num_heads)
             size_acc = []
             size_avg_acc = []
@@ -406,7 +413,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=self.default_div_weight,
                                               head_num=num_heads,
-                                              learning_rate=self.default_div_lr)
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
@@ -477,7 +485,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              unlabelled_dataset_batchsize=batch_size)
+                                              unlabelled_dataset_batchsize=batch_size,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -534,7 +543,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_comp = []
 
         
-        lrs = np.linspace(start_lr, end_lr, num_samples)
+        lrs = np.logspace(start_lr, end_lr, num_samples)
         
         for lr in tqdm(lrs, desc="lrs", position=0):
             results_lr.append(lr)
@@ -550,7 +559,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
-                                              learning_rate=lr)
+                                              learning_rate=lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
@@ -592,6 +602,81 @@ class AdvancedMinigridDivDisSweepExperiment():
                   "Learning Rate")
     
 
+    def sweep_l2_reg_weight(self,
+                 start_l2,
+                 end_l2,
+                 num_samples,
+                 num_seeds):
+        # 1D array
+        results_reg_weights = []
+        # 2D array for multiple seeds
+        results_acc = []
+        results_avg_acc = []
+        results_loss = []
+        results_comp = []
+
+        
+        l2_weights = np.logspace(start_l2, end_l2, num_samples)
+        
+        for reg_weight in tqdm(l2_weights, desc="l2_reg_weights", position=0):
+            results_reg_weights.append(reg_weight)
+            lr_acc = []
+            lr_avg_acc = []
+            lr_loss = []
+            lr_comp = []
+
+            
+            for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
+                set_seed(seed)
+                classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                              log_dir=self.log_dir,
+                                              diversity_weight=self.default_div_weight,
+                                              head_num=self.default_num_heads,
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=reg_weight)
+                
+                classifier.add_data(positive_files=self.train_positive_files,
+                                    negative_files=self.train_negative_files,
+                                    unlabelled_files=self.unlabelled_files)
+                
+                train_loss = classifier.train(self.default_epochs)
+                lr_loss.append(train_loss)
+                
+                _, _, _, acc = self.test_terminations(self.dataset_positive,
+                                                      self.dataset_negative,
+                                                      classifier)
+                lr_acc.append(max(acc))
+                lr_avg_acc.append(np.mean(acc))
+
+                comps = self.head_complexity(classifier)
+                lr_comp.append(comps[np.argmax(acc)])
+                
+            results_acc.append(lr_acc)
+            results_avg_acc.append(lr_avg_acc)
+            results_loss.append(lr_loss)
+            results_comp.append(lr_comp)
+
+        save_dict = {"reg_weights": results_reg_weights,
+                     "accuracies": results_acc,
+                     "avg_accuracies": results_avg_acc,
+                     "losses": results_loss,
+                     "complexities": results_comp}
+        
+        self.save_results_dict(save_dict,
+                               "reg_weight_sweep.pkl")
+                
+
+        self.plot(os.path.join(self.plot_dir, "reg_weight_sweep.png"),
+                  results_reg_weights,
+                  results_acc,
+                  results_avg_acc,
+                  results_loss,
+                  results_comp,
+                  "Sweep over L2 Regularization Weight",
+                  "L2 Regularization Weight")
+        
+
+
     def sweep_div_overlap(self,
                         start_ratio,
                         end_ratio,
@@ -618,7 +703,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
-                                              learning_rate=self.default_div_lr)
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 unlabelled_num = len(self.unlabelled_files)
                 unlabelled_files = random.sample(self.unlabelled_files, int(unlabelled_num*(1-overlap)))
                 train_files = self.train_positive_files + self.train_negative_files
@@ -689,7 +775,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               log_dir=self.log_dir,
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
-                                              learning_rate=self.default_div_lr)
+                                              learning_rate=self.default_div_lr,
+                                              l2_reg_weight=self.default_l2_reg_weight)
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=all_combination_files[variety])
