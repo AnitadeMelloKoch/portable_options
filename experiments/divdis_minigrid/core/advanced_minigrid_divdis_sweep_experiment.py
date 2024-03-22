@@ -129,7 +129,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
     def head_complexity(self, classifier):
-        evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=64, base_dir=self.base_dir)
+        evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=32, base_dir=self.base_dir)
         evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
         #evaluator.test_dataset.set_transform_function(transform)
         evaluator.evaluate(test_sample_size=self.evaluation_sample_size)
