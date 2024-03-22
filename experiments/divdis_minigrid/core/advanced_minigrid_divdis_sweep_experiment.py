@@ -155,7 +155,8 @@ class AdvancedMinigridDivDisSweepExperiment():
              plot_title,
              x_label,
 
-             categorical=False):
+             categorical=False,
+             log_scale=False):
 
         losses = np.array(losses)
         accuracies = np.array(accuracies)
@@ -167,8 +168,8 @@ class AdvancedMinigridDivDisSweepExperiment():
     
         if not categorical: # most cases, line plot
             fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-            print(losses.shape)
-            print(losses)
+            print(accuracies.shape)
+            print(accuracies)
             axes[0].plot(x_values, losses.mean(axis=1))
             axes[0].fill_between(x_values,
                                 losses.mean(axis=1)-losses.std(axis=1),
@@ -200,6 +201,10 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[2].set_xlabel(x_label)
             axes[2].set_ylabel(y_labels[2])
             axes[2].title.set_text(ax_titles[2])
+            if log_scale:
+                axes[0].set_yscale('log')
+                axes[1].set_yscale('log')
+                axes[2].set_yscale('log')
             
         else: # bar plot for categorical data
             fig, axes = plt.subplots(1, 3, figsize=(15, 6))
@@ -307,7 +312,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_loss,
                   results_comp,
                   "Sweep over Diversity Weight",
-                  "Diversity Weight")
+                  "Diversity Weight",
+                  log_scale=True)
         
 
     
@@ -599,7 +605,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_loss,
                   results_comp,
                   "Sweep over Learning Rate",
-                  "Learning Rate")
+                  "Learning Rate",
+                  log_scale=True)
     
 
     def sweep_l2_reg_weight(self,
@@ -673,7 +680,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_loss,
                   results_comp,
                   "Sweep over L2 Regularization Weight",
-                  "L2 Regularization Weight")
+                  "L2 Regularization Weight",
+                  log_scale=True)
         
 
 
