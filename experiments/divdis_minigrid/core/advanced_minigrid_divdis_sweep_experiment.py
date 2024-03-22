@@ -202,9 +202,9 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[2].set_ylabel(y_labels[2])
             axes[2].title.set_text(ax_titles[2])
             if log_scale:
-                axes[0].set_yscale('log')
-                axes[1].set_yscale('log')
-                axes[2].set_yscale('log')
+                axes[0].set_xscale('log')
+                axes[1].set_xscale('log')
+                axes[2].set_xscale('log')
             
         else: # bar plot for categorical data
             fig, axes = plt.subplots(1, 3, figsize=(15, 6))
