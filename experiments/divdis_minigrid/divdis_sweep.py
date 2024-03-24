@@ -74,6 +74,7 @@ if __name__ == "__main__":
     print(f"[{formatted_time()}] Sweeping ensemble size...")
     experiment.sweep_ensemble_size(1, 
                                    20,
+                                   2,
                                    NUM_SEEDS)
 
 

@@ -395,6 +395,7 @@ class AdvancedMinigridDivDisSweepExperiment():
     def sweep_ensemble_size(self,
                             start_size,
                             end_size,
+                            step_size,
                             num_seeds):
         # 1D array
         results_size = []
@@ -405,7 +406,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_comp = []
 
         
-        for num_heads in tqdm(range(start_size, end_size+1, 2), desc="size", position=0):
+        for num_heads in tqdm(range(start_size, end_size+1, step_size), desc="size", position=0):
             results_size.append(num_heads)
             size_acc = []
             size_avg_acc = []
