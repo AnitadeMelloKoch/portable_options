@@ -405,7 +405,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_comp = []
 
         
-        for num_heads in tqdm(range(start_size, end_size+1, step=2), desc="size", position=0):
+        for num_heads in tqdm(range(start_size, end_size+1, 2), desc="size", position=0):
             results_size.append(num_heads)
             size_acc = []
             size_avg_acc = []
