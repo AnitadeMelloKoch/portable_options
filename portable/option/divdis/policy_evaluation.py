@@ -1,9 +1,10 @@
-from scipy.stats import 
+from scipy.stats import wasserstein_distance_nd
 
-print(wasserstein_distance_nd(
-    [[1,2],[3,2]],
-    [[6,2],[1,5]]
-))
+def get_wasserstain_distance(policy_a_samples, policy_b_samples):
+    return wasserstein_distance_nd(
+        policy_a_samples,
+        policy_b_samples
+    )
 
 
 

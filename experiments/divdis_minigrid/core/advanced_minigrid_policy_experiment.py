@@ -126,10 +126,72 @@ class AdvancedMinigridDivDisOptionExperiment():
         option.save()
     
     def evaluate_wasserstein_diff_policies_mock_option(self,
-                                                       env,
-                                                       env_seed,
+                                                       env_1,
+                                                       env_2,
+                                                       env_seed_1,
+                                                       env_seed_2,
                                                        terminations):
-        pass
+        # terminations should be a two element list of lists of 
+        # terminations for the two options
+        base_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                       terminations=terminations[0],
+                                       log_dir=os.path.join(self.log_dir, "option"),
+                                       save_dir=os.path.join(self.save_dir, "option"),
+                                       use_seed_for_initiation=True,
+                                       policy_phi=self.policy_phi,
+                                       video_generator=self.video_generator)
+        
+        trained_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                       terminations=terminations[1],
+                                       log_dir=os.path.join(self.log_dir, "option"),
+                                       save_dir=os.path.join(self.save_dir, "option"),
+                                       use_seed_for_initiation=True,
+                                       policy_phi=self.policy_phi,
+                                       video_generator=self.video_generator)
+        
+        self.train_policy(base_option, env_1, env_seed_1)
+        self.train_policy(trained_option, env_2, env_seed_2)
+        
+        test_buffer = self.get_test_buffer(base_option, env_1, 1000)
+        
+    
+    def get_test_buffer(self, option, env, num_states):
+        test_states = []
+        for _ in range(100):
+            rand_num = np.random.randint(80)
+            obs, info = env.reset()
+            _, _, _, _, _, _, states, _ = option.eval()
+            test_states.extend(states)
+        
+        return test_states
+            
+    
+    def train_policy(self, option, env, env_seed):
+        total_steps = 0
+        rewards = deque(maxlen=200)
+        episode = 0
+        for head_idx in range(option.num_heads):
+            while total_steps < 2e6:
+                rand_num = np.random.randint(50)
+                obs, info = env.reset(rand_num)
+                _, _, _, steps, _, rewards, _, _ = option.train_policy(head_idx,
+                                                                       env,
+                                                                       obs,
+                                                                       info,
+                                                                       env_seed)
+                total_steps += steps
+                rewards.append(sum(rewards))
+                if episode % 200 == 0:
+                    logging.info("idx {} steps: {} average train rewards: {}".format(head_idx,
+                                                                                     total_steps,
+                                                                                     np.mean(rewards)))
+                episode += 1
+            logging.info("idx {} finished -> steps: {} average train reward: {}".format(head_idx,
+                                                                                        total_steps,
+                                                                                        np.mean(rewards)))
+        option.save()
+            
+    
     
     def evaluate_wasserstein_one_policy_mock_option(self,
                                                     env,
