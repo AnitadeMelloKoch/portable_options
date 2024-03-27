@@ -153,8 +153,6 @@ if __name__ == "__main__":
         return x
     
     def option_agent_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1,1,1,1,1])
-        
         return x
     
     terminations = [

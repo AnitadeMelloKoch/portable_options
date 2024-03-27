@@ -146,12 +146,9 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7])
-
         return x
     
     def option_agent_phi(x):
-        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1])
         
         return x
     
