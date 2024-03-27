@@ -119,5 +119,6 @@ class PerfectAtLocation(BaseTermination):
         self.y = y
     
     def check_term(self, state, env):
-        return (state[20] == self.x and state[21] == self.y)
+        agent_x, agent_y = env.unwrapped.agent_pos
+        return (agent_x == self.x and agent_y == self.y)
     

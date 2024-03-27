@@ -86,6 +86,31 @@ def create_linear_policy(input_dim, action_space):
                     ),
                 )
 
+def create_cnn_policy(n_channels, action_space, hidden_feature_size=128):
+    return torch.nn.Sequential(
+        nn.Conv2d(n_channels, 16, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(16, 32, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, (2,2)),
+        nn.ReLU(),
+        nn.Flatten(),
+        nn.LazyLinear(hidden_feature_size),
+        nn.ReLU(),
+        
+        nn.Linear(hidden_feature_size, 64),
+        nn.Tanh(),
+        nn.Linear(64, 64),
+        nn.Tanh(),
+        nn.Linear(64, action_space),
+        pfrl.policies.GaussianHeadWithStateIndependentCovariance(
+            action_size=action_space,
+            var_type="diagonal",
+            var_func=lambda x: torch.exp(2*x),
+            var_param_init=0
+        )
+    )
+
 def create_linear_vf(input_dim):
     return torch.nn.Sequential(
                             nn.Linear(input_dim, 64),
@@ -94,6 +119,25 @@ def create_linear_vf(input_dim):
                             nn.Tanh(),
                             nn.Linear(64, 1),
                         )
+
+def create_cnn_vf(n_channels, hidden_feature_size=128):
+    return torch.nn.Sequential(
+        nn.Conv2d(n_channels, 16, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(16, 32, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, (2,2)),
+        nn.ReLU(),
+        nn.Flatten(),
+        nn.LazyLinear(hidden_feature_size),
+        nn.ReLU(),
+        
+        nn.Linear(hidden_feature_size, 64),
+        nn.Tanh(),
+        nn.Linear(64, 64),
+        nn.Tanh(),
+        nn.Linear(64, 1)
+    )
 
 @gin.configurable
 class ActionPPO():
@@ -191,8 +235,7 @@ class OptionPPO():
                  policy,
                  value_function,
                  learning_rate,
-                 state_dim,
-                 action_num,
+                 state_shape,
                  phi,
                  num_options,
                  final_epsilon,
@@ -212,7 +255,7 @@ class OptionPPO():
                                lr=learning_rate,
                                eps=1e-5)
         
-        obs_normalizer = pfrl.nn.EmpiricalNormalization((state_dim+action_num,))
+        obs_normalizer = pfrl.nn.EmpiricalNormalization(state_shape)
         
         if use_gpu is False:
             gpu=-1
@@ -250,7 +293,12 @@ class OptionPPO():
     
     def act(self, obs, action):
         obs = obs.unsqueeze(0)
-        concat_input = torch.cat((obs, action), dim=-1)
+        action = torch.reshape(action, (-1,1,action.shape[-1],1))
+        action = torch.repeat_interleave(action, obs.shape[1], dim=1)
+        action = torch.repeat_interleave(action, obs.shape[3], dim=3)
+        
+        concat_input = torch.cat((obs, action), dim=2)
+        
         q_vals = self.agent.batch_act(concat_input)
         q_vals = torch.from_numpy(q_vals)
         self.step += 1
@@ -266,7 +314,10 @@ class OptionPPO():
     
     def observe(self, obs, q_vals, reward, done, reset):
         obs = obs.unsqueeze(0)
-        concat_input = torch.cat((obs, q_vals), dim=-1)
+        q_vals = torch.reshape(q_vals, (-1,1,q_vals.shape[-1],1))
+        q_vals = torch.repeat_interleave(q_vals, obs.shape[1], dim=1)
+        q_vals = torch.repeat_interleave(q_vals, obs.shape[3], dim=3)
+        concat_input = torch.cat((obs, q_vals), dim=2)
         reward = [reward]
         done = [done]
         reset = [reset]

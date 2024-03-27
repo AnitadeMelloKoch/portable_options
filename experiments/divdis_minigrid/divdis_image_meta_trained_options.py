@@ -8,7 +8,11 @@ import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
 from portable.agent.model.ppo import create_linear_policy, create_linear_vf
 
-def make_random_getkey_env(train_colour, seed, collect_key=False):
+def make_random_getkey_env(train_colour, 
+                           seed, 
+                           collect_key=False, 
+                           keep_colour="",
+                           pickup_colour=""):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
     
@@ -25,10 +29,11 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         ),
         door_colour=door_colour,
         key_colours=key_cols,
-        time_limit=100,
+        time_limit=500,
         image_input=False,
         key_collected=collect_key,
-        keep_colour=train_colour
+        keep_colour=keep_colour,
+        pickup_colour=pickup_colour
     )
 
 env_seed = 1
@@ -42,10 +47,27 @@ train_envs = [
             grayscale=False
         ),
         door_colour="red",
-        time_limit=100,
+        time_limit=500,
         image_input=False,
         keep_colour="red"
-        )],
+        ),
+        make_random_getkey_env("red", env_seed, keep_colour="red"),
+        make_random_getkey_env("red", env_seed, keep_colour="red"),
+        make_random_getkey_env("red", env_seed, keep_colour="red"),],
+        [AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=env_seed,
+            grayscale=False
+        ),
+        door_colour="red",
+        time_limit=500,
+        image_input=False,
+        pickup_colour="red"
+        ),
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),
+        make_random_getkey_env("red", env_seed, pickup_colour="red"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -55,10 +77,27 @@ train_envs = [
             grayscale=False
         ),
         door_colour="red",
-        time_limit=100,
+        time_limit=500,
         image_input=False,
         keep_colour="yellow"
-        )],
+        ),
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),],
+        [AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=env_seed,
+            grayscale=False
+        ),
+        door_colour="red",
+        time_limit=500,
+        image_input=False,
+        pickup_colour="yellow"
+        ),
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),
+        make_random_getkey_env("yellow", env_seed, pickup_colour="yellow"),],
     ],
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
@@ -68,12 +107,13 @@ train_envs = [
             grayscale=False
         ),
         door_colour="red",
-        time_limit=100,
+        time_limit=500,
         image_input=False,
         keep_colour="grey"
-        )],
-    ],
-    [
+        ),
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),
+        make_random_getkey_env("grey", env_seed, keep_colour="grey"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
             'AdvancedDoorKey-8x8-v0',
@@ -81,50 +121,13 @@ train_envs = [
             grayscale=False
         ),
         door_colour="red",
-        time_limit=100,
+        time_limit=500,
         image_input=False,
-        pickup_colour="red",
-        force_door_closed=True
-        )],
-    ],
-    [
-        [AdvancedDoorKeyPolicyTrainWrapper(
-            environment_builder(
-                'AdvancedDoorKey-8x8-v0',
-                seed=env_seed,
-                grayscale=False
-            ),
-            door_colour="red",
-            time_limit=300,
-            image_input=False,
-            force_door_open=True
-        )]
-    ],
-    [
-        [AdvancedDoorKeyPolicyTrainWrapper(
-            environment_builder(
-                'AdvancedDoorKey-8x8-v0',
-                seed=env_seed,
-                grayscale=False
-            ),
-            door_colour="red",
-            time_limit=300,
-            image_input=False,
-            force_door_open=True
-        )]
-    ],
-    [
-        [AdvancedDoorKeyPolicyTrainWrapper(
-            environment_builder(
-                'AdvancedDoorKey-8x8-v0',
-                seed=env_seed,
-                grayscale=False
-            ),
-            door_colour="red",
-            time_limit=300,
-            image_input=False,
-            force_door_open=True
-        )]
+        pickup_colour="grey"
+        ),
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
+        make_random_getkey_env("grey", env_seed, pickup_colour="grey"),],
     ]
 ]
 
@@ -143,9 +146,13 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
+        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7])
+
         return x
     
     def option_agent_phi(x):
+        x = x/torch.tensor([7,7,1,1,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,5,7,7,4,7,7,7,1,1,1,1,1,1,1,1,1,1])
+        
         return x
     
     terminations = [
@@ -154,31 +161,24 @@ if __name__ == "__main__":
         [PerfectGetKey("yellow"),
          NeverCorrectGetKey("yellow")],
         [PerfectGetKey("grey"),
-         NeverCorrectGetKey("grey")],
-        [PerfectDoorOpen(),
-         PerfectDoorOpen()],
-        [PerfectAtLocation(4,1),
-         PerfectAtLocation(4,1)],
-        [PerfectAtLocation(5,3),
-         PerfectAtLocation(5,3)],
-        [PerfectAtLocation(6,6),
-         PerfectAtLocation(6,6)],
+         NeverCorrectGetKey("grey")]
     ]
     
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               option_agent_phi=option_agent_phi,
-                                                              action_policy=create_linear_policy(23, 14),
-                                                              action_vf=create_linear_vf(23),
-                                                              option_policy=create_linear_policy(37, 1),
-                                                              option_vf=create_linear_vf(37),
+                                                              action_policy=create_linear_policy(26, 10),
+                                                              action_vf=create_linear_vf(26),
+                                                              option_policy=create_linear_policy(36, 2),
+                                                              option_vf=create_linear_vf(36),
                                                               terminations=terminations)
     
+    # experiment.load()
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     4e6)
+                                     1e7)
     
     meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',
@@ -192,8 +192,6 @@ if __name__ == "__main__":
                                 2e8,
                                 0.7)
     
-    experiment.eval_meta_agent(meta_env,
-                               env_seed,
-                               1)
+    
     
     

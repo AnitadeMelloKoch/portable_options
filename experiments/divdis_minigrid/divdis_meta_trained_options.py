@@ -1,4 +1,4 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_meta_experiment import FactoredAdvancedMinigridDivDisMetaExperiment
+from experiments.divdis_minigrid.core.advanced_minigrid_divdis_meta_experiment import FactoredAdvancedMinigridDivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 

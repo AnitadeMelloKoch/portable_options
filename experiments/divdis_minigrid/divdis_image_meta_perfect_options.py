@@ -1,4 +1,4 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_meta_experiment import FactoredAdvancedMinigridDivDisMetaExperiment
+from experiments.divdis_minigrid.core.advanced_minigrid_divdis_meta_experiment import AdvancedMinigridDivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
          PerfectAtLocation(6,6)],
     ]
     
-    experiment = FactoredAdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
+    experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               option_agent_phi=option_agent_phi,
@@ -189,11 +189,11 @@ if __name__ == "__main__":
                                      env_seed,
                                      4e6)
     
-    meta_env = factored_environment_builder(
+    meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',
                     seed=env_seed,
                     max_steps=int(1e4),
-                    factored_type=2
+                    grayscale=False
                 )
     
     experiment.train_meta_agent(meta_env,

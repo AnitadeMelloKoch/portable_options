@@ -17,7 +17,7 @@ from portable.option.policy.intrinsic_motivation.tabular_count import TabularCou
 import math
 
 @gin.configurable
-class FactoredAdvancedMinigridDivDisMetaExperiment():
+class AdvancedMinigridDivDisMetaExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
