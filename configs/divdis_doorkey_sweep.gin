@@ -10,7 +10,7 @@ AdvancedMinigridDivDisSweepExperiment.default_num_heads       = 5
 AdvancedMinigridDivDisSweepExperiment.default_l2_reg_weight   = 0.001
 AdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.15  # 0.25 on cluster, 0.15 on local
 
-DivDisClassifier.input_dim                                            = 26
+DivDisClassifier.input_dim                                            = 3
 DivDisClassifier.num_classes                                          = 2
 
 

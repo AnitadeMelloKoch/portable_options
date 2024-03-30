@@ -3,11 +3,14 @@ import random
 import time
 
 import torch
+#import torch_tensorrt
+
 from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_experiment import \
     AdvancedMinigridDivDisClassifierExperiment
 
 color = 'grey'
+#task = f'open{color}door'
 task = f'get{color}key'
 init_term = 'termination'
 RANDOM_TRAIN = True
@@ -49,7 +52,7 @@ if __name__ == "__main__":
     #torch.backends.cuda.matmul.allow_tf32 = True
     #torch.set_float32_matmul_precision('medium')
     #torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = True
-
+    #print(torch._dynamo.list_backends())
         
     t0 = time.time()
     experiment = AdvancedMinigridDivDisClassifierExperiment(base_dir=args.base_dir,
@@ -59,7 +62,7 @@ if __name__ == "__main__":
                 negative_train_files,
                 unlabelled_train_files)
 
-    experiment.train_classifier(1000)
+    experiment.train_classifier(300)
     
     t1 = time.time()
     print(f"Time taken: {t1-t0}")

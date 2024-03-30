@@ -207,32 +207,35 @@ class AdvancedMinigridDivDisSweepExperiment():
                 axes[2].set_xscale('log')
             
         else: # bar plot for categorical data
-            fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
             x_axis_data = np.arange(len(x_values))
             x_ticks = x_values
-            bar_width = 0.35
+            bar_width = 0.5
+
+            print(avg_accuracies.shape)
+            print(avg_accuracies)
             
             axes[0].bar(x_axis_data, losses.mean(1), yerr=losses.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
             axes[0].set_xlabel(x_label)
             axes[0].set_ylabel(y_labels[0])
             axes[0].title.set_text(ax_titles[0])
             axes[0].set_xticks(x_axis_data)
-            axes[0].set_xticklabels(x_ticks, rotation=25, ha='right')
-
-            axes[1].bar(x_axis_data-bar_width/2, accuracies.mean(1), yerr=accuracies.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
-            axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
+            axes[0].set_xticklabels(x_ticks, rotation=35, ha='right')
+            
+            axes[1].bar(x_axis_data-bar_width/2, accuracies.mean(1), yerr=accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
+            axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
             axes[1].set_xlabel(x_label)
             axes[1].set_ylabel(y_labels[1])
             axes[1].title.set_text(ax_titles[1])
             axes[1].set_xticks(x_axis_data)
-            axes[1].set_xticklabels(x_ticks, rotation=25, ha='right')
+            axes[1].set_xticklabels(x_ticks, rotation=35, ha='right')
 
             axes[2].bar(x_axis_data, complexities.mean(1), yerr=complexities.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
             axes[2].set_xlabel(x_label)
             axes[2].set_ylabel(y_labels[0])
             axes[2].title.set_text(ax_titles[0])
             axes[2].set_xticks(x_axis_data)
-            axes[2].set_xticklabels(x_ticks, rotation=25, ha='right')
+            axes[2].set_xticklabels(x_ticks, rotation=35, ha='right')
 
         fig.suptitle(plot_title)
         fig.tight_layout()
@@ -804,12 +807,14 @@ class AdvancedMinigridDivDisSweepExperiment():
                 variety_comp.append(comps[np.argmax(acc)])
                 
             results_acc.append(variety_acc)
+            results_avg_acc.append(variety_avg_acc)
             results_loss.append(variety_loss)
             results_comp.append(variety_comp)
         
         save_dict = {"variety": results_variety,
                      "variety_combinations": variety_combinations,
                      "accuracies": results_acc,
+                     "avg_accuracies": results_avg_acc,
                      "losses": results_loss,
                      "complexities": results_comp,
                      }

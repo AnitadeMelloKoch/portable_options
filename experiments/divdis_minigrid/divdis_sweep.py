@@ -54,10 +54,10 @@ if __name__ == "__main__":
     print(f"[{formatted_time()}] Sweeping ensemble size...")
     experiment.sweep_ensemble_size(1, 
                                    20,
-                                   2,
+                                   1,
                                    NUM_SEEDS)
 
-
+    
     print(f"[{formatted_time()}] Sweeping div batch size...")
     experiment.sweep_div_batch_size(16,
                                     400,
@@ -65,6 +65,7 @@ if __name__ == "__main__":
                                     NUM_SEEDS)
 
 
+    
     print(f"[{formatted_time()}] Sweeping div variety...")
     
     # Sweep variety
@@ -125,3 +126,4 @@ if __name__ == "__main__":
                                  1,
                                  5,
                                  NUM_SEEDS)
+

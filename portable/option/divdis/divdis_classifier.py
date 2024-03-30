@@ -52,10 +52,12 @@ class DivDisClassifier():
         self.classifier = SmallCNN(num_input_channels=input_dim,
                                    num_classes=num_classes,
                                    num_heads=head_num)
-        #self.classifier = torch.compile(
-        #                        SmallCNN(num_input_channels=input_dim,
+        #self.classifier = torch.compile(SmallCNN(num_input_channels=input_dim,
         #                                    num_classes=num_classes,
-        #                                    num_heads=head_num))
+        #                                    num_heads=head_num),
+        #                                #backend='tensorrt',
+        #                                #dynamic=False
+        #                                )
         
         
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
