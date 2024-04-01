@@ -232,9 +232,9 @@ class AdvancedMinigridDivDisMetaExperiment():
                             rewards,
                             done)
                 obs = next_obs
-            logging.info("Episode {} total steps: {} undiscounted reward: {}".format(episode,
+            logging.info("Episode {} total steps: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
-                                                                                     undiscounted_reward))
+                                                                                     np.mean(episode_rewards)))
             
             if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
                 self.video_generator.episode_end("episode_{}".format(episode))

@@ -6,7 +6,7 @@ from experiments.minigrid.utils import environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
-from portable.agent.model.ppo import create_linear_policy, create_linear_vf
+from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 
 def make_random_getkey_env(train_colour, seed, collect_key=False):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
@@ -176,16 +176,18 @@ if __name__ == "__main__":
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               option_agent_phi=option_agent_phi,
-                                                              action_policy=create_linear_policy(23, 14),
-                                                              action_vf=create_linear_vf(23),
-                                                              option_policy=create_linear_policy(37, 1),
-                                                              option_vf=create_linear_vf(37),
+                                                              action_policy=create_cnn_policy(3, 14),
+                                                              action_vf=create_cnn_vf(3),
+                                                              option_policy=create_cnn_policy(3, 3),
+                                                              option_vf=create_cnn_vf(3),
                                                               terminations=terminations)
     
     
-    experiment.train_option_policies(train_envs,
-                                     env_seed,
-                                     4e6)
+    # experiment.train_option_policies(train_envs,
+    #                                  env_seed,
+    #                                  4e6)
+    
+    experiment.load()
     
     meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',
@@ -197,7 +199,7 @@ if __name__ == "__main__":
     experiment.train_meta_agent(meta_env,
                                 env_seed,
                                 2e8,
-                                0.7)
+                                2)
     
     experiment.eval_meta_agent(meta_env,
                                env_seed,
