@@ -193,6 +193,8 @@ class PolicyWithInitiation(Agent):
                 device = torch.device("cuda")
             else:
                 device = torch.device("cpu")
+            if type(experiences) is np.ndarray:
+                experiences = torch.from_numpy(experiences)
             exp_batch = batch_experiences(
                 experiences,
                 device=device,
