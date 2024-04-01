@@ -174,6 +174,9 @@ class PolicyWithInitiation(Agent):
                 terminal):
         self.update_step()
         
+        if type(obs) is np.ndarray:
+            obs = torch.from_numpy(obs)
+        
         if self.training:
             transition = {"state": obs,
                           "action": action,
