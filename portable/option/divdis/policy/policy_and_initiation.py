@@ -174,8 +174,11 @@ class PolicyWithInitiation(Agent):
                 terminal):
         self.update_step()
         
-        if type(obs) is np.ndarray:
+        if type(obs) == np.ndarray:
             obs = torch.from_numpy(obs)
+        
+        if type(next_obs) == np.ndarray:
+            next_obs = torch.from_numpy(next_obs)
         
         if self.training:
             transition = {"state": obs,
@@ -196,8 +199,7 @@ class PolicyWithInitiation(Agent):
                 device = torch.device("cuda")
             else:
                 device = torch.device("cpu")
-            if type(experiences) is np.ndarray:
-                experiences = torch.from_numpy(experiences)
+            
             exp_batch = batch_experiences(
                 experiences,
                 device=device,
@@ -296,6 +298,28 @@ class PolicyWithInitiation(Agent):
         if return_q is True:
             return a, q_values.q_values
         return a
+
+    def batch_act(self, obs):
+        if self.use_gpu:
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        
+        obs = batch_states(obs, device, self.phi)
+        if self.image_input:
+            obs = self.cnn(obs)
+        obs = obs.unsqueeze(1).float()
+        obs, _ = self.recurrent_memory(obs)
+        obs = obs.squeeze(0)
+        q_values = self.q_network(obs)
+
+        randval = np.random.rand()
+        if randval > 0.01:
+            a = q_values.greedy_actions
+        else:
+            a = np.random.randint(0, self.num_actions)
+        
+        return a, q_values.q_values
     
     def add_data_initiation(self,
                             positive_examples=[],

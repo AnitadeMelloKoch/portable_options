@@ -327,7 +327,6 @@ class AdvancedMinigridDivDisMetaExperiment():
                     self.video_generator.episode_end("eval_{}".format(run))
                 
                 undiscounted_rewards.append(undiscounted_reward)
-            
     
     
     
