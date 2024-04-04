@@ -8,10 +8,12 @@ import matplotlib.pyplot as plt
 from portable.utils.utils import set_seed
 import torch 
 from collections import deque
+from portable.option.divdis.policy_evaluation import get_wasserstain_distance, get_kl_distance
 
 from experiments.experiment_logger import VideoGenerator
 from portable.option.divdis.divdis_option import DivDisOption
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
+from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 
 OPTION_TYPES = [
     "mock",
@@ -125,78 +127,124 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                                         np.mean(train_rewards)))
         option.save()
     
-    def evaluate_wasserstein_diff_policies_mock_option(self,
-                                                       env_1,
-                                                       env_2,
-                                                       env_seed_1,
-                                                       env_seed_2,
-                                                       terminations):
+    def evaluate_diff_policies_mock_option(self,
+                                           env_1,
+                                           env_2,
+                                           env_seed_1,
+                                           env_seed_2,
+                                           terminations,
+                                           evaluation_type):
         # terminations should be a two element list of lists of 
         # terminations for the two options
         base_option = DivDisMockOption(use_gpu=self.use_gpu,
                                        terminations=terminations[0],
-                                       log_dir=os.path.join(self.log_dir, "option"),
-                                       save_dir=os.path.join(self.save_dir, "option"),
+                                       log_dir=os.path.join(self.log_dir, "base_option"),
+                                       save_dir=os.path.join(self.save_dir, "base_option"),
                                        use_seed_for_initiation=True,
                                        policy_phi=self.policy_phi,
                                        video_generator=self.video_generator)
+        
+        rand_policy = PolicyWithInitiation(use_gpu=self.use_gpu,
+                                           policy_phi=self.policy_phi,
+                                           learn_initiation=False)
+        rand_policy.move_to_gpu()
         
         trained_option = DivDisMockOption(use_gpu=self.use_gpu,
                                        terminations=terminations[1],
-                                       log_dir=os.path.join(self.log_dir, "option"),
-                                       save_dir=os.path.join(self.save_dir, "option"),
+                                       log_dir=os.path.join(self.log_dir, "trained_option"),
+                                       save_dir=os.path.join(self.save_dir, "trained_option"),
                                        use_seed_for_initiation=True,
                                        policy_phi=self.policy_phi,
                                        video_generator=self.video_generator)
         
-        self.train_policy(base_option, env_1, env_seed_1)
-        self.train_policy(trained_option, env_2, env_seed_2)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=1e6)
+        self.train_policy(trained_option, env_2, env_seed_2, max_steps=1e6)
         
-        test_buffer = self.get_test_buffer(base_option, env_1, 1000)
+        test_buffer = self.get_test_buffer(base_option, 
+                                           env_1, 
+                                           5000,
+                                           0,
+                                           env_seed_1)
+        
+        _, base_q_values = base_option.evaluate_states(0,
+                                                       test_buffer,
+                                                       env_seed_1)
+        
+        _, rand_q_values = rand_policy.batch_act(test_buffer)
+        
+        _, trained_q_values = trained_option.evaluate_states(0,
+                                                             test_buffer,
+                                                             env_seed_2)
+        
+        base_q_values = base_q_values.detach().cpu().squeeze().numpy()
+        rand_q_values = rand_q_values.detach().cpu().squeeze().numpy()
+        trained_q_values = trained_q_values.detach().cpu().squeeze().numpy()
+        
+        if evaluation_type == "wass": 
+            rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+            trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+            
+            print("random wass:", rand_wass)
+            logging.info("random wass:", rand_wass)
+            print("trained wass", trained_wass)
+            logging.info("trained wass", trained_wass)
+        
+        if evaluation_type == "kl": 
+            rand_kl = get_kl_distance(base_q_values, rand_q_values)
+            trained_kl = get_kl_distance(base_q_values, trained_q_values)
+            
+            print("random kl:", rand_kl)
+            logging.info("random kl:", rand_kl)
+            print("trained kl", trained_kl)
+            logging.info("trained kl", trained_kl)
         
     
-    def get_test_buffer(self, option, env, num_states):
+    def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
         test_states = []
-        for _ in range(100):
+        while len(test_states) < num_states:
             rand_num = np.random.randint(80)
-            obs, info = env.reset()
-            _, _, _, _, _, _, states, _ = option.eval()
+            obs, info = env.reset(agent_reposition_attempts=rand_num)
+            _, _, _, _, _, _, states, _ = option.eval_policy(head_idx,
+                                                             env,
+                                                             obs,
+                                                             info,
+                                                             env_seed)
+            for idx in range(len(states)):
+                states[idx] = states[idx].unsqueeze(0)
             test_states.extend(states)
+        
+        test_states = torch.cat(test_states, dim=0)
         
         return test_states
             
     
-    def train_policy(self, option, env, env_seed):
+    def train_policy(self, option, env, env_seed, max_steps=1e6):
         total_steps = 0
-        rewards = deque(maxlen=200)
+        train_rewards = deque(maxlen=200)
         episode = 0
         for head_idx in range(option.num_heads):
-            while total_steps < 2e6:
-                rand_num = np.random.randint(50)
-                obs, info = env.reset(rand_num)
+            while total_steps < max_steps:
+                rand_num = np.random.randint(low=0, high=50)
+                obs, info = env.reset(agent_reposition_attempts=rand_num)
                 _, _, _, steps, _, rewards, _, _ = option.train_policy(head_idx,
                                                                        env,
                                                                        obs,
                                                                        info,
                                                                        env_seed)
                 total_steps += steps
-                rewards.append(sum(rewards))
+                train_rewards.append(sum(rewards))
                 if episode % 200 == 0:
                     logging.info("idx {} steps: {} average train rewards: {}".format(head_idx,
                                                                                      total_steps,
-                                                                                     np.mean(rewards)))
+                                                                                     np.mean(train_rewards)))
                 episode += 1
             logging.info("idx {} finished -> steps: {} average train reward: {}".format(head_idx,
                                                                                         total_steps,
-                                                                                        np.mean(rewards)))
+                                                                                        np.mean(train_rewards)))
         option.save()
             
     
     
-    def evaluate_wasserstein_one_policy_mock_option(self,
-                                                    env,
-                                                    env_seed,
-                                                    terminations):
-        pass
+    
 
 

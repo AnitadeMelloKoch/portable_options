@@ -400,6 +400,19 @@ class DivDisMockOption():
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     
+    
+    
+    def evaluate_states(self,
+                        idx,
+                        states,
+                        seed):
+        
+        actions, q_vals = self.policies[idx][seed].batch_act(states)
+        
+        return actions, q_vals
+        
+    
+    
 
 
 
