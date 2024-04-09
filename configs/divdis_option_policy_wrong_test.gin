@@ -2,7 +2,7 @@ import experiments.divdis_minigrid.core.advanced_minigrid_policy_experiment
 import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
 
-AdvancedMinigridDivDisOptionExperiment.experiment_name              = "wass_same_policy"
+AdvancedMinigridDivDisOptionExperiment.experiment_name              = "wass_wrong_policy"
 AdvancedMinigridDivDisOptionExperiment.use_gpu                      = True
 AdvancedMinigridDivDisOptionExperiment.option_type                  = "mock"
 
