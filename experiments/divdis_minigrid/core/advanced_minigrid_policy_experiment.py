@@ -133,7 +133,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            env_seed_1,
                                            env_seed_2,
                                            terminations,
-                                           evaluation_type):
+                                           evaluation_type,
+                                           evaluate_num=1):
         # terminations should be a two element list of lists of 
         # terminations for the two options
         base_option = DivDisMockOption(use_gpu=self.use_gpu,
@@ -160,44 +161,46 @@ class AdvancedMinigridDivDisOptionExperiment():
         self.train_policy(base_option, env_1, env_seed_1, max_steps=1e6)
         self.train_policy(trained_option, env_2, env_seed_2, max_steps=1e6)
         
-        test_buffer = self.get_test_buffer(base_option, 
-                                           env_1, 
-                                           5000,
-                                           0,
-                                           env_seed_1)
+        for _ in range(evaluate_num):
         
-        _, base_q_values = base_option.evaluate_states(0,
-                                                       test_buffer,
-                                                       env_seed_1)
-        
-        _, rand_q_values = rand_policy.batch_act(test_buffer)
-        
-        _, trained_q_values = trained_option.evaluate_states(0,
-                                                             test_buffer,
-                                                             env_seed_2)
-        
-        base_q_values = base_q_values.detach().cpu().squeeze().numpy()
-        rand_q_values = rand_q_values.detach().cpu().squeeze().numpy()
-        trained_q_values = trained_q_values.detach().cpu().squeeze().numpy()
-        
-        if evaluation_type == "wass": 
-            rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
-            trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+            test_buffer = self.get_test_buffer(base_option, 
+                                            env_1, 
+                                            1000,
+                                            0,
+                                            env_seed_1)
             
-            print("random wass:", rand_wass)
-            logging.info("random wass:", rand_wass)
-            print("trained wass", trained_wass)
-            logging.info("trained wass", trained_wass)
-        
-        if evaluation_type == "kl": 
-            rand_kl = get_kl_distance(base_q_values, rand_q_values)
-            trained_kl = get_kl_distance(base_q_values, trained_q_values)
+            _, base_q_values = base_option.evaluate_states(0,
+                                                        test_buffer,
+                                                        env_seed_1)
             
-            print("random kl:", rand_kl)
-            logging.info("random kl:", rand_kl)
-            print("trained kl", trained_kl)
-            logging.info("trained kl", trained_kl)
-        
+            _, rand_q_values = rand_policy.batch_act(test_buffer)
+            
+            _, trained_q_values = trained_option.evaluate_states(0,
+                                                                test_buffer,
+                                                                env_seed_2)
+            
+            base_q_values = base_q_values.detach().cpu().squeeze().numpy()
+            rand_q_values = rand_q_values.detach().cpu().squeeze().numpy()
+            trained_q_values = trained_q_values.detach().cpu().squeeze().numpy()
+            
+            if evaluation_type == "wass": 
+                rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+                trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+                
+                print("random wass:", rand_wass)
+                logging.info("random wass:", rand_wass)
+                print("trained wass", trained_wass)
+                logging.info("trained wass", trained_wass)
+            
+            if evaluation_type == "kl": 
+                rand_kl = get_kl_distance(base_q_values, rand_q_values)
+                trained_kl = get_kl_distance(base_q_values, trained_q_values)
+                
+                print("random kl:", rand_kl)
+                logging.info("random kl:", rand_kl)
+                print("trained kl", trained_kl)
+                logging.info("trained kl", trained_kl)
+            
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
         test_states = []

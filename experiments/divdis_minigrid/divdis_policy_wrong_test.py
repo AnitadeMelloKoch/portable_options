@@ -24,7 +24,7 @@ if __name__ == "__main__":
     
     terminations = [
         [PerfectGetKey("red")],
-        [PerfectGetKey("red")]
+        [PerfectDoorOpen()]
     ]
     
     env_1 = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
@@ -46,7 +46,9 @@ if __name__ == "__main__":
         ),
         door_colour="red",
         time_limit=100,
-        image_input=True)
+        image_input=True,
+        pickup_colour="red",
+        force_door_closed=True)
     
     experiment = AdvancedMinigridDivDisOptionExperiment(base_dir=args.base_dir,
                                                         seed=args.seed,
@@ -58,7 +60,8 @@ if __name__ == "__main__":
                                                   0,
                                                   1,
                                                   terminations,
-                                                  "wass")
+                                                  "wass",
+                                                  evaluate_num=5)
     
     
     

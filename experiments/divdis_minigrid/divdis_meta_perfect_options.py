@@ -149,14 +149,14 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("red"),
-         NeverCorrectGetKey("red")],
-        [PerfectGetKey("yellow"),
-         NeverCorrectGetKey("yellow")],
-        [PerfectGetKey("grey"),
-         NeverCorrectGetKey("grey")],
-        [PerfectDoorOpen(),
-         PerfectDoorOpen()],
+        # [PerfectGetKey("red"),
+        #  NeverCorrectGetKey("red")],
+        # [PerfectGetKey("yellow"),
+        #  NeverCorrectGetKey("yellow")],
+        # [PerfectGetKey("grey"),
+        #  NeverCorrectGetKey("grey")],
+        # [PerfectDoorOpen(),
+        #  PerfectDoorOpen()],
         [PerfectAtLocation(4,1),
          PerfectAtLocation(4,1)],
         [PerfectAtLocation(5,3),
@@ -168,32 +168,30 @@ if __name__ == "__main__":
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
-                                                              option_agent_phi=option_agent_phi,
+                                                              agent_phi=option_agent_phi,
                                                               action_policy=create_linear_policy(23, 14),
                                                               action_vf=create_linear_vf(23),
-                                                              option_policy=create_linear_policy(37, 1),
-                                                              option_vf=create_linear_vf(37),
                                                               terminations=terminations)
     
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     4e6)
+                                     1e6)
     
-    meta_env = environment_builder(
-                    'AdvancedDoorKey-8x8-v0',
-                    seed=env_seed,
-                    max_steps=int(1e4),
-                    grayscale=False
-                )
+    # meta_env = environment_builder(
+    #                 'AdvancedDoorKey-8x8-v0',
+    #                 seed=env_seed,
+    #                 max_steps=int(1e4),
+    #                 grayscale=False
+    #             )
     
-    experiment.train_meta_agent(meta_env,
-                                env_seed,
-                                2e8,
-                                0.7)
+    # experiment.train_meta_agent(meta_env,
+    #                             env_seed,
+    #                             2e8,
+    #                             0.7)
     
-    experiment.eval_meta_agent(meta_env,
-                               env_seed,
-                               1)
+    # experiment.eval_meta_agent(meta_env,
+    #                            env_seed,
+    #                            1)
     
     

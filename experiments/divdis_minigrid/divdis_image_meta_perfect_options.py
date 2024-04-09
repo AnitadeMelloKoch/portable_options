@@ -26,7 +26,7 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         door_colour=door_colour,
         key_colours=key_cols,
         time_limit=100,
-        image_input=False,
+        image_input=True,
         key_collected=collect_key,
         keep_colour=train_colour
     )
@@ -43,7 +43,7 @@ train_envs = [
         ),
         door_colour="red",
         time_limit=100,
-        image_input=False,
+        image_input=True,
         keep_colour="red"
         )],
     ],
@@ -56,7 +56,7 @@ train_envs = [
         ),
         door_colour="red",
         time_limit=100,
-        image_input=False,
+        image_input=True,
         keep_colour="yellow"
         )],
     ],
@@ -69,7 +69,7 @@ train_envs = [
         ),
         door_colour="red",
         time_limit=100,
-        image_input=False,
+        image_input=True,
         keep_colour="grey"
         )],
     ],
@@ -82,7 +82,7 @@ train_envs = [
         ),
         door_colour="red",
         time_limit=100,
-        image_input=False,
+        image_input=True,
         pickup_colour="red",
         force_door_closed=True
         )],
@@ -96,7 +96,7 @@ train_envs = [
             ),
             door_colour="red",
             time_limit=300,
-            image_input=False,
+            image_input=True,
             force_door_open=True
         )]
     ],
@@ -109,7 +109,7 @@ train_envs = [
             ),
             door_colour="red",
             time_limit=300,
-            image_input=False,
+            image_input=True,
             force_door_open=True
         )]
     ],
@@ -122,7 +122,7 @@ train_envs = [
             ),
             door_colour="red",
             time_limit=300,
-            image_input=False,
+            image_input=True,
             force_door_open=True
         )]
     ]
@@ -156,36 +156,27 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("red"),
-         NeverCorrectGetKey("red")],
-        [PerfectGetKey("yellow"),
-         NeverCorrectGetKey("yellow")],
-        [PerfectGetKey("grey"),
-         NeverCorrectGetKey("grey")],
-        [PerfectDoorOpen(),
-         PerfectDoorOpen()],
-        [PerfectAtLocation(4,1),
-         PerfectAtLocation(4,1)],
-        [PerfectAtLocation(5,3),
-         PerfectAtLocation(5,3)],
-        [PerfectAtLocation(6,6),
-         PerfectAtLocation(6,6)],
+        [PerfectGetKey("red")],
+        [PerfectGetKey("yellow")],
+        [PerfectGetKey("grey")],
+        [PerfectDoorOpen()],
+        [PerfectAtLocation(4,1)],
+        [PerfectAtLocation(5,3)],
+        [PerfectAtLocation(6,6)],
     ]
     
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
-                                                              option_agent_phi=option_agent_phi,
-                                                              action_policy=create_cnn_policy(3, 14),
+                                                              agent_phi=option_agent_phi,
+                                                              action_policy=create_cnn_policy(3, 7),
                                                               action_vf=create_cnn_vf(3),
-                                                              option_policy=create_cnn_policy(3, 3),
-                                                              option_vf=create_cnn_vf(3),
                                                               terminations=terminations)
     
     
     # experiment.train_option_policies(train_envs,
     #                                  env_seed,
-    #                                  4e6)
+    #                                  1e6)
     
     experiment.load()
     

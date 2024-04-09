@@ -8,7 +8,7 @@ FactoredAdvancedMinigridDivDisMetaExperiment.experiment_name        = "meta_poli
 FactoredAdvancedMinigridDivDisMetaExperiment.num_options            = 7
 FactoredAdvancedMinigridDivDisMetaExperiment.num_primitive_actions  = 7
 FactoredAdvancedMinigridDivDisMetaExperiment.use_gpu                = True
-FactoredAdvancedMinigridDivDisMetaExperiment.make_videos            = True
+FactoredAdvancedMinigridDivDisMetaExperiment.make_videos            = False
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = 23

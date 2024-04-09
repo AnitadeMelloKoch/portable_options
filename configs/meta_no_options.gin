@@ -16,12 +16,6 @@ ActionPPO.final_epsilon                                             = 0.05
 ActionPPO.final_exploration_frames                                  = 1e6
 ActionPPO.num_actions                                               = 7
 
-OptionPPO.learning_rate                                             = 2.5e-4
-OptionPPO.state_shape                                               = (3, 71, 64)
-OptionPPO.final_epsilon                                             = 0.05
-OptionPPO.final_exploration_frames                                  = 1e6
-OptionPPO.num_options                                               = 1
-
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
 PolicyWithInitiation.buffer_length                                  = 50000

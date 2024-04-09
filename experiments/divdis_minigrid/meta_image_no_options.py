@@ -6,7 +6,7 @@ from experiments.minigrid.utils import environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
-from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
+from portable.agent.model.ppo import CNNPolicy, CNNVF
 
 env_seed = 1
 
@@ -35,11 +35,9 @@ if __name__ == "__main__":
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
                                                       seed=args.seed,
                                                       option_policy_phi=policy_phi,
-                                                      option_agent_phi=option_agent_phi,
-                                                      action_policy=create_cnn_policy(3, 7),
-                                                      action_vf=create_cnn_vf(3),
-                                                      option_policy=create_cnn_policy(3, 1),
-                                                      option_vf=create_cnn_vf(3),
+                                                      agent_phi=option_agent_phi,
+                                                      action_policy=CNNPolicy(3, 7),
+                                                      action_vf=CNNVF(3),
                                                       terminations=terminations)
     
     # experiment.load()
