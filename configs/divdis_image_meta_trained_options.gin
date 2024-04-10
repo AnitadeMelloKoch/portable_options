@@ -5,8 +5,8 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
 AdvancedMinigridDivDisMetaExperiment.experiment_name                = "meta_policy_trained_options"
-AdvancedMinigridDivDisMetaExperiment.num_options                    = 3
-AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 7
+AdvancedMinigridDivDisMetaExperiment.num_options                    = 10
+AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 0
 AdvancedMinigridDivDisMetaExperiment.use_gpu                        = True
 AdvancedMinigridDivDisMetaExperiment.make_videos                    = True
 
@@ -16,12 +16,6 @@ ActionPPO.final_epsilon                                             = 0.05
 ActionPPO.final_exploration_frames                                  = 1e7
 ActionPPO.num_actions                                               = 10
 
-OptionPPO.learning_rate                                             = 2.5e-4
-OptionPPO.state_shape                                               = (3, 74, 64)
-OptionPPO.final_epsilon                                             = 0.05
-OptionPPO.final_exploration_frames                                  = 1e6
-OptionPPO.num_options                                               = 2
-
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
 PolicyWithInitiation.buffer_length                                  = 50000
@@ -29,10 +23,10 @@ PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
 PolicyWithInitiation.final_epsilon                                  = 0.01
-PolicyWithInitiation.final_exploration_frames                       = 5e4
+PolicyWithInitiation.final_exploration_frames                       = 8e5
 PolicyWithInitiation.batch_size                                     = 32
 PolicyWithInitiation.num_actions                                    = 7
 PolicyWithInitiation.policy_infeature_size                          = 6272
-PolicyWithInitiation.q_hidden_size                                  = 64
-PolicyWithInitiation.gru_hidden_size                                = 128
+PolicyWithInitiation.q_hidden_size                                  = 128
+PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True

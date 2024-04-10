@@ -6,7 +6,7 @@ from experiments.minigrid.utils import environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
-from portable.agent.model.ppo import create_linear_policy, create_linear_vf
+from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 
 def make_random_getkey_env(train_colour, 
                            seed, 
@@ -128,7 +128,55 @@ train_envs = [
         make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
         make_random_getkey_env("grey", env_seed, pickup_colour="grey"),
         make_random_getkey_env("grey", env_seed, pickup_colour="grey"),],
+    ],[
+        [AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=env_seed,
+            grayscale=False
+        ),
+        door_colour="red",
+        time_limit=100,
+        image_input=True,
+        pickup_colour="red",
+        force_door_closed=True
+        )],
+        [AdvancedDoorKeyPolicyTrainWrapper(
+        environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=env_seed,
+            grayscale=False
+        ),
+        door_colour="red",
+        time_limit=100,
+        image_input=True,
+        pickup_colour="red",
+        force_door_open=True
+        )]
+    ],[
+        [AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=env_seed,
+                grayscale=False
+            ),
+            door_colour="red",
+            time_limit=300,
+            image_input=True,
+            force_door_open=True
+        )],[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder(
+                'AdvancedDoorKey-8x8-v0',
+                seed=env_seed,
+                grayscale=False
+            ),
+            door_colour="red",
+            time_limit=300,
+            image_input=True,
+            force_door_open=True
+        )]
     ]
+    
 ]
 
 if __name__ == "__main__":
@@ -158,18 +206,20 @@ if __name__ == "__main__":
         [PerfectGetKey("yellow"),
          NeverCorrectGetKey("yellow")],
         [PerfectGetKey("grey"),
-         NeverCorrectGetKey("grey")]
+         NeverCorrectGetKey("grey")],
+        [PerfectDoorOpen(),
+         NeverPerfectDoorOpen()],
+        [PerfectAtLocation(6,6),
+         RandomAtLocation(6,6,0)]
     ]
     
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
-                                                              seed=args.seed,
-                                                              option_policy_phi=policy_phi,
-                                                              option_agent_phi=option_agent_phi,
-                                                              action_policy=create_linear_policy(26, 10),
-                                                              action_vf=create_linear_vf(26),
-                                                              option_policy=create_linear_policy(36, 2),
-                                                              option_vf=create_linear_vf(36),
-                                                              terminations=terminations)
+                                                      seed=args.seed,
+                                                      option_policy_phi=policy_phi,
+                                                      agent_phi=option_agent_phi,
+                                                      action_policy=create_cnn_policy(3, 10),
+                                                      action_vf=create_cnn_vf(3),
+                                                      terminations=terminations)
     
     # experiment.load()
     

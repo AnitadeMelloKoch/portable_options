@@ -179,27 +179,27 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                 test_buffer,
                                                                 env_seed_2)
             
-            base_q_values = base_q_values.detach().cpu().squeeze().numpy()
-            rand_q_values = rand_q_values.detach().cpu().squeeze().numpy()
-            trained_q_values = trained_q_values.detach().cpu().squeeze().numpy()
+            base_q_values = base_q_values.detach().cpu().squeeze()
+            rand_q_values = rand_q_values.detach().cpu().squeeze()
+            trained_q_values = trained_q_values.detach().cpu().squeeze()
             
             if evaluation_type == "wass": 
                 rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
                 trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
                 
                 print("random wass:", rand_wass)
-                logging.info("random wass:", rand_wass)
+                logging.info("random wass: {}".format(rand_wass))
                 print("trained wass", trained_wass)
-                logging.info("trained wass", trained_wass)
+                logging.info("trained wass: {}".format(trained_wass))
             
             if evaluation_type == "kl": 
                 rand_kl = get_kl_distance(base_q_values, rand_q_values)
                 trained_kl = get_kl_distance(base_q_values, trained_q_values)
                 
                 print("random kl:", rand_kl)
-                logging.info("random kl:", rand_kl)
+                logging.info("random kl: {}".format(rand_kl))
                 print("trained kl", trained_kl)
-                logging.info("trained kl", trained_kl)
+                logging.info("trained kl {}".format(trained_kl))
             
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):

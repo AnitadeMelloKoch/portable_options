@@ -3,9 +3,13 @@ from torch.nn.functional import kl_div
 import torch
 
 def get_wasserstain_distance(policy_a_samples, policy_b_samples):
+    policy_a_samples = torch.softmax(policy_a_samples, dim=1)
+    policy_b_samples = torch.softmax(policy_b_samples, dim=1)
+    
+    
     return wasserstein_distance_nd(
-        policy_a_samples,
-        policy_b_samples
+        policy_a_samples.numpy(),
+        policy_b_samples.numpy()
     )
 
 def get_kl_distance(policy_a_samples, policy_b_samples):
@@ -15,7 +19,7 @@ def get_kl_distance(policy_a_samples, policy_b_samples):
         policy_a_samples,
         policy_b_samples,
         log_target=True
-    )
+    ).numpy()
 
 
 

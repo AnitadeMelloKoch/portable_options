@@ -58,7 +58,8 @@ if __name__ == "__main__":
                                                   0,
                                                   1,
                                                   terminations,
-                                                  "kl")
+                                                  "kl",
+                                                  evaluate_num=5)
     
     
     
