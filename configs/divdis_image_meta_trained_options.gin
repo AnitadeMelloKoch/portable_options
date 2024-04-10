@@ -5,7 +5,7 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
 AdvancedMinigridDivDisMetaExperiment.experiment_name                = "meta_policy_trained_options"
-AdvancedMinigridDivDisMetaExperiment.num_options                    = 10
+AdvancedMinigridDivDisMetaExperiment.num_options                    = 5
 AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 0
 AdvancedMinigridDivDisMetaExperiment.use_gpu                        = True
 AdvancedMinigridDivDisMetaExperiment.make_videos                    = False
