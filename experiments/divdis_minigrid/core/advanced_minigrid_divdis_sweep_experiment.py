@@ -221,6 +221,8 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[0].title.set_text(ax_titles[0])
             axes[0].set_xticks(x_axis_data)
             axes[0].set_xticklabels(x_ticks, rotation=35, ha='right')
+            for label in axes[0].get_xticklabels():
+                label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
             
             axes[1].bar(x_axis_data-bar_width/2, accuracies.mean(1), yerr=accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
             axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
@@ -229,6 +231,8 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[1].title.set_text(ax_titles[1])
             axes[1].set_xticks(x_axis_data)
             axes[1].set_xticklabels(x_ticks, rotation=35, ha='right')
+            for label in axes[1].get_xticklabels():
+                label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
             axes[2].bar(x_axis_data, complexities.mean(1), yerr=complexities.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
             axes[2].set_xlabel(x_label)
@@ -236,6 +240,8 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[2].title.set_text(ax_titles[0])
             axes[2].set_xticks(x_axis_data)
             axes[2].set_xticklabels(x_ticks, rotation=35, ha='right')
+            for label in axes[2].get_xticklabels():
+                label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
         fig.suptitle(plot_title)
         fig.tight_layout()
