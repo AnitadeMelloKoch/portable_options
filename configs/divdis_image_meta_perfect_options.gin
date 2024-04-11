@@ -6,7 +6,7 @@ import portable.agent.model.ppo
 
 AdvancedMinigridDivDisMetaExperiment.experiment_name                = "meta_image_policy_perfect_options"
 AdvancedMinigridDivDisMetaExperiment.num_options                    = 7
-AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 0
+AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 7
 AdvancedMinigridDivDisMetaExperiment.use_gpu                        = True
 AdvancedMinigridDivDisMetaExperiment.make_videos                    = True
 
@@ -14,7 +14,7 @@ ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
 ActionPPO.final_epsilon                                             = 0.05
 ActionPPO.final_exploration_frames                                  = 1e6
-ActionPPO.num_actions                                               = 7
+ActionPPO.num_actions                                               = 14
 ActionPPO.update_interval                                           = 100
 
 PolicyWithInitiation.warmup_steps                                   = 1024
