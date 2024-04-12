@@ -12,7 +12,7 @@ class PrintLayer(torch.nn.Module):
         
         return x
 
-class SmallCNN(nn.Module):
+class MonteCNN(nn.Module):
     def __init__(self,
                  num_input_channels,
                  num_classes,
@@ -20,21 +20,20 @@ class SmallCNN(nn.Module):
         super().__init__()
 
         self.model = nn.ModuleList([nn.Sequential(
-            nn.LazyConv2d(out_channels=32, kernel_size=5, stride=2, padding=0),
+            nn.LazyConv2d(out_channels=32, kernel_size=10, stride=4, padding=0),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
             
-            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=0),
+            nn.LazyConv2d(out_channels=64, kernel_size=4, stride=2, padding=0),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=4, stride=2), # maybe try global avg pool in future
+
+            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1, padding=0),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
             
             nn.Flatten(),           
-            nn.LazyLinear(750),
-            nn.ReLU(),
-            nn.Dropout(0.10),
-            nn.LazyLinear(100),
+            nn.LazyLinear(1000),
             nn.ReLU(),
             nn.LazyLinear(num_classes)
             

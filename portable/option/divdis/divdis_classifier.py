@@ -1,4 +1,5 @@
-import logging 
+import logging
+from pyexpat import model 
 import torch
 import torch.nn as nn
 import gin
@@ -6,8 +7,9 @@ import os
 import numpy as np 
 
 from portable.option.memory import SetDataset
-from portable.option.divdis.models.small_cnn import SmallCNN
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
+from portable.option.divdis.models.minigrid_cnn import MinigridCNN
+from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
 logger = logging.getLogger(__name__)
@@ -15,7 +17,8 @@ logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
     "multi_head_mlp",
-    "small_cnn"
+    "minigrid_cnn",
+    "monte_cnn"
 ]
 
 
@@ -30,14 +33,14 @@ class DivDisClassifier():
                  input_dim,
                  num_classes,
                  diversity_weight,
-                 l2_reg_weight=0,
+                 l2_reg_weight=0.001,
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  
                  summary_writer=None,
-                 model_name='classifier') -> None:
+                 model_name='minigrid_cnn') -> None:
         
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
@@ -48,10 +51,18 @@ class DivDisClassifier():
         self.head_num = head_num
         
         self.log_dir = log_dir
+
+        if model_name == "minigrid_cnn":
+            self.classifier = MinigridCNN(num_input_channels=input_dim,
+                                          num_classes=num_classes,
+                                          num_heads=head_num)
+        elif model_name == "monte_cnn":
+            self.classifier = MonteCNN(num_input_channels=input_dim,
+                                       num_classes=num_classes,
+                                       num_heads=head_num)
+        else:
+            raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
-        self.classifier = SmallCNN(num_input_channels=input_dim,
-                                   num_classes=num_classes,
-                                   num_heads=head_num)
         #self.classifier = torch.compile(SmallCNN(num_input_channels=input_dim,
         #                                    num_classes=num_classes,
         #                                    num_heads=head_num),
@@ -59,10 +70,9 @@ class DivDisClassifier():
         #                                #dynamic=False
         #                                )
         
-        
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
-                                          weight_decay=l2_reg_weight
+                                          weight_decay=l2_reg_weight # weight decay also works as L2 regularization
                                           )
         
         self.divdis_criterion = DivDisLoss(heads=head_num)

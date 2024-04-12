@@ -16,17 +16,18 @@ from portable.utils.utils import set_seed
 
 
 @gin.configurable 
-class AdvancedMinigridDivDisClassifierExperiment():
+class MonteDivDisClassifierExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
                  seed,
                  use_gpu,
                  
-                 classifier_head_num,
-                 classifier_learning_rate,
                  classifier_input_dim,
                  classifier_num_classes,
+                 
+                 classifier_head_num,
+                 classifier_learning_rate,
                  classifier_diversity_weight,
                  classifier_l2_reg_weight,
                  classifier_train_epochs):
@@ -34,6 +35,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         self.seed = seed 
         self.base_dir = base_dir
         self.experiment_name = experiment_name 
+        self.train_epochs = classifier_train_epochs
         
         set_seed(seed)
         
@@ -50,8 +52,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                            num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
-                                           model_name='minigrid_cnn')
-        self.train_epochs = classifier_train_epochs
+                                           model_name='monte_cnn'
+                                           )
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         log_file = os.path.join(self.log_dir,
@@ -68,7 +70,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         logging.info("Learning rate: {}".format(classifier_learning_rate))
         logging.info("Diversity weight: {}".format(classifier_diversity_weight))
         logging.info("L2 reg weight: {}".format(classifier_l2_reg_weight))
-        logging.info("Classifier train epochs: {}".format(classifier_train_epochs))
+        logging.info("Train epochs: {}".format(classifier_train_epochs))
     
     def save(self):
         self.classifier.save(path=self.save_dir)

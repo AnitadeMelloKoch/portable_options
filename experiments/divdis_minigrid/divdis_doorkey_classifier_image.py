@@ -62,7 +62,7 @@ if __name__ == "__main__":
                 negative_train_files,
                 unlabelled_train_files)
 
-    experiment.train_classifier(300)
+    experiment.train_classifier(200)
     
     t1 = time.time()
     print(f"Time taken: {t1-t0}")
