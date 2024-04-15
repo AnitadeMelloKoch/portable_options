@@ -293,8 +293,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                     
                     print("Seed:", seed)
                     logging.info(f"Seed: {seed}")
-                    print("random kl:", wrong_kl)
-                    logging.info("random kl: {}".format(wrong_kl))
+                    print("wrong kl:", wrong_kl)
+                    logging.info("wrong kl: {}".format(wrong_kl))
                     print("trained kl", trained_kl)
                     logging.info("trained kl {}".format(trained_kl))
                     print("rand kl", rand_kl)
