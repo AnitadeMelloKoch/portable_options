@@ -24,8 +24,8 @@ OptionPPO.final_exploration_frames                                  = 1e6
 OptionPPO.num_options                                               = 2
 
 PolicyWithInitiation.warmup_steps                                   = 1024
-PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
-PolicyWithInitiation.buffer_length                                  = 50000
+PolicyWithInitiation.prioritized_replay_anneal_steps                = 10000
+PolicyWithInitiation.buffer_length                                  = 10000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
