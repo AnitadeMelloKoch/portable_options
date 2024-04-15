@@ -39,19 +39,21 @@ if __name__ == "__main__":
         image_input=True
         )
     
-    env_2 = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
+    env_seed_list = [1,2,3,4,5,6,7,8,9]
+    
+    env_2_list = [AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
         'AdvancedDoorKey-8x8-v0',
-        seed=1,
+        seed=seed,
         max_steps=500,
         grayscale=False
         ),
         door_colour="red",
         time_limit=100,
-        image_input=True)
+        image_input=True) for seed in env_seed_list]
     
-    env_3 = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
+    env_3_list = [AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
         'AdvancedDoorKey-8x8-v0',
-        seed=1,
+        seed=seed,
         max_steps=500,
         grayscale=False,
     ),
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     image_input=True,
     pickup_colour="red",
     force_door_closed=True
-    )
+    ) for seed in env_seed_list]
     
     experiment = AdvancedMinigridDivDisOptionExperiment(base_dir=args.base_dir,
                                                         seed=args.seed,
@@ -68,10 +70,10 @@ if __name__ == "__main__":
                                                         option_type="mock")
     
     experiment.evaluate_two_policies_mock_option(env_1,
-                                                 env_2,
-                                                 env_3,
+                                                 env_2_list,
+                                                 env_3_list,
                                                  0,
-                                                 1,
+                                                 env_seed_list,
                                                  terminations,
                                                  "wass",
                                                  5)

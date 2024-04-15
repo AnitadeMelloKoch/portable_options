@@ -203,10 +203,10 @@ class AdvancedMinigridDivDisOptionExperiment():
     
     def evaluate_two_policies_mock_option(self,
                                            env_1,
-                                           env_2,
-                                           env_3,
+                                           env_2_list,
+                                           env_3_list,
                                            env_seed_1,
-                                           env_seed_2,
+                                           env_seed_2_list,
                                            terminations,
                                            evaluation_type,
                                            evaluate_num=1):
@@ -220,80 +220,85 @@ class AdvancedMinigridDivDisOptionExperiment():
                                        policy_phi=self.policy_phi,
                                        video_generator=self.video_generator)
         
-        trained_option = DivDisMockOption(use_gpu=self.use_gpu,
-                                       terminations=terminations[1],
-                                       log_dir=os.path.join(self.log_dir, "trained_option"),
-                                       save_dir=os.path.join(self.save_dir, "trained_option"),
-                                       use_seed_for_initiation=True,
-                                       policy_phi=self.policy_phi,
-                                       video_generator=self.video_generator)
-        
-        wrong_trained_option = DivDisMockOption(use_gpu=self.use_gpu,
-                                                terminations=terminations[2],
-                                                log_dir=os.path.join(self.log_dir, "wrong_option"),
-                                                save_dir=os.path.join(self.save_dir, "wrong_option"),
-                                                use_seed_for_initiation=True,
-                                                policy_phi=self.policy_phi,
-                                                video_generator=self.video_generator)
-        
         rand_policy = PolicyWithInitiation(use_gpu=self.use_gpu,
                                            policy_phi=self.policy_phi,
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
         self.train_policy(base_option, env_1, env_seed_1, max_steps=5e5)
-        self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e5)
-        self.train_policy(wrong_trained_option, env_3, env_seed_2, max_steps=5e5)
         
-        for _ in range(evaluate_num):
-            test_buffer = self.get_test_buffer(base_option, 
-                                            env_1, 
-                                            1000,
-                                            0,
-                                            env_seed_1)
+        for idx, seed in enumerate(env_seed_2_list):
+            trained_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                        terminations=terminations[1],
+                                        log_dir=os.path.join(self.log_dir, "trained_option"),
+                                        save_dir=os.path.join(self.save_dir, "trained_option"),
+                                        use_seed_for_initiation=True,
+                                        policy_phi=self.policy_phi,
+                                        video_generator=self.video_generator)
+            wrong_trained_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                                    terminations=terminations[2],
+                                                    log_dir=os.path.join(self.log_dir, "wrong_option"),
+                                                    save_dir=os.path.join(self.save_dir, "wrong_option"),
+                                                    use_seed_for_initiation=True,
+                                                    policy_phi=self.policy_phi,
+                                                    video_generator=self.video_generator)
             
-            _, base_q_values = base_option.evaluate_states(0,
-                                                           test_buffer,
-                                                           env_seed_1)
+            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=5e5)
+            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=5e5)
             
-            _, trained_q_values = trained_option.evaluate_states(0,
-                                                                 test_buffer,
-                                                                 env_seed_2)
-            
-            _, wrong_q_values = wrong_trained_option.evaluate_states(0,
-                                                                     test_buffer,
-                                                                     env_seed_2)
-            
-            _, rand_q_values = rand_policy.batch_act(test_buffer)
-            
-            base_q_values = base_q_values.detach().cpu().squeeze()
-            wrong_q_values = wrong_q_values.detach().cpu().squeeze()
-            trained_q_values = trained_q_values.detach().cpu().squeeze()
-            rand_q_values = rand_q_values.detach().cpu().squeeze()
-            
-            if evaluation_type == "wass": 
-                wrong_wass = get_wasserstain_distance(base_q_values, wrong_q_values)
-                trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
-                rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+            for _ in range(evaluate_num):
+                test_buffer = self.get_test_buffer(base_option, 
+                                                env_1, 
+                                                1000,
+                                                0,
+                                                env_seed_1)
                 
-                print("wrong wass:", wrong_wass)
-                logging.info("wrong wass: {}".format(wrong_wass))
-                print("right wass", trained_wass)
-                logging.info("right wass: {}".format(trained_wass))
-                print("rand wass: {}".format(rand_wass))
-                logging.info("rand wass: {}".format(rand_wass))
-            
-            if evaluation_type == "kl": 
-                wrong_kl = get_kl_distance(base_q_values, wrong_q_values)
-                trained_kl = get_kl_distance(base_q_values, trained_q_values)
-                rand_kl = get_kl_distance(base_q_values, rand_q_values)
+                _, base_q_values = base_option.evaluate_states(0,
+                                                            test_buffer,
+                                                            env_seed_1)
                 
-                print("random kl:", wrong_kl)
-                logging.info("random kl: {}".format(wrong_kl))
-                print("trained kl", trained_kl)
-                logging.info("trained kl {}".format(trained_kl))
-                print("rand kl", rand_kl)
-                logging.info("rand kl: {}".format(rand_kl))
+                _, trained_q_values = trained_option.evaluate_states(0,
+                                                                    test_buffer,
+                                                                    seed)
+                
+                _, wrong_q_values = wrong_trained_option.evaluate_states(0,
+                                                                        test_buffer,
+                                                                        seed)
+                
+                _, rand_q_values = rand_policy.batch_act(test_buffer)
+                
+                base_q_values = base_q_values.detach().cpu().squeeze()
+                wrong_q_values = wrong_q_values.detach().cpu().squeeze()
+                trained_q_values = trained_q_values.detach().cpu().squeeze()
+                rand_q_values = rand_q_values.detach().cpu().squeeze()
+                
+                if evaluation_type == "wass": 
+                    wrong_wass = get_wasserstain_distance(base_q_values, wrong_q_values)
+                    trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+                    rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+                    
+                    print("Seed:", seed)
+                    logging.info(f"Seed: {seed}")
+                    print("wrong wass:", wrong_wass)
+                    logging.info("wrong wass: {}".format(wrong_wass))
+                    print("right wass", trained_wass)
+                    logging.info("right wass: {}".format(trained_wass))
+                    print("rand wass: {}".format(rand_wass))
+                    logging.info("rand wass: {}".format(rand_wass))
+                
+                if evaluation_type == "kl": 
+                    wrong_kl = get_kl_distance(base_q_values, wrong_q_values)
+                    trained_kl = get_kl_distance(base_q_values, trained_q_values)
+                    rand_kl = get_kl_distance(base_q_values, rand_q_values)
+                    
+                    print("Seed:", seed)
+                    logging.info(f"Seed: {seed}")
+                    print("random kl:", wrong_kl)
+                    logging.info("random kl: {}".format(wrong_kl))
+                    print("trained kl", trained_kl)
+                    logging.info("trained kl {}".format(trained_kl))
+                    print("rand kl", rand_kl)
+                    logging.info("rand kl: {}".format(rand_kl))
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
         test_states = []
@@ -312,7 +317,6 @@ class AdvancedMinigridDivDisOptionExperiment():
         test_states = torch.cat(test_states, dim=0)
         
         return test_states
-            
     
     def train_policy(self, option, env, env_seed, max_steps=1e6):
         total_steps = 0
