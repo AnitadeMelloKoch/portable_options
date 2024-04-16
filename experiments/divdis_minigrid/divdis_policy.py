@@ -61,6 +61,7 @@ if __name__ == "__main__":
     time_limit=100,
     image_input=True,
     pickup_colour="red",
+    key_collected=True,
     force_door_closed=True
     ) for seed in env_seed_list]
     
