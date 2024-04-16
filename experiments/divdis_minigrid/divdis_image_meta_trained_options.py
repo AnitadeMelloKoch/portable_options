@@ -225,7 +225,7 @@ if __name__ == "__main__":
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     1e6)
+                                     5e5)
     
     meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',
