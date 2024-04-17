@@ -163,6 +163,14 @@ class PolicyWithInitiation(Agent):
         self.target_q_network.to("cpu")
         self.recurrent_memory.to("cpu")
     
+    def store_buffer(self, dir):
+        os.makedirs(dir, exist_ok=True)
+        self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
+        self.replay_buffer.memory = None
+    
+    def load_buffer(self, dir):
+        self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
+    
     def update_step(self):
         self.step_number += 1
     
@@ -277,9 +285,10 @@ class PolicyWithInitiation(Agent):
             device = torch.device("cpu")
         
         obs = batch_states([obs], device, self.phi)
+        obs = obs.float()
         if self.image_input:
             obs = self.cnn(obs)
-        obs = obs.unsqueeze(1).float()
+        obs = obs.unsqueeze(1)
         obs, _ = self.recurrent_memory(obs)
         obs = obs.squeeze(0)
         q_values = self.q_network(obs)

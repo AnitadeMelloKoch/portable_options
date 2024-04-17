@@ -109,8 +109,10 @@ class ProbabilisticGetKey(BaseTermination):
         super().__init__()
     
     def check_term(self, state, env):
-        if state in self.seen_states.keys():
-            return self.seen_states[state]
+        if type(state) is not np.ndarray:
+            state = state.numpy()
+        if state.tobytes() in self.seen_states.keys():
+            return self.seen_states[state.tobytes()]
         else:
             randval = np.random.rand()
             if randval <= self.prob_correct:
@@ -118,7 +120,7 @@ class ProbabilisticGetKey(BaseTermination):
             else:
                 term = wrong_check_got_key(env, self.key_colour)
             
-            self.seen_states[state] = term
+            self.seen_states[state.tobytes()] = term
             return term
 
 class RandomGetKey(BaseTermination):
@@ -126,8 +128,10 @@ class RandomGetKey(BaseTermination):
         super().__init__()
     
     def check_term(self, state, env):
-        if state in self.seen_states.keys():
-            return self.seen_states[state]
+        if type(state) is not np.ndarray:
+            state = state.numpy()
+        if state.tobytes() in self.seen_states.keys():
+            return self.seen_states[state.tobytes()]
         else:
             term = None
             randval = np.random.rand()
@@ -136,7 +140,7 @@ class RandomGetKey(BaseTermination):
             else:
                 term = False
             
-            self.seen_states[state] = term
+            self.seen_states[state.tobytes()] = term
             return term
 
 class PerfectAtLocation(BaseTermination):
@@ -159,8 +163,10 @@ class RandomAtLocation(BaseTermination):
         self.p = p
     
     def check_term(self, state, env):
-        if state in self.seen_states.keys():
-            return self.seen_states[state]
+        if type(state) is not np.ndarray:
+            state = state.numpy()
+        if state.tobytes() in self.seen_states.keys():
+            return self.seen_states[state.tobytes()]
         else:
             term = None
             if np.random.rand() < self.p:
@@ -169,5 +175,5 @@ class RandomAtLocation(BaseTermination):
             else:
                 term = np.random.rand() < 0.5
             
-            self.seen_states[state] = term
+            self.seen_states[state.tobytes()] = term
             return term

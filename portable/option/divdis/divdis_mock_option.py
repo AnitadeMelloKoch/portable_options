@@ -127,14 +127,15 @@ class DivDisMockOption():
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
                 self.policies[head_idx][option_idx] = self._get_new_policy()
-            return self.policies[head_idx][option_idx]
+            return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
         else:
             if len(self.initiable_policies[head_idx]) > 0:
-                return self.policies[head_idx][option_idx]
+                return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
             else:
                 policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
-                return policy
+                # policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
+                return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self):
         return PolicyWithInitiation(use_gpu=self.use_gpu,
@@ -158,8 +159,9 @@ class DivDisMockOption():
         done = False
         should_terminate = False
         
-        policy = self._get_policy(idx, policy_idx)
+        policy, buffer_dir = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
+        # policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -204,6 +206,9 @@ class DivDisMockOption():
             else:
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
+        
+        policy.move_to_cpu()
+        # policy.store_buffer(buffer_dir)
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     
@@ -349,7 +354,9 @@ class DivDisMockOption():
             raise Exception("Policy has not been initialized. Train policy before evaluating")
         
         policy = self.policies[idx][seed]
+        buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
         policy.move_to_gpu()
+        # policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
             while not (done or should_terminate or (steps >= max_steps)):
@@ -397,6 +404,9 @@ class DivDisMockOption():
             if self.video_generator is not None and make_video:
                 img = env.render()
                 self.video_generator.make_image(img)
+            
+            policy.move_to_cpu()
+            # policy.store_buffer(buffer_dir)
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     
