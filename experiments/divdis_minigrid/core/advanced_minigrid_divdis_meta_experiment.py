@@ -187,21 +187,22 @@ class AdvancedMinigridDivDisMetaExperiment():
                     rewards = [reward]
                     # total_steps += 1
                 else:
-                    if (action_mask[action] is False):
-                        next_obs, reward, done, info = env.step(6)
-                        steps = 1
-                        rewards = [reward]
-                    else:
-                        action_offset = action-self.num_primitive_actions
-                        option_num = int(action_offset/self.num_heads)
-                        option_head = action_offset%self.num_heads
-                        next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].train_policy(option_head,
-                                                                                                              env,
-                                                                                                              obs,
-                                                                                                              info,
-                                                                                                              seed,
-                                                                                                              max_steps=100,
-                                                                                                              make_video=True)
+                    # if (action_mask[action] is False):
+                    #     print("no actions")
+                    #     next_obs, reward, done, info = env.step(6)
+                    #     steps = 1
+                    #     rewards = [reward]
+                    # else:
+                    action_offset = action-self.num_primitive_actions
+                    option_num = int(action_offset/self.num_heads)
+                    option_head = action_offset%self.num_heads
+                    next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].train_policy(option_head,
+                                                                                                            env,
+                                                                                                            obs,
+                                                                                                            info,
+                                                                                                            seed,
+                                                                                                            max_steps=100,
+                                                                                                            make_video=True)
                 undiscounted_reward += np.sum(rewards)
                 total_steps += 1
                 

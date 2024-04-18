@@ -55,6 +55,9 @@ class DivDisMockOption():
             self.plot_dir = plot_dir
             self.term_states = []
             self.missed_term_states = []
+        
+        self.train_rewards = deque(maxlen=200)
+        self.option_steps = 0
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -174,6 +177,14 @@ class DivDisMockOption():
             
             next_state, reward, done, info = env.step(action)
             
+            fig = plt.figure(num=1, clear=True)
+            ax = fig.add_subplot()
+            screen = env.render()
+            ax.imshow(screen)
+            plt.savefig("screen.png")
+            
+            self.option_steps += 1
+            
             should_terminate = self.terminations[idx](state,
                                                       env)
             
@@ -197,7 +208,7 @@ class DivDisMockOption():
                            done or should_terminate)
             
             option_rewards.append(reward)
-
+            
             state = next_state
         
         if not self.use_seed_for_initiation:
@@ -209,6 +220,7 @@ class DivDisMockOption():
         
         policy.move_to_cpu()
         # policy.store_buffer(buffer_dir)
+        self.train_rewards.append(sum(rewards))
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     
