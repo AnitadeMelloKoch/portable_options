@@ -177,12 +177,6 @@ class DivDisMockOption():
             
             next_state, reward, done, info = env.step(action)
             
-            fig = plt.figure(num=1, clear=True)
-            ax = fig.add_subplot()
-            screen = env.render()
-            ax.imshow(screen)
-            plt.savefig("screen.png")
-            
             self.option_steps += 1
             
             should_terminate = self.terminations[idx](state,
