@@ -214,7 +214,11 @@ class DivDisMockOption():
         
         policy.move_to_cpu()
         # policy.store_buffer(buffer_dir)
-        self.train_rewards.append(sum(rewards))
+        self.train_rewards.append(sum(option_rewards))
+        self.option_steps += 1
+        
+        if self.option_steps%50 == 0:
+            logging.info("Option success rate: {}".format(np.mean(self.train_rewards)))
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     

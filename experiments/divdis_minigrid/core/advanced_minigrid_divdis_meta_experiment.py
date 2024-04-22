@@ -181,6 +181,8 @@ class AdvancedMinigridDivDisMetaExperiment():
                 self._video_log("action: {}".format(action))
                 self._video_log("action q vals: {}".format(q_vals))
                 
+                logging.info("Selected action: {}".format(action))
+                
                 if action < self.num_primitive_actions:
                     next_obs, reward, done, info = env.step(action)
                     undiscounted_reward += reward
@@ -201,7 +203,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                                                                                                             obs,
                                                                                                             info,
                                                                                                             seed,
-                                                                                                            max_steps=100,
+                                                                                                            max_steps=50,
                                                                                                             make_video=True)
                 undiscounted_reward += np.sum(rewards)
                 total_steps += 1
