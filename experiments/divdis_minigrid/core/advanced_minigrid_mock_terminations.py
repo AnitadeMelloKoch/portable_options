@@ -90,6 +90,8 @@ class ProbabilisticDoorOpen(BaseTermination):
         super().__init__()
         self.door_colour = door_colour
         self.prob_correct = prob_correct
+        self.x = None
+        self.y = None
     
     def get_door(self, env):
         if self.x and self.y:
