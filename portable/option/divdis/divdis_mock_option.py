@@ -12,6 +12,8 @@ from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from collections import deque
 
+from portable.option.sets.utils import BayesianWeighting
+
 @gin.configurable 
 class DivDisMockOption():
     def __init__(self,
@@ -22,6 +24,8 @@ class DivDisMockOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
+                 beta_distribution_alpha=100,
+                 beta_distribution_beta=100,
                  video_generator=None,
                  plot_dir=None):
         
@@ -58,6 +62,10 @@ class DivDisMockOption():
         
         self.train_rewards = deque(maxlen=200)
         self.option_steps = 0
+        
+        self.confidences = BayesianWeighting(beta_distribution_alpha,
+                                             beta_distribution_beta,
+                                             self.num_heads)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -137,7 +145,7 @@ class DivDisMockOption():
             else:
                 policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
-                # policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
+                policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self):
@@ -164,7 +172,7 @@ class DivDisMockOption():
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
-        # policy.load_buffer(buffer_dir)
+        policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -213,7 +221,7 @@ class DivDisMockOption():
             policy.add_context_examples(states)
         
         policy.move_to_cpu()
-        # policy.store_buffer(buffer_dir)
+        policy.store_buffer(buffer_dir)
         self.train_rewards.append(sum(option_rewards))
         self.option_steps += 1
         
@@ -366,7 +374,7 @@ class DivDisMockOption():
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
         policy.move_to_gpu()
-        # policy.load_buffer(buffer_dir)
+        policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
             while not (done or should_terminate or (steps >= max_steps)):
@@ -416,7 +424,7 @@ class DivDisMockOption():
                 self.video_generator.make_image(img)
             
             policy.move_to_cpu()
-            # policy.store_buffer(buffer_dir)
+            policy.store_buffer(buffer_dir)
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     
@@ -430,8 +438,14 @@ class DivDisMockOption():
         actions, q_vals = self.policies[idx][seed].batch_act(states)
         
         return actions, q_vals
-        
     
+    def get_confidences(self):
+        return self.confidences.weights()
+    
+    def update_confidences(self,
+                           update):
+        
+        self.confidences.update_successes(update)
     
 
 

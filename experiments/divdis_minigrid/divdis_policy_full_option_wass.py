@@ -22,9 +22,12 @@ if __name__ == "__main__":
     def policy_phi(x):
         return x
     
-    terminations = [
-        [PerfectGetKey("red")],
-        [PerfectDoorOpen()]
+    terminations_1 = [PerfectGetKey("red")]
+    
+    terminations_2 = [
+        ProbabilisticGetKey("red", 0.9),
+        ProbabilisticGetKey("red", 0.5),
+        ProbabilisticGetKey("red", 0.2),
     ]
     
     env_1 = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
@@ -38,30 +41,30 @@ if __name__ == "__main__":
         image_input=True
         )
     
-    env_2 = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
-        'AdvancedDoorKey-8x8-v0',
-        seed=1,
-        max_steps=500,
-        grayscale=False
-        ),
-        door_colour="red",
-        time_limit=100,
-        image_input=True,
-        pickup_colour="red",
-        force_door_closed=True)
+    env_seed_list = [1,2,3,4,5,6,7,8,9]
+    
+    def env_2_builder(seed):
+        return AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
+            'AdvancedDoorKey-8x8-v0',
+            seed=seed,
+            max_steps=500,
+            grayscale=False
+            ),
+            door_colour="red",
+            time_limit=100,
+            image_input=True)
     
     experiment = AdvancedMinigridDivDisOptionExperiment(base_dir=args.base_dir,
                                                         seed=args.seed,
                                                         policy_phi=policy_phi,
                                                         option_type="mock")
     
-    experiment.evaluate_diff_policies_mock_option(env_1,
-                                                  env_2,
-                                                  0,
-                                                  1,
-                                                  terminations,
-                                                  "kl",
-                                                  evaluate_num=5)
+    experiment.evaluate_option(env_1,
+                               0,
+                               env_2_builder,
+                               env_seed_list,
+                               terminations_1,
+                               "wass")
     
     
     

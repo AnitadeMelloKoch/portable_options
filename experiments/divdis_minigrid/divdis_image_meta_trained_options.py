@@ -221,11 +221,11 @@ if __name__ == "__main__":
                                                       action_vf=create_cnn_vf(3),
                                                       terminations=terminations)
     
-    experiment.load()
+    # experiment.load()
     
     # experiment.train_option_policies(train_envs,
     #                                  env_seed,
-    #                                  5e5)
+    #                                  5e2)
     
     meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',

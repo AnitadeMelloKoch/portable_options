@@ -344,7 +344,71 @@ class AdvancedMinigridDivDisOptionExperiment():
         option.save()
             
     
-    
+    def evaluate_option(self,
+                        env_1,
+                        seed_1,
+                        env_2_builder,
+                        seeds_2,
+                        termination_1,
+                        terminations_2,
+                        evaluation_type):
+        
+        original_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                           terminations=termination_1,
+                                           log_dir=os.path.join(self.log_dir, "original"),
+                                           save_dir=os.path.join(self.save_dir, "original"),
+                                           use_seed_for_initiation=True,
+                                           policy_phi=self.policy_phi,
+                                           video_generator=self.video_generator)
+        new_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                      terminations=terminations_2,
+                                      log_dir=os.path.join(self.log_dir, "new"),
+                                      save_dir=os.path.join(self.save_dir, "new"),
+                                      use_seed_for_initiation=True,
+                                      policy_phi=self.policy_phi,
+                                      video_generator=self.video_generator)
+        
+        self.train_policy(original_option, env_1, seed_1, max_steps=5e5)
+        
+        head_scores = np.zeros(new_option.num_heads)
+        
+        for seed_2 in seeds_2:
+            env_2 = env_2_builder(seed_2)
+            self.train_policy(new_option, env_2, seed_2, max_steps=5e5)
+            for head_idx in range(new_option.num_heads):
+                test_buffer = self.get_test_buffer(original_option,
+                                                env_2,
+                                                1000,
+                                                head_idx,
+                                                seed_2)
+                
+                _, original_q_values = original_option.evaluate_states(0,
+                                                                    test_buffer,
+                                                                    seed_1)
+                
+                _, new_q_values = new_option.evaluate_states(head_idx,
+                                                             test_buffer,
+                                                             seed_2)
+                
+                original_q_values = original_q_values.detach().cpu().squeeze()
+                new_q_values = new_q_values.detach().cpu().squeeze()
+                
+                if evaluation_type == "wass":
+                    score = get_wasserstain_distance(original_q_values, new_q_values)
+                if evaluation_type == "kl":
+                    score = get_kl_distance(original_q_values, new_q_values)
+                
+                print("head {} score {}".format(head_idx, score))
+                logging.info("head {} score {}".format(head_idx, score))
+                head_scores[head_idx] = score
+            
+            confidence_scores = np.zeros(new_option.num_heads)
+            confidence_scores[np.argmax(head_scores)] = 1
+            
+            new_option.update_confidences(confidence_scores)
+        
+        print("final confidences: {}".format(new_option.get_confidences()))
+        
     
 
 
