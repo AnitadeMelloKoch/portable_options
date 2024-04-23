@@ -83,6 +83,47 @@ class NeverPerfectDoorOpen(BaseTermination):
             return not (door.is_open and (door.color == self.door_colour))
         return not door.is_open
 
+class ProbabilisticDoorOpen(BaseTermination):
+    def __init__(self, 
+                 prob_correct, 
+                 door_colour=None):
+        super().__init__()
+        self.door_colour = door_colour
+        self.prob_correct = prob_correct
+    
+    def get_door(self, env):
+        if self.x and self.y:
+            cell = env.unwrapped.grid.get(self.x, self.y)
+            if cell:
+                if cell.type == "door":
+                    return cell
+        
+        for x in range(env.unwrapped.width):
+            for y in range(env.unwrapped.height):
+                cell = env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "door":
+                        self.x = x
+                        self.y = y
+                        return cell
+    
+    def check_term(self, state, env):
+        if type(state) is not np.ndarray:
+            state = state.numpy()
+        if state.tobytes() in self.seen_states.keys():
+            return self.seen_states[state.tobytes()]
+        else:
+            randval = np.random.rand()
+            door = self.get_door(env)
+            if randval <= self.prob_correct:
+                if self.door_colour:
+                    return door.is_open and (door.color == self.door_colour)
+                return door.is_open
+            else:
+                if self.door_colour:
+                    return not (door.is_open and (door.color == self.door_colour))
+                return not door.is_open
+
 class PerfectGetKey(BaseTermination):
     def __init__(self, key_colour):
         self.key_colour = key_colour

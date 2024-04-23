@@ -201,16 +201,21 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectGetKey("red"),
-         NeverCorrectGetKey("red")],
-        [PerfectGetKey("yellow"),
-         NeverCorrectGetKey("yellow")],
-        [PerfectGetKey("grey"),
-         NeverCorrectGetKey("grey")],
-        [PerfectDoorOpen(),
-         NeverPerfectDoorOpen()],
-        [PerfectAtLocation(6,6),
-         RandomAtLocation(6,6,0)]
+        [ProbabilisticGetKey("red",0.9),
+         ProbabilisticGetKey("red",0.5),
+         ProbabilisticGetKey("red",0.2)],
+        [ProbabilisticGetKey("yellow",0.9),
+         ProbabilisticGetKey("yellow",0.5),
+         ProbabilisticGetKey("yellow",0.2)],
+        [ProbabilisticGetKey("grey",0.9),
+         ProbabilisticGetKey("grey",0.5),
+         ProbabilisticGetKey("grey",0.2)],
+        [ProbabilisticDoorOpen(0.9),
+         ProbabilisticDoorOpen(0.5),
+         ProbabilisticDoorOpen(0.2)],
+        [RandomAtLocation(6,6,0.9),
+         RandomAtLocation(6,6,0.5),
+         RandomAtLocation(6,6,0.2)]
     ]
     
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
