@@ -64,6 +64,7 @@ if __name__ == "__main__":
                                env_2_builder,
                                env_seed_list,
                                terminations_1,
+                               terminations_2,
                                "wass")
     
     
