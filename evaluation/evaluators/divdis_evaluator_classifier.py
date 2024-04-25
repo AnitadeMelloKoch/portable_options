@@ -1,5 +1,3 @@
-from cgi import test
-from email.mime import image
 import os
 import random
 import numpy as np
@@ -61,46 +59,48 @@ class DivDisEvaluatorClassifier():
             labels = labels.cuda()
             
         for image_idx in range(num_images):
-            # Get each image and label
-            image, label = images[image_idx], labels[image_idx].item()
+            image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
 
             # Create a figure with subplots
-            fig, axes = plt.subplots(nrows=self.head_num, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
+            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
             fig.suptitle(f'Attributions for Image {image_idx} (Label: {label})')
 
-            predictions = self.classifier.predict(image.unsqueeze(0))[0]  # Get predictions for the current head
+            predictions = self.classifier.predict(image)[0]  # Get predictions for the current head
             predicted_labels = predictions.argmax(dim=-1)  # Assuming single label prediction
+
+            for i in range(self.stack_size):
+                ax = axes[0, i]
+                ax.imshow(image[0, i].cpu().numpy(), cmap='gray')
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.text(-0.2, 0.5, "Original Image", transform=ax.transAxes, 
+                    va='center', ha='right', fontsize=12, fontweight='bold')
                 
             # Loop through each classifier head
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                              
+
                 attr = self.integrated_gradients[head_idx].attribute(
-                    image.unsqueeze(0),
+                    image,
                     nt_samples=10,
                     n_steps=10,
                     target=label
-                ).squeeze().cpu().detach().numpy()
+                ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
+                
+                display_image = image.squeeze().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
                 
                 # Loop through each channel in the input image
                 for channel_idx in range(self.stack_size):
-                    ax = axes[head_idx, channel_idx]
-                    image_channel = image.cpu().numpy()[channel_idx, :, :]
-                    attr_channel = attr[channel_idx, :, :]  
+                    ax = axes[head_idx+1, channel_idx]
+                    ax.imshow(display_image[:,:,channel_idx], cmap='gray')
+                    #ax.imshow(attr[:,:,channel_idx], cmap='seismic', alpha=0.5)
                     
-                    ax.imshow(image_channel, cmap='gray')
-                    _, heatmap = viz.visualize_image_attr(
-                    attr_channel,
-                    image_channel,
-                    method="heat_map",
-                    sign="all",
-                    show_colorbar=False,
-                    plt_fig_axis=None,  # We handle the plotting ourselves
-                    use_pyplot=False
-                    )
-                    ax.imshow(heatmap, cmap='jet', alpha=0.5)
-                    ax.set_axis_off()
-                    
+                    fig, ax = viz.visualize_image_attr(attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                                                       original_image=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                                                       method='blended_heat_map', sign='all', 
+                                                       show_colorbar=False, plt_fig_axis=(fig, ax))
+                    ax.set_xticks([])
+                    ax.set_yticks([])
 
                 if(label == 1) & (pred_label_head == 1):
                     row_name = (f'Head {head_idx}: True Positive')
@@ -111,7 +111,7 @@ class DivDisEvaluatorClassifier():
                 elif(label == 1) & (pred_label_head == 0):
                     row_name = (f'Head {head_idx}: False Negative')
             
-                axes[head_idx,0].text(-0.3, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
+                axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
                     va='center', ha='right', fontsize=12, fontweight='bold')
                     
             plt.tight_layout()
