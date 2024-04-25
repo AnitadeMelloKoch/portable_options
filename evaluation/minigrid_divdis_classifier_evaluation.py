@@ -4,7 +4,8 @@ import random
 
 import torch
 
-from evaluation.evaluators import DivDisEvaluatorClassifier
+#from evaluators import DivDisEvaluatorClassifier
+from evaluators import DivDisEvaluatorClassifier
 #from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import \
 #    AdvancedMinigridFactoredDivDisClassifierExperiment
 from portable.option.divdis.divdis_classifier import DivDisClassifier

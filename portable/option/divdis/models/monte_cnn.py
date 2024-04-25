@@ -20,7 +20,7 @@ class MonteCNN(nn.Module):
         super().__init__()
 
         self.model = nn.ModuleList([nn.Sequential(
-            nn.LazyConv2d(out_channels=32, kernel_size=10, stride=4, padding=0),
+            nn.LazyConv2d(out_channels=32, kernel_size=8, stride=4, padding=0),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             
@@ -33,7 +33,7 @@ class MonteCNN(nn.Module):
             nn.ReLU(),
             
             nn.Flatten(),           
-            nn.LazyLinear(1000),
+            nn.LazyLinear(512),
             nn.ReLU(),
             nn.LazyLinear(num_classes)
             

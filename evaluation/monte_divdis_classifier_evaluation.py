@@ -1,9 +1,16 @@
-import multiprocessing
-from experiments.divdis_monte.core.monte_divdis_classifier_experiment import MonteDivDisClassifierExperiment
-import argparse 
+import argparse
+import os
+import random
+
+import torch
+
+#from evaluators import DivDisEvaluatorClassifier
+from evaluation.evaluators.divdis_evaluator_classifier import DivDisEvaluatorClassifier
+#from experiments.divdis_minigrid.core.advanced_minigrid_factored_divdis_classifier_experiment import \
+#    AdvancedMinigridFactoredDivDisClassifierExperiment
+from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.utils.utils import load_gin_configs
-import torch 
-import random 
+
 
 img_dir = "resources/monte_images/"
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
@@ -44,35 +51,33 @@ negative_test_files = [
                         img_dir+"climb_down_ladder_room22_screen_termination_negative.npy",
                        ]
 
-if __name__ == "__main__":
-        parser = argparse.ArgumentParser()
 
-        parser.add_argument("--base_dir", type=str, required=True)
-        parser.add_argument("--seed", type=int, required=True)
-        parser.add_argument("--config_file", nargs='+', type=str, required=True)
-        parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    #parser.add_argument("--classifier_dir", type=str, required=True)
+    parser.add_argument("--base_dir", type=str, required=True)
+    parser.add_argument("--config_file", nargs='+', type=str, required=True)
+    parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
                 ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
                 ' "create_atari_environment.game_name="Pong"").')
+    args = parser.parse_args()
+    load_gin_configs(args.config_file, args.gin_bindings)
 
-        args = parser.parse_args()
+    classifier = DivDisClassifier(log_dir=args.base_dir+"logs")
+    classifier.add_data(positive_train_files,
+                        negative_train_files,
+                        unlabelled_train_files)
+    classifier.train(500)
 
-        load_gin_configs(args.config_file, args.gin_bindings)
+    evaluator = DivDisEvaluatorClassifier(
+                    classifier,
+                    base_dir=args.base_dir)
+    evaluator.add_test_files(positive_test_files, negative_test_files)
+    evaluator.evaluate_images(3)
 
-        multiprocessing.set_start_method('spawn')
-        
-        experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir,
-                                                        seed=args.seed)
+    #evaluator.add_true_from_files(positive_test_files)
+    #evaluator.add_false_from_files(negative_test_files)
+    #evaluator.evaluate(2)
 
-        experiment.add_datafiles(positive_train_files,
-                                 negative_train_files,
-                                 unlabelled_train_files)
-
-        experiment.train_classifier()
-        
-        accuracy = experiment.test_classifier(positive_test_files,
-                                              negative_test_files,
-                                              save=True)
-        
-        print(f"Accuracy: {accuracy[0]}")
-        print(f"Weighted Accuracy: {accuracy[1]}")
- 
+    # print head complexity
+    #print(evaluator.get_head_complexity())

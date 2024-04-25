@@ -18,16 +18,17 @@ def make_env(env_name, seed, max_frames):
         clip_rewards=False,
         frame_stack=False
     )
-
     env.seed(seed)
-
+    
     return MontezumaPortWrapper(env)
+
 
 def update_state(player_pic, state):
     state = np.roll(state, -1, 0)
     state[-1, ...] = player_pic
-
+    
     return state
+
 
 def set_ram(env, ram_state):
     env.reset()
@@ -38,6 +39,7 @@ def set_ram(env, ram_state):
     env.unwrapped.ale.restoreState(new_state_ref)
     env.unwrapped.ale.deleteState(new_state_ref)
     obs, _, _, _ = env.step(0)  # NO-OP action to update the RAM state
+
 
 def get_player_position(ram):
     """
@@ -59,6 +61,7 @@ def get_player_position(ram):
     room = int(getByte(ram, '83'))
     return x, y, room
 
+
 def set_player_position(env, x, y, room):
     """
     set the player position, specifically made for monte envs
@@ -77,6 +80,7 @@ def set_player_position(env, x, y, room):
     env.step(0)  # NO-OP action to update the RAM state
 
 
+
 class MonteDataCollector:
     def __init__(self, env_name, seed, max_frames):
         self.env = make_env(env_name, seed, max_frames)
@@ -93,19 +97,31 @@ class MonteDataCollector:
         self.TERMINATION = False
 
         # init visualization
-        self.fig = plt.figure(num=1, clear=True)
+        self.fig = plt.figure(num=1, figsize=(10,10), clear=True)
         self.ax = self.fig.add_subplot()
         screen = self.env.render('rgb_array')
-        #self.ax.clear()  # Clear the axes
+        self.ax.clear()  # Clear the axes
         self.ax.imshow(screen)  # Update the image
         plt.show(block=False)
+
 
     def update_state(self, player_pic, state):
         state = np.roll(state, -1, 0)
         state[-1, ...] = player_pic
         return state
 
-    def set_ram(self, ram_state):
+
+    def visualize_env(self, pause=0.05):
+        # update env visualization for current state
+        screen = self.env.render("rgb_array")
+        self.ax.clear()
+        self.ax.imshow(screen)
+        plt.draw()
+        plt.pause(pause)
+
+
+    def set_ram(self, ram):
+        ram_state, agent_state, state, position = ram.values()
         self.env.reset()
         state_ref = self.env.unwrapped.ale.cloneState()
         self.env.unwrapped.ale.deleteState(state_ref)
@@ -114,6 +130,22 @@ class MonteDataCollector:
         self.env.unwrapped.ale.restoreState(new_state_ref)
         self.env.unwrapped.ale.deleteState(new_state_ref)
         obs, _, _, _ = self.env.step(0)  # NO-OP action to update the RAM state
+
+        if self.INITIATION:
+            self.init_positive_states['state'] = [state]
+            self.init_positive_states['agent'] = [agent_state]
+        else:
+            self.init_negative_states['state'] = [state]
+            self.init_negative_states['agent'] = [agent_state]
+
+        if self.TERMINATION:
+            self.term_positive_states['state'] = [state]
+            self.term_positive_states['agent'] = [agent_state]
+        else:
+            self.term_negative_states['state'] = [state]
+            self.term_negative_states['agent'] = [agent_state]
+
+        self.visualize_env()
         
 
     def collect_data(self, stdscr):
@@ -126,11 +158,13 @@ class MonteDataCollector:
         stdscr.addstr("Use arrow keys for jumping movements.\n")
         stdscr.addstr("Press I to toggle initiation, T to toggle termination. Press V to clear saved dataset. Press B to save data.\n")
         stdscr.addstr(f"Current initiation: {self.INITIATION}, Current termination: {self.TERMINATION}\n")
-        i = 0
+        i = len(self.init_positive_states['state'])+len(self.init_negative_states['state'])
+
+        self.visualize_env()
 
         while True:
             key = stdscr.getch()  # Get a single key press
-            stdscr.addstr(f"t={i}, pressed {chr(key)}. Initiation: {self.INITIATION}, Termination: {self.TERMINATION}\n")
+            stdscr.addstr(f"t={i}, pressed {chr(key)} | Initiation: {self.INITIATION}, Termination: {self.TERMINATION}\n")
             
             if key == 27:  # ESC key to exit
                 break
@@ -158,26 +192,28 @@ class MonteDataCollector:
                 
                 if key == ord('y'):
                     # ask for save file name prefix
-                    stdscr.addstr(f"Enter save file name prefix: (such as climb_down_ladder_room0)\n")
+                    stdscr.addstr(f"Enter save file name prefix: (e.g. 'climb_down_ladder_room0')\n")
                     prefix = stdscr.getstr().decode('utf-8')
-                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}\n")
+                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}_screen_initiation_positive.npy and 7 other .npy files\n")
                     self.save_data(f'{prefix}')
                     self.init_positive_states = {'state':[], 'agent':[]}
                     self.init_negative_states = {'state':[], 'agent':[]}
                     self.term_positive_states = {'state':[], 'agent':[]}
                     self.term_negative_states = {'state':[], 'agent':[]}
                     stdscr.addstr("Data saved! Dataset has been reset.\n")
+                else:
+                    stdscr.addstr("Data not saved.\n")
                 
-            elif key == ord('w'):
+            elif key == (ord('w') or ord('W')):
                 i += 1
                 self.perform_action(actions.UP, 1)
-            elif key == ord('s'):
+            elif key == (ord('s') or ord('S')):
                 i += 1
                 self.perform_action(actions.DOWN, 1)
-            elif key == ord('a'):
+            elif key == (ord('a') or ord('A')):
                 i += 1
                 self.perform_action(actions.LEFT, 1)
-            elif key == ord('d'):
+            elif key == (ord('d') or ord('D')):
                 i += 1
                 self.perform_action(actions.RIGHT, 1)
 
@@ -220,16 +256,15 @@ class MonteDataCollector:
     def perform_action(self, action, steps):
 
         for _ in range(steps):
-            screen = self.env.render("rgb_array")
-            self.ax.clear()  # Clear the axes
-            self.ax.imshow(screen)
-            plt.draw()
-            plt.pause(0.05)
+            # env step and update state images
+            obs, _, _, _ = self.env.step(action)
+            self.state = update_state(obs, self.state)
 
             rgb_array = self.env.get_pixels_around_player()
             image = color.rgb2gray(rgb_array)
             self.agent_state = update_state(image, self.agent_state)
 
+            # store in init or term dataset
             if self.INITIATION:
                 self.init_positive_states['state'].append(self.state.copy())
                 self.init_positive_states['agent'].append(self.agent_state.copy())
@@ -244,10 +279,10 @@ class MonteDataCollector:
                 self.term_negative_states['state'].append(self.state.copy())
                 self.term_negative_states['agent'].append(self.agent_state.copy())
 
-            obs, _, _, _ = self.env.step(action)
-            self.state = update_state(obs, self.state)
+            self.visualize_env()
+            
 
-    def save_data(self, prefix):
+    def save_data(self, prefix):       
         if len(self.init_positive_states["state"]) > 0:
             np.save(f'{self.save_dir+prefix}_screen_initiation_positive.npy', np.array(self.init_positive_states["state"]))
         if len(self.init_negative_states["state"]) > 0:
@@ -273,10 +308,12 @@ class MonteDataCollector:
 
 if __name__ == "__main__":
     collector = MonteDataCollector('MontezumaRevengeNoFrameskip-v4', 0, 30*60*60)
+    collector.INITIATION = False
+    collector.TERMINATION = True
 
-    start_filename = "resources/monte_env_states/room0/ladder/top_0.pkl"
+    start_filename = "resources/monte_env_states/room22/ladder/bottom_0.pkl"
     with open(start_filename, "rb") as f:
         start_ram = pickle.load(f)
-    collector.set_ram(start_ram["ram"])
-    
+    collector.set_ram(start_ram)
+
     collector.run()

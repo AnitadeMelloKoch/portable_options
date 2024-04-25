@@ -1,0 +1,13 @@
+import portable.option.divdis.divdis_classifier
+
+
+DivDisClassifier.head_num            = 6
+DivDisClassifier.num_classes         = 2
+DivDisClassifier.learning_rate       = 0.0001 #1e-3
+DivDisClassifier.diversity_weight    = 0.0001 #1e-3
+DivDisClassifier.l2_reg_weight       = 0.001 #1e-2
+DivDisClassifier.dataset_batchsize   = 64
+DivDisClassifier.model_name          = "monte_cnn"
+DivDisClassifier.use_gpu             = True
+
+DivDisClassifier.input_dim           = 4

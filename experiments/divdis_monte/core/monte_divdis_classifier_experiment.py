@@ -5,6 +5,7 @@ import pickle
 
 import gin
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -13,7 +14,18 @@ from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory import SetDataset
 from portable.utils.utils import set_seed
 
+def save_image(img, save_dir, batch_number, img_number_within_batch):
+            # Construct filename to include both batch number and image number within the batch
+            filename = f"{save_dir}/batch_{batch_number}_image_{img_number_within_batch}.png"
+            fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+            for i, ax in enumerate(axes.flat):
+                ax.imshow(img[i], cmap='gray')
+            plt.tight_layout()
+            plt.savefig(filename)
+            plt.close(fig)
 
+def worker_initializer():
+    plt.switch_backend('Agg')
 
 @gin.configurable 
 class MonteDivDisClassifierExperiment():
@@ -92,7 +104,8 @@ class MonteDivDisClassifierExperiment():
     
     def test_classifier(self,
                         test_positive_files,
-                        test_negative_files):
+                        test_negative_files,
+                        save=False):
         dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
         
@@ -104,13 +117,14 @@ class MonteDivDisClassifierExperiment():
         
         dataset_positive.add_true_files(test_positive_files)
         dataset_negative.add_false_files(test_negative_files)
-        
+    
         counter = 0
         accuracy = np.zeros(self.classifier.head_num)
         accuracy_pos = np.zeros(self.classifier.head_num)
         accuracy_neg = np.zeros(self.classifier.head_num)
         
-        for _ in range(dataset_positive.num_batches):
+        #for _ in range(dataset_positive.num_batches):
+        for _ in range(3):
             counter += 1
             x, y = dataset_positive.get_batch()
             pred_y = self.classifier.predict(x)
@@ -120,13 +134,26 @@ class MonteDivDisClassifierExperiment():
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
                 accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
-        
+
+                # save false positive images to file'
+                if save:
+                    save_dir = os.path.join(self.plot_dir, 'false_negative', 'head_{}'.format(idx))
+                    os.makedirs(save_dir, exist_ok=True)
+                    
+                    false_neg_idx = (pred_class != y)
+                    false_neg_imgs = x[false_neg_idx]
+                    with Pool(initializer=worker_initializer) as pool:
+                        args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_neg_imgs)]
+                        pool.starmap(save_image, args)
+
+
         accuracy_pos /= counter
         
         total_count = counter
         counter = 0
         
-        for _ in range(dataset_negative.num_batches):
+        #for _ in range(dataset_negative.num_batches):
+        for _ in range(3):    
             counter += 1
             x, y = dataset_negative.get_batch()
             pred_y = self.classifier.predict(x)
@@ -136,6 +163,17 @@ class MonteDivDisClassifierExperiment():
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
                 accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+                if save:
+                    save_dir = os.path.join(self.plot_dir, 'false_positive', 'head_{}'.format(idx))
+                    os.makedirs(save_dir, exist_ok=True)
+                    
+                    false_pos_idx = (pred_class != y)
+                    false_pos_imgs = x[false_pos_idx]
+                    with Pool(initializer=worker_initializer) as pool:
+                        args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_pos_imgs)]
+                        pool.starmap(save_image, args)
+                    
         
         accuracy_neg /= counter
         total_count += counter

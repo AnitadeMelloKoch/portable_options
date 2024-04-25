@@ -1,16 +1,16 @@
 import experiments.divdis_monte.core.monte_divdis_classifier_experiment
 import portable.option.divdis.divdis_classifier
 
-MonteDivDisClassifierExperiment.experiment_name                = "monte_cnn_test"
+MonteDivDisClassifierExperiment.experiment_name                = "monte_full_test4"
 MonteDivDisClassifierExperiment.use_gpu                        = True
 
 MonteDivDisClassifierExperiment.classifier_input_dim           = 4 # should be 3 or (64,64,3)
 MonteDivDisClassifierExperiment.classifier_num_classes         = 2
 
 MonteDivDisClassifierExperiment.classifier_head_num            = 6
-MonteDivDisClassifierExperiment.classifier_learning_rate       = 0.002 #2e-3
-MonteDivDisClassifierExperiment.classifier_diversity_weight    = 0.001 #1e-3
-MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.01 #1e-2
+MonteDivDisClassifierExperiment.classifier_learning_rate       = 0.0001 #1e-3
+MonteDivDisClassifierExperiment.classifier_diversity_weight    = 0.00001 #1e-3
+MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.001 #1e-2
 MonteDivDisClassifierExperiment.classifier_train_epochs        = 1000
 
 DivDisClassifier.dataset_batchsize = 64

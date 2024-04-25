@@ -1,4 +1,5 @@
 from cgi import test
+from email.mime import image
 import os
 import random
 import numpy as np
@@ -14,7 +15,7 @@ from portable.option.memory.set_dataset import SetDataset
 
 from portable.option.sets.models.portable_set_decaying_div import EnsembleClassifierDecayingDiv
 from evaluation.model_wrappers import EnsembleClassifierWrapper
-from ..evaluators.utils import concatenate
+from .utils import concatenate
 
 from captum.attr import IntegratedGradients, DeepLift, GradientShap, NoiseTunnel, FeatureAblation
 from captum.attr import LayerConductance, LayerActivation, LayerIntegratedGradients
@@ -27,10 +28,10 @@ class DivDisEvaluatorClassifier():
     def __init__(
             self,
             classifier,
-            image_input=False,
+            image_input=True,
             batch_size=64,
             base_dir=None,
-            stack_size=2):
+            stack_size=4):
         
         self.classifier = classifier
 
@@ -42,7 +43,8 @@ class DivDisEvaluatorClassifier():
         self.head_num = self.classifier.head_num
         self.image_input = image_input
 
-        self.test_dataset = SetDataset(max_size=1e6, batchsize=batch_size)
+        self.test_batch_size = batch_size
+        self.test_dataset = SetDataset(max_size=1e6, batchsize=self.test_batch_size)
         
         self.stack_size = stack_size
         
@@ -52,13 +54,75 @@ class DivDisEvaluatorClassifier():
         self.classification_reports = [None for _ in range(self.head_num)]
 
 
-    def add_test_files(self, true_files, false_files):
-        self.test_dataset.add_true_files(true_files)
-        self.test_dataset.add_false_files(false_files)
+    def evaluate_images(self, num_images=5):
+        images, labels = self.test_dataset.get_batch()
+        if self.classifier.use_gpu:
+            images = images.cuda()
+            labels = labels.cuda()
+            
+        for image_idx in range(num_images):
+            # Get each image and label
+            image, label = images[image_idx], labels[image_idx].item()
 
+            # Create a figure with subplots
+            fig, axes = plt.subplots(nrows=self.head_num, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
+            fig.suptitle(f'Attributions for Image {image_idx} (Label: {label})')
 
-    def evaluate(self, test_sample_size=0.1, num_features=26, plot=False):
-        num_batches_sampled = int(self.test_dataset.num_batches*test_sample_size)
+            predictions = self.classifier.predict(image.unsqueeze(0))[0]  # Get predictions for the current head
+            predicted_labels = predictions.argmax(dim=-1)  # Assuming single label prediction
+                
+            # Loop through each classifier head
+            for head_idx in range(self.head_num):
+                pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
+                              
+                attr = self.integrated_gradients[head_idx].attribute(
+                    image.unsqueeze(0),
+                    nt_samples=10,
+                    n_steps=10,
+                    target=label
+                ).squeeze().cpu().detach().numpy()
+                
+                # Loop through each channel in the input image
+                for channel_idx in range(self.stack_size):
+                    ax = axes[head_idx, channel_idx]
+                    image_channel = image.cpu().numpy()[channel_idx, :, :]
+                    attr_channel = attr[channel_idx, :, :]  
+                    
+                    ax.imshow(image_channel, cmap='gray')
+                    _, heatmap = viz.visualize_image_attr(
+                    attr_channel,
+                    image_channel,
+                    method="heat_map",
+                    sign="all",
+                    show_colorbar=False,
+                    plt_fig_axis=None,  # We handle the plotting ourselves
+                    use_pyplot=False
+                    )
+                    ax.imshow(heatmap, cmap='jet', alpha=0.5)
+                    ax.set_axis_off()
+                    
+
+                if(label == 1) & (pred_label_head == 1):
+                    row_name = (f'Head {head_idx}: True Positive')
+                elif(label == 0) & (pred_label_head == 0):
+                    row_name = (f'Head {head_idx}: True Negative')
+                elif(label == 0) & (pred_label_head == 1):
+                    row_name = (f'Head {head_idx}: False Positive')
+                elif(label == 1) & (pred_label_head == 0):
+                    row_name = (f'Head {head_idx}: False Negative')
+            
+                axes[head_idx,0].text(-0.3, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
+                    va='center', ha='right', fontsize=12, fontweight='bold')
+                    
+            plt.tight_layout()
+            #plt.show()
+            # Optionally save the figure
+            fig.savefig(os.path.join(self.plot_dir, f'attributions_image_{image_idx}.png'))
+            plt.close(fig)
+    
+
+    def evaluate_factored(self, sample_size=0.1, plot=False):
+        num_batches_sampled = int(self.test_dataset.num_batches*sample_size)
         num_test_states = self.test_dataset.batchsize * num_batches_sampled
         #all_states = np.zeros((num_test_states, num_features))
 
@@ -77,8 +141,6 @@ class DivDisEvaluatorClassifier():
             states, labels = self.test_dataset.get_batch() # should be all data, since batchsize is max_size
             i0, i1 = i*self.test_dataset.batchsize, (i+1)*self.test_dataset.batchsize
 
-            #all_states[i0:i1] = states.numpy()
-
             all_labels[i0:i1] = labels.numpy()
 
             if self.classifier.use_gpu:
@@ -86,34 +148,25 @@ class DivDisEvaluatorClassifier():
                 labels = labels.to('cuda')
             
             labels_pred = self.classifier.predict(states).detach() # (batch_size, head_num, num_classes)
-            labels_pred = torch.argmax(labels_pred, dim=2) # (batch_size, head_num)
-            #all_labels_pred[i0:i1] = labels_pred.to('cpu').numpy()
-
+            labels_pred = torch.argmax(labels_pred, dim=-1) # (batch_size, head_num)
                 
             for head_idx in range(self.head_num):
                 # get the predictions for the head
                 labels_pred_head = labels_pred[:, head_idx]
             
                 # attributions
-                '''states_tp = states[np.where((labels == 1) & (labels_pred_head == 1))[0]]
-                states_tn = states[np.where((labels == 0) & (labels_pred_head == 1))[0]]
-                states_fp = states[np.where((labels == 0) & (labels_pred_head == 1))[0]]
-                states_fn = states[np.where((labels == 1) & (labels_pred_head == 0))[0]]'''
                 states_tp = states[(labels == 1) & (labels_pred_head == 1)]
                 states_tn = states[(labels == 0) & (labels_pred_head == 0)]
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
                 states_fn = states[(labels == 1) & (labels_pred_head == 0)]
 
-                self.ig_attr_test[head_idx]['all'].append(self.integrated_gradients[head_idx].attribute(states, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true positive'].append(self.integrated_gradients[head_idx].attribute(states_tp, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true negative'].append(self.integrated_gradients[head_idx].attribute(states_tn, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['all'           ].append(self.integrated_gradients[head_idx].attribute(states,    nt_samples=10, n_steps=10, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true positive' ].append(self.integrated_gradients[head_idx].attribute(states_tp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true negative' ].append(self.integrated_gradients[head_idx].attribute(states_tn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
 
-                #print(f'Head {head_idx+1} done')
-                #print(torch.cuda.memory_allocated() / 1e9, 'GB')
-                #print(torch.cuda.memory_reserved() / 1e9, 'GB')
-
+        # concatenate all attributions from all batches, independently for each head and each attribution type
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
 
         if plot:
@@ -129,13 +182,13 @@ class DivDisEvaluatorClassifier():
                 self.classification_reports[head_idx] = report_df
 
             self._plot_cm_cr()
-            #self._plot_attributions() # TODO: implement image attributions
-            self._plot_attributions_factored(num_features) if not self.image_input else None
+
+            if not self.image_input:
+                self._plot_attributions_factored(26)
         
 
 
-    '''
-    def evaluate_old(self, num_images):
+    """def evaluate_old(self, num_images):
         idxs = list(range(len(self.true_data)))
 
         random_true_images_idxs = random.sample(idxs, num_images)
@@ -176,9 +229,9 @@ class DivDisEvaluatorClassifier():
             self._plot_attributions(image,
                                     false_attributions[idx],
                                     false_votes[idx],
-                                    "false_{}_ig.png".format(idx))
+                                    "false_{}_ig.png".format(idx))"""
 
-    def _attributions(self, images, integrated_gradients, target):
+    """def _attributions(self, images, integrated_gradients, target):
         attributions = []
         for image in images:
             single_image = image.unsqueeze(0)
@@ -208,9 +261,9 @@ class DivDisEvaluatorClassifier():
                 ))
             attributions.append(image_attr)
 
-        return attributions
+        return attributions"""
     
-    def _evaluate_images(self, images):
+    """def _evaluate_images(self, images):
         images_list = []
         for image in images:
             vote_list = []
@@ -220,9 +273,10 @@ class DivDisEvaluatorClassifier():
                 # print(pred)
                 vote_list.append(pred)
             images_list.append(vote_list)
-        return images_list      
+        return images_list     """ 
 
-    def _plot_attributions(self, image, attributions, votes, plot_name):
+
+    """def _plot_attributions(self, image, attributions, votes, plot_name):
         fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(2*self.stack_size,2*(self.head_num + 1)))
         # plt.subplots_adjust(wspace=0.1, hspace=0.1)
         
@@ -259,8 +313,12 @@ class DivDisEvaluatorClassifier():
         plt.tight_layout()
         savepath = os.path.join(self.plot_dir, plot_name)
         fig.savefig(savepath)
-        plt.close(fig)
-    '''
+        plt.close(fig)"""
+
+
+
+
+    
 
     def _plot_attributions_factored(self, num_features=26):
         assert self.image_input is False, "Not implemented for image input"
@@ -318,6 +376,7 @@ class DivDisEvaluatorClassifier():
         fig.savefig(savepath)
         plt.close(fig)
 
+
     def _plot_cm_cr(self):
         fig, axes = plt.subplots(nrows=self.head_num, ncols=2, figsize=(8,3*(self.head_num)))
         if self.head_num == 1:  # Ensure axes is iterable when there's only one subplot
@@ -351,12 +410,14 @@ class DivDisEvaluatorClassifier():
         savepath = os.path.join(self.plot_dir, 'cm_and_cr.png')
         fig.savefig(savepath)
         plt.close(fig)
+
             
     def reset_test_dataset(self):
-        self.test_dataset = SetDataset(max_size=1e6, batchsize=int(1e6))
+        self.test_dataset = SetDataset(max_size=1e6, batchsize=self.test_batch_size)
 
 
     def get_head_complexity(self):
+        """ call only after evaluate_factored() to get the head complexity"""
         head_complexity = []
         for i in range(self.head_num):
             ig_attr_test = self.ig_attr_test[i]['all']
@@ -366,3 +427,12 @@ class DivDisEvaluatorClassifier():
             head_complexity.append(ig_attr_test_std.mean())
         return head_complexity
 
+
+    def head_complexity(self, sample_size=0.1):
+        """ call this directly to get the head complexity"""
+        self.evaluate_factored(sample_size)
+        return self.get_head_complexity()
+
+    def add_test_files(self, true_files, false_files):
+        self.test_dataset.add_true_files(true_files)
+        self.test_dataset.add_false_files(false_files)
