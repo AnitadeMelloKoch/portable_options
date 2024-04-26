@@ -124,10 +124,11 @@ class PolicyWithInitiation(Agent):
             replay_start_size=warmup_steps,
             update_interval=update_interval
         )
+        
+        self.store_buffer_to_disk = True
     
     def can_initiate(self, obs):
         in_context = self.context.predict(obs)
-        print(self.initiation.pessimistic_predict(obs))
         if (self.interactions < self.bootstrap_init_timesteps) or (in_context is False):
             return in_context
         else:
@@ -164,11 +165,15 @@ class PolicyWithInitiation(Agent):
         self.recurrent_memory.to("cpu")
     
     def store_buffer(self, dir):
+        if not self.store_buffer_to_disk:
+            return
         os.makedirs(dir, exist_ok=True)
         self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         self.replay_buffer.memory = None
     
     def load_buffer(self, dir):
+        if not self.store_buffer_to_disk:
+            return
         if os.path.exists(dir):
             self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
         else:
@@ -350,7 +355,8 @@ class PolicyWithInitiation(Agent):
         if self.image_input:
             torch.save(self.cnn.state_dict(), os.path.join(dir, 'cnn.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
-        # self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
+        if self.store_buffer_to_disk:
+            self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         np.save(os.path.join(dir, "step_number.npy"), self.step_number)
     
     def load(self, dir):
@@ -361,7 +367,8 @@ class PolicyWithInitiation(Agent):
                 self.cnn.load_state_dict(torch.load(os.path.join(dir, 'cnn.pt')))
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
-            # self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
+            if self.store_buffer_to_disk:
+                self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
             self.step_number = np.load(os.path.join(dir, "step_number.npy"))
         else:
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))

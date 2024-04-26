@@ -66,6 +66,7 @@ class DivDisMockOption():
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.num_heads)
+        
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -152,6 +153,10 @@ class DivDisMockOption():
         return PolicyWithInitiation(use_gpu=self.use_gpu,
                                     policy_phi=self.policy_phi,
                                     learn_initiation=(not self.use_seed_for_initiation))
+    
+    def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
+        policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
+        policy.store_buffer_to_disk = store_buffer_bool
     
     def train_policy(self, 
                      idx,
@@ -242,6 +247,8 @@ class DivDisMockOption():
         eval_rewards = deque(maxlen=200)
         episode = 0
         
+        self.set_policy_save_to_disk(idx, seed, False)
+        
         while total_steps < max_steps:
             env = random.choice(envs)
             rand_num = np.random.randint(low=0, high=50)
@@ -280,6 +287,8 @@ class DivDisMockOption():
             #     break
         
         self.save()
+        self.set_policy_save_to_disk(idx, seed, True)
+        
     
     def _get_eval_performance(self,
                               idx,
