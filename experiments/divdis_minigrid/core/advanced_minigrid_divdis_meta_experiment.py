@@ -196,8 +196,8 @@ class AdvancedMinigridDivDisMetaExperiment():
                     next_obs, reward, done, info = env.step(action)
                     undiscounted_reward += reward
                     rewards = [reward]
-                    # total_steps += 1
-                    steps = 0
+                    total_steps += 1
+                    steps = 1
                 else:
                     # if (action_mask[action] is False):
                     #     print("no actions")
@@ -283,7 +283,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                     action_mask = self.get_masks_from_seed(seed)
                     action, q_vals = self.act(obs)
                     
-                    self._video_log("[meta] action: {} option: {}".format(action, option))
+                    self._video_log("[meta] action: {}".format(action))
                     self._video_log("[meta] action q values")
                     for idx in range(len(q_vals[0])):
                         self._video_log("[meta] action {} value {}".format(idx, q_vals[0][idx]))
@@ -293,19 +293,23 @@ class AdvancedMinigridDivDisMetaExperiment():
                         undiscounted_reward += reward
                         rewards = [reward]
                         total_steps += 1
+                        steps = 1
                     else:
-                        if (action_mask[action] is False):
-                            self._video_log("[meta] action+option not executable. Perform no-op")
-                            next_obs, reward, done, info = env.step(6)
-                            steps = 1
-                            rewards = [reward]
-                        else:
-                            self._video_log("[meta] selected option {}".format(action-self.num_primitive_actions))
-                            next_obs, info, done, steps, rewards, _, _, _ = self.options[action-self.num_primitive_actions].eval_policy(option,
-                                                                                                                                  env,
-                                                                                                                                  obs,
-                                                                                                                                  info,
-                                                                                                                                  seed)
+                        # if (action_mask[action] is False):
+                        #     self._video_log("[meta] action+option not executable. Perform no-op")
+                        #     next_obs, reward, done, info = env.step(6)
+                        #     steps = 1
+                        #     rewards = [reward]
+                        # else:
+                        action_offset = action-self.num_primitive_actions
+                        option_num = int(action_offset/self.num_heads)
+                        option_head = action_offset%self.num_heads
+                        self._video_log("[meta] selected option {}".format(action-self.num_primitive_actions))
+                        next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].eval_policy(option_head,
+                                                                                                             env,
+                                                                                                             obs,
+                                                                                                             info,
+                                                                                                             seed)
                         undiscounted_reward += np.sum(rewards)
                         total_steps += steps
                     
