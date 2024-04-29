@@ -9,6 +9,7 @@ import torch
 from collections import deque
 import random
 import matplotlib.pyplot as plt
+import pickle
 
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from experiments.experiment_logger import VideoGenerator
@@ -89,14 +90,23 @@ class AdvancedMinigridDivDisMetaExperiment():
         else:
             self.num_heads = 0
         self.gamma = discount_rate
+        
+        self.experiment_data = []
+        
     
     def save(self):
         for option in self.options:
             option.save()
+        
+        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
+            pickle.dump(self.experiment_data, f)
     
     def load(self):
         for option in self.options:
             option.load()
+        
+        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
+            self.experiment_data = pickle.load(f)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -187,6 +197,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                     undiscounted_reward += reward
                     rewards = [reward]
                     # total_steps += 1
+                    steps = 0
                 else:
                     # if (action_mask[action] is False):
                     #     print("no actions")
@@ -207,6 +218,12 @@ class AdvancedMinigridDivDisMetaExperiment():
                 undiscounted_reward += np.sum(rewards)
                 total_steps += 1
                 
+                self.experiment_data.append({
+                    "meta_step": total_steps,
+                    "option_length": steps,
+                    "option_rewards": rewards
+                })
+                
                 self.observe(obs,
                             rewards,
                             done)
@@ -225,6 +242,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             self.plot_learning_curve(episode_rewards)
             
             self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+            self.save()
             
             if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
                 logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
