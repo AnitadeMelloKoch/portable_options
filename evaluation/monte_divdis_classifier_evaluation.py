@@ -1,7 +1,6 @@
 import argparse
 import os
 import random
-
 import torch
 
 #from evaluators import DivDisEvaluatorClassifier
@@ -16,12 +15,13 @@ img_dir = "resources/monte_images/"
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
                         img_dir+"screen_death_1.npy"]
-unlabeled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
-                         img_dir+"screen_climb_down_ladder_initiation_negative.npy",]
-positive_test_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
-negative_test_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",]
+#unlabeled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
+#                         img_dir+"screen_climb_down_ladder_initiation_negative.npy",]
+#positive_test_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
+#negative_test_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",]
 
-'''unlabelled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
+unlabeled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
+                          img_dir+"screen_climb_down_ladder_initiation_negative.npy",
                           img_dir+"climb_down_ladder_room0_screen_termination_positive.npy",
                           img_dir+"climb_down_ladder_room0_screen_termination_negative.npy",
                           img_dir+"climb_down_ladder_room2_screen_termination_negative.npy",
@@ -32,7 +32,7 @@ negative_test_files = [img_dir+"screen_climb_down_ladder_termination_negative.np
                           img_dir+"climb_down_ladder_room6_screen_termination_negative.npy",
                           img_dir+"climb_down_ladder_room7_screen_termination_negative.npy",
                           img_dir+"screen_death_2.npy",
-                          img_dir+"screen_death_3.npy",
+                          
                           ]
 
 positive_test_files = [
@@ -54,7 +54,9 @@ negative_test_files = [
                         img_dir+"climb_down_ladder_room19_screen_termination_negative.npy",
                         img_dir+"climb_down_ladder_room21_screen_termination_negative.npy",
                         img_dir+"climb_down_ladder_room22_screen_termination_negative.npy",
-                       ]'''
+                        img_dir+"screen_death_3.npy",
+                        img_dir+"screen_death_4.npy",
+                       ]
 
 
 if __name__ == "__main__":
@@ -72,13 +74,13 @@ if __name__ == "__main__":
     classifier.add_data(positive_train_files,
                         negative_train_files,
                         unlabeled_train_files)
-    classifier.train(2500)
+    classifier.train(2000)
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
                     base_dir=args.base_dir)
     evaluator.add_test_files(positive_test_files, negative_test_files)
-    evaluator.evaluate_images(3)
+    evaluator.evaluate_images(25)
 
     #evaluator.add_true_from_files(positive_test_files)
     #evaluator.add_false_from_files(negative_test_files)

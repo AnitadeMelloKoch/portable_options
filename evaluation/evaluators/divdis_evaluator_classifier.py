@@ -73,8 +73,8 @@ class DivDisEvaluatorClassifier():
                 ax.imshow(image[0, i].cpu().numpy(), cmap='gray')
                 ax.set_xticks([])
                 ax.set_yticks([])
-                ax.text(-0.2, 0.5, "Original Image", transform=ax.transAxes, 
-                    va='center', ha='right', fontsize=12, fontweight='bold')
+            axes[0, 0].text(-0.2, 0.5, "Original Image", transform=axes[0, 0].transAxes, 
+                va='center', ha='right', fontsize=12, fontweight='bold')
                 
             # Loop through each classifier head
             for head_idx in range(self.head_num):
@@ -98,9 +98,11 @@ class DivDisEvaluatorClassifier():
                     fig, ax = viz.visualize_image_attr(attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
                                                        original_image=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
                                                        method='blended_heat_map', sign='all', 
-                                                       show_colorbar=False, plt_fig_axis=(fig, ax))
-                    ax.set_xticks([])
-                    ax.set_yticks([])
+                                                       show_colorbar=False, plt_fig_axis=(fig, ax),
+                                                       use_pyplot=False)
+                    ax.set_axis_off()
+                    
+
 
                 if(label == 1) & (pred_label_head == 1):
                     row_name = (f'Head {head_idx}: True Positive')

@@ -9,7 +9,7 @@ img_dir = "resources/monte_images/"
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
                         img_dir+"screen_death_1.npy"]
-unlabelled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
+unlabeled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
                           img_dir+"climb_down_ladder_room0_screen_termination_positive.npy",
                           img_dir+"climb_down_ladder_room0_screen_termination_negative.npy",
                           img_dir+"climb_down_ladder_room2_screen_termination_negative.npy",
@@ -21,6 +21,7 @@ unlabelled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.
                           img_dir+"climb_down_ladder_room7_screen_termination_negative.npy",
                           img_dir+"screen_death_2.npy",
                           img_dir+"screen_death_3.npy",
+                          
                           ]
 
 positive_test_files = [
@@ -65,7 +66,7 @@ if __name__ == "__main__":
 
         experiment.add_datafiles(positive_train_files,
                                  negative_train_files,
-                                 unlabelled_train_files)
+                                 unlabeled_train_files)
 
         experiment.train_classifier()
         
