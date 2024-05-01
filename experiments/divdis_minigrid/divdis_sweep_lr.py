@@ -5,8 +5,8 @@ from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_sweep_experiment import AdvancedMinigridDivDisSweepExperiment
 
 color = 'grey'
-#task = f'get{color}key'
-task = f'open{color}door'
+task = f'get{color}key'
+#task = f'open{color}door'
 init_term = 'termination'
 RANDOM_TRAIN = True
 RANDOM_UNLABELLED = True
@@ -52,90 +52,10 @@ if __name__ == "__main__":
     NUM_SEEDS = 5
 
 
-    print(f"[{formatted_time()}] Sweeping epochs...")
-    experiment.sweep_epochs(100, 
-                            1000, 
-                            100,
-                            NUM_SEEDS)
-    
     print(f"[{formatted_time()}] Sweeping learning rate...")
-    experiment.sweep_lr(-5, # 0.00001
-                        -3,
+    experiment.sweep_lr(-6, # 0.00001
+                        -2,
                         10,
                         NUM_SEEDS)
-    
 
-
-    print(f"[{formatted_time()}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(-7, # 0.0000001
-                                      -2,
-                                      15,
-                                      NUM_SEEDS)
-
-    print(f"[{formatted_time()}] Sweeping L2 reg weight...")
-    experiment.sweep_l2_reg_weight(-4, # 0.0001
-                                   -2,
-                                   10,
-                                   NUM_SEEDS)
-
-
-
-    print(f"[{formatted_time()}] Sweeping ensemble size...")
-    experiment.sweep_ensemble_size(1, 
-                                   20,
-                                   1,
-                                   NUM_SEEDS)
-
-    
-    print(f"[{formatted_time()}] Sweeping div batch size...")
-    experiment.sweep_div_batch_size(16,
-                                    400,
-                                    16,
-                                    NUM_SEEDS)
-
-
-    
-    print(f"[{formatted_time()}] Sweeping div variety...")
-    
-    # Sweep variety
-    seed_var = [[0],[1,2],[1,2,3,4]]
-    color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]
-    variety_names = ['low','medium','high']
-    rs_var = [False, True]
-    variety_combinations = []
-    all_combination_files = []
-    
-    for seed_idx in range(len(seed_var)):
-        for color_idx in range(len(color_var)):
-            for rs_idx in range(len(rs_var)):
-                # 3*3*2 = 18 combinations
-                combination_files = []
-                for s in seed_var[seed_idx]:
-                    for c in color_var[color_idx]:
-                        if rs_var[rs_idx]:
-                            file_name = f"resources/minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_1_termination_positive.npy"
-                        else:
-                            file_name = f"resources/minigrid_images/adv_doorkey_8x8_v2_get{c}key_door{c}_{s}_termination_positive.npy"
-                        combination_files.append(file_name)
-                all_combination_files.append(combination_files)
-                variety_combinations.append(f'{variety_names[seed_idx]},{variety_names[color_idx]},{"included" if rs_var[rs_idx] else "none"}')
-        
-    experiment.sweep_div_variety(variety_combinations, all_combination_files, NUM_SEEDS)
-
-
-
-
-
-  
-
-
-
-
-
-    
-    print(f"[{formatted_time()}] Sweeping div overlap...")
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 5,
-                                 NUM_SEEDS)
 

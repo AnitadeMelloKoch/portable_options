@@ -5,8 +5,8 @@ from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_sweep_experiment import AdvancedMinigridDivDisSweepExperiment
 
 color = 'grey'
-#task = f'get{color}key'
-task = f'open{color}door'
+task = f'get{color}key'
+#task = f'open{color}door'
 init_term = 'termination'
 RANDOM_TRAIN = True
 RANDOM_UNLABELLED = True
@@ -52,49 +52,6 @@ if __name__ == "__main__":
     NUM_SEEDS = 5
 
 
-    print(f"[{formatted_time()}] Sweeping epochs...")
-    experiment.sweep_epochs(100, 
-                            1000, 
-                            100,
-                            NUM_SEEDS)
-    
-    print(f"[{formatted_time()}] Sweeping learning rate...")
-    experiment.sweep_lr(-5, # 0.00001
-                        -3,
-                        10,
-                        NUM_SEEDS)
-    
-
-
-    print(f"[{formatted_time()}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(-7, # 0.0000001
-                                      -2,
-                                      15,
-                                      NUM_SEEDS)
-
-    print(f"[{formatted_time()}] Sweeping L2 reg weight...")
-    experiment.sweep_l2_reg_weight(-4, # 0.0001
-                                   -2,
-                                   10,
-                                   NUM_SEEDS)
-
-
-
-    print(f"[{formatted_time()}] Sweeping ensemble size...")
-    experiment.sweep_ensemble_size(1, 
-                                   20,
-                                   1,
-                                   NUM_SEEDS)
-
-    
-    print(f"[{formatted_time()}] Sweeping div batch size...")
-    experiment.sweep_div_batch_size(16,
-                                    400,
-                                    16,
-                                    NUM_SEEDS)
-
-
-    
     print(f"[{formatted_time()}] Sweeping div variety...")
     
     # Sweep variety
@@ -122,20 +79,4 @@ if __name__ == "__main__":
         
     experiment.sweep_div_variety(variety_combinations, all_combination_files, NUM_SEEDS)
 
-
-
-
-
-  
-
-
-
-
-
-    
-    print(f"[{formatted_time()}] Sweeping div overlap...")
-    experiment.sweep_div_overlap(0,
-                                 1,
-                                 5,
-                                 NUM_SEEDS)
 

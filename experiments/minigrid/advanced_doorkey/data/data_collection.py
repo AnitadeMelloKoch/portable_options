@@ -1,7 +1,10 @@
-from experiments.minigrid.utils import environment_builder, actions, factored_environment_builder
-from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
-import matplotlib.pyplot as plt 
+import os
+import pickle
 import numpy as np
+import matplotlib.pyplot as plt
+
+from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
+from experiments.minigrid.utils import FactoredObsWrapperDoorKey, environment_builder, actions, factored_environment_builder
 
 
 class MiniGridDataCollector:
@@ -13,11 +16,12 @@ class MiniGridDataCollector:
         self.tasks = ["get_key", "open_door"]
         self.training_seed = None
 
-    
-    def collect_envs(self):
-        self.training_seed = int(input("Training seed: "))
-        self.env_mode = int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
-        self.data_mode = int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
+
+    def collect_envs(self, training_seed=None, env_mode=None, data_mode=None, manual_input_data=None):
+        self.training_seed = int(input("Training seed: ")) if training_seed is None else training_seed
+        self.env_mode = env_mode or int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
+        self.data_mode = data_mode or int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
+        self.manual_input_data = (True if input("Manual input data? (y/n): ") == "y" else False) if manual_input_data is None else manual_input_data
         
         if self.data_mode == 1:
             # Init env, not collected, just for visualisation
@@ -26,26 +30,13 @@ class MiniGridDataCollector:
             ax.set_title("Init visualisation to get agent, key, door locations")
                 
             env, _ = self.init_env('blue', []) 
-            state, _ = env.reset()
+            state, info = env.reset()
             state = state.numpy()
-            screen = env.render()
-            ax.imshow(screen)
-            plt.show(block=False)
+            #screen = env.render()
+            #ax.imshow(screen)
+            #plt.show(block=False)
             
-            if self.training_seed == 0:
-                agent_loc = self.process_loc_input('4,3')
-                agent_facing = 'd'
-                num_keys = 3
-                target_key_loc = self.process_loc_input('4,2')
-                keys_loc = [target_key_loc]
-                keys_loc.append(self.process_loc_input('4,4'))
-                keys_loc.append(self.process_loc_input('1,6'))
-                
-                door_loc = self.process_loc_input('2,5')
-                #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
-                show_path = True 
-                show_turns = False
-            else:
+            if self.manual_input_data is True:
                 # User input for agent, key, door locations, etc.
                 agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
                                                     " [NOTE: row increases down 1-6, col increases right 1-6]: "))
@@ -62,6 +53,29 @@ class MiniGridDataCollector:
                 #goal_loc = self.process_loc_input(input("Goal location: (row_num, col_num) "))
                 show_path = True if input("Show data collection path? (y/n): ") == "y" else False
                 show_turns = True if input("Show cell collection turns? (y/n): ") == "y" else False
+                
+            else: # default to auto collection
+                # agent info
+                agent_loc = info['player_pos'][::-1] 
+                facing_map = {
+                    0: 'r',
+                    1: 'd',
+                    2: 'l',
+                    3: 'u'
+                }
+                agent_facing = facing_map.get(env.unwrapped.agent_dir, None)
+
+                # keys and door info
+                door_color = info['door'].colour
+                door_loc = info['door'].position[::-1]  # Reverse door position for consistency
+
+                # Initialize keys_loc with target_key_loc first, then other keys
+                keys_loc = [k.position[::-1] for k in info['keys'] if k.colour == door_color] + \
+                        [k.position[::-1] for k in info['keys'] if k.colour != door_color]
+                target_key_loc = keys_loc[0]
+                
+                show_path = False 
+                show_turns = False
 
             first_instance = True
             for t_idx in range(2):
@@ -78,11 +92,10 @@ class MiniGridDataCollector:
                     env, env_type = self.init_env(door_color, [])
                     grid = GridEnv(env, env_type, task, self.training_seed, key_color, door_color, agent_loc, agent_facing, target_key_loc, keys_loc, door_loc, 
                                 show_path, show_turns)
-                    print(f'======START DATA COLLECTION======')
-                    print(f"Collecting data for {task} task, {door_color} door, {door_color} key.")
+                    #print(f'======START DATA COLLECTION======')
+                    print(f"Collecting seed: {self.training_seed}; task: {task} , {door_color} door, {door_color} key.")
                     grid.collect_data()
                     first_instance = False
-
 
                     
         elif self.data_mode == 2:
@@ -106,9 +119,9 @@ class MiniGridDataCollector:
             env, _ = self.init_env(door_color, other_keys_colour) 
             state, _ = env.reset()
             state = state.numpy()
-            screen = env.render()
-            ax.imshow(screen)
-            plt.show(block=False)
+            #screen = env.render()
+            #ax.imshow(screen)
+            #plt.show(block=False)
             
             # User input for agent, key, door locations, etc.
             agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
@@ -143,7 +156,9 @@ class MiniGridDataCollector:
             env = environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed, grayscale=False)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                 door_colour=door_colour,
-                                                key_colours=other_keys_colour)
+                                                key_colours=other_keys_colour,
+                                                image_input=True)
+            #env = FactoredObsWrapperDoorKey(env)
             env_type = 'minigrid'
         elif self.env_mode == 2:
             env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=self.training_seed)
@@ -158,7 +173,7 @@ class MiniGridDataCollector:
         
         return env, env_type
 
-                           
+
     def process_loc_input(self, input_str):
         try:
             # Split the input string by comma
@@ -218,9 +233,9 @@ class GridEnv:
         self.env = env
         self.state, _ = self.env.reset()
         self.state = self.state.numpy()
-        self.screen = self.env.render()
-        self.ax.imshow(self.screen)
-        plt.show(block=False)
+        #self.screen = self.env.render()
+        #self.ax.imshow(self.screen)
+        #plt.show(block=False)
 
 
     def collect_data(self):
@@ -270,6 +285,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] >= self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -327,6 +344,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] >= self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -389,6 +408,8 @@ class GridEnv:
             self.forward(1)
             self.collect_cell()
             self.go_to((1, self.wall_col+1))
+            if self.agent_loc[1] >= self.wall_col+1:
+                print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
             self.sweep((1, self.wall_col+1), (6,6))
@@ -527,16 +548,6 @@ class GridEnv:
     def forward(self, steps):
         if steps < 0:
             raise ValueError('steps must be positive')
-        
-        if self.agent_facing == 'u':
-            self.agent_loc = (self.agent_loc[0]-steps, self.agent_loc[1])
-        elif self.agent_facing == 'd':
-            self.agent_loc = (self.agent_loc[0]+steps, self.agent_loc[1])
-        elif self.agent_facing == 'l':
-            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]-steps)
-        elif self.agent_facing == 'r':
-            self.agent_loc = (self.agent_loc[0], self.agent_loc[1]+steps)
-            
         self.perform_action(actions.FORWARD, steps, show=self.show_path)
 
         
@@ -549,7 +560,6 @@ class GridEnv:
         }
                 
         turn_action = turn_map.get(self.agent_facing, {}).get(target_direction, 'No turn needed')
-        self.agent_facing = target_direction
         
         if turn_action == 'right':
             self.perform_action(actions.RIGHT, 1, show=self.show_path)
@@ -557,8 +567,6 @@ class GridEnv:
             self.perform_action(actions.LEFT, 1, show=self.show_path)
         elif turn_action == 'turn around':
             self.perform_action(actions.LEFT, 2, show=self.show_path)
-        else:
-            print('No turn needed')
 
         if self.agent_facing != target_direction:
             self.fig.savefig('experiments/minigrid/advanced_doorkey/data/turn_error.png')
@@ -582,15 +590,15 @@ class GridEnv:
             
         for _ in range(steps):
             
-            state, _, terminated, _  = self.env.step(action)
+            state, _, terminated, info  = self.env.step(action)
             state = state.numpy()
             
-            if show:
-                screen = self.env.render()    
-                self.ax.clear()  # Clear the axes
-                self.ax.imshow(screen)  # Update the image
-                plt.draw()  # Redraw only the necessary parts
-                plt.pause(0.005)  # Short pause for the update
+            #if show:
+                #screen = self.env.render()    
+                #self.ax.clear()  # Clear the axes
+                #self.ax.imshow(screen)  # Update the image
+                #plt.draw()  # Redraw only the necessary parts
+                #plt.pause(0.005)  # Short pause for the update
 
             
             if init_positive is None:
@@ -629,6 +637,8 @@ class GridEnv:
             else:
                 term_msg = "Not saved to either term"
 
+            # update agent location & facing
+            self.update_agent_info()
             # map agent facing to arrows
             facing_map = {
                 'u': '^',
@@ -637,7 +647,17 @@ class GridEnv:
                 'r': '>'
             }
             cur_facing = facing_map.get(self.agent_facing, 'No facing')
-            print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
+            #print(f"{init_msg} | {term_msg} | {cur_facing} | {self.agent_loc} | {str(action)}")
+
+    def update_agent_info(self):
+        self.agent_loc = self.env.unwrapped.agent_pos[::-1]
+        facing_map = {
+                    0: 'r',
+                    1: 'd',
+                    2: 'l',
+                    3: 'u'
+                }
+        self.agent_facing = facing_map.get(self.env.unwrapped.agent_dir, None)
 
 
     def save_to_file(self):
@@ -680,8 +700,22 @@ class GridEnv:
 
 if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
-    meta_data_collector.collect_envs()
+    
+    seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14]
+    USE_MP = True
+    
+    if USE_MP:
+        import multiprocess as mp
+        with mp.Pool() as p:
+            collect_imgs = lambda seed: meta_data_collector.collect_envs(seed, env_mode=1, data_mode=1, manual_input_data=False)
+            p.map(collect_imgs, seeds_to_collect)
 
+    else:
+        from tqdm import tqdm
+        for seed in tqdm(seeds_to_collect):
+            meta_data_collector.collect_envs(seed, 1, 1, False)
+        
+    
 
 
 

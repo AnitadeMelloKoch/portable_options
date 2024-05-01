@@ -1,19 +1,20 @@
+import argparse
+import csv
+import datetime
+import logging
 import lzma
 import os
-import csv
-import sys
+import random
 import shutil
-import logging
-import datetime
-import argparse
-from pydoc import locate
+import sys
 from collections import defaultdict
 from distutils.util import strtobool
-import gin
+from pydoc import locate
+
 import dill
+import gin
 import matplotlib.pyplot as plt
 import numpy as np
-import random
 import torch
 
 
@@ -55,7 +56,8 @@ def create_log_dir(dir_path, remove_existing=True, log_git=True):
 
     # log git stuff
     if log_git:
-        from pfrl.experiments.prepare_output_dir import is_under_git_control, save_git_information
+        from pfrl.experiments.prepare_output_dir import (is_under_git_control,
+                                                         save_git_information)
         if is_under_git_control():
             save_git_information(outdir)
         
@@ -217,4 +219,6 @@ def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     
-    
+    # Ensure that PyTorch uses deterministic algorithms where possible
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
