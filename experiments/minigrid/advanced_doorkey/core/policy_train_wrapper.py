@@ -82,7 +82,11 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
               keep_colour="",
               pickup_colour="",
               force_door_closed=False,
-              force_door_open=False):
+              force_door_open=False,
+              agent_position=None,
+              collect_key=None,
+              door_unlocked=None,
+              door_open=None):
         
         obs, info = self.env.reset()
         
@@ -90,7 +94,16 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self._set_door_colour()
         self._set_key_colours()
         
-        if self.key_collected:
+        if collect_key is None:
+            collect_key = self.key_collected
+        
+        if door_open is None:
+            door_open = self.door_open
+        
+        if door_unlocked is None:
+            door_unlocked = self.door_unlocked
+        
+        if collect_key:
             correct_key = self._get_door_key()
             key = self.env.unwrapped.grid.get(correct_key.position[0], correct_key.position[1])
             self.env.unwrapped.carrying.append(key)
@@ -99,14 +112,14 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                                         correct_key.position[1],
                                         None)
         
-        if self.door_unlocked or self.door_open:
+        if door_unlocked or door_open:
             door = self.env.unwrapped.grid.get(
                 self.objects["door"].position[0], 
                 self.objects["door"].position[1]
             )
             door.is_locked = False
         
-            if self.door_open:
+            if door_open:
                 door = self.env.unwrapped.grid.get(
                     self.objects["door"].position[0], 
                     self.objects["door"].position[1]
@@ -120,7 +133,19 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                               force_door_closed=force_door_closed,
                               force_door_open=force_door_open)
         
-        self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
+        obj = None
+        
+        if agent_position is not None:
+            agent_x, agent_y = agent_position
+            obj = self.env.unwrapped.grid.get(agent_x, agent_y)
+        
+        # if agent_position is None or obj is not None:
+        if agent_position is None:
+            self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
+        else:
+            self.env.unwrapped.agent_pos = agent_position
+        
+        self._find_objs()
         
         obs, _, _, info = self.env.step(actions.LEFT)
         obs, _, _, info = self.env.step(actions.RIGHT)
@@ -201,7 +226,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 door.is_locked = False
                 if randval < 0.3 or force_door_open:
                     door.is_open = True
-        self._find_objs()
+        
     
     def _find_objs(self):
         self.objects = {

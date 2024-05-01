@@ -1,20 +1,10 @@
-import portable.agent.model.linear_q
-import experiments.divdis_minigrid.core.advanced_minigrid_divdis_meta_experiment
+import experiments.divdis_minigrid.core.advanced_minigrid_policy_experiment
 import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
-import portable.agent.model.ppo 
 
-AdvancedMinigridDivDisMetaExperiment.experiment_name                = "meta_no_options"
-AdvancedMinigridDivDisMetaExperiment.num_options                    = 0
-AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 7
-AdvancedMinigridDivDisMetaExperiment.use_gpu                        = True
-AdvancedMinigridDivDisMetaExperiment.make_videos                    = True
-
-ActionPPO.learning_rate                                             = 2.5e-4
-ActionPPO.state_shape                                               = (3, 64,64)
-ActionPPO.final_epsilon                                             = 0.05
-ActionPPO.final_exploration_frames                                  = 1e6
-ActionPPO.num_actions                                               = 7
+AdvancedMinigridDivDisOptionExperiment.experiment_name              = "wass_full_policy"
+AdvancedMinigridDivDisOptionExperiment.use_gpu                      = True
+AdvancedMinigridDivDisOptionExperiment.option_type                  = "mock"
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
@@ -26,6 +16,8 @@ PolicyWithInitiation.final_epsilon                                  = 0.01
 PolicyWithInitiation.final_exploration_frames                       = 5e4
 PolicyWithInitiation.batch_size                                     = 32
 PolicyWithInitiation.num_actions                                    = 7
-PolicyWithInitiation.policy_infeature_size                          = 26
+PolicyWithInitiation.policy_infeature_size                          = 6272
 PolicyWithInitiation.q_hidden_size                                  = 64
 PolicyWithInitiation.gru_hidden_size                                = 128
+PolicyWithInitiation.image_input                                    = True
+

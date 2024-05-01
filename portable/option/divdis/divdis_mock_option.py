@@ -12,6 +12,8 @@ from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from collections import deque
 
+from portable.option.sets.utils import BayesianWeighting
+
 @gin.configurable 
 class DivDisMockOption():
     def __init__(self,
@@ -22,6 +24,8 @@ class DivDisMockOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
+                 beta_distribution_alpha=100,
+                 beta_distribution_beta=100,
                  video_generator=None,
                  plot_dir=None):
         
@@ -55,6 +59,13 @@ class DivDisMockOption():
             self.plot_dir = plot_dir
             self.term_states = []
             self.missed_term_states = []
+        
+        self.train_rewards = deque(maxlen=200)
+        self.option_steps = 0
+        
+        self.confidences = BayesianWeighting(beta_distribution_alpha,
+                                             beta_distribution_beta,
+                                             self.num_heads)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -127,19 +138,24 @@ class DivDisMockOption():
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
                 self.policies[head_idx][option_idx] = self._get_new_policy()
-            return self.policies[head_idx][option_idx]
+            return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
         else:
             if len(self.initiable_policies[head_idx]) > 0:
-                return self.policies[head_idx][option_idx]
+                return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
             else:
                 policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
-                return policy
+                policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
+                return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self):
         return PolicyWithInitiation(use_gpu=self.use_gpu,
                                     policy_phi=self.policy_phi,
                                     learn_initiation=(not self.use_seed_for_initiation))
+    
+    def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
+        policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
+        policy.store_buffer_to_disk = store_buffer_bool
     
     def train_policy(self, 
                      idx,
@@ -158,8 +174,9 @@ class DivDisMockOption():
         done = False
         should_terminate = False
         
-        policy = self._get_policy(idx, policy_idx)
+        policy, buffer_dir = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
+        policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -171,6 +188,8 @@ class DivDisMockOption():
                 self.video_generator.make_image(env.render())
             
             next_state, reward, done, info = env.step(action)
+            
+            self.option_steps += 1
             
             should_terminate = self.terminations[idx](state,
                                                       env)
@@ -195,7 +214,7 @@ class DivDisMockOption():
                            done or should_terminate)
             
             option_rewards.append(reward)
-
+            
             state = next_state
         
         if not self.use_seed_for_initiation:
@@ -205,6 +224,10 @@ class DivDisMockOption():
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
         
+        policy.move_to_cpu()
+        policy.store_buffer(buffer_dir)
+        policy.end_skill(sum(option_rewards))
+        
         return state, info, done, steps, rewards, option_rewards, states, infos
     
     def bootstrap_policy(self,
@@ -212,17 +235,25 @@ class DivDisMockOption():
                          envs,
                          max_steps,
                          min_performance,
-                         seed):
+                         seed,
+                         agent_start_positions=[]):
         total_steps = 0
         train_rewards = deque(maxlen=200)
         eval_rewards = deque(maxlen=200)
         episode = 0
         
+        self.set_policy_save_to_disk(idx, seed, False)
+        
         while total_steps < max_steps:
             env = random.choice(envs)
             rand_num = np.random.randint(low=0, high=50)
+            if len(agent_start_positions) > 0:
+                agent_position = random.choice(agent_start_positions)
+            else:
+                agent_position = None
             obs, info = env.reset(agent_reposition_attempts=rand_num,
-                                  random_start=True)
+                                  random_start=True,
+                                  agent_position=agent_position)
             
             _, _, _, steps, _, rewards, _, _ = self.train_policy(idx,
                                                               env,
@@ -244,13 +275,15 @@ class DivDisMockOption():
                                                                           np.mean(eval_rewards)))
             episode += 1
             
-            if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
-                logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
-                                                                                                             np.mean(eval_rewards),
-                                                                                                             total_steps))
-                break
+            # if total_steps > 200000 and np.mean(eval_rewards) > min_performance:
+            #     logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
+            #                                                                                                  np.mean(eval_rewards),
+            #                                                                                                  total_steps))
+            #     break
         
         self.save()
+        self.set_policy_save_to_disk(idx, seed, True)
+        
     
     def _get_eval_performance(self,
                               idx,
@@ -343,7 +376,9 @@ class DivDisMockOption():
             raise Exception("Policy has not been initialized. Train policy before evaluating")
         
         policy = self.policies[idx][seed]
+        buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
         policy.move_to_gpu()
+        policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
             while not (done or should_terminate or (steps >= max_steps)):
@@ -392,7 +427,24 @@ class DivDisMockOption():
                 img = env.render()
                 self.video_generator.make_image(img)
             
+            policy.move_to_cpu()
+            policy.store_buffer(buffer_dir)
+            
             return state, info, done, steps, rewards, option_rewards, states, infos
+    
+    def evaluate_states(self,
+                        idx,
+                        states,
+                        seed):
+        actions, q_vals = self.policies[idx][seed].batch_act(states)
+        return actions, q_vals
+    
+    def get_confidences(self):
+        return self.confidences.weights()
+    
+    def update_confidences(self,
+                           update):
+        self.confidences.update_successes(update)
     
 
 

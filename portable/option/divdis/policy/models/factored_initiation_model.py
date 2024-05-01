@@ -4,6 +4,7 @@ import numpy as np
 from collections import deque
 from pfrl.wrappers import atari_wrappers
 from sklearn.svm import OneClassSVM, SVC
+from portable.option.divdis.policy.models.svm_evaluator import SVMEvaluator
 
 class InitiationClassifier:
     def __init__(self, optimistic_classifier, pessimistic_classifier):
@@ -31,6 +32,7 @@ class FactoredInitiationClassifier(InitiationClassifier):
         pessimistic_classifier = None
         self.positive_examples = deque([], maxlen=maxlen)
         self.negative_examples = deque([], maxlen=maxlen)
+        self.evaluator = SVMEvaluator()
         super().__init__(optimistic_classifier, pessimistic_classifier)
 
     def optimistic_predict(self, state):
@@ -38,6 +40,7 @@ class FactoredInitiationClassifier(InitiationClassifier):
         return self.optimistic_classifier.predict([state.numpy()])[0] == 1
 
     def pessimistic_predict(self, state):
+        print(self.pessimistic_classifier)
         assert isinstance(self.pessimistic_classifier, (OneClassSVM, SVC))
         return self.pessimistic_classifier.predict([state.numpy()])[0] == 1
     
@@ -99,3 +102,11 @@ class FactoredInitiationClassifier(InitiationClassifier):
         if positive_training_examples.shape[0] > 0:
             self.pessimistic_classifier = OneClassSVM(kernel="rbf", nu=nu, gamma="scale")
             self.pessimistic_classifier.fit(positive_training_examples)
+
+    def evaluate_svm(self):
+        
+        
+        self.evaluator.plot_surface
+        pass
+    
+    

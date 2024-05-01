@@ -63,6 +63,7 @@ def collect_seed(seed, task, initiation=None, termination=None):
         print(f"states shape: {states.shape}")
 
 
+
 if __name__ == '__main__':
 
     # multiprocessing
