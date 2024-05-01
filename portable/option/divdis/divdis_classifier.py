@@ -12,8 +12,6 @@ from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
-from portable.option.sets.utils import BayesianWeighting
-
 logger = logging.getLogger(__name__)
 
 MODEL_TYPE = [
@@ -35,12 +33,8 @@ class DivDisClassifier():
                  input_dim,
                  num_classes,
                  diversity_weight,
-
-                 l2_reg_weight=0.001,
-
-                 beta_distribution_alpha,
-                 beta_distribution_beta,
                  
+                 l2_reg_weight=0.001,
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
@@ -70,13 +64,6 @@ class DivDisClassifier():
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
-        #self.classifier = torch.compile(SmallCNN(num_input_channels=input_dim,
-        #                                    num_classes=num_classes,
-        #                                    num_heads=head_num),
-        #                                #backend='tensorrt',
-        #                                #dynamic=False
-        #                                )
-        
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
                                           weight_decay=l2_reg_weight # weight decay also works as L2 regularization
@@ -86,9 +73,7 @@ class DivDisClassifier():
         self.ce_criterion = torch.nn.CrossEntropyLoss()
         self.diversity_weight = diversity_weight
         
-        self.confidences = BayesianWeighting(beta_distribution_alpha,
-                                             beta_distribution_beta,
-                                             self.head_num)
+        self.state_dim = 3
     
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
