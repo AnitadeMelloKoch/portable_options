@@ -1,6 +1,8 @@
 import os 
+import logging
 import gin
 import torch 
+import pickle
 import numpy as np 
 import torch.optim as optim
 from copy import deepcopy
@@ -9,6 +11,7 @@ from pfrl import replay_buffers
 from pfrl.replay_buffer import ReplayUpdater, batch_experiences
 from pfrl.utils.batch_states import batch_states
 import torch.nn as nn
+from collections import deque
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
@@ -59,6 +62,8 @@ class PolicyWithInitiation(Agent):
         self.interactions = 0
         
         self.step_number = 0
+        self.train_rewards = deque(maxlen=200)
+        self.option_runs = 0
         
         self.image_input = image_input
         if image_input:
@@ -181,6 +186,13 @@ class PolicyWithInitiation(Agent):
     
     def update_step(self):
         self.step_number += 1
+    
+    def end_skill(self, summed_reward):
+        self.train_rewards.append(summed_reward)
+        self.option_runs += 1
+        if self.option_runs%50 == 0:
+            logging.info("Option policy success rate: {} from {} steps".format(np.mean(self.train_rewards), self.option_runs))
+            
     
     def observe(self,
                 obs,
@@ -358,6 +370,9 @@ class PolicyWithInitiation(Agent):
         if self.store_buffer_to_disk:
             self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         np.save(os.path.join(dir, "step_number.npy"), self.step_number)
+        np.save(os.path.join(dir, "option_runs.npy"), self.option_runs)
+        with open(os.path.join(dir, "run_rewards.pkl"), "wb") as f:
+            pickle.dump(self.train_rewards, f)
     
     def load(self, dir):
         if os.path.exists(os.path.join(dir, "policy.pt")):
@@ -370,6 +385,9 @@ class PolicyWithInitiation(Agent):
             if self.store_buffer_to_disk:
                 self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
             self.step_number = np.load(os.path.join(dir, "step_number.npy"))
+            self.option_runs = np.load(os.path.join(dir, "option_runs.npy"))
+            with open(os.path.join(dir, "run_rewards.pkl"), "rb") as f:
+                self.train_rewards = pickle.load(f)
         else:
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     

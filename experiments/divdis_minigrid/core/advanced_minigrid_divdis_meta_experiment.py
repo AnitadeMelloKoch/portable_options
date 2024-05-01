@@ -12,10 +12,13 @@ import matplotlib.pyplot as plt
 import pickle
 
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
+from portable.option.divdis.divdis_option import DivDisOption
 from experiments.experiment_logger import VideoGenerator
 from portable.agent.model.ppo import ActionPPO 
-from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
 import math
+from portable.option.memory import SetDataset
+
+OPTION_TYPES = ["mock", "divdis"]
 
 @gin.configurable
 class AdvancedMinigridDivDisMetaExperiment():
@@ -28,15 +31,22 @@ class AdvancedMinigridDivDisMetaExperiment():
                  use_gpu,
                  action_policy,
                  action_vf,
-                 terminations,
+                 option_type,
                  num_options,
                  num_primitive_actions,
+                 classifier_epochs=50,
+                 terminations=[],
+                 option_head_num=4,
                  discount_rate=0.9,
                  make_videos=False):
         
-        self.name = experiment_name,
+        assert option_type in OPTION_TYPES
+        
+        self.name = experiment_name
         self.seed = seed 
         self.use_gpu = use_gpu
+        self.option_type = option_type
+        self.classifier_epochs = classifier_epochs
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -75,20 +85,33 @@ class AdvancedMinigridDivDisMetaExperiment():
             [math.pow(discount_rate, n) for n in range(100)]
         )
         
-        for idx, termination_list in enumerate(terminations):
-            self.options.append(DivDisMockOption(use_gpu=use_gpu,
+        if self.option_type is "mock":
+            for idx, termination_list in enumerate(terminations):
+                self.options.append(DivDisMockOption(use_gpu=use_gpu,
+                                                    log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
+                                                    save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
+                                                    terminations=termination_list,
+                                                    policy_phi=option_policy_phi,
+                                                    video_generator=self.video_generator,
+                                                    plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
+                                                    use_seed_for_initiation=True))
+            if len(self.options) > 0:
+                self.num_heads = self.options[0].num_heads
+            else:
+                self.num_heads = 0
+        
+        elif self.option_type is "divdis":
+            self.num_heads = option_head_num
+            for idx in range(self.num_options):
+                self.options.append(DivDisOption(use_gpu=use_gpu,
                                                  log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
                                                  save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
-                                                 terminations=termination_list,
+                                                 num_heads=option_head_num,
                                                  policy_phi=option_policy_phi,
                                                  video_generator=self.video_generator,
                                                  plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
                                                  use_seed_for_initiation=True))
         
-        if len(self.options) > 0:
-            self.num_heads = self.options[0].num_heads
-        else:
-            self.num_heads = 0
         self.gamma = discount_rate
         
         self.experiment_data = []
@@ -97,16 +120,27 @@ class AdvancedMinigridDivDisMetaExperiment():
     def save(self):
         for option in self.options:
             option.save()
-        
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.experiment_data, f)
     
     def load(self):
         for option in self.options:
             option.load()
-        
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.experiment_data = pickle.load(f)
+    
+    def add_datafiles(self,
+                      positive_files,
+                      negative_files,
+                      unlabelled_files):
+        assert len(positive_files) == self.num_options
+        assert len(negative_files) == self.num_options
+        assert len(unlabelled_files) == self.num_options
+        
+        for idx in range(len(positive_files)):
+            self.options[idx].add_datafiles(positive_files[idx],
+                                            negative_files[idx],
+                                            unlabelled_files[idx])
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -123,6 +157,13 @@ class AdvancedMinigridDivDisMetaExperiment():
                                                      max_steps,
                                                      0.98,
                                                      seed)
+    
+    def train_option_classifiers(self):
+        for idx in range(self.num_options):
+            self.options[idx].terminations.train(self.classifier_epochs)
+        
+        self.save()
+        
     
     def get_masks_from_seed(self,
                             seed):
@@ -327,7 +368,84 @@ class AdvancedMinigridDivDisMetaExperiment():
                 
                 undiscounted_rewards.append(undiscounted_reward)
     
-    
+    def test_classifiers(self,
+                         test_positive_files,
+                         test_negative_files):
+        assert len(test_positive_files) == self.num_options
+        assert len(test_negative_files) == self.num_options
+        
+        self.accuracy_pos = []
+        self.accuracy_neg = []
+        self.weighted_accuracy = []
+        self.accuracy = []
+        
+        for option_idx in range(self.num_options):
+            dataset_positive = SetDataset(max_size=1e6,
+                                          batchsize=64)
+            dataset_negative = SetDataset(max_size=1e6,
+                                          batchsize=64)
+            
+            dataset_positive.add_true_files(test_positive_files[option_idx])
+            dataset_negative.add_false_files(test_negative_files[option_idx])
+            
+            counter = 0
+            accuracy = np.zeros(self.num_heads)
+            accuracy_pos = np.zeros(self.num_heads)
+            accuracy_neg = np.zeros(self.num_heads)
+            
+            for _ in range(dataset_positive.num_batches):
+                counter += 1
+                x, y = dataset_positive.get_batch()
+                pred_y = self.options[option_idx].terminations.predict(x).cpu()
+                
+                for idx in range(self.num_heads):
+                    pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                    accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
+                    accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+            
+            accuracy_pos /= counter
+            
+            total_counter = counter
+            counter = 0
+            
+            for _ in range(dataset_negative.num_batches):
+                counter += 1
+                x, y = dataset_negative.get_batch()
+                pred_y = self.options[option_idx].terminations.predict(x).cpu()
+                
+                for idx in range(self.num_heads):
+                    pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                    accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
+                    accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+            
+            accuracy_neg /= counter
+            total_counter += counter
+            
+            accuracy /= total_counter
+            
+            weighted_acc = (accuracy_pos+accuracy_neg)/2
+            
+            logging.info("============= Option {} Evaluated =============".format(option_idx))
+            for idx in range(self.num_heads):
+                logging.info("idx:{} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
+                    idx,
+                    accuracy_pos[idx],
+                    accuracy_neg[idx],
+                    accuracy[idx],
+                    weighted_acc[idx])
+                )
+            logging.info("===============================================")
+            
+            self.accuracy.append(accuracy)
+            self.accuracy_neg.append(accuracy_neg)
+            self.accuracy_pos.append(accuracy_pos)
+            self.weighted_accuracy.append(weighted_acc)
+        
+        save_dir = os.path.join(self.save_dir, "classifier_accuracies")
+        np.save(os.path.join(save_dir, 'accuracy.npy'), self.accuracy)
+        np.save(os.path.join(save_dir, 'accuracy_pos.npy'), self.accuracy_pos)
+        np.save(os.path.join(save_dir, 'accuracy_neg.npy'), self.accuracy_neg)
+        np.save(os.path.join(save_dir, 'weighted_accuracy.npy'), self.weighted_accuracy)
     
     
     

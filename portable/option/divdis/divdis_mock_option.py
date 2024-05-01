@@ -66,7 +66,6 @@ class DivDisMockOption():
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.num_heads)
-        
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -227,11 +226,7 @@ class DivDisMockOption():
         
         policy.move_to_cpu()
         policy.store_buffer(buffer_dir)
-        self.train_rewards.append(sum(option_rewards))
-        self.option_steps += 1
-        
-        if self.option_steps%50 == 0:
-            logging.info("Option success rate: {}".format(np.mean(self.train_rewards)))
+        policy.end_skill(sum(option_rewards))
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     
@@ -437,15 +432,11 @@ class DivDisMockOption():
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     
-    
-    
     def evaluate_states(self,
                         idx,
                         states,
                         seed):
-        
         actions, q_vals = self.policies[idx][seed].batch_act(states)
-        
         return actions, q_vals
     
     def get_confidences(self):
@@ -453,7 +444,6 @@ class DivDisMockOption():
     
     def update_confidences(self,
                            update):
-        
         self.confidences.update_successes(update)
     
 

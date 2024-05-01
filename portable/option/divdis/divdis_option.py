@@ -4,11 +4,14 @@ import numpy as np
 import gin 
 import random 
 import torch 
+import pickle
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
+
+from portable.option.sets.utils import BayesianWeighting
 
 @gin.configurable 
 class DivDisOption():
@@ -19,6 +22,9 @@ class DivDisOption():
                  num_heads,
                  
                  policy_phi,
+                 use_seed_for_initiation,
+                 beta_distribution_alpha=100,
+                 beta_distribution_beta=100,
                  video_generator=None,
                  plot_dir=None):
         
@@ -27,15 +33,22 @@ class DivDisOption():
         self.policy_phi = policy_phi
         self.log_dir = log_dir
         
+        self.use_seed_for_initiation = use_seed_for_initiation
+        
         self.terminations = DivDisClassifier(use_gpu=use_gpu,
                                              head_num=num_heads,
                                              log_dir=os.path.join(log_dir, 'termination'))
         
         self.num_heads = num_heads
         
-        self.policies = [
-            {} for _ in range(num_heads)
-        ]
+        if self.use_seed_for_initiation:
+            self.policies = [
+                {} for _ in range(self.num_heads)
+            ]
+        else:
+            self.policies = [
+                [] for _ in range(self.num_heads)
+            ]
         
         self.initiable_policies = None
         self.video_generator = video_generator
@@ -46,6 +59,9 @@ class DivDisOption():
             self.plot_dir = plot_dir
             self.term_states = []
             self.missed_term_states = []
+        
+        self.confidences = BayesianWeighting(beta_distribution_alpha,
+                                             beta_distribution_beta)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -58,21 +74,44 @@ class DivDisOption():
         os.makedirs(self._get_termination_save_path(), exist_ok=True)
         
         self.terminations.save(path=self._get_termination_save_path())
+        for idx, policies in enumerate(self.policies):
+            for key in policies.keys():
+                policies[key].save(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
+        
+            with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
+                pickle.dump(list(policies.keys()), f)
+        
     
     def load(self):
         if os.path.exists(self._get_termination_save_path()):
             # print in green text
             print("\033[92m {}\033[00m" .format("Termination model loaded"))
             self.terminations.load(self._get_termination_save_path())
+            for idx, policies in enumerate(self.policies):
+                with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
+                    keys = pickle.load(f)
+                for key in keys:
+                    policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
+                                                        policy_phi=self.policy_phi,
+                                                        learn_initiation=(not self.use_seed_for_initiation))
+                    policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
+
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation())
+        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
+                                                            policy_phi=self.policy_phi))
     
-    def find_possible_policy(self, obs):
+    def find_possible_policy(self, *kwargs):
+        if self.use_seed_for_initiation:
+            return self._seed_possible_policies(*kwargs)
+        else:
+            return self._initiation_possible_policies(*kwargs)
+    
+    def _initiation_possible_policies(self, obs):
         policy_idxs = []
         
         for policies in self.policies:
@@ -86,6 +125,14 @@ class DivDisOption():
         
         return policy_idxs
     
+    def _seed_possible_policies(self, seed):
+        mask = [False]*self.num_heads
+        for idx, policies in enumerate(self.policies):
+            if seed in policies.keys():
+                mask[idx] = True
+        
+        return mask
+    
     def add_datafiles(self,
                       positive_files,
                       negative_files,
@@ -94,12 +141,37 @@ class DivDisOption():
                                    negative_files,
                                    unlabelled_files)
     
+    def _get_policy(self, head_idx, option_idx):
+        if self.use_seed_for_initiation:
+            if option_idx not in self.policies[head_idx].keys():
+                self.policies[head_idx][option_idx] = self._get_new_policy()
+            return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
+        else:
+            if len(self.initiable_policies[head_idx]) > 0:
+                return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
+            else:
+                policy = self._get_new_policy()
+                self.policies[head_idx].append(policy)
+                policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
+                return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
+    
+    def _get_new_policy(self):
+        return PolicyWithInitiation(use_gpu=self.use_gpu,
+                                    policy_phi=self.policy_phi,
+                                    learn_initiation=(not self.use_seed_for_initiation))
+    
+    def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
+        policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
+        policy.store_buffer_to_disk = store_buffer_bool
+    
     def train_policy(self, 
                      idx,
                      env,
                      state,
                      info,
-                     seed,
+                     policy_idx,
+                     max_steps=1e6,
+                     make_video=False,
                      perfect_term=lambda x: False):
         
         steps = 0
@@ -111,26 +183,21 @@ class DivDisOption():
         done = False
         should_terminate = False
         
-        # if seed not in self.initiable_policies[idx]:
-        #     self.initiable_policies[idx][seed] = PolicyWithInitiation()
-        
-        # policy = self.initiable_policies[idx][seed]
-        
-        if seed not in self.policies[idx].keys():
-            self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
-                                                            policy_phi=self.policy_phi)
-        
-        policy = self.policies[idx][seed]
+        policy, buffer_dir = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
+        policy.load_buffer(buffer_dir)
         
         img_state = None
         img_next_state = env.render()
         
-        while not (done or should_terminate):
+        while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
             infos.append(info)
             
             action = policy.act(state)
+            if make_video and self.video_generator:
+                self._video_log("[option] action: {}".format(action))
+                self.video_generator.make_image(env.render())
             
             next_state, reward, done, info = env.step(action)
             img_state = img_next_state
@@ -140,6 +207,9 @@ class DivDisOption():
             should_terminate = torch.argmax(pred_y) == 1
             steps += 1
             rewards.append(reward)
+            
+            if make_video:
+                self._video_log("In termination: {}".format(should_terminate))
             
             if should_terminate:
                 reward = 1
@@ -179,17 +249,16 @@ class DivDisOption():
 
             state = next_state
         
-        # if should_terminate:
-        #     # should save positive examples and create classifier if it hasn't been
-        #     pass
-        # if done:
-        #     pass
+        if not self.use_seed_for_initiation:
+            if should_terminate:
+                policy.add_data_initiation(positive_examples=states)
+            else:
+                policy.add_data_initiation(negative_examples=states)
+            policy.add_context_examples(states)
         
-        if should_terminate:
-            policy.add_data_initiation(positive_examples=states)
-        else:
-            policy.add_data_initiation(negative_examples=states)
-        policy.add_context_examples(states)
+        policy.move_to_cpu()
+        policy.store_buffer(buffer_dir)
+        policy.end_skill(sum(option_rewards))
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     
@@ -278,7 +347,9 @@ class DivDisOption():
                     env,
                     state,
                     info,
-                    seed):
+                    seed,
+                    make_video=True,
+                    max_steps=1e6):
         
         steps = 0
         rewards = []
@@ -293,6 +364,9 @@ class DivDisOption():
             raise Exception("Policy has not been initialized. Train policy before evaluating")
         
         policy = self.policies[idx][seed]
+        buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
+        policy.move_to_gpu()
+        policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
             while not (done or should_terminate):
@@ -327,17 +401,36 @@ class DivDisOption():
                 option_rewards.append(reward)
                 state = next_state
             
-            if should_terminate:
-                self._video_log("policy hit termination")
-            if done:
-                self._video_log("environment terminated")
+            if make_video:
+                if should_terminate:
+                    self._video_log("policy hit termination")
+                if done:
+                    self._video_log("environment terminated")
+                if steps >= max_steps:
+                    self._video_log("option timed out")
             
-            if self.video_generator is not None:
+            if self.video_generator is not None and make_video:
                 img = env.render()
                 self.video_generator.make_image(img)
             
+            policy.move_to_cpu()
+            policy.store_buffer(buffer_dir)
+            
             return state, info, steps, rewards, option_rewards, states, infos
     
+    def evaluate_states(self,
+                        idx,
+                        states,
+                        seed):
+        actions, q_vals = self.policies[idx][seed].batch_act(states)
+        return actions, q_vals
+    
+    def get_confidences(self):
+        return self.confidences.weights()
+    
+    def update_confidences(self,
+                           update):
+        self.confidences.update_successes(update)
 
 
 

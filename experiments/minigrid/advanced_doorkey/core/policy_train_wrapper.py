@@ -139,7 +139,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             agent_x, agent_y = agent_position
             obj = self.env.unwrapped.grid.get(agent_x, agent_y)
         
-        if agent_position is None or obj is not None:
+        # if agent_position is None or obj is not None:
+        if agent_position is None:
             self.env.unwrapped.place_agent_randomly(agent_reposition_attempts)
         else:
             self.env.unwrapped.agent_pos = agent_position
