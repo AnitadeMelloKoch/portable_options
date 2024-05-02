@@ -323,7 +323,6 @@ class AdvancedMinigridDivDisOptionExperiment():
         train_rewards = deque(maxlen=200)
         episode = 0
         for head_idx in range(option.num_heads):
-            option.set_policy_save_to_disk(head_idx, env_seed, False)
             while total_steps < max_steps:
                 rand_num = np.random.randint(low=0, high=50)
                 obs, info = env.reset(agent_reposition_attempts=rand_num)
@@ -343,7 +342,6 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                                         total_steps,
                                                                                         np.mean(train_rewards)))
             option.save()
-            option.set_policy_save_to_disk(head_idx, env_seed, True)
             
     
     def evaluate_option(self,
@@ -382,7 +380,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                 env_2,
                                                 1000,
                                                 head_idx,
-                                                seed_2)
+                                                seed_1)
+                
+                test_buffer = test_buffer.to("cuda")
                 
                 _, original_q_values = original_option.evaluate_states(0,
                                                                     test_buffer,
