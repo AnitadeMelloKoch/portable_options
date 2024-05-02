@@ -54,14 +54,15 @@ class DivDisOption():
         self.video_generator = video_generator
         self.make_plots = False
         
-        if plot_dir is not None:
-            self.make_plots = True
-            self.plot_dir = plot_dir
-            self.term_states = []
-            self.missed_term_states = []
+        # if plot_dir is not None:
+        #     self.make_plots = True
+        #     self.plot_dir = plot_dir
+        #     self.term_states = []
+        #     self.missed_term_states = []
         
         self.confidences = BayesianWeighting(beta_distribution_alpha,
-                                             beta_distribution_beta)
+                                             beta_distribution_beta,
+                                             num_heads)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -81,6 +82,7 @@ class DivDisOption():
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
                 pickle.dump(list(policies.keys()), f)
         
+        self.confidences.save(os.path.join(self.save_dir, 'confidence.pkl'))
     
     def load(self):
         if os.path.exists(self._get_termination_save_path()):
@@ -95,7 +97,7 @@ class DivDisOption():
                                                         policy_phi=self.policy_phi,
                                                         learn_initiation=(not self.use_seed_for_initiation))
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
-
+            self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
@@ -202,6 +204,8 @@ class DivDisOption():
             next_state, reward, done, info = env.step(action)
             img_state = img_next_state
             img_next_state = env.render()
+            if type(next_state) is np.ndarray:
+                next_state = torch.from_numpy(next_state).float()
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = torch.argmax(pred_y) == 1
@@ -381,6 +385,8 @@ class DivDisOption():
                     self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
+                if type(next_state) is np.ndarray:
+                    next_state = torch.from_numpy(next_state).float()
                 term_state = self.policy_phi(next_state).unsqueeze(0)
                 should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
                 steps += 1

@@ -268,7 +268,7 @@ class DivDisMockOption():
                                                           seed)
             eval_rewards.append(sum(eval_run_rewards))
             
-            if episode % 50 == 0:
+            if episode % 1 == 0:
                 logging.info("idx {} steps: {} average train reward: {} average eval reward {}".format(idx,
                                                                           total_steps,
                                                                           np.mean(train_rewards),

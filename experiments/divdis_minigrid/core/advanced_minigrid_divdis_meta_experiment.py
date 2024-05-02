@@ -77,7 +77,6 @@ class AdvancedMinigridDivDisMetaExperiment():
                                     phi=agent_phi)
         
         self.options = []
-        assert len(terminations) == num_options
         self.num_options = num_options
         self.num_primitive_actions = num_primitive_actions
         
@@ -85,7 +84,8 @@ class AdvancedMinigridDivDisMetaExperiment():
             [math.pow(discount_rate, n) for n in range(100)]
         )
         
-        if self.option_type is "mock":
+        if self.option_type == "mock":
+            assert len(terminations) == num_options
             for idx, termination_list in enumerate(terminations):
                 self.options.append(DivDisMockOption(use_gpu=use_gpu,
                                                     log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
@@ -100,7 +100,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             else:
                 self.num_heads = 0
         
-        elif self.option_type is "divdis":
+        elif self.option_type == "divdis":
             self.num_heads = option_head_num
             for idx in range(self.num_options):
                 self.options.append(DivDisOption(use_gpu=use_gpu,
@@ -396,7 +396,8 @@ class AdvancedMinigridDivDisMetaExperiment():
             for _ in range(dataset_positive.num_batches):
                 counter += 1
                 x, y = dataset_positive.get_batch()
-                pred_y = self.options[option_idx].terminations.predict(x).cpu()
+                pred_y, _ = self.options[option_idx].terminations.predict(x)
+                pred_y = pred_y.cpu()
                 
                 for idx in range(self.num_heads):
                     pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
@@ -411,7 +412,8 @@ class AdvancedMinigridDivDisMetaExperiment():
             for _ in range(dataset_negative.num_batches):
                 counter += 1
                 x, y = dataset_negative.get_batch()
-                pred_y = self.options[option_idx].terminations.predict(x).cpu()
+                pred_y, _ = self.options[option_idx].terminations.predict(x)
+                pred_y = pred_y.cpu()
                 
                 for idx in range(self.num_heads):
                     pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
@@ -442,6 +444,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             self.weighted_accuracy.append(weighted_acc)
         
         save_dir = os.path.join(self.save_dir, "classifier_accuracies")
+        os.makedirs(save_dir, exist_ok=True)
         np.save(os.path.join(save_dir, 'accuracy.npy'), self.accuracy)
         np.save(os.path.join(save_dir, 'accuracy_pos.npy'), self.accuracy_pos)
         np.save(os.path.join(save_dir, 'accuracy_neg.npy'), self.accuracy_neg)

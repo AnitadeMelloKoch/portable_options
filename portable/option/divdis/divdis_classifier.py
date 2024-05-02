@@ -78,14 +78,12 @@ class DivDisClassifier():
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
-        self.confidences.save(os.path.join(path, 'confidence'))
     
     def load(self, path):
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
             self.dataset.load(path)
-            self.confidences.load(os.path.join(path, 'confidence'))
     
     def move_to_gpu(self):
         if self.use_gpu:
@@ -177,13 +175,12 @@ class DivDisClassifier():
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        confidences = self.confidences.weights()
         votes = torch.argmax(pred_y, axis=-1)
         
         votes = votes.cpu().numpy()
         self.votes = votes
         
-        return pred_y, votes, confidences
+        return pred_y, votes
         
     def predict_idx(self, x, idx):
         self.classifier.eval()
@@ -196,17 +193,3 @@ class DivDisClassifier():
         
         
         return pred_y[:,idx,:]
-    
-    def update_confidence(self,
-                          was_successful: bool,
-                          votes: list):
-        success_count = votes
-        failure_count = np.ones(len(success_count)) - success_count
-        
-        if not was_successful:
-            success_count = failure_count
-            failure_count = votes
-        
-        self.confidences.update_successes(success_count)
-        self.confidences.update_failures(failure_count)
-    
