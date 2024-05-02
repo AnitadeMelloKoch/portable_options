@@ -130,7 +130,7 @@ class PolicyWithInitiation(Agent):
             update_interval=update_interval
         )
         
-        self.store_buffer_to_disk = True
+        self.store_buffer_to_disk = False
     
     def can_initiate(self, obs):
         in_context = self.context.predict(obs)
