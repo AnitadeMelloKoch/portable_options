@@ -85,16 +85,17 @@ class MonteDataCollector:
     def __init__(self, env_name, seed, max_frames):
         self.env = make_env(env_name, seed, max_frames)
         self.env.reset()
-        self.agent_state = np.zeros((4, 56, 44))
         self.state = np.zeros((4, 84, 84))
         self.save_dir = 'resources/monte_images/'
         
-        self.init_positive_states = {'state':[], 'agent':[]}
-        self.init_negative_states = {'state':[], 'agent':[]}
-        self.term_positive_states = {'state':[], 'agent':[]}
-        self.term_negative_states = {'state':[], 'agent':[]}
+        self.init_positive_states = []
+        self.init_negative_states = []
+        self.term_positive_states = []
+        self.term_negative_states = []
+        self.uncertain_states = []
         self.INITIATION = False
         self.TERMINATION = False
+        self.UNCERTAIN = False
 
         # init visualization
         self.fig = plt.figure(num=1, figsize=(10,10), clear=True)
@@ -132,18 +133,14 @@ class MonteDataCollector:
         obs, _, _, _ = self.env.step(0)  # NO-OP action to update the RAM state
 
         if self.INITIATION:
-            self.init_positive_states['state'] = [state]
-            self.init_positive_states['agent'] = [agent_state]
+            self.init_positive_states = [state]
         else:
-            self.init_negative_states['state'] = [state]
-            self.init_negative_states['agent'] = [agent_state]
+            self.init_negative_states = [state]
 
         if self.TERMINATION:
-            self.term_positive_states['state'] = [state]
-            self.term_positive_states['agent'] = [agent_state]
+            self.term_positive_states = [state]
         else:
-            self.term_negative_states['state'] = [state]
-            self.term_negative_states['agent'] = [agent_state]
+            self.term_negative_states = [state]
 
         self.visualize_env()
         
@@ -158,7 +155,7 @@ class MonteDataCollector:
         stdscr.addstr("Use arrow keys for jumping movements.\n")
         stdscr.addstr("Press I to toggle initiation, T to toggle termination. Press V to clear saved dataset. Press B to save data.\n")
         stdscr.addstr(f"Current initiation: {self.INITIATION}, Current termination: {self.TERMINATION}\n")
-        i = len(self.init_positive_states['state'])+len(self.init_negative_states['state'])
+        i = len(self.init_positive_states)+len(self.init_negative_states)
 
         self.visualize_env()
 
@@ -170,21 +167,21 @@ class MonteDataCollector:
                 break
             
             elif key == ord('i'):
-                self.INITIATION = not self.INITIATION
+                self.INITIATION = True
+                self.TERMINATION = False
+                self.UNCERTAIN = False
                 stdscr.addstr(f"Initiation set to: {self.INITIATION}\n")
             elif key == ord('t'):
-                self.TERMINATION = not self.TERMINATION
+                self.TERMINATION = True
+                self.INITIATION = False
+                self.UNCERTAIN = False
                 stdscr.addstr(f"Termination set to: {self.TERMINATION}\n")
-
-            elif key == ord('v'):
-                stdscr.addstr(f"Reset saved data? (y/n)")
-                key = stdscr.getch()
-                if key == ord('y'):
-                    self.init_positive_states = {'state':[], 'agent':[]}
-                    self.init_negative_states = {'state':[], 'agent':[]}
-                    self.term_positive_states = {'state':[], 'agent':[]}
-                    self.term_negative_states = {'state':[], 'agent':[]}
-                    stdscr.addstr("Data reset!\n")
+            elif key == ord('u'):
+                self.UNCERTAIN = True
+                self.INITIATION = False
+                self.TERMINATION = False
+                stdscr.addstr(f"Uncertainty set to: {self.TERMINATION}\n")
+                
 
             elif key == ord('b'):
                 stdscr.addstr(f"Save data? Dataset will be reset. (y/n)\n")
@@ -194,15 +191,11 @@ class MonteDataCollector:
                     # ask for save file name prefix
                     stdscr.addstr(f"Enter save file name prefix: (e.g. 'climb_down_ladder_room0')\n")
                     prefix = stdscr.getstr().decode('utf-8')
-                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}_screen_initiation_positive.npy and 7 other .npy files\n")
+                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}_screen_initiation_positive.npy and 3 other .npy files\n")
                     self.save_data(f'{prefix}')
-                    self.init_positive_states = {'state':[], 'agent':[]}
-                    self.init_negative_states = {'state':[], 'agent':[]}
-                    self.term_positive_states = {'state':[], 'agent':[]}
-                    self.term_negative_states = {'state':[], 'agent':[]}
-                    stdscr.addstr("Data saved! Dataset has been reset.\n")
+                    stdscr.addstr("Data saved!\n")
                 else:
-                    stdscr.addstr("Data not saved.\n")
+                    stdscr.addstr("Data not saved. Still collecting data.\n")
                 
             elif key == (ord('w') or ord('W')):
                 i += 1
@@ -260,46 +253,35 @@ class MonteDataCollector:
             obs, _, _, _ = self.env.step(action)
             self.state = update_state(obs, self.state)
 
-            rgb_array = self.env.get_pixels_around_player()
-            image = color.rgb2gray(rgb_array)
-            self.agent_state = update_state(image, self.agent_state)
-
             # store in init or term dataset
             if self.INITIATION:
-                self.init_positive_states['state'].append(self.state.copy())
-                self.init_positive_states['agent'].append(self.agent_state.copy())
+                self.init_positive_states.append(self.state.copy())
             else:
-                self.init_negative_states['state'].append(self.state.copy())
-                self.init_negative_states['agent'].append(self.agent_state.copy())
+                self.init_negative_states.append(self.state.copy())
 
             if self.TERMINATION:
-                self.term_positive_states['state'].append(self.state.copy())
-                self.term_positive_states['agent'].append(self.agent_state.copy())
+                self.term_positive_states.append(self.state.copy())
             else:
-                self.term_negative_states['state'].append(self.state.copy())
-                self.term_negative_states['agent'].append(self.agent_state.copy())
+                self.term_negative_states.append(self.state.copy())
+
+            if self.UNCERTAIN:
+                self.uncertain_states.append(self.state.copy())
 
             self.visualize_env()
             
 
     def save_data(self, prefix):       
-        if len(self.init_positive_states["state"]) > 0:
-            np.save(f'{self.save_dir+prefix}_screen_initiation_positive.npy', np.array(self.init_positive_states["state"]))
-        if len(self.init_negative_states["state"]) > 0:
-            np.save(f'{self.save_dir+prefix}_screen_initiation_negative.npy', np.array(self.init_negative_states["state"]))
-        if len(self.term_positive_states["state"]) > 0:
-            np.save(f'{self.save_dir+prefix}_screen_termination_positive.npy', np.array(self.term_positive_states["state"]))
-        if len(self.term_negative_states["state"]) > 0:
-            np.save(f'{self.save_dir+prefix}_screen_termination_negative.npy', np.array(self.term_negative_states["state"]))
+        if len(self.init_positive_states) > 0:
+            np.save(f'{self.save_dir+prefix}_initiation_positive.npy', np.array(self.init_positive_states))
+        if len(self.init_negative_states) > 0:
+            np.save(f'{self.save_dir+prefix}_initiation_negative.npy', np.array(self.init_negative_states))
+        if len(self.term_positive_states) > 0:
+            np.save(f'{self.save_dir+prefix}_termination_positive.npy', np.array(self.term_positive_states))
+        if len(self.term_negative_states) > 0:
+            np.save(f'{self.save_dir+prefix}_termination_negative.npy', np.array(self.term_negative_states))
+        if len(self.uncertain_states) > 0:
+            np.save(f'{self.save_dir+prefix}_uncertain.npy', np.array(self.uncertain_states))
 
-        if len(self.init_positive_states["agent"]) > 0:
-            np.save(f'{self.save_dir+prefix}_agent_initiation_positive.npy', np.array(self.init_positive_states["agent"]))
-        if len(self.init_negative_states["agent"]) > 0:
-            np.save(f'{self.save_dir+prefix}_agent_initiation_negative.npy', np.array(self.init_negative_states["agent"]))
-        if len(self.term_positive_states["agent"]) > 0:
-            np.save(f'{self.save_dir+prefix}_agent_termination_positive.npy', np.array(self.term_positive_states["agent"]))
-        if len(self.term_negative_states["agent"]) > 0:
-            np.save(f'{self.save_dir+prefix}_agent_termination_negative.npy', np.array(self.term_negative_states["agent"]))
 
     def run(self):
         curses.wrapper(self.collect_data)
