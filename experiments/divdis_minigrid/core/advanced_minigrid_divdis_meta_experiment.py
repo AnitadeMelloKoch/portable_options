@@ -417,11 +417,12 @@ class AdvancedMinigridDivDisMetaExperiment():
                 
                 for idx in range(self.num_heads):
                     pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
-                    accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
+                    accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
                     accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
             
             accuracy_neg /= counter
             total_counter += counter
+            
             
             accuracy /= total_counter
             
