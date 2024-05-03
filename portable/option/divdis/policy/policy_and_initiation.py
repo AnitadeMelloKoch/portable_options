@@ -175,6 +175,7 @@ class PolicyWithInitiation(Agent):
         if self.replay_buffer.memory is None:
             print("MAYBE A PROBLEM -> NO BUFFER TO SAVE")
             return
+        print("storing buffer")
         os.makedirs(dir, exist_ok=True)
         self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         self.replay_buffer.memory = None
@@ -182,6 +183,7 @@ class PolicyWithInitiation(Agent):
     def load_buffer(self, dir):
         if not self.store_buffer_to_disk:
             return
+        print("loading buffer")
         if os.path.exists(dir):
             self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
         else:
@@ -194,8 +196,9 @@ class PolicyWithInitiation(Agent):
         self.train_rewards.append(summed_reward)
         self.option_runs += 1
         if self.option_runs%50 == 0:
-            logging.info("Option policy success rate: {} from {} steps".format(np.mean(self.train_rewards), self.option_runs))
-            
+            logging.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
+                                                                                           self.option_runs,
+                                                                                           self.step_number))
     
     def observe(self,
                 obs,

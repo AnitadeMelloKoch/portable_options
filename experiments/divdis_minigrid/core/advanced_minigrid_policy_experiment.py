@@ -360,21 +360,21 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            use_seed_for_initiation=True,
                                            policy_phi=self.policy_phi,
                                            video_generator=self.video_generator)
-        new_option = DivDisMockOption(use_gpu=self.use_gpu,
-                                      terminations=terminations_2,
-                                      log_dir=os.path.join(self.log_dir, "new"),
-                                      save_dir=os.path.join(self.save_dir, "new"),
-                                      use_seed_for_initiation=True,
-                                      policy_phi=self.policy_phi,
-                                      video_generator=self.video_generator)
         
-        self.train_policy(original_option, env_1, seed_1, max_steps=5e5)
+        self.train_policy(original_option, env_1, seed_1, max_steps=1e5)
         
         head_scores = np.zeros(new_option.num_heads)
         
         for seed_2 in seeds_2:
+            new_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                        terminations=terminations_2,
+                                        log_dir=os.path.join(self.log_dir, "new"),
+                                        save_dir=os.path.join(self.save_dir, "new"),
+                                        use_seed_for_initiation=True,
+                                        policy_phi=self.policy_phi,
+                                        video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
-            self.train_policy(new_option, env_2, seed_2, max_steps=5e5)
+            self.train_policy(new_option, env_2, seed_2, max_steps=1e5)
             for head_idx in range(new_option.num_heads):
                 test_buffer = self.get_test_buffer(original_option,
                                                 env_2,

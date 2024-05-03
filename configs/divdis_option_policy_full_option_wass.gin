@@ -2,13 +2,13 @@ import experiments.divdis_minigrid.core.advanced_minigrid_policy_experiment
 import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
 
-AdvancedMinigridDivDisOptionExperiment.experiment_name              = "wass_full_policy"
+AdvancedMinigridDivDisOptionExperiment.experiment_name              = "wass_full_option"
 AdvancedMinigridDivDisOptionExperiment.use_gpu                      = True
 AdvancedMinigridDivDisOptionExperiment.option_type                  = "mock"
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 50000
-PolicyWithInitiation.buffer_length                                  = 50000
+PolicyWithInitiation.buffer_length                                  = 100000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
