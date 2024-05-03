@@ -361,7 +361,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            policy_phi=self.policy_phi,
                                            video_generator=self.video_generator)
         
-        self.train_policy(original_option, env_1, seed_1, max_steps=1e5)
+        self.train_policy(original_option, env_1, seed_1, max_steps=4e4)
         
         head_scores = np.zeros(new_option.num_heads)
         
@@ -374,7 +374,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                                         policy_phi=self.policy_phi,
                                         video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
-            self.train_policy(new_option, env_2, seed_2, max_steps=1e5)
+            self.train_policy(new_option, env_2, seed_2, max_steps=4e4)
             for head_idx in range(new_option.num_heads):
                 test_buffer = self.get_test_buffer(original_option,
                                                 env_2,
