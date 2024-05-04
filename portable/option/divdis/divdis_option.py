@@ -187,6 +187,7 @@ class DivDisOption():
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
         policy.move_to_gpu()
+        self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         img_state = None
@@ -204,8 +205,6 @@ class DivDisOption():
             next_state, reward, done, info = env.step(action)
             img_state = img_next_state
             img_next_state = env.render()
-            if type(next_state) is np.ndarray:
-                next_state = torch.from_numpy(next_state).float()
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = torch.argmax(pred_y) == 1
@@ -261,6 +260,7 @@ class DivDisOption():
             policy.add_context_examples(states)
         
         policy.move_to_cpu()
+        self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
         
@@ -370,6 +370,7 @@ class DivDisOption():
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
         policy.move_to_gpu()
+        self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
@@ -420,6 +421,7 @@ class DivDisOption():
                 self.video_generator.make_image(img)
             
             policy.move_to_cpu()
+            self.terminations.move_to_cpu()
             policy.store_buffer(buffer_dir)
             
             return state, info, steps, rewards, option_rewards, states, infos

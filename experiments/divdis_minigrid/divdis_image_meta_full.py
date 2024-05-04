@@ -7,6 +7,7 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import Adva
 import random
 from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 from experiments.divdis_minigrid.experiment_files import *
+import numpy as np
 
 
 if __name__ == "__main__":
@@ -23,9 +24,15 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = (x/255.0).float()
         return x
     
     def option_agent_phi(x):
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = (x/255.0).float()
         return x
     
     experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
@@ -48,7 +55,10 @@ if __name__ == "__main__":
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
                                    max_steps=int(1e4),
-                                   grayscale=False)
+                                   grayscale=False,
+                                   normalize_obs=False)
+    
+    state, _ = meta_env.reset()
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
