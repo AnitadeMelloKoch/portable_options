@@ -363,7 +363,7 @@ class AdvancedMinigridDivDisOptionExperiment():
         
         self.train_policy(original_option, env_1, seed_1, max_steps=4e4)
         
-        head_scores = np.zeros(new_option.num_heads)
+        head_scores = np.zeros(len(terminations_2))
         
         for seed_2 in seeds_2:
             new_option = DivDisMockOption(use_gpu=self.use_gpu,
