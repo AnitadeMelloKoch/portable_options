@@ -436,7 +436,9 @@ class DivDisMockOption():
                         idx,
                         states,
                         seed):
+        self.policies[idx][seed].move_to_gpu()
         actions, q_vals = self.policies[idx][seed].batch_act(states)
+        self.policies[idx][seed].move_to_cpu()
         return actions, q_vals
     
     def get_confidences(self):

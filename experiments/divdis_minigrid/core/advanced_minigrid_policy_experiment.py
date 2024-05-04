@@ -301,7 +301,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                     logging.info("rand kl: {}".format(rand_kl))
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
-        test_states = []
+        test_states = []        
         while len(test_states) < num_states:
             rand_num = np.random.randint(80)
             obs, info = env.reset(agent_reposition_attempts=rand_num)
@@ -319,10 +319,10 @@ class AdvancedMinigridDivDisOptionExperiment():
         return test_states
     
     def train_policy(self, option, env, env_seed, max_steps=1e6):
-        total_steps = 0
-        train_rewards = deque(maxlen=200)
-        episode = 0
         for head_idx in range(option.num_heads):
+            train_rewards = deque(maxlen=200)
+            episode = 0
+            total_steps = 0
             while total_steps < max_steps:
                 rand_num = np.random.randint(low=0, high=50)
                 obs, info = env.reset(agent_reposition_attempts=rand_num)
@@ -341,7 +341,7 @@ class AdvancedMinigridDivDisOptionExperiment():
             logging.info("idx {} finished -> steps: {} average train reward: {}".format(head_idx,
                                                                                         total_steps,
                                                                                         np.mean(train_rewards)))
-            option.save()
+        option.save()
             
     
     def evaluate_option(self,
@@ -361,7 +361,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            policy_phi=self.policy_phi,
                                            video_generator=self.video_generator)
         
-        self.train_policy(original_option, env_1, seed_1, max_steps=4e4)
+        self.train_policy(original_option, env_1, seed_1, max_steps=2e4)
         
         head_scores = np.zeros(len(terminations_2))
         
@@ -374,13 +374,13 @@ class AdvancedMinigridDivDisOptionExperiment():
                                         policy_phi=self.policy_phi,
                                         video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
-            self.train_policy(new_option, env_2, seed_2, max_steps=4e4)
+            self.train_policy(new_option, env_2, seed_2, max_steps=2e4)
             for head_idx in range(new_option.num_heads):
-                test_buffer = self.get_test_buffer(original_option,
+                test_buffer = self.get_test_buffer(new_option,
                                                 env_2,
-                                                1000,
+                                                500,
                                                 head_idx,
-                                                seed_1)
+                                                seed_2)
                 
                 test_buffer = test_buffer.to("cuda")
                 
