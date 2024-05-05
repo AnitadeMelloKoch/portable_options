@@ -1,4 +1,5 @@
 import argparse
+import multiprocessing
 from portable.utils.utils import load_gin_configs
 import torch 
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
@@ -54,7 +55,9 @@ if __name__ == "__main__":
             door_colour="red",
             time_limit=100,
             image_input=True)
-    
+        
+    multiprocessing.set_start_method('spawn', force=True)
+
     experiment = AdvancedMinigridDivDisOptionExperiment(base_dir=args.base_dir,
                                                         seed=args.seed,
                                                         policy_phi=policy_phi,
