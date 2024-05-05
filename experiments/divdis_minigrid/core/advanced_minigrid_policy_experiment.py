@@ -260,7 +260,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=1e4)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=1e3)
         
 
         for idx, seed in enumerate(env_seed_2_list):
@@ -279,8 +279,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                     policy_phi=self.policy_phi,
                                                     video_generator=self.video_generator)
             
-            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=1e4)
-            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=1e4)
+            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=1e3)
+            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=1e3)
             
             for _ in range(evaluate_num):
                 if evaluation_type != "psm":
@@ -289,7 +289,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                 500,
                                                 0,
                                                 env_seed_1)
+                    logging.info(f"Buffer shape: {test_buffer.shape}")
                     test_buffer = test_buffer.to("cuda")
+                    
                     _, base_q_values = base_option.evaluate_states(0,
                                                             test_buffer,
                                                             env_seed_1)
@@ -301,6 +303,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                             test_buffer,
                                                                             seed)
                     _, rand_q_values = rand_policy.batch_act(test_buffer)
+
+                    print(base_q_values.shape)
+                    logging.info(f"Q val shape (option.evaluate_states output): {base_q_values.shape}")
                 
                     base_q_values = base_q_values.detach().cpu().squeeze()
                     wrong_q_values = wrong_q_values.detach().cpu().squeeze()
