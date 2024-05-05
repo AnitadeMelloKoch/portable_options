@@ -6,44 +6,66 @@ import torch
 import random 
 
 img_dir = "resources/monte_images/"
+# train using room 1 only
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
-                        img_dir+"screen_death_1.npy"]
+                        img_dir+"screen_death_1.npy",
+                        img_dir+"screen_death_2.npy",
+                        img_dir+"screen_death_3.npy"]
+# unlabeled using room 1, 0, 4, 5, 6, 10 + variety of iamges
 unlabeled_train_files = [img_dir+"screen_climb_down_ladder_initiation_positive.npy",
-                          img_dir+"climb_down_ladder_room0_screen_termination_positive.npy",
-                          img_dir+"climb_down_ladder_room0_screen_termination_negative.npy",
-                          img_dir+"climb_down_ladder_room2_screen_termination_negative.npy",
-                          img_dir+"climb_down_ladder_room3_screen_termination_negative.npy",
-                          img_dir+"climb_down_ladder_room4_screen_termination_positive.npy",
-                          img_dir+"climb_down_ladder_room4_screen_termination_negative.npy",
-                          img_dir+"climb_down_ladder_room6_screen_termination_positive.npy",
-                          img_dir+"climb_down_ladder_room6_screen_termination_negative.npy",
-                          img_dir+"climb_down_ladder_room7_screen_termination_negative.npy",
-                          img_dir+"screen_death_2.npy",
-                          img_dir+"screen_death_3.npy",
+                         img_dir+"screen_climb_down_ladder_initiation_negative.npy",
+                         img_dir+"screen_death_4.npy",
+                         
+                         img_dir+"climb_down_ladder_room0_initiation_positive.npy",
+                         img_dir+"climb_down_ladder_room0_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room0_termination_negative.npy",
+                         img_dir+"climb_down_ladder_room0_uncertain.npy",
+                         
+                         img_dir+"climb_down_ladder_room4_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room4_termination_negative.npy",
+                         img_dir+"climb_down_ladder_room4_uncertain.npy",
+
+                         img_dir+"climb_down_ladder_room5_initiation_positive.npy",
+                         img_dir+"climb_down_ladder_room5_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room5_termination_negative.npy",
+                         img_dir+"climb_down_ladder_room5_uncertain.npy",
+
+                         img_dir+"climb_down_ladder_room6_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room6_termination_positive.npy",
+                         img_dir+"climb_down_ladder_room6_termination_negative.npy",
                           
+                         img_dir+"climb_down_ladder_room10_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room10_termination_negative.npy",
+                         img_dir+"climb_down_ladder_room10_uncertain.npy",
+
+                         img_dir+"room8_walk_around.npy",
+                         img_dir+"room18_walk_around.npy",
                           ]
 
-positive_test_files = [
-                        img_dir+"climb_down_ladder_room9_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room10_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room11_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room13_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room19_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room21_screen_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room22_screen_termination_positive.npy",
+positive_test_files = [img_dir+"climb_down_ladder_room9_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room19_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room21_termination_positive.npy",
                        ]
-negative_test_files = [
-                        img_dir+"climb_down_ladder_room8_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room9_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room10_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room11_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room13_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room14_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room19_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room21_screen_termination_negative.npy",
-                        img_dir+"climb_down_ladder_room22_screen_termination_negative.npy",
+negative_test_files = [img_dir+"climb_down_ladder_room2_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room3_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room7_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room9_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room11_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room13_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room14_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room19_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room21_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room22_termination_negative.npy",                       
                        ]
+uncertain_test_files = [img_dir+"climb_down_ladder_room2_uncertain.npy",
+                        img_dir+"climb_down_ladder_room3_uncertain.npy",
+                        img_dir+"climb_down_ladder_room7_uncertain.npy",
+                        img_dir+"climb_down_ladder_room10_uncertain.npy",
+                        img_dir+"climb_down_ladder_room11_uncertain.npy",
+                        img_dir+"climb_down_ladder_room13_uncertain.npy",
+                        img_dir+"climb_down_ladder_room14_uncertain.npy",
+                        ]
 
 if __name__ == "__main__":
         parser = argparse.ArgumentParser()
@@ -71,9 +93,19 @@ if __name__ == "__main__":
         experiment.train_classifier()
         
         accuracy = experiment.test_classifier(positive_test_files,
-                                              negative_test_files,
-                                              save=True)
+                                              negative_test_files)
+        uncertainty = experiment.measure_uncertainty(uncertain_test_files)
+                                                 
         
         print(f"Accuracy: {accuracy[0]}")
         print(f"Weighted Accuracy: {accuracy[1]}")
+        print(f"Uncertainty: {uncertainty}")
+
+        num_batch = 1
+        view_acc = experiment.view_false_predictions(positive_test_files,
+                                                     negative_test_files,
+                                                     num_batch)
+        print(f"Viewing {num_batch} of Predictions:")
+        print(f"Accuracy: {view_acc[0]}")
+        print(f"Weighted Accuracy: {view_acc[1]}")
  

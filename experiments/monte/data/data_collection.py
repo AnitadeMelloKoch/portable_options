@@ -132,6 +132,12 @@ class MonteDataCollector:
         self.env.unwrapped.ale.deleteState(new_state_ref)
         obs, _, _, _ = self.env.step(0)  # NO-OP action to update the RAM state
 
+        # check state shape
+        try:
+            assert state.shape == (4, 84, 84)
+        except AssertionError:
+            state = state.squeeze.numpy()
+
         if self.INITIATION:
             self.init_positive_states = [state]
         else:
@@ -154,14 +160,14 @@ class MonteDataCollector:
         stdscr.addstr("Press W, A, S, D to move. Q, E, Z, C for combined movements.\n")
         stdscr.addstr("Use arrow keys for jumping movements.\n")
         stdscr.addstr("Press I to toggle initiation, T to toggle termination. Press V to clear saved dataset. Press B to save data.\n")
-        stdscr.addstr(f"Current initiation: {self.INITIATION}, Current termination: {self.TERMINATION}\n")
+        stdscr.addstr(f"Current Unitiation: {self.INITIATION}, Termination: {self.TERMINATION}, Uncertainty: {self.UNCERTAIN}\n")
         i = len(self.init_positive_states)+len(self.init_negative_states)
 
         self.visualize_env()
 
         while True:
             key = stdscr.getch()  # Get a single key press
-            stdscr.addstr(f"t={i}, pressed {chr(key)} | Initiation: {self.INITIATION}, Termination: {self.TERMINATION}\n")
+            stdscr.addstr(f"t={i}, pressed {chr(key)} | Initiation: {self.INITIATION}, Termination: {self.TERMINATION}, Uncertainty: {self.UNCERTAIN}\n")
             
             if key == 27:  # ESC key to exit
                 break
@@ -180,7 +186,12 @@ class MonteDataCollector:
                 self.UNCERTAIN = True
                 self.INITIATION = False
                 self.TERMINATION = False
-                stdscr.addstr(f"Uncertainty set to: {self.TERMINATION}\n")
+                stdscr.addstr(f"Uncertainty set to: {self.UNCERTAIN}\n")
+            elif key == ord('f'):
+                self.INITIATION = False
+                self.TERMINATION = False
+                self.UNCERTAIN = False
+                stdscr.addstr(f"All set to: {self.INITIATION}\n")
                 
 
             elif key == ord('b'):
@@ -191,7 +202,7 @@ class MonteDataCollector:
                     # ask for save file name prefix
                     stdscr.addstr(f"Enter save file name prefix: (e.g. 'climb_down_ladder_room0')\n")
                     prefix = stdscr.getstr().decode('utf-8')
-                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}_screen_initiation_positive.npy and 3 other .npy files\n")
+                    stdscr.addstr(f"Saving data to {self.save_dir+prefix}_initiation_positive.npy and 3 other .npy files\n")
                     self.save_data(f'{prefix}')
                     stdscr.addstr("Data saved!\n")
                 else:
@@ -291,9 +302,12 @@ class MonteDataCollector:
 if __name__ == "__main__":
     collector = MonteDataCollector('MontezumaRevengeNoFrameskip-v4', 0, 30*60*60)
     collector.INITIATION = False
-    collector.TERMINATION = True
+    collector.TERMINATION = False
 
-    start_filename = "resources/monte_env_states/room22/ladder/bottom_0.pkl"
+    #start_filename = "resources/monte_env_states/room22/ladder/bottom_0.pkl"
+    #start_filename = "resources/monte_env_states/room18/platforms/right.pkl"
+    start_filename = "resources/monte_env_states/room18/bridge/right_bridge.pkl"
+    
     with open(start_filename, "rb") as f:
         start_ram = pickle.load(f)
     collector.set_ram(start_ram)

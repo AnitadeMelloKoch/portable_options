@@ -36,10 +36,10 @@ class DivDisClassifier():
                  num_classes,
                  diversity_weight,
 
-                 l2_reg_weight=0.001,
-
                  beta_distribution_alpha,
                  beta_distribution_beta,
+
+                 l2_reg_weight=0.001,
                  
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
@@ -183,8 +183,8 @@ class DivDisClassifier():
     def predict(self, x):
         self.classifier.eval()
         
-        if len(x.shape) == self.state_dim:
-            x = x.unsqueeze(0)
+        #if len(x.shape) == self.state_dim:
+        #    x = x.unsqueeze(0)
         
         if self.use_gpu:
             x = x.to("cuda")

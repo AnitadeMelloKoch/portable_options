@@ -105,7 +105,7 @@ class MonteDivDisClassifierExperiment():
     def test_classifier(self,
                         test_positive_files,
                         test_negative_files,
-                        save=False):
+                        ):
         dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
         
@@ -123,57 +123,31 @@ class MonteDivDisClassifierExperiment():
         accuracy_pos = np.zeros(self.classifier.head_num)
         accuracy_neg = np.zeros(self.classifier.head_num)
         
-        #for _ in range(dataset_positive.num_batches):
-        for _ in range(3):
+        for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y = self.classifier.predict(x)
-            pred_y = pred_y.cpu()
+            pred_y, votes, confidence = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
-                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
                 accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
-
-                # save false positive images to file'
-                if save:
-                    save_dir = os.path.join(self.plot_dir, 'false_negative', 'head_{}'.format(idx))
-                    os.makedirs(save_dir, exist_ok=True)
-                    
-                    false_neg_idx = (pred_class != y)
-                    false_neg_imgs = x[false_neg_idx]
-                    with Pool(initializer=worker_initializer) as pool:
-                        args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_neg_imgs)]
-                        pool.starmap(save_image, args)
-
 
         accuracy_pos /= counter
         
         total_count = counter
         counter = 0
         
-        #for _ in range(dataset_negative.num_batches):
-        for _ in range(3):    
+        for _ in range(dataset_negative.num_batches):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y = self.classifier.predict(x)
-            pred_y = pred_y.cpu()
+            pred_y, votes, confidence = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
-                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
                 accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
                 accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
 
-                if save:
-                    save_dir = os.path.join(self.plot_dir, 'false_positive', 'head_{}'.format(idx))
-                    os.makedirs(save_dir, exist_ok=True)
-                    
-                    false_pos_idx = (pred_class != y)
-                    false_pos_imgs = x[false_pos_idx]
-                    with Pool(initializer=worker_initializer) as pool:
-                        args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_pos_imgs)]
-                        pool.starmap(save_image, args)
-                    
         
         accuracy_neg /= counter
         total_count += counter
@@ -194,6 +168,127 @@ class MonteDivDisClassifierExperiment():
         logging.info("=================================================")
         
         return accuracy, weighted_acc
+
+
+    def measure_uncertainty(self, uncertain_files):
+        dataset_positive = SetDataset(max_size=1e6,
+                                      batchsize=64)
+        
+        
+        dataset_positive.add_true_files(uncertain_files)
+    
+        counter = 0
+        uncertainty = np.zeros(self.classifier.head_num)
+        
+        for _ in range(dataset_positive.num_batches):
+            counter += 1
+            x, y = dataset_positive.get_batch()
+            pred_y, votes, confidence = self.classifier.predict(x)
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
+                uncertainty[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+        uncertainty /= counter
+        
+        
+        logging.info("============= Classifiers Uncertainty Measured =============")
+        for idx in range(self.classifier.head_num):
+            logging.info("Head idx:{:<4}, Uncertainty: {:.4f}.".format(idx, uncertainty[idx]))
+        logging.info("=================================================")
+        
+        return uncertainty
+
+
+    def view_false_predictions(self,
+                        test_positive_files,
+                        test_negative_files,
+                        num_batch=1):
+        dataset_positive = SetDataset(max_size=1e6,
+                                      batchsize=64)
+        
+        dataset_negative = SetDataset(max_size=1e6,
+                                      batchsize=64)
+        
+        # dataset_positive.set_transform_function(transform)
+        # dataset_negative.set_transform_function(transform)
+        
+        dataset_positive.add_true_files(test_positive_files)
+        dataset_negative.add_false_files(test_negative_files)
+    
+        counter = 0
+        accuracy = np.zeros(self.classifier.head_num)
+        accuracy_pos = np.zeros(self.classifier.head_num)
+        accuracy_neg = np.zeros(self.classifier.head_num)
+        
+        for _ in range(num_batch):
+            counter += 1
+            x, y = dataset_positive.get_batch()
+            pred_y, votes, confidence = self.classifier.predict(x)
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
+                accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+                # save false positive images to file'
+                save_dir = os.path.join(self.plot_dir, 'false_negative', 'head_{}'.format(idx))
+                os.makedirs(save_dir, exist_ok=True)
+                
+                false_neg_idx = (pred_class != y)
+                false_neg_imgs = x[false_neg_idx].squeeze()
+                
+                with Pool(initializer=worker_initializer) as pool:
+                    args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_neg_imgs)]
+                    pool.starmap(save_image, args)
+
+
+        accuracy_pos /= counter
+        
+        total_count = counter
+        counter = 0
+        
+        for _ in range(num_batch):
+            counter += 1
+            x, y = dataset_negative.get_batch()
+            pred_y, votes, confidence = self.classifier.predict(x)
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
+                accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+                save_dir = os.path.join(self.plot_dir, 'false_positive', 'head_{}'.format(idx))
+                os.makedirs(save_dir, exist_ok=True)
+                
+                false_pos_idx = (pred_class != y)
+                false_pos_imgs = x[false_pos_idx]
+                with Pool(initializer=worker_initializer) as pool:
+                    args = [(img, save_dir, counter, i + 1) for i, img in enumerate(false_pos_imgs)]
+                    pool.starmap(save_image, args)
+                    
+        
+        accuracy_neg /= counter
+        total_count += counter
+        
+        accuracy /= total_count
+        
+        weighted_acc = (accuracy_pos + accuracy_neg)/2
+        
+        logging.info("============= Classifiers evaluated =============")
+        logging.info(f"Evaluated {num_batch} batches.")
+        for idx in range(self.classifier.head_num):
+            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
+                idx,
+                accuracy_pos[idx],
+                accuracy_neg[idx],
+                accuracy[idx],
+                weighted_acc[idx])
+            )
+        logging.info("=================================================")
+        
+        return accuracy, weighted_acc
+
     
     def explain_classifiers(self,
                             test_data,
