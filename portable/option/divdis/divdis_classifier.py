@@ -12,8 +12,6 @@ from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
-from portable.option.sets.utils import BayesianWeighting
-
 logger = logging.getLogger(__name__)
 
 MODEL_TYPE = [
@@ -35,12 +33,8 @@ class DivDisClassifier():
                  input_dim,
                  num_classes,
                  diversity_weight,
-
-                 beta_distribution_alpha,
-                 beta_distribution_beta,
-
-                 l2_reg_weight=0.001,
                  
+                 l2_reg_weight=0.001,
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
@@ -70,13 +64,6 @@ class DivDisClassifier():
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
-        #self.classifier = torch.compile(SmallCNN(num_input_channels=input_dim,
-        #                                    num_classes=num_classes,
-        #                                    num_heads=head_num),
-        #                                #backend='tensorrt',
-        #                                #dynamic=False
-        #                                )
-        
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
                                           weight_decay=l2_reg_weight # weight decay also works as L2 regularization
@@ -86,21 +73,17 @@ class DivDisClassifier():
         self.ce_criterion = torch.nn.CrossEntropyLoss()
         self.diversity_weight = diversity_weight
         
-        self.confidences = BayesianWeighting(beta_distribution_alpha,
-                                             beta_distribution_beta,
-                                             self.head_num)
+        self.state_dim = 3
     
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
-        self.confidences.save(os.path.join(path, 'confidence'))
     
     def load(self, path):
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
             self.dataset.load(path)
-            self.confidences.load(os.path.join(path, 'confidence'))
     
     def move_to_gpu(self):
         if self.use_gpu:
@@ -183,8 +166,8 @@ class DivDisClassifier():
     def predict(self, x):
         self.classifier.eval()
         
-        #if len(x.shape) == self.state_dim:
-        #    x = x.unsqueeze(0)
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
         
         if self.use_gpu:
             x = x.to("cuda")
@@ -192,13 +175,12 @@ class DivDisClassifier():
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        confidences = self.confidences.weights()
         votes = torch.argmax(pred_y, axis=-1)
         
         votes = votes.cpu().numpy()
         self.votes = votes
         
-        return pred_y, votes, confidences
+        return pred_y, votes
         
     def predict_idx(self, x, idx):
         self.classifier.eval()
@@ -211,17 +193,3 @@ class DivDisClassifier():
         
         
         return pred_y[:,idx,:]
-    
-    def update_confidence(self,
-                          was_successful: bool,
-                          votes: list):
-        success_count = votes
-        failure_count = np.ones(len(success_count)) - success_count
-        
-        if not was_successful:
-            success_count = failure_count
-            failure_count = votes
-        
-        self.confidences.update_successes(success_count)
-        self.confidences.update_failures(failure_count)
-    

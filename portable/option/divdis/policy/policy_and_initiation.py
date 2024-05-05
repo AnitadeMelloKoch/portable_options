@@ -130,7 +130,7 @@ class PolicyWithInitiation(Agent):
             update_interval=update_interval
         )
         
-        self.store_buffer_to_disk = True
+        self.store_buffer_to_disk = False
     
     def can_initiate(self, obs):
         in_context = self.context.predict(obs)
@@ -172,6 +172,10 @@ class PolicyWithInitiation(Agent):
     def store_buffer(self, dir):
         if not self.store_buffer_to_disk:
             return
+        if self.replay_buffer.memory is None:
+            print("MAYBE A PROBLEM -> NO BUFFER TO SAVE")
+            return
+        print("storing buffer")
         os.makedirs(dir, exist_ok=True)
         self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         self.replay_buffer.memory = None
@@ -179,6 +183,7 @@ class PolicyWithInitiation(Agent):
     def load_buffer(self, dir):
         if not self.store_buffer_to_disk:
             return
+        print("loading buffer")
         if os.path.exists(dir):
             self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
         else:
@@ -191,8 +196,9 @@ class PolicyWithInitiation(Agent):
         self.train_rewards.append(summed_reward)
         self.option_runs += 1
         if self.option_runs%50 == 0:
-            logging.info("Option policy success rate: {} from {} steps".format(np.mean(self.train_rewards), self.option_runs))
-            
+            logging.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
+                                                                                           self.option_runs,
+                                                                                           self.step_number))
     
     def observe(self,
                 obs,
@@ -367,7 +373,7 @@ class PolicyWithInitiation(Agent):
         if self.image_input:
             torch.save(self.cnn.state_dict(), os.path.join(dir, 'cnn.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
-        if self.store_buffer_to_disk:
+        if self.store_buffer_to_disk is False:
             self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         np.save(os.path.join(dir, "step_number.npy"), self.step_number)
         np.save(os.path.join(dir, "option_runs.npy"), self.option_runs)
@@ -382,7 +388,7 @@ class PolicyWithInitiation(Agent):
                 self.cnn.load_state_dict(torch.load(os.path.join(dir, 'cnn.pt')))
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
-            if self.store_buffer_to_disk:
+            if self.store_buffer_to_disk is False:
                 self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
             self.step_number = np.load(os.path.join(dir, "step_number.npy"))
             self.option_runs = np.load(os.path.join(dir, "option_runs.npy"))
@@ -391,5 +397,4 @@ class PolicyWithInitiation(Agent):
         else:
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     
-
 

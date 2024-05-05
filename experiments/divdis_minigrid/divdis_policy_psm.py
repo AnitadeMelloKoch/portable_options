@@ -1,5 +1,4 @@
 import argparse
-import multiprocessing
 from portable.utils.utils import load_gin_configs
 import torch 
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
@@ -40,8 +39,8 @@ if __name__ == "__main__":
         image_input=True
         )
     
-    #env_seed_list = [1,2,3,4,5,6,7,8,9]
-    env_seed_list = [1,2,3]
+    env_seed_list = [1,2,3,4,5,6,7,8,9]
+    #env_seed_list = [1,2,3]
     
     env_2_list = [AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
         'AdvancedDoorKey-8x8-v0',
@@ -67,7 +66,6 @@ if __name__ == "__main__":
     force_door_closed=True
     ) for seed in env_seed_list]
 
-    multiprocessing.set_start_method('spawn', force=True)
     
     experiment = AdvancedMinigridDivDisOptionExperiment(base_dir=args.base_dir,
                                                         seed=args.seed,

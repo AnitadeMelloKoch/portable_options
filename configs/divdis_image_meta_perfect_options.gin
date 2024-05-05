@@ -9,6 +9,7 @@ AdvancedMinigridDivDisMetaExperiment.num_options                    = 7
 AdvancedMinigridDivDisMetaExperiment.num_primitive_actions          = 0
 AdvancedMinigridDivDisMetaExperiment.use_gpu                        = True
 AdvancedMinigridDivDisMetaExperiment.make_videos                    = True
+AdvancedMinigridDivDisMetaExperiment.option_type                    = "mock"
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
@@ -19,7 +20,7 @@ ActionPPO.update_interval                                           = 100
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 50000
+PolicyWithInitiation.buffer_length                                  = 5000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4

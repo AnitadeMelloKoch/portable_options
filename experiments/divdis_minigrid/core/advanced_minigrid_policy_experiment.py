@@ -1,6 +1,5 @@
 import logging
 import datetime
-from multiprocessing import Process
 import os 
 import gin 
 import pickle 
@@ -160,21 +159,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                                        video_generator=self.video_generator)
         
         
-        #self.train_policy(base_option, env_1, env_seed_1, max_steps=5e4)
-        #self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e4)
-        def train_policy_process(option, env, env_seed, max_steps):
-            self.train_policy(option, env, env_seed, max_steps)
-            
-        process_base = Process(target=train_policy_process, args=(base_option, env_1, env_seed_1, 2e4))
-        process_trained = Process(target=train_policy_process, args=(trained_option, env_2, env_seed_2, 2e4))
-
-        # Start the processes
-        process_base.start()
-        process_trained.start()
-
-        # Wait for both processes to complete
-        process_base.join()
-        process_trained.join()
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e4)
+        self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e4)
         
         for _ in range(evaluate_num):
             if evaluation_type != "psm":
@@ -274,12 +260,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=2e4)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=1e4)
         
-        def train_policy_process(option, env, env_seed, max_steps):
-            self.train_policy(option, env, env_seed, max_steps)
-            
-        
+
         for idx, seed in enumerate(env_seed_2_list):
             trained_option = DivDisMockOption(use_gpu=self.use_gpu,
                                         terminations=terminations[1],
@@ -296,22 +279,17 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                     policy_phi=self.policy_phi,
                                                     video_generator=self.video_generator)
             
-            #self.train_policy(trained_option, env_2_list[idx], seed, max_steps=2e4)
-            #self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=2e4)
-            process_trained = Process(target=train_policy_process, args=(trained_option, env_2_list[idx], seed, 2e4))
-            process_wrong = Process(target=train_policy_process, args=(wrong_trained_option, env_3_list[idx], seed, 2e4))
-            process_trained.start()
-            process_wrong.start()
-            process_trained.join()
-            process_wrong.join()
+            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=1e4)
+            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=1e4)
             
             for _ in range(evaluate_num):
                 if evaluation_type != "psm":
                     test_buffer = self.get_test_buffer(base_option, 
                                                 env_1, 
-                                                1000,
+                                                500,
                                                 0,
                                                 env_seed_1)
+                    test_buffer = test_buffer.to("cuda")
                     _, base_q_values = base_option.evaluate_states(0,
                                                             test_buffer,
                                                             env_seed_1)
@@ -373,6 +351,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                 5,
                                                                 0,
                                                                 seed)
+                    test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
+                    test_buffer_traj_trained = [traj.to("cuda") for traj in test_buffer_traj_trained]
+                    test_buffer_traj_wrong = [traj.to("cuda") for traj in test_buffer_traj_wrong]
                 
                     base_q_values = [base_option.evaluate_states(0,traj,env_seed_1)[1] for traj in test_buffer_traj]
                     trained_q_values = [trained_option.evaluate_states(0,traj,seed)[1] for traj in test_buffer_traj_trained]
@@ -441,11 +422,10 @@ class AdvancedMinigridDivDisOptionExperiment():
         return test_trajectories
     
     def train_policy(self, option, env, env_seed, max_steps=1e6):
-        total_steps = 0
-        train_rewards = deque(maxlen=200)
-        episode = 0
         for head_idx in range(option.num_heads):
-            option.set_policy_save_to_disk(head_idx, env_seed, False)
+            train_rewards = deque(maxlen=200)
+            episode = 0
+            total_steps = 0
             while total_steps < max_steps:
                 rand_num = np.random.randint(low=0, high=50)
                 obs, info = env.reset(agent_reposition_attempts=rand_num)
@@ -464,8 +444,7 @@ class AdvancedMinigridDivDisOptionExperiment():
             logging.info("idx {} finished -> steps: {} average train reward: {}".format(head_idx,
                                                                                         total_steps,
                                                                                         np.mean(train_rewards)))
-            option.save()
-            option.set_policy_save_to_disk(head_idx, env_seed, True)
+        option.save()
             
     
     def evaluate_option(self,
@@ -484,28 +463,30 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            use_seed_for_initiation=True,
                                            policy_phi=self.policy_phi,
                                            video_generator=self.video_generator)
-        new_option = DivDisMockOption(use_gpu=self.use_gpu,
-                                      terminations=terminations_2,
-                                      log_dir=os.path.join(self.log_dir, "new"),
-                                      save_dir=os.path.join(self.save_dir, "new"),
-                                      use_seed_for_initiation=True,
-                                      policy_phi=self.policy_phi,
-                                      video_generator=self.video_generator)
+
         
         self.train_policy(original_option, env_1, seed_1, max_steps=2e4)
         
-        head_scores = np.zeros(new_option.num_heads)
+        head_scores = np.zeros(len(terminations_2))
         
         for seed_2 in seeds_2:
+            new_option = DivDisMockOption(use_gpu=self.use_gpu,
+                                terminations=terminations_2,
+                                log_dir=os.path.join(self.log_dir, "new"),
+                                save_dir=os.path.join(self.save_dir, "new"),
+                                use_seed_for_initiation=True,
+                                policy_phi=self.policy_phi,
+                                video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
             self.train_policy(new_option, env_2, seed_2, max_steps=2e4)
             for head_idx in range(new_option.num_heads):
                 if evaluation_type != "psm":
-                    test_buffer = self.get_test_buffer(original_option,
+                    test_buffer = self.get_test_buffer(new_option,
                                                     env_2,
-                                                    1000,
+                                                    500,
                                                     head_idx,
                                                     seed_2)
+                    test_buffer = test_buffer.to("cuda")
 
                     
                     _, original_q_values = original_option.evaluate_states(0,
@@ -525,17 +506,20 @@ class AdvancedMinigridDivDisOptionExperiment():
                         score = get_kl_distance(original_q_values, new_q_values)
                         
                 else:
-                    #TODO: question: should this be evaluated in the env it was originally trained on?
                     test_buffer_traj = self.get_test_buffer_trajectories(original_option, 
                                                 env_1, 
                                                 5,
                                                 head_idx,
-                                                seed_1)
+                                                seed_1,
+                                                max_steps=400)
                     test_buffer_traj_new = self.get_test_buffer_trajectories(new_option,
                                                             env_2,
                                                             5,
                                                             head_idx,
-                                                            seed_2)
+                                                            seed_2,
+                                                            max_steps=400)
+                    test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
+                    test_buffer_traj_new = [traj.to("cuda") for traj in test_buffer_traj_new]
                     
                     original_q_values = [original_option.evaluate_states(0,traj,seed_1)[1] for traj in test_buffer_traj]
                     new_q_values = [new_option.evaluate_states(head_idx,traj,seed_2)[1] for traj in test_buffer_traj_new]

@@ -268,7 +268,7 @@ class DivDisMockOption():
                                                           seed)
             eval_rewards.append(sum(eval_run_rewards))
             
-            if episode % 50 == 0:
+            if episode % 1 == 0:
                 logging.info("idx {} steps: {} average train reward: {} average eval reward {}".format(idx,
                                                                           total_steps,
                                                                           np.mean(train_rewards),
@@ -436,7 +436,9 @@ class DivDisMockOption():
                         idx,
                         states,
                         seed):
+        self.policies[idx][seed].move_to_gpu()
         actions, q_vals = self.policies[idx][seed].batch_act(states)
+        self.policies[idx][seed].move_to_cpu()
         return actions, q_vals
     
     def get_confidences(self):
@@ -446,17 +448,3 @@ class DivDisMockOption():
                            update):
         self.confidences.update_successes(update)
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
