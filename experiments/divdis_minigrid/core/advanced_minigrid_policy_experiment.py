@@ -1,5 +1,6 @@
 import logging
 import datetime
+from multiprocessing import Process
 import os 
 import gin 
 import pickle 
@@ -158,8 +159,22 @@ class AdvancedMinigridDivDisOptionExperiment():
                                        policy_phi=self.policy_phi,
                                        video_generator=self.video_generator)
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e5)
-        self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e5)
+        
+        #self.train_policy(base_option, env_1, env_seed_1, max_steps=5e4)
+        #self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e4)
+        def train_policy_process(option, env, env_seed, max_steps):
+            self.train_policy(option, env, env_seed, max_steps)
+            
+        process_base = Process(target=train_policy_process, args=(base_option, env_1, env_seed_1, 2e4))
+        process_trained = Process(target=train_policy_process, args=(trained_option, env_2, env_seed_2, 2e4))
+
+        # Start the processes
+        process_base.start()
+        process_trained.start()
+
+        # Wait for both processes to complete
+        process_base.join()
+        process_trained.join()
         
         for _ in range(evaluate_num):
             if evaluation_type != "psm":
@@ -259,7 +274,11 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e5)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=2e4)
+        
+        def train_policy_process(option, env, env_seed, max_steps):
+            self.train_policy(option, env, env_seed, max_steps)
+            
         
         for idx, seed in enumerate(env_seed_2_list):
             trained_option = DivDisMockOption(use_gpu=self.use_gpu,
@@ -277,8 +296,14 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                     policy_phi=self.policy_phi,
                                                     video_generator=self.video_generator)
             
-            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=5e5)
-            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=5e5)
+            #self.train_policy(trained_option, env_2_list[idx], seed, max_steps=2e4)
+            #self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=2e4)
+            process_trained = Process(target=train_policy_process, args=(trained_option, env_2_list[idx], seed, 2e4))
+            process_wrong = Process(target=train_policy_process, args=(wrong_trained_option, env_3_list[idx], seed, 2e4))
+            process_trained.start()
+            process_wrong.start()
+            process_trained.join()
+            process_wrong.join()
             
             for _ in range(evaluate_num):
                 if evaluation_type != "psm":
@@ -467,13 +492,13 @@ class AdvancedMinigridDivDisOptionExperiment():
                                       policy_phi=self.policy_phi,
                                       video_generator=self.video_generator)
         
-        self.train_policy(original_option, env_1, seed_1, max_steps=5e5)
+        self.train_policy(original_option, env_1, seed_1, max_steps=2e4)
         
         head_scores = np.zeros(new_option.num_heads)
         
         for seed_2 in seeds_2:
             env_2 = env_2_builder(seed_2)
-            self.train_policy(new_option, env_2, seed_2, max_steps=5e5)
+            self.train_policy(new_option, env_2, seed_2, max_steps=2e4)
             for head_idx in range(new_option.num_heads):
                 if evaluation_type != "psm":
                     test_buffer = self.get_test_buffer(original_option,

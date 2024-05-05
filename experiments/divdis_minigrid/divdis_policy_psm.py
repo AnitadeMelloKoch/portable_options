@@ -39,7 +39,8 @@ if __name__ == "__main__":
         image_input=True
         )
     
-    env_seed_list = [1,2,3,4,5,6,7,8,9]
+    #env_seed_list = [1,2,3,4,5,6,7,8,9]
+    env_seed_list = [1,2,3]
     
     env_2_list = [AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
         'AdvancedDoorKey-8x8-v0',
