@@ -15,8 +15,8 @@ AdvancedMinigridDivDisMetaExperiment.classifier_epochs              = 200
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
-ActionPPO.final_epsilon                                             = 0.05
-ActionPPO.final_exploration_frames                                  = 1e6
+ActionPPO.final_epsilon                                             = 0.0
+ActionPPO.final_exploration_frames                                  = 10
 ActionPPO.num_actions                                               = 25
 ActionPPO.update_interval                                           = 100
 

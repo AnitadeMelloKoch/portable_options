@@ -209,6 +209,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                          max_steps,
                          min_performance):
         total_steps = 0
+        decisions = 0
         episode_rewards = deque(maxlen=200)
         episode = 0
         undiscounted_rewards = []
@@ -238,6 +239,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                     undiscounted_reward += reward
                     rewards = [reward]
                     total_steps += 1
+                    decisions += 1
                     steps = 1
                 else:
                     # if (action_mask[action] is False):
@@ -257,20 +259,24 @@ class AdvancedMinigridDivDisMetaExperiment():
                                                                                                             max_steps=50,
                                                                                                             make_video=True)
                 undiscounted_reward += np.sum(rewards)
-                total_steps += 1
+                decisions += 1
+                total_steps += steps
+                
                 
                 self.experiment_data.append({
-                    "meta_step": total_steps,
+                    "meta_step": decisions,
                     "option_length": steps,
-                    "option_rewards": rewards
+                    "option_rewards": rewards,
+                    "frames": total_steps
                 })
                 
                 self.observe(obs,
                             rewards,
                             done)
                 obs = next_obs
-            logging.info("Episode {} total steps: {}  average undiscounted reward: {}".format(episode,
+            logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
+                                                                                     decisions,
                                                                                      np.mean(episode_rewards)))
             
             if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
