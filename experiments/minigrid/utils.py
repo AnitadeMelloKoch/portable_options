@@ -200,9 +200,16 @@ class GrayscaleWrapper(ObservationWrapper):
         return observation.astype(np.uint8)
 
 class ScaleObsWrapper(ObservationWrapper):
+    def __init__(self, 
+                 env: Env,
+                 image_size: tuple):
+        super().__init__(env)
+        
+        self.image_size = image_size
+    
     def observation(self, observation):
         img = Image.fromarray(observation)
-        return np.asarray(img.resize((128, 128), Image.BILINEAR))
+        return np.asarray(img.resize(self.image_size, Image.BICUBIC))
 
 class NormalizeObsWrapper(ObservationWrapper):
     def observation(self, observation):
@@ -320,10 +327,9 @@ def environment_builder(
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
     if scale_obs:
-        env = ScaleObsWrapper(env)
+        env = ScaleObsWrapper(env, final_image_size)
     if pad_obs:
         env = PadObsWrapper(env, final_image_size)
-    # env = ResizeObsWrapper(env)
     env = TransposeObsWrapper(env)
     if grayscale:
         env = GrayscaleWrapper(env)
