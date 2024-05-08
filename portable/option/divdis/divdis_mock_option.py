@@ -24,6 +24,7 @@ class DivDisMockOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
+                 exp_type,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
@@ -33,6 +34,7 @@ class DivDisMockOption():
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
+        self.exp_type = exp_type
         # this is for debugging. By using seed for initiation we do not need to 
         # learn the initiation set and are assuming the initiation set is the seed
         self.use_seed_for_initiation = use_seed_for_initiation
@@ -185,7 +187,11 @@ class DivDisMockOption():
             action = policy.act(state)
             if make_video and self.video_generator:
                 self._video_log("[option] action: {}".format(action))
-                self.video_generator.make_image(env.render())
+                if self.exp_type == "minigrid":
+                    self.video_generator.make_image(env.render())
+                else:
+                    self.video_generator.make_image(env.render("rgb_array"))
+                    
             
             next_state, reward, done, info = env.step(action)
             
@@ -391,8 +397,10 @@ class DivDisMockOption():
                     for x in range(len(q_vals[0])):
                         self._video_log("[option] action {} value {}".format(x, q_vals[0][x]))
                 if self.video_generator is not None and make_video:
-                    img = env.render()
-                    self.video_generator.make_image(img)
+                    if self.exp_type == "minigrid":
+                        self.video_generator.make_image(env.render())
+                    else:
+                        self.video_generator.make_image(env.render("rgb_array"))
                 
                 next_state, reward, done, info = env.step(action)
                 should_terminate = self.terminations[idx](state,
@@ -424,8 +432,10 @@ class DivDisMockOption():
                     self._video_log("option timed out")
             
             if self.video_generator is not None and make_video:
-                img = env.render()
-                self.video_generator.make_image(img)
+                if self.exp_type == "minigrid":
+                    self.video_generator.make_image(env.render())
+                else:
+                    self.video_generator.make_image(env.render("rgb_array"))
             
             policy.move_to_cpu()
             policy.store_buffer(buffer_dir)

@@ -37,3 +37,5 @@ PolicyWithInitiation.num_actions                                    = 7
 PolicyWithInitiation.policy_infeature_size                          = 23
 PolicyWithInitiation.q_hidden_size                                  = 64
 PolicyWithInitiation.gru_hidden_size                                = 128
+
+DivDisMockOption.exp_type                                           = "monte"

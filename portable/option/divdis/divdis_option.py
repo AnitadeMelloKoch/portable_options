@@ -23,6 +23,7 @@ class DivDisOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
+                 exp_type,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
@@ -32,6 +33,7 @@ class DivDisOption():
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
+        self.exp_type = exp_type
         
         self.use_seed_for_initiation = use_seed_for_initiation
         
@@ -53,12 +55,6 @@ class DivDisOption():
         self.initiable_policies = None
         self.video_generator = video_generator
         self.make_plots = False
-        
-        # if plot_dir is not None:
-        #     self.make_plots = True
-        #     self.plot_dir = plot_dir
-        #     self.term_states = []
-        #     self.missed_term_states = []
         
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
@@ -190,9 +186,6 @@ class DivDisOption():
         self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
-        img_state = None
-        img_next_state = env.render()
-        
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
             infos.append(info)
@@ -200,11 +193,12 @@ class DivDisOption():
             action = policy.act(state)
             if make_video and self.video_generator:
                 self._video_log("[option] action: {}".format(action))
-                self.video_generator.make_image(env.render())
+                if self.exp_type == "minigrid":
+                    self.video_generator.make_image(env.render())
+                else:
+                    self.video_generator.make_image(env.render("rgb_array"))
             
             next_state, reward, done, info = env.step(action)
-            img_state = img_next_state
-            img_next_state = env.render()
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = torch.argmax(pred_y) == 1
@@ -216,31 +210,8 @@ class DivDisOption():
             
             if should_terminate:
                 reward = 1
-                if self.make_plots:
-                    np_next_state = list(next_state.cpu().numpy())
-                    if np_next_state not in self.term_states:
-                        self.plot_term_state(state.cpu().numpy(),
-                                             img_state, 
-                                             next_state.cpu().numpy(),
-                                             img_next_state, 
-                                             idx, 
-                                             success=True,
-                                             pred_y=pred_y)
-                        self.term_states.append(np_next_state)
             else:
                 reward = 0
-                if self.make_plots:
-                    if perfect_term(env) is True:
-                        np_next_state = list(next_state.cpu().numpy())
-                        if np_next_state not in self.missed_term_states:
-                            self.plot_term_state(state.cpu().numpy(),
-                                                 img_state, 
-                                                 next_state.cpu().numpy(),
-                                                 img_next_state, 
-                                                 idx, 
-                                                 success=False,
-                                                 pred_y=pred_y)
-                            self.missed_term_states.append(np_next_state)
             
             policy.observe(state,
                            action,
@@ -382,7 +353,10 @@ class DivDisOption():
                 self._video_log("action: {}".format(action))
                 self._video_log("State representation: {}".format(state))
                 if self.video_generator is not None:
-                    img = env.render()
+                    if self.exp_type == "minigrid":
+                        img = env.render()
+                    else:
+                        img = env.render("rgb_array")
                     self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
@@ -417,8 +391,10 @@ class DivDisOption():
                     self._video_log("option timed out")
             
             if self.video_generator is not None and make_video:
-                img = env.render()
-                self.video_generator.make_image(img)
+                if self.exp_type == "minigrid":
+                    self.video_generator.make_image(env.render())
+                else:
+                    self.video_generator.make_image(env.render("rgb_array"))
             
             policy.move_to_cpu()
             self.terminations.move_to_cpu()

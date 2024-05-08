@@ -1,5 +1,59 @@
 from portable.utils.ale_utils import get_object_position, get_skull_position
 
+bottom_of_ladder = [
+    (20, 148, 1), # bottom of left ladder room 1
+    (76, 192, 1), # bottom of middle ladder room 1
+    (133, 148, 1), # bottom right ladder room 1
+    (77, 235, 4), # middle ladder room 4
+    (77, 235, 6), # bottom ladder room 6
+    (77, 235, 9), # bottom of ladder room 9
+    (77, 235, 10), # bottom of ladder room 10
+    (77, 236, 11), # middle of ladder room 11
+    (77, 237, 13), # middle of ladder room 13
+    (77, 235, 19), # bottom ladder room 19
+    (76, 235, 21), # bottom ladder room 21
+    (77, 235, 22), # bottom ladder room 22
+]
+
+top_of_ladder = [
+    (21, 192, 1), # top of left ladder room 1
+    (77, 235, 1), # top of middle ladder room 1
+    (129, 192, 1), # top right ladder room 1
+    (74, 235, 0), # top ladder room 0
+    (79, 235, 2), # top ladder room 2
+    (76, 235, 3), # top ladder room 3
+    (77, 235, 4), # middle ladder room 4
+    (77, 157, 5), # top ladder room 5
+    (79, 235, 7), # top ladder room 7
+    (77, 235, 11), # middle of ladder room 11
+    (77, 235, 13), # middle of ladder room 13
+    (80, 160, 14), # top ladder room 14
+]
+
+def check_termination_bottom_ladder(state, env):
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
+    
+    position = info["position"]
+    
+    for pos in bottom_of_ladder:
+        if in_epsilon_square(pos, position):
+            return True
+    return False
+
+def check_termination_top_ladder(state, env):
+    info = env.get_current_info({})
+    if info["dead"]:
+        return False
+    
+    position = info["position"]
+    
+    for pos in top_of_ladder:
+        if in_epsilon_square(pos, position):
+            return True
+    return False
+
 def get_snake_x_left(position):
     if position[2] == 9:
         return 11
@@ -16,8 +70,6 @@ def get_snake_x_right(position):
     if position[2] == 22:
         return 25
 
-
-
 def in_epsilon_square(current_position, final_position):
     epsilon = 2
     if current_position[0] <= (final_position[0] + epsilon) and \
@@ -25,67 +77,7 @@ def in_epsilon_square(current_position, final_position):
         current_position[1] <= (final_position[1] + epsilon) and \
         current_position[1] >= (final_position[1] - epsilon):
         return True
-    return False   
-
-def get_percent_completed_enemy(start_pos, final_pos, terminations, env):
-    def manhatten(a,b):
-        return sum(abs(val1-val2) for val1, val2 in zip((a[0], a[1]),(b[0],b[1])))
-
-    if start_pos[2] != final_pos[2]:
-        return 0
-
-    info = env.get_current_info({})
-    if info["dead"]:
-        return 0
-
-    room = start_pos[2]
-    ground_y = start_pos[1]
-    ram = env.unwrapped.ale.getRAM()
-    true_distance = 0
-    completed_distance = 0
-    if final_pos[2] != room:
-        return 0
-    if final_pos[2] == 4 and final_pos[0] == 5:
-        return 0
-    if room in [2,3]:
-        # skulls
-        skull_x = get_skull_position(ram)
-        end_pos = (skull_x-25, ground_y)
-        if final_pos[0] < skull_x-25 and final_pos[1] <= ground_y:
-            return 1
-        else:
-            true_distance = manhatten(start_pos, end_pos)
-            completed_distance = manhatten(start_pos, final_pos)
-    if room in [0,1,18]:
-        # skulls
-        skull_x = get_skull_position(ram)
-        end_pos = (skull_x-6, ground_y)
-        if final_pos[0] < skull_x-6 and final_pos[1] <= ground_y:
-            return 1
-        else:
-            true_distance = manhatten(start_pos, end_pos)
-            completed_distance = manhatten(start_pos, final_pos)
-    elif room in [4,13,21]:
-        # spiders
-        spider_x, _ = get_object_position(ram)
-        end_pos = (spider_x - 6, ground_y)
-        if final_pos[0] < spider_x and final_pos[1] <= ground_y:
-            return 1
-        else:
-            true_distance = manhatten(start_pos, end_pos)
-            completed_distance = manhatten(start_pos, final_pos)
-    elif room in [9,11,22]:
-        # snakes
-        end_pos = terminations
-        if in_epsilon_square(final_pos, end_pos):
-            return 1
-        else:
-            true_distance = manhatten(start_pos, end_pos)
-            completed_distance = manhatten(start_pos, final_pos)
-    else:
-        return 0
-
-    return completed_distance/(true_distance+1e-5)
+    return False  
 
 def check_termination_correct_enemy_left(state, env):
     info = env.get_current_info({})
@@ -181,3 +173,9 @@ def check_termination_correct_enemy_right(state, env):
             return False
     else:
         return False
+
+
+
+
+
+

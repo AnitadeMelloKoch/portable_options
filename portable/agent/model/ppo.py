@@ -11,6 +11,7 @@ from pfrl import explorers
 import gin
 from typing import Any, Callable, Sequence
 from torch.utils.data._utils.collate import default_collate
+from pfrl.policies import SoftmaxCategoricalHead
 
 class MaskedPPO(PPO):
     def _batch_act_eval(self, batch_obs):
@@ -239,18 +240,50 @@ def create_cnn_vf(n_channels, hidden_feature_size=128):
         nn.Linear(64, 1)
     )
 
+def lecun_init(layer, gain=1):
+    if isinstance(layer, (nn.Conv2d, nn.Linear)):
+        pfrl.initializers.init_lecun_normal(layer.weight, gain)
+        nn.init.zeros_(layer.bias)
+    else:
+        pfrl.initializers.init_lecun_normal(layer.weight_ih_l0, gain)
+        pfrl.initializers.init_lecun_normal(layer.weight_hh_l0, gain)
+        nn.init.zeros_(layer.bias_ih_l0)
+        nn.init.zeros_(layer.bias_hh_l0)
+    return layer
+
+def create_atari_model(n_channels, n_actions):
+    return nn.Sequential(
+        lecun_init(nn.Conv2d(n_channels, 32, 8, stride=4)),
+        nn.ReLU(),
+        lecun_init(nn.Conv2d(32, 64, 4, stride=2)),
+        nn.ReLU(),
+        lecun_init(nn.Conv2d(64, 64, 3, stride=1)),
+        nn.ReLU(),
+        nn.Flatten(),
+        lecun_init(nn.Linear(3136,512)),
+        nn.ReLU(),
+        pfrl.nn.Branched(
+            nn.Sequential(
+                lecun_init(nn.Linear(512, n_actions), 1e-2),
+                SoftmaxCategoricalHead()
+            ),
+            lecun_init(nn.Linear(512, 1))
+        )
+    )
+
 @gin.configurable
 class ActionPPO():
     def __init__(self,
                  use_gpu,
-                 policy,
-                 value_function,
                  learning_rate,
                  state_shape,
                  phi,
                  final_epsilon,
                  final_exploration_frames,
                  num_actions,
+                 policy=None,
+                 value_function=None,
+                 model=None,
                  epochs_per_update=10,
                  clip_eps_vf=None,
                  entropy_coef=0,
@@ -260,7 +293,12 @@ class ActionPPO():
                  minibatch_size=64,
                  update_interval=2048):
         
-        model = pfrl.nn.Branched(policy, value_function)
+        self.returns_vals = False
+        if model is None:
+            assert policy is not None
+            assert value_function is not None
+            model = pfrl.nn.Branched(policy, value_function)
+            self.returns_vals = True
         opt = torch.optim.Adam(model.parameters(),
                                lr=learning_rate,
                                eps=1e-5)
@@ -306,23 +344,24 @@ class ActionPPO():
     
     def act(self, obs):
         self.step += 1
-        # print(obs[0].shape)
-        q_vals = self.agent.batch_act([obs])
-        q_vals = torch.from_numpy(q_vals)
-        # print(q_vals.shape)
+        out = self.agent.batch_act([obs])
+        out = torch.from_numpy(out)
         
-        # q_vals[np.logical_not([obs[1]])] = -np.inf
+        if not self.returns_vals:
+            return out, None
+        
         if self.agent.training:
             action = self.explorer.select_action(
                 self.step,
-                greedy_action_func=lambda: torch.argmax(q_vals)
+                greedy_action_func=lambda: torch.argmax(out)
             )
+            
             # while q_vals[action] == -np.inf:
             #     action = np.random.randint(self.num_actions)
         else:
-            action = torch.argmax(q_vals)
+            action = torch.argmax(out)
         
-        return action, q_vals
+        return action, out
     
     def q_function(self, obs):
         return self.agent.batch_act(obs)
