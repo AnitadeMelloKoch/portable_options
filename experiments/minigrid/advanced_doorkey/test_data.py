@@ -7,7 +7,7 @@ initiation_positive_files = [
 ]
 
 initiation_negative_files = [
-        'resources/minigrid_images/adv_doorkey_8x8_v2_togoal_0_termination_positive.npy',
+        'resources/large_minigrid_images/adv_doorkey_getbluekey_doorblue_0_termination_negative.npy',
 ]
 
 dataset_pos = SetDataset(batchsize=16)

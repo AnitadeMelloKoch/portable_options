@@ -1,17 +1,13 @@
-from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
-import argparse 
+import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
-from experiments.minigrid.utils import environment_builder
-from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
-import numpy as np
-from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import LockedRoomPolicyTrainWrapper
-import matplotlib.pyplot as plt
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
+from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
+from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
+from experiments.minigrid.utils import environment_builder
 from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--base_dir", type=str, required=True)
@@ -31,19 +27,22 @@ if __name__ == "__main__":
         return x
     
     terminations = [
-        [PerfectDoorOpen("green")],
-        [PerfectDoorOpen("purple")],
-        [PerfectDoorOpen("blue")]
+        [PerfectGetKey("red")]
     ]
     
-    env = LockedRoomPolicyTrainWrapper(environment_builder('LockedRoom-v0',
-                            seed=0,
-                            grayscale=False,
-                            normalize_obs=False,
-                            scale_obs=True,
-                            final_image_size=(128,128),
-                            max_steps=2000))
-
+    env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
+        "AdvancedDoorKey-19x19-v0",
+        seed=0,
+        max_steps=6000,
+        grayscale=False,
+        normalize_obs=False,
+        scale_obs=True,
+        final_image_size=(128,128)
+    ),
+    door_colour="red",
+    time_limit=6000,
+    image_input=True)
+    
     experiment = DivDisMetaExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       agent_phi=policy_phi,
@@ -53,8 +52,16 @@ if __name__ == "__main__":
                                       action_vf=create_cnn_vf(3),
                                       terminations=terminations)
     
-    experiment.train_option_policies([[[env]],
-                                      [[env]],
-                                      [[env]]],
+    experiment.train_option_policies([[[env]]],
                                      0,
-                                     1e6)
+                                     2e6)
+    
+
+
+
+
+
+
+
+
+

@@ -167,7 +167,16 @@ class MiniGridDataCollector:
                                                 key_colours=other_keys_colour,
                                                 image_input=False)
             env_type = 'factored_minigrid'
-
+        elif self.env_mode == 3:
+            env = environment_builder('AdvancedDoorKey-19x19-v0', seed=self.training_seed, grayscale=False,
+                                                    scale_obs=True,
+                                                    normalize_obs=False,
+                                                    final_image_size=(128,128))
+            env = AdvancedDoorKeyPolicyTrainWrapper(env,
+                                                    door_colour=door_colour,
+                                                    key_colours=other_keys_colour,
+                                                    image_input=True)
+            env_type = 'large_minigrid'
         else:
             raise ValueError("Environment mode not recognised! Use either 1 or 2")
         
@@ -236,6 +245,11 @@ class GridEnv:
         #self.screen = self.env.render()
         #self.ax.imshow(self.screen)
         #plt.show(block=False)
+        
+        if env_type == "large_minigrid":
+            self.max_val = 17
+        else:
+            self.max_val = 6
 
 
     def collect_data(self):
@@ -245,7 +259,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # PICK UP KEY
             pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
@@ -257,7 +271,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # UNLOCK DOOR
             unlock_loc = (self.door_loc[0], self.door_loc[1]-1)
@@ -268,7 +282,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # OPEN DOOR
             self.go_to(unlock_loc)
@@ -277,7 +291,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
 
             # ENTER OTHER ROOM
             self.go_to(unlock_loc)
@@ -289,7 +303,7 @@ class GridEnv:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
-            self.sweep((1, self.wall_col+1), (6,6))
+            self.sweep((1, self.wall_col+1), (self.max_val,self.max_val))
             
             # SAVE IMAGES
             self.save_to_file()
@@ -301,7 +315,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # PICK UP KEY
             pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
@@ -313,7 +327,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # UNLOCK DOOR
             unlock_loc = (self.door_loc[0], self.door_loc[1]-1)
@@ -326,7 +340,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # OPEN DOOR
             self.go_to(unlock_loc)
@@ -336,7 +350,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
 
             # ENTER OTHER ROOM
             self.go_to(unlock_loc)
@@ -348,7 +362,7 @@ class GridEnv:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
-            self.sweep((1, self.wall_col+1), (6,6))
+            self.sweep((1, self.wall_col+1), (self.max_val,self.max_val))
             
             # SAVE IMAGES
             self.save_to_file()
@@ -360,7 +374,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
             
             # PICK UP KEY
             pickup_loc, facing_needed = self.key_pick_loc(self.target_key_loc)
@@ -372,7 +386,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
 
             # PICK UP CORRECT KEY
             pickup_loc, facing_needed = self.key_pick_loc(self.correct_key_loc)
@@ -390,7 +404,7 @@ class GridEnv:
             ## UNLOCKED & CLOSED
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
 
             ## UNLOCKED & OPEN
             # OPEN DOOR
@@ -400,7 +414,7 @@ class GridEnv:
 
             # GET TO TOP LEFT CORNER & SWEEP ROOM
             self.go_to((1,1))
-            self.sweep((1,1), (6,self.wall_col-1))
+            self.sweep((1,1), (self.max_val,self.wall_col-1))
 
             # ENTER OTHER ROOM
             self.go_to(unlock_loc)
@@ -412,7 +426,7 @@ class GridEnv:
                 print('Agent successfully entered other room!')
 
             # SWEEP OTHER ROOM
-            self.sweep((1, self.wall_col+1), (6,6))
+            self.sweep((1, self.wall_col+1), (self.max_val,self.max_val))
             
             # SAVE IMAGES
             self.save_to_file()
@@ -665,16 +679,18 @@ class GridEnv:
             save_dir = 'resources/minigrid_images'
         elif self.env_type == 'factored_minigrid':
             save_dir = 'resources/factored_minigrid_images'
+        elif self.env_type == 'large_minigrid':
+            save_dir = 'resources/large_minigrid_images'
         else:
             raise ValueError("Environment type not recognised! Use either 'minigrid' or 'factored_minigrid'")
         
         # Task specific base name
         if self.task.lower()==('get_key' or 'getkey'):
-            base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
+            base_file_name = f"adv_doorkey_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
         elif self.task.lower()==('open_door' or 'opendoor'):
-            base_file_name = f"adv_doorkey_8x8_v2_open{self.door_color}door_door{self.door_color}_{self.training_seed}"
+            base_file_name = f"adv_doorkey_open{self.door_color}door_door{self.door_color}_{self.training_seed}"
         elif self.task.lower()==('get_diff_key' or 'getdiffkey'):
-            base_file_name = f"adv_doorkey_8x8_v2_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
+            base_file_name = f"adv_doorkey_get{self.key_color}key_door{self.door_color}_{self.training_seed}"
         else:
             raise ValueError("Task not recognised! Use either get_key, open_door, get_diff_key")
 
@@ -701,8 +717,8 @@ class GridEnv:
 if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
     
-    seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14]
-    USE_MP = True
+    seeds_to_collect = [7, 8, 9, 10, 11,12,13,14]
+    USE_MP = False
     
     if USE_MP:
         import multiprocess as mp
@@ -713,7 +729,7 @@ if __name__ == "__main__":
     else:
         from tqdm import tqdm
         for seed in tqdm(seeds_to_collect):
-            meta_data_collector.collect_envs(seed, 1, 1, False)
+            meta_data_collector.collect_envs(seed, 3, 1, False)
         
     
 
