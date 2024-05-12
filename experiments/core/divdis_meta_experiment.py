@@ -265,8 +265,8 @@ class DivDisMetaExperiment():
                                                                                                             obs,
                                                                                                             info,
                                                                                                             seed,
-                                                                                                            max_steps=50,
-                                                                                                            make_video=True)
+                                                                                                            max_steps=200,
+                                                                                                            make_video=False)
                 undiscounted_reward += np.sum(rewards)
                 decisions += 1
                 total_steps += steps
