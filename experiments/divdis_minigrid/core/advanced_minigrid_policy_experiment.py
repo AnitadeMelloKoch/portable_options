@@ -1,6 +1,7 @@
 import logging
 import datetime
-import os 
+import os
+import time 
 import gin 
 import pickle 
 import numpy as np 
@@ -205,12 +206,10 @@ class AdvancedMinigridDivDisOptionExperiment():
             else:
                 test_buffer_traj = self.get_test_buffer_trajectories(base_option, 
                                                 env_1, 
-                                                5,
                                                 0,
                                                 env_seed_1)
                 test_buffer_traj_trained = self.get_test_buffer_trajectories(trained_option,
                                                             env_2,
-                                                            5,
                                                             0,
                                                             env_seed_2)
                 
@@ -225,8 +224,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                 rand_psm = 0
                 trained_psm = 0
                 for traj_idx in range(5):
-                    rand_psm += get_policy_similarity_metric(base_q_values[traj_idx], rand_q_values[traj_idx])
-                    trained_psm += get_policy_similarity_metric(base_q_values[traj_idx], trained_q_values[traj_idx])
+                    rand_psm += get_policy_similarity_metric(base_q_values[traj_idx], rand_q_values[traj_idx], use_gpu=self.use_gpu)
+                    trained_psm += get_policy_similarity_metric(base_q_values[traj_idx], trained_q_values[traj_idx], use_gpu=self.use_gpu)
                 
                 rand_psm /= 5
                 trained_psm /= 5
@@ -260,9 +259,8 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=1e3)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=3e4)
         
-
         for idx, seed in enumerate(env_seed_2_list):
             trained_option = DivDisMockOption(use_gpu=self.use_gpu,
                                         terminations=terminations[1],
@@ -278,9 +276,14 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                     use_seed_for_initiation=True,
                                                     policy_phi=self.policy_phi,
                                                     video_generator=self.video_generator)
+            logging.info(f"Now training new options for seed: {seed}")
             
-            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=1e3)
-            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=1e3)
+            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=3e4)
+            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=3e4)
+
+            wrong_psm_list = []
+            trained_psm_list = []
+            rand_psm_list = []
             
             for _ in range(evaluate_num):
                 if evaluation_type != "psm":
@@ -289,7 +292,6 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                 500,
                                                 0,
                                                 env_seed_1)
-                    logging.info(f"Buffer shape: {test_buffer.shape}")
                     test_buffer = test_buffer.to("cuda")
                     
                     _, base_q_values = base_option.evaluate_states(0,
@@ -304,8 +306,6 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                                             seed)
                     _, rand_q_values = rand_policy.batch_act(test_buffer)
 
-                    print(base_q_values.shape)
-                    logging.info(f"Q val shape (option.evaluate_states output): {base_q_values.shape}")
                 
                     base_q_values = base_q_values.detach().cpu().squeeze()
                     wrong_q_values = wrong_q_values.detach().cpu().squeeze()
@@ -341,25 +341,29 @@ class AdvancedMinigridDivDisOptionExperiment():
                         logging.info("rand kl: {}".format(rand_kl))
                         
                 else:
+                    logging.info(f"=======================================")
+                    logging.info(f"Now evaluating seed: {seed}")
                     test_buffer_traj = self.get_test_buffer_trajectories(base_option, 
                                                 env_1, 
-                                                5,
+                                                20,
                                                 0,
                                                 env_seed_1)
                     test_buffer_traj_trained = self.get_test_buffer_trajectories(trained_option,
                                                                 env_2_list[idx],
-                                                                5,
+                                                                20,
                                                                 0,
                                                                 seed)
-                    test_buffer_traj_wrong = self.get_test_buffer(wrong_trained_option,
+                    test_buffer_traj_wrong = self.get_test_buffer_trajectories(wrong_trained_option,
                                                                 env_3_list[idx],
-                                                                5,
+                                                                20,
                                                                 0,
                                                                 seed)
+                    
+                    
                     test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
                     test_buffer_traj_trained = [traj.to("cuda") for traj in test_buffer_traj_trained]
                     test_buffer_traj_wrong = [traj.to("cuda") for traj in test_buffer_traj_wrong]
-                
+
                     base_q_values = [base_option.evaluate_states(0,traj,env_seed_1)[1] for traj in test_buffer_traj]
                     trained_q_values = [trained_option.evaluate_states(0,traj,seed)[1] for traj in test_buffer_traj_trained]
                     wrong_q_values = [wrong_trained_option.evaluate_states(0,traj,seed)[1] for traj in test_buffer_traj_wrong]
@@ -369,19 +373,21 @@ class AdvancedMinigridDivDisOptionExperiment():
                     wrong_q_values = [q_values.detach().cpu().squeeze() for q_values in wrong_q_values]
                     trained_q_values = [q_values.detach().cpu().squeeze() for q_values in trained_q_values]
                     rand_q_values = [q_values.detach().cpu().squeeze() for q_values in rand_q_values]
+                    
+                    wrong_psm = []
+                    trained_psm = []
+                    rand_psm = []
 
+                    # compare all traj pairs between base and (wrong, trained, random)
+                    for base_idx in range(20):
+                        for other_idx in range(20):
+                            wrong_psm.append(get_policy_similarity_metric(base_q_values[base_idx], wrong_q_values[other_idx], use_gpu=self.use_gpu))
+                            trained_psm.append(get_policy_similarity_metric(base_q_values[base_idx], trained_q_values[other_idx], use_gpu=self.use_gpu))
+                            rand_psm.append(get_policy_similarity_metric(base_q_values[base_idx], rand_q_values[other_idx], use_gpu=self.use_gpu))
 
-                    wrong_psm = 0
-                    trained_psm = 0
-                    rand_psm = 0
-                    for traj_idx in range(5):
-                        wrong_psm += get_policy_similarity_metric(base_q_values[traj_idx], wrong_q_values[traj_idx])
-                        trained_psm += get_policy_similarity_metric(base_q_values[traj_idx], trained_q_values[traj_idx])
-                        rand_psm += get_policy_similarity_metric(base_q_values[traj_idx], rand_q_values[traj_idx])
-
-                    wrong_psm /= 5
-                    trained_psm /= 5
-                    rand_psm /= 5
+                    wrong_psm = sum(wrong_psm) / len(wrong_psm)
+                    trained_psm = sum(trained_psm) / len(trained_psm)
+                    rand_psm = sum(rand_psm) / len(rand_psm)
                     
                     print("Seed:", seed)
                     logging.info(f"Seed: {seed}")
@@ -391,6 +397,16 @@ class AdvancedMinigridDivDisOptionExperiment():
                     logging.info("trained psm {}".format(trained_psm))
                     print("rand psm", rand_psm)
                     logging.info("rand psm: {}".format(rand_psm))
+
+                    wrong_psm_list.append(wrong_psm)
+                    trained_psm_list.append(trained_psm)
+                    rand_psm_list.append(rand_psm)
+
+            logging.info("Mean stats for Seed: {}".format(seed))
+            logging.info(f"Wrong PSM: {np.mean(wrong_psm_list), np.std(wrong_psm_list)}")
+            logging.info(f"Trained PSM: {np.mean(trained_psm_list), np.std(trained_psm_list)}")
+            logging.info(f"Rand PSM: {np.mean(rand_psm_list), np.std(rand_psm_list)}")
+            
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
         test_states = []
@@ -410,9 +426,9 @@ class AdvancedMinigridDivDisOptionExperiment():
         
         return test_states
 
-    def get_test_buffer_trajectories(self, option, env, num_trajectories, head_idx, env_seed, max_steps=500):
+    def get_test_buffer_trajectories(self, option, env, num_traj, head_idx, env_seed, max_steps=100):
         test_trajectories  = []
-        while len(test_trajectories) < num_trajectories:
+        while len(test_trajectories) < num_traj:
             rand_num = np.random.randint(80)
             obs, info = env.reset(agent_reposition_attempts=rand_num)
             _, _, _, _, _, _, states, _ = option.eval_policy(head_idx,
@@ -422,7 +438,10 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                              env_seed,
                                                              max_steps=max_steps)
             trajectory = [state.unsqueeze(0) for state in states]
-            test_trajectories.append(torch.cat(trajectory, dim=0))
+            trajectory = torch.cat(trajectory, dim=0)
+            if trajectory.dim() == 1: # in the rare case that the trajectory is only one state
+                trajectory = trajectory.unsqueeze(0)
+            test_trajectories.append(trajectory)
         
         return test_trajectories
     
@@ -475,6 +494,9 @@ class AdvancedMinigridDivDisOptionExperiment():
         head_scores = np.zeros(len(terminations_2))
         
         for seed_2 in seeds_2:
+            logging.info("=======================================")
+            print("Now training new option for seed: {}".format(seed_2))
+            logging.info("Now training new option for seed: {}".format(seed_2))
             new_option = DivDisMockOption(use_gpu=self.use_gpu,
                                 terminations=terminations_2,
                                 log_dir=os.path.join(self.log_dir, "new"),
@@ -484,7 +506,21 @@ class AdvancedMinigridDivDisOptionExperiment():
                                 video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
             self.train_policy(new_option, env_2, seed_2, max_steps=2e4)
+            if evaluation_type == "psm":
+                test_buffer_traj = self.get_test_buffer_trajectories(original_option, 
+                                                env_1, 
+                                                20,
+                                                0,
+                                                seed_1)
+                test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
+                original_q_values = [original_option.evaluate_states(0,traj,seed_1)[1] for traj in test_buffer_traj]
+                original_q_values = [q_values.detach().cpu().squeeze() for q_values in original_q_values]
+            
             for head_idx in range(new_option.num_heads):
+                print("Now evaluating head: {}".format(head_idx))
+                logging.info("----------------------------------------")
+                logging.info("Now evaluating head: {}".format(head_idx))
+
                 if evaluation_type != "psm":
                     test_buffer = self.get_test_buffer(new_option,
                                                     env_2,
@@ -511,31 +547,23 @@ class AdvancedMinigridDivDisOptionExperiment():
                         score = get_kl_distance(original_q_values, new_q_values)
                         
                 else:
-                    test_buffer_traj = self.get_test_buffer_trajectories(original_option, 
-                                                env_1, 
-                                                5,
-                                                head_idx,
-                                                seed_1,
-                                                max_steps=400)
                     test_buffer_traj_new = self.get_test_buffer_trajectories(new_option,
                                                             env_2,
-                                                            5,
+                                                            20,
                                                             head_idx,
-                                                            seed_2,
-                                                            max_steps=400)
-                    test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
+                                                            seed_2)
                     test_buffer_traj_new = [traj.to("cuda") for traj in test_buffer_traj_new]
                     
-                    original_q_values = [original_option.evaluate_states(0,traj,seed_1)[1] for traj in test_buffer_traj]
                     new_q_values = [new_option.evaluate_states(head_idx,traj,seed_2)[1] for traj in test_buffer_traj_new]
-                    
-                    original_q_values = [q_values.detach().cpu().squeeze() for q_values in original_q_values]
                     new_q_values = [q_values.detach().cpu().squeeze() for q_values in new_q_values]
                     
-                    score = 0
-                    for idx in range(5):
-                        score += get_policy_similarity_metric(original_q_values[idx], new_q_values[idx])
-                    score /= 5
+                    score = []
+                    for original_idx in range(20): # one trajectory from original option
+                        for new_idx in range(20):
+                            score.append(get_policy_similarity_metric(original_q_values[original_idx], new_q_values[new_idx], use_gpu=self.use_gpu)) # 20*20 pair wise traj q val comparisons.
+
+                    logging.info(f"DEBUG: head {head_idx} score list: {score}")
+                    score = sum(score) / len(score)
 
                 
                 print("head {} score {}".format(head_idx, score))
@@ -546,8 +574,10 @@ class AdvancedMinigridDivDisOptionExperiment():
             confidence_scores[np.argmax(head_scores)] = 1
             
             new_option.update_confidences(confidence_scores)
+
         
         print("final confidences: {}".format(new_option.get_confidences()))
+        logging.info("final confidences: {}".format(new_option.get_confidences()))
         
     
 

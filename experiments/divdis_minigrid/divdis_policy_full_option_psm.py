@@ -42,8 +42,8 @@ if __name__ == "__main__":
         )
     
     env_seed_list = [1,2,3,4,5,6,7,8,9]
-    #env_seed_list = [1,2,3]
-    
+
+
     def env_2_builder(seed):
         return AdvancedDoorKeyPolicyTrainWrapper(environment_builder(
             'AdvancedDoorKey-8x8-v0',

@@ -339,7 +339,6 @@ class PolicyWithInitiation(Agent):
             device = torch.device("cuda")
         else:
             device = torch.device("cpu")
-        
         obs = batch_states(obs, device, self.phi)
         if self.image_input:
             obs = self.cnn(obs)
