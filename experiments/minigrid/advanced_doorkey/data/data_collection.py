@@ -17,24 +17,25 @@ class MiniGridDataCollector:
         self.training_seed = None
 
 
-    def collect_envs(self, training_seed=None, env_mode=None, data_mode=None, manual_input_data=None):
+    def collect_envs(self, training_seed=None, env_mode=None, data_mode=None, manual_input_data=None, show=False):
         self.training_seed = int(input("Training seed: ")) if training_seed is None else training_seed
         self.env_mode = env_mode or int(input("Environment: (1) advanced doorkey (2) factored doorkey: "))
         self.data_mode = data_mode or int(input("Mode: (1) get_key & open_door (2) get_diff_key: "))
         self.manual_input_data = (True if input("Manual input data? (y/n): ") == "y" else False) if manual_input_data is None else manual_input_data
+        self.show = show
         
         if self.data_mode == 1:
             # Init env, not collected, just for visualisation
-            fig = plt.figure(num=1, clear=True)
-            ax = fig.add_subplot()
-            ax.set_title("Init visualisation to get agent, key, door locations")
-                
             env, _ = self.init_env('blue', []) 
             state, info = env.reset()
             state = state.numpy()
-            #screen = env.render()
-            #ax.imshow(screen)
-            #plt.show(block=False)
+            if self.show: 
+                fig = plt.figure(num=1, clear=True)
+                ax = fig.add_subplot()
+                ax.set_title("Init visualisation to get agent, key, door locations") 
+                screen = env.render()
+                ax.imshow(screen)
+                plt.show(block=False)
             
             if self.manual_input_data is True:
                 # User input for agent, key, door locations, etc.
@@ -119,9 +120,10 @@ class MiniGridDataCollector:
             env, _ = self.init_env(door_color, other_keys_colour) 
             state, _ = env.reset()
             state = state.numpy()
-            #screen = env.render()
-            #ax.imshow(screen)
-            #plt.show(block=False)
+            if self.show:
+                screen = env.render()
+                ax.imshow(screen)
+                plt.show(block=False)
             
             # User input for agent, key, door locations, etc.
             agent_loc = self.process_loc_input(input("Agent location: (row_num, col_num) [e.g. 5,4]"
@@ -578,7 +580,7 @@ class GridEnv:
         self.perform_action(actions.RIGHT, 4, show=self.show_turns)
 
 
-    def perform_action(self, action, steps, show=True, prompt=False):
+    def perform_action(self, action, steps, show=False, prompt=False):
         # TODO: maybe add option for NOT saving some actions (like duplicates)
         # if prompt, use user input to decide whether to save to init or term
         if prompt:
@@ -593,12 +595,12 @@ class GridEnv:
             state, _, terminated, info  = self.env.step(action)
             state = state.numpy()
             
-            #if show:
-                #screen = self.env.render()    
-                #self.ax.clear()  # Clear the axes
-                #self.ax.imshow(screen)  # Update the image
-                #plt.draw()  # Redraw only the necessary parts
-                #plt.pause(0.005)  # Short pause for the update
+            if show:
+                screen = self.env.render()    
+                self.ax.clear()  # Clear the axes
+                self.ax.imshow(screen)  # Update the image
+                plt.draw()  # Redraw only the necessary parts
+                plt.pause(0.005)  # Short pause for the update
 
             
             if init_positive is None:
@@ -702,7 +704,7 @@ if __name__ == "__main__":
     meta_data_collector = MiniGridDataCollector()
     
     seeds_to_collect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12,13,14]
-    USE_MP = True
+    USE_MP = False
     
     if USE_MP:
         import multiprocess as mp
@@ -713,7 +715,7 @@ if __name__ == "__main__":
     else:
         from tqdm import tqdm
         for seed in tqdm(seeds_to_collect):
-            meta_data_collector.collect_envs(seed, 1, 1, False)
+            meta_data_collector.collect_envs(seed, 1, 1, False, show=False)
         
     
 
