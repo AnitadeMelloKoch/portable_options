@@ -159,8 +159,8 @@ class MonteDataCollector:
         stdscr.addstr("Now collecting data! Press ESC to exit.\n")
         stdscr.addstr("Press W, A, S, D to move. Q, E, Z, C for combined movements.\n")
         stdscr.addstr("Use arrow keys for jumping movements.\n")
-        stdscr.addstr("Press I to toggle initiation, T to toggle termination. Press V to clear saved dataset. Press B to save data.\n")
-        stdscr.addstr(f"Current Unitiation: {self.INITIATION}, Termination: {self.TERMINATION}, Uncertainty: {self.UNCERTAIN}\n")
+        stdscr.addstr("Press I to toggle initiation, T to toggle termination, U to toggle uncertainty, F to set all to False. Press B to save data.\n")
+        stdscr.addstr(f"Current Initiation: {self.INITIATION}, Termination: {self.TERMINATION}, Uncertainty: {self.UNCERTAIN}\n")
         i = len(self.init_positive_states)+len(self.init_negative_states)
 
         self.visualize_env()
@@ -302,11 +302,11 @@ class MonteDataCollector:
 if __name__ == "__main__":
     collector = MonteDataCollector('MontezumaRevengeNoFrameskip-v4', 0, 30*60*60)
     collector.INITIATION = False
-    collector.TERMINATION = False
+    collector.TERMINATION = True
 
-    #start_filename = "resources/monte_env_states/room22/ladder/bottom_0.pkl"
-    #start_filename = "resources/monte_env_states/room18/platforms/right.pkl"
-    start_filename = "resources/monte_env_states/room18/bridge/right_bridge.pkl"
+    start_filename = "resources/monte_env_states/room21/ladder/bottom_0.pkl"
+    #start_filename = "resources/monte_env_states/room6/platforms/left.pkl"
+    #start_filename = "resources/monte_env_states/room18/bridge/right_bridge.pkl"
     
     with open(start_filename, "rb") as f:
         start_ram = pickle.load(f)
