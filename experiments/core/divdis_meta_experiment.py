@@ -13,6 +13,7 @@ import pickle
 
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from portable.option.divdis.divdis_option import DivDisOption
+from portable.option.divdis.global_option import GlobalOption
 from experiments.experiment_logger import VideoGenerator
 from portable.agent.model.ppo import ActionPPO 
 import math
@@ -32,6 +33,10 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 start_epsilon=0.0,
+                 end_epsilon=0.0,
+                 decay_steps=5e5,
+                 use_global_option=False,
                  option_timeout=50,
                  action_policy=None,
                  action_vf=None,
@@ -55,6 +60,12 @@ class DivDisMetaExperiment():
         self.option_type = option_type
         self.classifier_epochs = classifier_epochs
         self.option_timeout = option_timeout
+        self.use_global_option = use_global_option
+        
+        self.start_epsilon = start_epsilon
+        self.end_epsilon = end_epsilon
+        self.decay_steps = decay_steps
+        self.epsilon = start_epsilon
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -93,6 +104,12 @@ class DivDisMetaExperiment():
             [math.pow(discount_rate, n) for n in range(100)]
         )
         
+        if self.use_global_option:
+            self.global_option = GlobalOption(use_gpu=use_gpu,
+                                              log_dir=os.path.join(self.log_dir),
+                                              save_dir=os.path.join(self.save_dir),
+                                              policy_phi=option_policy_phi)
+        
         if self.option_type == "mock":
             assert len(terminations) == num_options
             for idx, termination_list in enumerate(terminations):
@@ -121,6 +138,7 @@ class DivDisMetaExperiment():
                                                  plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
                                                  use_seed_for_initiation=True))
         
+        self.total_actions = self.num_primitive_actions + (self.num_options*self.num_heads)
         self.gamma = discount_rate
         
         self.experiment_data = []
@@ -131,12 +149,18 @@ class DivDisMetaExperiment():
             option.save()
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.experiment_data, f)
+        
+        if self.use_global_option:
+            self.global_option.save()
     
     def load(self):
         for option in self.options:
             option.load()
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.experiment_data = pickle.load(f)
+        
+        if self.use_global_option:
+            self.global_option.load()
     
     def add_datafiles(self,
                       positive_files,
@@ -215,6 +239,26 @@ class DivDisMetaExperiment():
                 img = env.render("rgb_array")
             self.video_generator.make_image(img)
     
+    def _compute_epsilon(self):
+        if self.decisions > self.decay_steps:
+            return self.end_epsilon
+        else:
+            epsilon_diff = self.end_epsilon - self.start_epsilon
+            return self.start_epsilon + epsilon_diff * (self.decisions / self.decay_steps)
+
+    def select_action(self, action):
+        if self.num_primitive_actions == 0:
+            return action
+        
+        self.epsilon = self._compute_epsilon()
+        if np.random.rand() < self.epsilon:
+            if np.random.rand() < 0.5:
+                return np.random.randint(self.num_primitive_actions)
+            else:
+                return np.random.randint(self.num_primitive_actions, self.total_actions)
+        else:
+            return action
+
     def train_meta_agent(self,
                          env,
                          seed,
@@ -245,20 +289,21 @@ class DivDisMetaExperiment():
                 self._video_log("action: {}".format(action))
                 self._video_log("action q vals: {}".format(q_vals))
                 
+                if self.use_global_option:
+                    if action == 0:
+                        next_obs, reward, done, info, steps = self.global_option.train_policy(env=env,
+                                                                                    info=info,
+                                                                                    make_video=False,
+                                                                                    obs=obs)
+                    else:
+                        action = action - 1
+                
                 if action < self.num_primitive_actions:
                     next_obs, reward, done, info = env.step(action)
                     undiscounted_reward += reward
                     rewards = [reward]
-                    total_steps += 1
-                    decisions += 1
                     steps = 1
                 else:
-                    # if (action_mask[action] is False):
-                    #     print("no actions")
-                    #     next_obs, reward, done, info = env.step(6)
-                    #     steps = 1
-                    #     rewards = [reward]
-                    # else:
                     action_offset = action-self.num_primitive_actions
                     option_num = int(action_offset/self.num_heads)
                     option_head = action_offset%self.num_heads
@@ -346,6 +391,14 @@ class DivDisMetaExperiment():
                     for idx in range(len(q_vals[0])):
                         self._video_log("[meta] action {} value {}".format(idx, q_vals[0][idx]))
                     
+                    if self.use_global_option:
+                        if action == 0:
+                            next_obs, reward, done, info, steps = self.global_option.eval_policy(env=env,
+                                                                                                 info=info,
+                                                                                                 obs=obs)
+                        else:
+                            action = action - 1
+                    
                     if action < self.num_primitive_actions:
                         next_obs, reward, done, info = env.step(action)
                         undiscounted_reward += reward
@@ -353,12 +406,6 @@ class DivDisMetaExperiment():
                         total_steps += 1
                         steps = 1
                     else:
-                        # if (action_mask[action] is False):
-                        #     self._video_log("[meta] action+option not executable. Perform no-op")
-                        #     next_obs, reward, done, info = env.step(6)
-                        #     steps = 1
-                        #     rewards = [reward]
-                        # else:
                         action_offset = action-self.num_primitive_actions
                         option_num = int(action_offset/self.num_heads)
                         option_head = action_offset%self.num_heads

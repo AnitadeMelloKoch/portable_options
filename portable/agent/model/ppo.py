@@ -278,8 +278,6 @@ class ActionPPO():
                  learning_rate,
                  state_shape,
                  phi,
-                 final_epsilon,
-                 final_exploration_frames,
                  num_actions,
                  policy=None,
                  value_function=None,
@@ -327,11 +325,6 @@ class ActionPPO():
         
         self.num_actions = num_actions
         
-        self.explorer = explorers.LinearDecayEpsilonGreedy(1.0,
-                                                           final_epsilon,
-                                                           final_exploration_frames,
-                                                           lambda: np.random.randint(num_actions))
-        
         self.step = 0
     
     def save(self, dir):
@@ -351,14 +344,6 @@ class ActionPPO():
             return out, None
         
         if self.agent.training:
-            action = self.explorer.select_action(
-                self.step,
-                greedy_action_func=lambda: torch.argmax(out)
-            )
-            
-            # while q_vals[action] == -np.inf:
-            #     action = np.random.randint(self.num_actions)
-        else:
             action = torch.argmax(out)
         
         return action, out

@@ -44,6 +44,7 @@ class DivDisOption():
                                              log_dir=os.path.join(log_dir, 'termination'))
         
         self.num_heads = num_heads
+        self.option_steps = [0]*self.num_heads
         
         if self.use_seed_for_initiation:
             self.policies = [
@@ -63,6 +64,10 @@ class DivDisOption():
                                              num_heads)
         
         self.intrinsic_bonus = TabularCount(beta=tabular_beta)
+        
+        self.train_data = {}
+        for idx in range(self.num_heads):
+            self.train_data[idx] = []
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -83,6 +88,8 @@ class DivDisOption():
                 pickle.dump(list(policies.keys()), f)
         
         self.confidences.save(os.path.join(self.save_dir, 'confidence.pkl'))
+        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
+            pickle.dump(self.train_data, f)
     
     def load(self):
         if os.path.exists(self._get_termination_save_path()):
@@ -98,6 +105,8 @@ class DivDisOption():
                                                         learn_initiation=(not self.use_seed_for_initiation))
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
+            with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
+                self.train_data = pickle.load(f)
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
@@ -179,6 +188,7 @@ class DivDisOption():
         steps = 0
         rewards = []
         option_rewards = []
+        extrinsic_rewards = []
         states = []
         infos = []
         
@@ -207,6 +217,7 @@ class DivDisOption():
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = torch.argmax(pred_y) == 1
             steps += 1
+            self.option_steps[idx] += 1
             rewards.append(reward)
             
             if make_video:
@@ -214,7 +225,9 @@ class DivDisOption():
             
             if should_terminate:
                 reward = 1
+                extrinsic_rewards.append(1)
             else:
+                extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonus.get_bonus(info["player_pos"])
             
             policy.observe(state,
@@ -238,6 +251,16 @@ class DivDisOption():
         self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
+        
+        self.experiment_data.append({
+            "head_idx": idx,
+            "frames": self.option_steps[idx],
+            "policy_idx": policy_idx,
+            "rewards": rewards,
+            "option_length": steps,
+            "option_rewards": option_rewards,
+            "extrinsic_rewards": extrinsic_rewards
+        })
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     

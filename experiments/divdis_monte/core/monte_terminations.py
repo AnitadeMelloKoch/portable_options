@@ -35,7 +35,7 @@ def check_termination_bottom_ladder(state, env):
     if info["dead"]:
         return False
     
-    position = info["position"]
+    position = info["player_pos"]
     
     for pos in bottom_of_ladder:
         if in_epsilon_square(pos, position):
@@ -47,7 +47,7 @@ def check_termination_top_ladder(state, env):
     if info["dead"]:
         return False
     
-    position = info["position"]
+    position = info["player_pos"]
     
     for pos in top_of_ladder:
         if in_epsilon_square(pos, position):
@@ -84,7 +84,7 @@ def check_termination_correct_enemy_left(state, env):
     if info["dead"]:
         return False
     
-    position = info["position"]
+    position = info["player_pos"]
 
     room = position[2]
     ram = env.unwrapped.ale.getRAM()
@@ -132,7 +132,7 @@ def check_termination_correct_enemy_right(state, env):
     if info["dead"]:
         return False
     
-    position = info["position"]
+    position = info["player_pos"]
     room = position[2]
     ram = env.unwrapped.ale.getRAM()
     if room in [2,3]:

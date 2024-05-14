@@ -65,13 +65,17 @@ class DivDisMockOption():
             self.missed_term_states = []
         
         self.train_rewards = deque(maxlen=200)
-        self.option_steps = 0
+        self.option_steps = [0]*self.num_heads
         
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.num_heads)
         
         self.intrinsic_bonus = TabularCount(beta=tabular_beta)
+        
+        self.train_data = {}
+        for idx in range(self.num_heads):
+            self.train_data[idx] = []
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -88,6 +92,8 @@ class DivDisMockOption():
         
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
                 pickle.dump(list(policies.keys()), f)
+        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
+            pickle.dump(self.train_data, f)
     
     def load(self):
         for idx, policies in enumerate(self.policies):
@@ -98,7 +104,9 @@ class DivDisMockOption():
                                                      policy_phi=self.policy_phi,
                                                      learn_initiation=(not self.use_seed_for_initiation))
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
-
+        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
+            self.train_data = pickle.load(f)
+    
     def add_policy(self, 
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
@@ -174,6 +182,7 @@ class DivDisMockOption():
         steps = 0
         rewards = []
         option_rewards = []
+        extrinsic_rewards = []
         states = []
         infos = []
         
@@ -199,7 +208,7 @@ class DivDisMockOption():
             
             next_state, reward, done, info = env.step(action)
             
-            self.option_steps += 1
+            self.option_steps[idx] += 1
             
             should_terminate = self.terminations[idx](state,
                                                       env)
@@ -214,7 +223,9 @@ class DivDisMockOption():
             
             if should_terminate:
                 reward = 1
+                extrinsic_rewards.append(1)
             else:
+                extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonus.get_bonus(info["player_pos"])
             
             policy.observe(state,
@@ -238,7 +249,17 @@ class DivDisMockOption():
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
         
-        return state, info, done, steps, rewards, option_rewards, states, infos
+        self.experiment_data.append({
+            "head_idx": idx,
+            "frames": self.option_steps[idx],
+            "policy_idx": policy_idx,
+            "rewards": rewards,
+            "option_length": steps,
+            "option_rewards": option_rewards,
+            "extrinsic_rewards": extrinsic_rewards
+        })
+        
+        return state, info, done, steps, rewards, extrinsic_rewards, states, infos
     
     def bootstrap_policy(self,
                          idx,

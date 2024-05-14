@@ -4,18 +4,17 @@ import portable.option.divdis.divdis_option
 import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
-DivDisMetaExperiment.experiment_name                                = "meta_monte"
+DivDisMetaExperiment.experiment_name                                = "meta_monte_global"
 DivDisMetaExperiment.num_options                                    = 4
 DivDisMetaExperiment.option_head_num                                = 1
 DivDisMetaExperiment.num_primitive_actions                          = 18
 DivDisMetaExperiment.use_gpu                                        = True
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
+DivDisMetaExperiment.use_global_option                              = True
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (4, 84, 84)
-ActionPPO.final_epsilon                                             = 0.0
-ActionPPO.final_exploration_frames                                  = 10
 ActionPPO.num_actions                                               = 22
 ActionPPO.update_interval                                           = 100
 
