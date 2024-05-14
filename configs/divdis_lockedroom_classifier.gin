@@ -8,9 +8,9 @@ AdvancedMinigridDivDisClassifierExperiment.classifier_num_classes           = 2
 
 AdvancedMinigridDivDisClassifierExperiment.classifier_head_num              = 6
 AdvancedMinigridDivDisClassifierExperiment.classifier_learning_rate         = 0.0002  #2e-4
-AdvancedMinigridDivDisClassifierExperiment.classifier_diversity_weight      = 0.00001 #1e-5  
-AdvancedMinigridDivDisClassifierExperiment.classifier_l2_reg_weight         = 0.001 #1e-2
-AdvancedMinigridDivDisClassifierExperiment.classifier_train_epochs          = 300
+AdvancedMinigridDivDisClassifierExperiment.classifier_diversity_weight      = 0.0001 #1e-5  
+AdvancedMinigridDivDisClassifierExperiment.classifier_l2_reg_weight         = 0.0005 #1e-2
+AdvancedMinigridDivDisClassifierExperiment.classifier_train_epochs          = 200
 
 DivDisClassifier.dataset_batchsize                                          = 64
 

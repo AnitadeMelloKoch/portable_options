@@ -143,7 +143,7 @@ class MonteAgentWrapper(gym.Wrapper):
         info["player_y"] = self.get_player_y(ram)
         info["dead"] = int(info["lives"] < self.num_lives)
         info["screen_num"] = self.get_screen_num(ram)
-        info["position"] = (info["player_x"], info["player_y"], info["screen_num"])
+        info["player_pos"] = (info["player_x"], info["player_y"], info["screen_num"])
         info["jumping"] = self.get_is_jumping(ram)
         info["needs_reset"] = False
         info["elapsed_steps"] = self._elapsed_steps
