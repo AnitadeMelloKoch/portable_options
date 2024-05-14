@@ -249,7 +249,7 @@ class DivDisMockOption():
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
         
-        self.experiment_data.append({
+        self.train_data[int(idx)].append({
             "head_idx": idx,
             "frames": self.option_steps[idx],
             "policy_idx": policy_idx,
