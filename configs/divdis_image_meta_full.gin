@@ -5,14 +5,14 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 import portable.option.divdis.divdis_classifier
 
-DivDisMetaExperiment.experiment_name                                = "meta_image_full_20_timeout"
+DivDisMetaExperiment.experiment_name                                = "meta_image_full_50_timeout"
 DivDisMetaExperiment.num_options                                    = 5
 DivDisMetaExperiment.option_head_num                                = 5
 DivDisMetaExperiment.num_primitive_actions                          = 0
 DivDisMetaExperiment.use_gpu                                        = True
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
-DivDisMetaExperiment.option_timeout                                 = 20
+DivDisMetaExperiment.option_timeout                                 = 50
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
