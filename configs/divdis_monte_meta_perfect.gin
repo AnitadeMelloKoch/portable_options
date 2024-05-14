@@ -9,7 +9,7 @@ DivDisMetaExperiment.num_options                                    = 4
 DivDisMetaExperiment.option_head_num                                = 1
 DivDisMetaExperiment.num_primitive_actions                          = 18
 DivDisMetaExperiment.use_gpu                                        = True
-DivDisMetaExperiment.make_videos                                    = True
+DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
 DivDisMockOption.exp_type                                           = "monte"
 

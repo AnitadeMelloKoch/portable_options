@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from collections import deque
 
 from portable.option.sets.utils import BayesianWeighting
+from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
 
 @gin.configurable 
 class DivDisMockOption():
@@ -25,6 +26,7 @@ class DivDisMockOption():
                  policy_phi,
                  use_seed_for_initiation,
                  exp_type,
+                 tabular_beta=0.0,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
@@ -68,6 +70,8 @@ class DivDisMockOption():
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.num_heads)
+        
+        self.intrinsic_bonus = TabularCount(beta=tabular_beta)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -211,7 +215,7 @@ class DivDisMockOption():
             if should_terminate:
                 reward = 1
             else:
-                reward = 0
+                reward = self.intrinsic_bonus.get_bonus(info["player_pos"])
             
             policy.observe(state,
                            action,

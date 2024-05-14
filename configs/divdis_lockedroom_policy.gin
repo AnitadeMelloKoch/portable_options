@@ -13,13 +13,13 @@ DivDisMetaExperiment.make_videos                                    = True
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
 ActionPPO.final_epsilon                                             = 0.05
-ActionPPO.final_exploration_frames                                  = 1e6
+ActionPPO.final_exploration_frames                                  = 15e5
 ActionPPO.num_actions                                               = 7
 ActionPPO.update_interval                                           = 100
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 100000
+PolicyWithInitiation.buffer_length                                  = 500000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
@@ -32,4 +32,5 @@ PolicyWithInitiation.q_hidden_size                                  = 128
 PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True
 
-DivDisMockOption.exp_type                                           = "monte"
+DivDisMockOption.exp_type                                           = "minigrid"
+DivDisMockOption.tabular_beta                                       = 0.0001
