@@ -7,7 +7,7 @@ initiation_positive_files = [
 ]
 
 initiation_negative_files = [
-        'resources/large_minigrid_images/lockedroom_opendoor_dooryellow_0_termination_negative.npy',
+        'resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_0_initiation_negative.npy',
 ]
 
 dataset_pos = SetDataset(batchsize=16)

@@ -32,6 +32,7 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 option_timeout=50,
                  action_policy=None,
                  action_vf=None,
                  action_model=None,
@@ -53,6 +54,7 @@ class DivDisMetaExperiment():
         self.use_gpu = use_gpu
         self.option_type = option_type
         self.classifier_epochs = classifier_epochs
+        self.option_timeout = option_timeout
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -265,7 +267,7 @@ class DivDisMetaExperiment():
                                                                                                             obs,
                                                                                                             info,
                                                                                                             seed,
-                                                                                                            max_steps=200,
+                                                                                                            max_steps=self.option_timeout,
                                                                                                             make_video=False)
                 undiscounted_reward += np.sum(rewards)
                 decisions += 1
