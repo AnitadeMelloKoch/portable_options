@@ -314,11 +314,11 @@ class ActionPPO():
                          obs_normalizer=obs_normalizer,
                          gpu=gpu,
                          phi=phi,
+                         entropy_coef=entropy_coef,
                          update_interval=update_interval,
                          minibatch_size=minibatch_size,
                          epochs=epochs_per_update,
                          clip_eps_vf=clip_eps_vf,
-                         entropy_coef=entropy_coef,
                          standardize_advantages=standardize_advantages,
                          gamma=gamma,
                          lambd=lambd)
