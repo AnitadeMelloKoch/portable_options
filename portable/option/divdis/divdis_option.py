@@ -63,7 +63,7 @@ class DivDisOption():
                                              beta_distribution_beta,
                                              num_heads)
         
-        self.intrinsic_bonus = TabularCount(beta=tabular_beta)
+        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(num_heads)]
         
         self.train_data = {}
         for idx in range(self.num_heads):
@@ -90,6 +90,8 @@ class DivDisOption():
         self.confidences.save(os.path.join(self.save_dir, 'confidence.pkl'))
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.train_data, f)
+        for idx, bonus in enumerate(self.intrinsic_bonuses):
+            bonus.save(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
     
     def load(self):
         if os.path.exists(self._get_termination_save_path()):
@@ -107,6 +109,8 @@ class DivDisOption():
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
             with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
                 self.train_data = pickle.load(f)
+            for idx, bonus in enumerate(self.intrinsic_bonuses):
+                bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
@@ -228,7 +232,7 @@ class DivDisOption():
                 extrinsic_rewards.append(1)
             else:
                 extrinsic_rewards.append(0)
-                reward = self.intrinsic_bonus.get_bonus(info["player_pos"])
+                reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
             policy.observe(state,
                            action,

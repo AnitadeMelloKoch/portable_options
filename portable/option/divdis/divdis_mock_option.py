@@ -71,7 +71,7 @@ class DivDisMockOption():
                                              beta_distribution_beta,
                                              self.num_heads)
         
-        self.intrinsic_bonus = TabularCount(beta=tabular_beta)
+        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(num_heads)]
         
         self.train_data = {}
         for idx in range(self.num_heads):
@@ -94,6 +94,8 @@ class DivDisMockOption():
                 pickle.dump(list(policies.keys()), f)
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.train_data, f)
+        for idx, bonus in enumerate(self.intrinsic_bonuses):
+            bonus.save(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
     
     def load(self):
         for idx, policies in enumerate(self.policies):
@@ -106,6 +108,9 @@ class DivDisMockOption():
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.train_data = pickle.load(f)
+        for idx, bonus in enumerate(self.intrinsic_bonuses):
+            bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
+        
     
     def add_policy(self, 
                    term_idx):
@@ -226,7 +231,7 @@ class DivDisMockOption():
                 extrinsic_rewards.append(1)
             else:
                 extrinsic_rewards.append(0)
-                reward = self.intrinsic_bonus.get_bonus(info["player_pos"])
+                reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
             policy.observe(state,
                            action,
