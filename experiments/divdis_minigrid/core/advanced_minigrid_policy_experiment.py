@@ -381,9 +381,9 @@ class AdvancedMinigridDivDisOptionExperiment():
                     # compare all traj pairs between base and (wrong, trained, random)
                     for base_idx in range(20):
                         for other_idx in range(20):
-                            wrong_psm.append(get_policy_similarity_metric(base_q_values[base_idx], wrong_q_values[other_idx], use_gpu=self.use_gpu))
-                            trained_psm.append(get_policy_similarity_metric(base_q_values[base_idx], trained_q_values[other_idx], use_gpu=self.use_gpu))
-                            rand_psm.append(get_policy_similarity_metric(base_q_values[base_idx], rand_q_values[other_idx], use_gpu=self.use_gpu))
+                            wrong_psm.append(get_policy_similarity_metric(base_q_values[base_idx], wrong_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
+                            trained_psm.append(get_policy_similarity_metric(base_q_values[base_idx], trained_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
+                            rand_psm.append(get_policy_similarity_metric(base_q_values[base_idx], rand_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
 
                     wrong_psm = sum(wrong_psm) / len(wrong_psm)
                     trained_psm = sum(trained_psm) / len(trained_psm)
