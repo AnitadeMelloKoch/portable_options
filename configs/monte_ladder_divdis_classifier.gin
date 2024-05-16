@@ -1,4 +1,4 @@
-import experiments.divdis_monte.core.monte_divdis_classifier_experiment
+import experiments.divdis_monte.core.divdis_monte_classifier_experiment
 import portable.option.divdis.divdis_classifier
 
 MonteDivDisClassifierExperiment.experiment_name                = "monte_ladder_classifier_room_progression"
