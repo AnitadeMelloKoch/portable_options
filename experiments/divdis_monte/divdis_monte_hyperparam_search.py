@@ -2,6 +2,7 @@ import argparse
 import random
 import time
 import os
+import pickle
 
 import numpy as np
 import ray
@@ -172,25 +173,25 @@ if __name__ == "__main__":
     #load_gin_configs(args.config_file, args.gin_bindings)
 
 
-    experiment = MonteDivDisHyperparamSearchExperiment(experiment_name="minigrid_hyperparam_search",
+    experiment = MonteDivDisHyperparamSearchExperiment(experiment_name="monte_hyperparam_search",
                                                        base_dir=args.base_dir,
                                                        use_gpu=True)
 
 
 
     search_space = {
-        "lr": tune.loguniform(1e-6, 1e-1),
-        "l2_reg": tune.loguniform(1e-6, 1e-1),
-        "div_weight":  tune.loguniform(1e-6, 1e-1),
-        "num_heads": tune.randint(1, 12),
+        "lr": tune.loguniform(1e-5, 1e-1),
+        "l2_reg": tune.loguniform(1e-5, 1e-1),
+        "div_weight":  tune.loguniform(1e-5, 1e-1),
+        "num_heads": tune.randint(1, 6),
         "initial_epochs": tune.randint(50, 1000), # 50, 1000
         "epochs_per_room": tune.randint(10, 100), # 10, 100
         "unlabelled_batch_size": tune.choice([None, 16, 32, 64, 128, 256]),
     }
 
     #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
-    optuna_search = OptunaSearch(metric=["best_weighted_acc", "num_heads"], mode=["max", "min"])
-    #re_search_alg = Repeater(optuna_search, repeat=3)
+    optuna_search = OptunaSearch(metric="best_weighted_acc", mode="max")
+    re_search_alg = Repeater(optuna_search, repeat=3)
 
     train_dataset = SetDataset(max_size=1e6, batchsize=32, unlabelled_batchsize=None)
     #train_dataset.add_true_files(positive_train_files)
@@ -227,12 +228,18 @@ if __name__ == "__main__":
             resources={"gpu":1}
         ),
         tune_config=tune.TuneConfig(
-        search_alg=optuna_search,
-        num_samples=5,
+        search_alg=re_search_alg,
+        num_samples=120,
     ),
         param_space=search_space,
     )
     results = tuner.fit()
+
+    # save results to pickle
+    with open(os.path.join(experiment.log_dir, results), 'wb') as f:
+        pickle.dump("monte_hyperparam_search_results", f)
+    
+    
     
     best_result = results.get_best_result("best_weighted_acc", "max")
 

@@ -216,7 +216,8 @@ class MonteDivDisHyperparamSearchExperiment():
                                     head_num=config['num_heads'],
                                     learning_rate=config['lr'],
                                     l2_reg_weight=config['l2_reg'],
-                                    unlabelled_dataset_batchsize=config['unlabelled_batch_size'],)
+                                    unlabelled_dataset_batchsize=config['unlabelled_batch_size'],
+                                    model_name='monte_cnn')
         
 
         train_dataset.reset()

@@ -120,18 +120,26 @@ class DivDisClassifier():
             total_loss_tracker = 0
             
             self.dataset.shuffle()
+            if self.dataset.unlabelled_data_length == 0:
+                use_unlabelled_data = False
+            else:
+                use_unlabelled_data = True
             
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                unlabelled_x = self.dataset.get_unlabelled_batch()
+                if use_unlabelled_data:
+                    unlabelled_x = self.dataset.get_unlabelled_batch()
                 
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
-                    unlabelled_x = unlabelled_x.to("cuda")
-                
-                unlabelled_pred = self.classifier(unlabelled_x)
+                    if use_unlabelled_data:
+                        unlabelled_x = unlabelled_x.to("cuda")
+
+                if use_unlabelled_data:
+                    unlabelled_pred = self.classifier(unlabelled_x)
+                    
                 pred_y = self.classifier(x)
                 labelled_loss = 0
                 for idx in range(self.head_num):
@@ -142,8 +150,11 @@ class DivDisClassifier():
                     labelled_loss += class_loss
                 
                 labelled_loss /= self.head_num
-                
-                div_loss = self.divdis_criterion(unlabelled_pred)
+
+                if use_unlabelled_data:
+                    div_loss = self.divdis_criterion(unlabelled_pred)
+                else:
+                    div_loss = torch.tensor(0)
                 
                 div_loss_tracker += div_loss.item()
                 

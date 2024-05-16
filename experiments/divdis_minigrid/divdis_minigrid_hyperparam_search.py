@@ -71,10 +71,10 @@ if __name__ == "__main__":
 
 
     search_space = {
-        "lr": tune.loguniform(1e-6, 1e-1),
-        "l2_reg": tune.loguniform(1e-6, 1e-1),
-        "div_weight":  tune.loguniform(1e-6, 1e-1),
-        "num_heads": tune.randint(1, 7),
+        "lr": tune.loguniform(1e-5, 1e-1),
+        "l2_reg": tune.loguniform(1e-5, 1e-1),
+        "div_weight":  tune.loguniform(1e-5, 1e-1),
+        "num_heads": tune.randint(1, 6),
         "num_epochs": tune.randint(50, 300),
         "unlabelled_batch_size": tune.choice([16, 32, 64, 128, 256]),
     }
