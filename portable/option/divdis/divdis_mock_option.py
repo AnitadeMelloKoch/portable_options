@@ -71,7 +71,7 @@ class DivDisMockOption():
                                              beta_distribution_beta,
                                              self.num_heads)
         
-        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(num_heads)]
+        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(self.num_heads)]
         
         self.train_data = {}
         for idx in range(self.num_heads):
