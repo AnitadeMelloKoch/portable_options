@@ -72,6 +72,8 @@ class DivDisMetaExperiment():
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         self.plot_dir = os.path.join(self.base_dir, 'plots')
         
+        self.decisions = 0
+        
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.save_dir, exist_ok=True)
         os.makedirs(self.plot_dir, exist_ok=True)
@@ -152,6 +154,8 @@ class DivDisMetaExperiment():
         
         if self.use_global_option:
             self.global_option.save()
+        
+        np.save(os.path.join(self.save_dir, "decisions.npy"),self.decisions)
     
     def load(self):
         for option in self.options:
@@ -161,6 +165,8 @@ class DivDisMetaExperiment():
         
         if self.use_global_option:
             self.global_option.load()
+        
+        self.decisions = np.load(os.path.join(self.save_dir, "decisions.npy"))
     
     def add_datafiles(self,
                       positive_files,
@@ -265,7 +271,6 @@ class DivDisMetaExperiment():
                          max_steps,
                          min_performance):
         total_steps = 0
-        decisions = 0
         episode_rewards = deque(maxlen=200)
         episode = 0
         undiscounted_rewards = []
@@ -315,12 +320,12 @@ class DivDisMetaExperiment():
                                                                                                             max_steps=self.option_timeout,
                                                                                                             make_video=False)
                 undiscounted_reward += np.sum(rewards)
-                decisions += 1
+                self.decisions += 1
                 total_steps += steps
                 
                 
                 self.experiment_data.append({
-                    "meta_step": decisions,
+                    "meta_step": self.decisions,
                     "option_length": steps,
                     "option_rewards": rewards,
                     "frames": total_steps
@@ -332,7 +337,7 @@ class DivDisMetaExperiment():
                 obs = next_obs
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
-                                                                                     decisions,  
+                                                                                     self.decisions,  
                                                                                      np.mean(episode_rewards)))
             
             if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
@@ -344,8 +349,9 @@ class DivDisMetaExperiment():
             
             self.plot_learning_curve(episode_rewards)
             
-            self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
-            self.save()
+            if episode % 50:
+                self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+                self.save()
             
             if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
                 logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
