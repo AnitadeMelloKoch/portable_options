@@ -24,21 +24,15 @@ from evaluation.evaluators import DivDisEvaluatorClassifier
 
 
 @gin.configurable
-class AdvancedMinigridDivDisHyperparamSearchExperiment():
+class MonteDivDisHyperparamSearchExperiment():
     def __init__(self,
-                 base_dir,
                  experiment_name,
-                 #use_gpu,
-                 
-                 train_positive_files,
-                 train_negative_files,
-                 unlabelled_files,
-                 test_positive_files,
-                 test_negative_files):
+                 base_dir,
+                 use_gpu):
 
         
         self.experiment_name = experiment_name
-        #self.use_gpu = use_gpu
+        self.use_gpu = use_gpu
         
         self.base_dir = os.path.join(base_dir, experiment_name)
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -46,25 +40,7 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
         
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.plot_dir, exist_ok=True)
-        
-        
-        '''self.dataset_positive = SetDataset(max_size=1e6,
-                                      batchsize=64)
-        self.dataset_negative = SetDataset(max_size=1e6,
-                                      batchsize=64)
-        
-        #self.dataset_positive.set_transform_function(transform)
-        #self.dataset_negative.set_transform_function(transform)
-        
-        self.dataset_positive.add_true_files(test_positive_files)
-        self.dataset_negative.add_false_files(test_negative_files)
 
-        self.test_positive_files = test_positive_files
-        self.test_negative_files = test_negative_files
-        
-        self.train_positive_files = train_positive_files
-        self.train_negative_files = train_negative_files
-        self.unlabelled_files = unlabelled_files'''
 
 
     
@@ -132,7 +108,6 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
              accuracies,
              avg_accuracies,
              losses,
-             complexities,
              
              plot_title,
              x_label,
@@ -143,10 +118,9 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
         losses = np.array(losses)
         accuracies = np.array(accuracies)
         avg_accuracies = np.array(avg_accuracies)
-        complexities = np.array(complexities)
         
-        ax_titles = ['Loss', 'Accuracy', 'Complexity']
-        y_labels = ['Final Training Loss', 'Test Accuracy', 'Head Complexity']
+        ax_titles = ['Loss', 'Accuracy']
+        y_labels = ['Final Training Loss', 'Test Accuracy']
     
         if not categorical: # most cases, line plot
             fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -175,18 +149,10 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
             axes[1].set_ylabel(y_labels[1])
             axes[1].title.set_text(ax_titles[1])
 
-            axes[2].plot(x_values, complexities.mean(axis=1))
-            axes[2].fill_between(x_values,
-                                np.maximum(complexities.mean(axis=1)-complexities.std(axis=1),0),
-                                complexities.mean(axis=1)+complexities.std(axis=1),
-                                alpha=0.2)
-            axes[2].set_xlabel(x_label)
-            axes[2].set_ylabel(y_labels[2])
-            axes[2].title.set_text(ax_titles[2])
+
             if log_scale:
                 axes[0].set_xscale('log')
                 axes[1].set_xscale('log')
-                axes[2].set_xscale('log')
             
         else: # bar plot for categorical data
             fig, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -216,14 +182,6 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
             for label in axes[1].get_xticklabels():
                 label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
-            axes[2].bar(x_axis_data, complexities.mean(1), yerr=complexities.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
-            axes[2].set_xlabel(x_label)
-            axes[2].set_ylabel(y_labels[0])
-            axes[2].title.set_text(ax_titles[0])
-            axes[2].set_xticks(x_axis_data)
-            axes[2].set_xticklabels(x_ticks, rotation=35, ha='right')
-            for label in axes[2].get_xticklabels():
-                label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
         fig.suptitle(plot_title)
         fig.tight_layout()
@@ -234,22 +192,24 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
     
     def train_classifier(self,
                          config,
+                         
                          train_dataset,
+                         positive_train_files,
+                         negative_train_files,
+                         unlabelled_train_files,
+                            
+                         room_list,
+                         unlabelled_list,
+                         
                          test_dataset_positive,
                          test_dataset_negative,
+                         uncertain_dataset,
                          verbose=True):
         random_seed = np.random.randint(0, 100000)
         set_seed(random_seed)
 
-
-        if torch.cuda.is_available():
-            use_gpu = True
-        else:
-            use_gpu = False
-
-        print(f"Using GPU: {use_gpu}")
         
-        classifier = DivDisClassifier(use_gpu=use_gpu,
+        classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                     log_dir=self.log_dir,
                                     num_classes=2,
                                     diversity_weight=config['div_weight'],
@@ -257,20 +217,48 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
                                     learning_rate=config['lr'],
                                     l2_reg_weight=config['l2_reg'],
                                     unlabelled_dataset_batchsize=config['unlabelled_batch_size'],)
-        train_dataset.unlabelled_batchsize = config['unlabelled_batch_size']
+        
+
+        train_dataset.reset()
+
+        if config['unlabelled_batch_size'] is not None:
+            train_dataset.dynamic_unlabelled_batchsize = False
+            train_dataset.unlabelled_batchsize = config['unlabelled_batch_size']
+        else:
+            train_dataset.dynamic_unlabelled_batchsize = True
+            train_dataset.unlabelled_batchsize = 0
+        
+        train_dataset.add_true_files(positive_train_files)
+        train_dataset.add_false_files(negative_train_files)
+        train_dataset.add_unlabelled_files(unlabelled_train_files)
+
         classifier.dataset = train_dataset
         
-        #classifier.add_data(self.train_positive_files, self.train_negative_files, self.unlabelled_files)
-        
-        train_loss = classifier.train(epochs=config['num_epochs'])
+        classifier.train(epochs=config['initial_epochs'])
+
+        for i in range(len(room_list)):
+            cur_room_unlab = unlabelled_list[i]
+            cur_room_unlab = [np.load(file) for file in cur_room_unlab]
+            cur_room_unlab = [img for list in cur_room_unlab for img in list]
+            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
+            
+            classifier.dataset.add_unlabelled_data(cur_room_unlab)
+            train_loss = classifier.train(epochs=config['epochs_per_room'])
+
         
         accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_terminations(test_dataset_positive, test_dataset_negative, classifier)
         best_weight_acc = max(weighted_acc)
         best_acc = accuracy[np.argmax(weighted_acc)]
-
+        accuracy_pos = accuracy_pos[np.argmax(weighted_acc)]
+        accuracy_neg = accuracy_neg[np.argmax(weighted_acc)]
+        uncertain_pos_rate, _, _, _ = self.test_terminations(uncertain_dataset, uncertain_dataset, classifier)
+        uncertain_pos_rate = uncertain_pos_rate[np.argmax(weighted_acc)]
+        
         train.report({
             #"accuracy": accuracy, "weighted_acc": weighted_acc, 
             "best_weighted_acc": best_weight_acc, "best_acc": best_acc, 
-            "average_weighted_acc": np.mean(weighted_acc), "average_acc": np.mean(accuracy),
+            "positive_accuracy": accuracy_pos, "negative_accuracy": accuracy_neg,
+            "uncertain_pos_rate": uncertain_pos_rate,
+            "average_accuracy": np.mean(accuracy), "average_weighted_acc": np.mean(weighted_acc),
             "num_heads": config['num_heads'], "loss": train_loss})
     

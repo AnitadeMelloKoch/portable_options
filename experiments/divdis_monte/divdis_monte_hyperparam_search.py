@@ -1,14 +1,26 @@
-import logging
-import multiprocessing
+import argparse
+import random
+import time
+import os
 
 import numpy as np
-from experiments.divdis_monte.core.divdis_monte_classifier_experiment import MonteDivDisClassifierExperiment
-import argparse 
-from portable.utils.utils import load_gin_configs
-import torch 
-import random 
+import ray
+import torch
+from tqdm import tqdm
+from ray import tune
+from ray.tune.search.optuna import OptunaSearch
+from ray.tune.search import Repeater
+from ray.tune.schedulers import ASHAScheduler
 
-img_dir = "resources/monte_images/"
+from experiments import experiment
+from portable.option.memory.set_dataset import SetDataset
+from portable.utils.utils import load_gin_configs
+from experiments.divdis_monte.core.divdis_monte_hyperparam_search_experiment import \
+    MonteDivDisHyperparamSearchExperiment
+
+
+
+img_dir = "/home/bingnan/portable_options/resources/monte_images/"
 # train using room 1 only
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
@@ -145,60 +157,90 @@ uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         ]
 
 
+
 if __name__ == "__main__":
-        parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
-        parser.add_argument("--base_dir", type=str, required=True)
-        parser.add_argument("--seed", type=int, required=True)
-        parser.add_argument("--config_file", nargs='+', type=str, required=True)
-        parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
-                ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
-                ' "create_atari_environment.game_name="Pong"").')
+    parser.add_argument("--base_dir", type=str, required=True)
+    #parser.add_argument("--config_file", nargs='+', type=str, required=True)
+    #parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
+    #    ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
+    #    ' "create_atari_environment.game_name="Pong"").')
 
-        args = parser.parse_args()
+    args = parser.parse_args()
 
-        load_gin_configs(args.config_file, args.gin_bindings)
+    #load_gin_configs(args.config_file, args.gin_bindings)
 
-        multiprocessing.set_start_method('spawn')
-        
-        experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir,
-                                                        seed=args.seed)
 
-        experiment.add_datafiles(positive_train_files,
-                                 negative_train_files,
-                                 initial_unlabelled_train_files)
-        experiment.classifier.train(300)
+    experiment = MonteDivDisHyperparamSearchExperiment(experiment_name="minigrid_hyperparam_search",
+                                                       base_dir=args.base_dir,
+                                                       use_gpu=True)
 
-        print("Training on room 1 only")
-        logging.info("Training on room 1 only")
-        accuracy = experiment.test_classifier(positive_test_files,
-                                              negative_test_files)
-        uncertainty = experiment.test_uncertainty(uncertain_test_files)
-        print(f"Accuracy: {accuracy[0]}")
-        print(f"Weighted Accuracy: {accuracy[1]}")
-        print(f"Uncertainty: {uncertainty}")
 
-        for room_idx in range(len(room_list)):
-            room = room_list[room_idx]
-            print(f"Training on room {room}")
-            logging.info(f"Training on room {room}")
-            cur_room_unlab = unlabelled_train_files[room_idx]
-            cur_room_unlab = [np.load(file) for file in cur_room_unlab]
-            cur_room_unlab = [img for list in cur_room_unlab for img in list]
-            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
-            experiment.classifier.dataset.add_unlabelled_data(cur_room_unlab)
-            experiment.classifier.train(30)
+
+    search_space = {
+        "lr": tune.loguniform(1e-6, 1e-1),
+        "l2_reg": tune.loguniform(1e-6, 1e-1),
+        "div_weight":  tune.loguniform(1e-6, 1e-1),
+        "num_heads": tune.randint(1, 12),
+        "initial_epochs": tune.randint(50, 1000), # 50, 1000
+        "epochs_per_room": tune.randint(10, 100), # 10, 100
+        "unlabelled_batch_size": tune.choice([None, 16, 32, 64, 128, 256]),
+    }
+
+    #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
+    optuna_search = OptunaSearch(metric=["best_weighted_acc", "num_heads"], mode=["max", "min"])
+    #re_search_alg = Repeater(optuna_search, repeat=3)
+
+    train_dataset = SetDataset(max_size=1e6, batchsize=32, unlabelled_batchsize=None)
+    #train_dataset.add_true_files(positive_train_files)
+    #train_dataset.add_false_files(negative_train_files)
+    #train_dataset.add_unlabelled_files(initial_unlabelled_train_files)
+
+    test_dataset_positive = SetDataset(max_size=1e6, batchsize=64, unlabelled_batchsize=None)
+    test_dataset_positive.add_true_files(positive_test_files)
+    test_dataset_negative = SetDataset(max_size=1e6, batchsize=64, unlabelled_batchsize=None)
+    test_dataset_negative.add_false_files(negative_test_files)
+
+    uncertain_dataset = SetDataset(max_size=1e6, batchsize=64, unlabelled_batchsize=None)
+    uncertain_dataset.add_true_files(uncertain_test_files)
+    
+
+    #ray.init(max_direct_call_object_size=1024 ** 3)  # 1 GB
+    
+    tuner = tune.Tuner(
+        tune.with_resources(
+            tune.with_parameters(
+                experiment.train_classifier, 
+                train_dataset=train_dataset,
+                positive_train_files=positive_train_files,
+                negative_train_files=negative_train_files,
+                unlabelled_train_files=initial_unlabelled_train_files,
+
+                room_list=room_list,
+                unlabelled_list=unlabelled_train_files,
                 
-            accuracy = experiment.test_classifier(positive_test_files, negative_test_files)
-            uncertainty = experiment.test_uncertainty(uncertain_test_files)
-                                                        
-            print(f"Accuracy: {accuracy[0]}")
-            print(f"Weighted Accuracy: {accuracy[1]}")
-            print(f"Uncertainty: {uncertainty}")
+                test_dataset_positive=test_dataset_positive,
+                test_dataset_negative=test_dataset_negative,
+                uncertain_dataset=uncertain_dataset,
+                ),
+            resources={"gpu":1}
+        ),
+        tune_config=tune.TuneConfig(
+        search_alg=optuna_search,
+        num_samples=5,
+    ),
+        param_space=search_space,
+    )
+    results = tuner.fit()
+    
+    best_result = results.get_best_result("best_weighted_acc", "max")
 
-        #num_batch = 1
-        #view_acc = experiment.view_false_predictions(positive_test_files, negative_test_files, num_batch)
-        #print(f"Viewing {num_batch} of Predictions:")
-        #print(f"Accuracy: {view_acc[0]}")
-        #print(f"Weighted Accuracy: {view_acc[1]}")
- 
+    print("Best trial config: {}".format(best_result.config))
+    print("Best trial final train loss: {}".format(
+        best_result.metrics["loss"]))
+    print("Best trial final test weighted accuracy: {}".format(
+        best_result.metrics["best_weighted_acc"]))
+    print("Best trial final test raw accuracy: {}".format(
+        best_result.metrics["best_acc"]))
+

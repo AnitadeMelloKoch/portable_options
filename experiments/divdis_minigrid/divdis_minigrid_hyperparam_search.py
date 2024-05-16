@@ -7,7 +7,7 @@ import numpy as np
 import ray
 import torch
 from tqdm import tqdm
-from ray import tune
+from ray import tune, train
 from ray.tune.search.optuna import OptunaSearch
 from ray.tune.search import Repeater
 from ray.tune.schedulers import ASHAScheduler
@@ -67,20 +67,23 @@ if __name__ == "__main__":
                                                                   test_positive_files=positive_test_files,
                                                                   test_negative_files=negative_test_files)
 
+    ray.init()
 
 
     search_space = {
-        "lr": tune.loguniform(1e-5, 1e-1),
-        "l2_reg": tune.loguniform(1e-5, 1e-1),
-        "div_weight":  tune.loguniform(1e-5, 1e-1),
-        "num_heads": tune.randint(1, 12),
-        "num_epochs": tune.randint(998, 1000),
+        "lr": tune.loguniform(1e-6, 1e-1),
+        "l2_reg": tune.loguniform(1e-6, 1e-1),
+        "div_weight":  tune.loguniform(1e-6, 1e-1),
+        "num_heads": tune.randint(1, 7),
+        "num_epochs": tune.randint(50, 300),
         "unlabelled_batch_size": tune.choice([16, 32, 64, 128, 256]),
     }
 
     #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
     optuna_search = OptunaSearch(metric=["best_weighted_acc", "num_heads"], mode=["max", "min"])
-    re_search_alg = Repeater(optuna_search, repeat=3)
+    #optuna_search = OptunaSearch(metric="best_weighted_acc", mode="max")
+
+    #re_search_alg = Repeater(optuna_search, repeat=1)
 
     train_dataset = SetDataset(max_size=1e6, batchsize=32, unlabelled_batchsize=None)
     train_dataset.add_true_files(positive_train_files)
@@ -101,11 +104,12 @@ if __name__ == "__main__":
                 train_dataset=train_dataset,
                 test_dataset_positive=test_dataset_positive,
                 test_dataset_negative=test_dataset_negative),
-            resources={"gpu": 0.5}
+            resources={"cpu":16, "gpu":1}
         ),
         tune_config=tune.TuneConfig(
-        search_alg=re_search_alg,
-        num_samples=60,
+        search_alg=optuna_search,
+        num_samples=5,
+        max_concurrent_trials=1,
     ),
         param_space=search_space,
     )

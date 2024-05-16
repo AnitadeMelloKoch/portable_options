@@ -1,5 +1,5 @@
 import multiprocessing
-from experiments.divdis_monte.core.monte_divdis_classifier_experiment import MonteDivDisClassifierExperiment
+from experiments.divdis_monte.core.divdis_monte_classifier_experiment import MonteDivDisClassifierExperiment
 import argparse 
 from portable.utils.utils import load_gin_configs
 import torch 
