@@ -7,7 +7,7 @@ import torch
 
 from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
 from pfrl.wrappers import atari_wrappers
-from experiments.divdis_monte.core.monte_terminations import *
+from experiments.divdis_monte.experiment_files import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -35,20 +35,20 @@ if __name__ == "__main__":
         return x
     # monte has 18 actions
     
-    terminations = [
-        [check_termination_bottom_ladder],
-        [check_termination_top_ladder],
-        [check_termination_correct_enemy_left],
-        [check_termination_correct_enemy_right]
-    ]
-    
     experiment = DivDisMetaExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_model=create_atari_model(4, 5),
-                                      option_type="mock",
-                                      terminations=terminations)
+                                      action_model=create_atari_model(4,17),
+                                      option_type="divdis")
+    
+    experiment.add_datafiles(
+        
+    )
+    
+    experiment.train_option_classifiers()
+    
+    # experiment.test_classifiers()
     
     env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
@@ -64,3 +64,7 @@ if __name__ == "__main__":
                                 args.seed,
                                 2e6,
                                 0.9)
+    
+
+
+

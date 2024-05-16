@@ -254,7 +254,7 @@ class DivDisOption():
         policy.move_to_cpu()
         self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
-        policy.end_skill(sum(option_rewards))
+        policy.end_skill(sum(extrinsic_rewards))
         
         self.train_data[int(idx)].append({
             "head_idx": idx,

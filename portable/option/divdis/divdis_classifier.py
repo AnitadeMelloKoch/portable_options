@@ -45,7 +45,8 @@ class DivDisClassifier():
         self.use_gpu = use_gpu,
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize,
-                                  unlabelled_batchsize=unlabelled_dataset_batchsize)
+                                  unlabelled_batchsize=unlabelled_dataset_batchsize,
+                                  store_int=True)
         self.learning_rate = learning_rate
         
         self.head_num = head_num
