@@ -14,6 +14,8 @@ from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory import SetDataset
 from portable.utils.utils import set_seed
 
+
+
 def save_image(img, save_dir, batch_number, img_number_within_batch):
             # Construct filename to include both batch number and image number within the batch
             filename = f"{save_dir}/batch_{batch_number}_image_{img_number_within_batch}.png"
@@ -27,6 +29,12 @@ def save_image(img, save_dir, batch_number, img_number_within_batch):
 def worker_initializer():
     plt.switch_backend('Agg')
 
+def transform(x):
+    # only keep the last channel of imgs
+    x = x[:, -1]
+    x = x.unsqueeze(1)
+    return x
+
 @gin.configurable 
 class MonteDivDisClassifierExperiment():
     def __init__(self,
@@ -35,7 +43,6 @@ class MonteDivDisClassifierExperiment():
                  seed,
                  use_gpu,
                  
-                 classifier_input_dim,
                  classifier_num_classes,
                  
                  classifier_head_num,
@@ -60,12 +67,12 @@ class MonteDivDisClassifierExperiment():
                                            log_dir=self.log_dir,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
-                                           input_dim=classifier_input_dim,
                                            num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
                                            model_name='monte_cnn'
                                            )
+        #self.classifier.dataset.set_transform_function(transform)
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         log_file = os.path.join(self.log_dir,
@@ -112,8 +119,8 @@ class MonteDivDisClassifierExperiment():
         dataset_negative = SetDataset(max_size=1e6,
                                       batchsize=64)
         
-        # dataset_positive.set_transform_function(transform)
-        # dataset_negative.set_transform_function(transform)
+        #dataset_positive.set_transform_function(transform)
+        #dataset_negative.set_transform_function(transform)
         
         dataset_positive.add_true_files(test_positive_files)
         dataset_negative.add_false_files(test_negative_files)
@@ -126,7 +133,7 @@ class MonteDivDisClassifierExperiment():
         for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y, votes, confidence = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
@@ -141,7 +148,7 @@ class MonteDivDisClassifierExperiment():
         for _ in range(dataset_negative.num_batches):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y, votes, confidence = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
@@ -170,10 +177,10 @@ class MonteDivDisClassifierExperiment():
         return accuracy, weighted_acc
 
 
-    def measure_uncertainty(self, uncertain_files):
+    def test_uncertainty(self, uncertain_files):
         dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
-        
+        #dataset_positive.set_transform_function(transform)
         
         dataset_positive.add_true_files(uncertain_files)
     
@@ -183,7 +190,7 @@ class MonteDivDisClassifierExperiment():
         for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y, votes, confidence = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
@@ -191,8 +198,7 @@ class MonteDivDisClassifierExperiment():
 
         uncertainty /= counter
         
-        
-        logging.info("============= Classifiers Uncertainty Measured =============")
+        logging.info("============= Classifiers Uncertainty States Measured =============")
         for idx in range(self.classifier.head_num):
             logging.info("Head idx:{:<4}, Uncertainty: {:.4f}.".format(idx, uncertainty[idx]))
         logging.info("=================================================")
@@ -210,8 +216,8 @@ class MonteDivDisClassifierExperiment():
         dataset_negative = SetDataset(max_size=1e6,
                                       batchsize=64)
         
-        # dataset_positive.set_transform_function(transform)
-        # dataset_negative.set_transform_function(transform)
+        #dataset_positive.set_transform_function(transform)
+        #dataset_negative.set_transform_function(transform)
         
         dataset_positive.add_true_files(test_positive_files)
         dataset_negative.add_false_files(test_negative_files)
@@ -224,7 +230,7 @@ class MonteDivDisClassifierExperiment():
         for _ in range(num_batch):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y, votes, confidence = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
@@ -251,7 +257,7 @@ class MonteDivDisClassifierExperiment():
         for _ in range(num_batch):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y, votes, confidence = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
             
             for idx in range(self.classifier.head_num):
                 pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
