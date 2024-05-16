@@ -268,6 +268,18 @@ class SetDataset():
         self.counter = 0
         self.shuffle()
 
+    def add_unlabelled_data(self, data_list):
+        data = torch.squeeze(
+            torch.stack(data_list), 1
+        )
+        self.unlabelled_data = self.concatenate(data, self.unlabelled_data)
+        if len(self.unlabelled_data) > self.list_max_size:
+            self.unlabelled_data = self.unlabelled_data[:self.list_max_size]
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.counter = 0
+        self.shuffle()
+
     def shuffle(self):
         self.shuffled_indices_true = np.setdiff1d(range(self.true_length), self.validate_indicies_true)
         self.shuffled_indices_true = np.random.permutation(self.shuffled_indices_true)
