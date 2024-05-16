@@ -138,15 +138,17 @@ class MonteDataCollector:
         except AssertionError:
             state = state.squeeze.numpy()
 
+        self.state = state
+
         if self.INITIATION:
-            self.init_positive_states = [state]
+            self.init_positive_states = [state.copy()]
         else:
-            self.init_negative_states = [state]
+            self.init_negative_states = [state.copy()]
 
         if self.TERMINATION:
-            self.term_positive_states = [state]
+            self.term_positive_states = [state.copy()]
         else:
-            self.term_negative_states = [state]
+            self.term_negative_states = [state.copy()]
 
         self.visualize_env()
         
