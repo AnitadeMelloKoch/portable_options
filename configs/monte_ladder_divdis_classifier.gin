@@ -1,18 +1,16 @@
 import experiments.divdis_monte.core.monte_divdis_classifier_experiment
 import portable.option.divdis.divdis_classifier
 
-MonteDivDisClassifierExperiment.experiment_name                = "monte_full_test6"
+MonteDivDisClassifierExperiment.experiment_name                = "monte_ladder_classifier_room_progression"
 MonteDivDisClassifierExperiment.use_gpu                        = True
 
-MonteDivDisClassifierExperiment.classifier_input_dim           = 4 # should be 3 or (64,64,3)
 MonteDivDisClassifierExperiment.classifier_num_classes         = 2
 
-MonteDivDisClassifierExperiment.classifier_head_num            = 10
+MonteDivDisClassifierExperiment.classifier_head_num            = 6
 MonteDivDisClassifierExperiment.classifier_learning_rate       = 0.0002 #1e-3
-MonteDivDisClassifierExperiment.classifier_diversity_weight    = 0.0001 #1e-3
-MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.0001 #1e-2
-MonteDivDisClassifierExperiment.classifier_train_epochs        = 1000
+MonteDivDisClassifierExperiment.classifier_diversity_weight    = 0.0005 #1e-3
+MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.00001 #1e-2
+MonteDivDisClassifierExperiment.classifier_train_epochs        = 500
 
-DivDisClassifier.dataset_batchsize = 128
-DivDisClassifier.beta_distribution_alpha = 100
-DivDisClassifier.beta_distribution_beta = 10
+DivDisClassifier.dataset_batchsize = 64
+

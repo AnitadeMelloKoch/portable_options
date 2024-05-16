@@ -12,5 +12,3 @@ DivDisClassifier.use_gpu             = True
 
 DivDisClassifier.input_dim           = 4
 
-DivDisClassifier.beta_distribution_alpha = 100
-DivDisClassifier.beta_distribution_beta = 10

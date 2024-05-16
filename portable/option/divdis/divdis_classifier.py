@@ -30,7 +30,6 @@ class DivDisClassifier():
                  
                  head_num,
                  learning_rate,
-                 input_dim,
                  num_classes,
                  diversity_weight,
                  
@@ -42,7 +41,8 @@ class DivDisClassifier():
                  summary_writer=None,
                  model_name='minigrid_cnn') -> None:
         
-        self.use_gpu = use_gpu,
+        self.use_gpu = use_gpu
+        
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize,
                                   unlabelled_batchsize=unlabelled_dataset_batchsize)
@@ -53,12 +53,10 @@ class DivDisClassifier():
         self.log_dir = log_dir
 
         if model_name == "minigrid_cnn":
-            self.classifier = MinigridCNN(num_input_channels=input_dim,
-                                          num_classes=num_classes,
+            self.classifier = MinigridCNN(num_classes=num_classes,
                                           num_heads=head_num)
         elif model_name == "monte_cnn":
-            self.classifier = MonteCNN(num_input_channels=input_dim,
-                                       num_classes=num_classes,
+            self.classifier = MonteCNN(num_classes=num_classes,
                                        num_heads=head_num)
 
         else:
@@ -106,8 +104,12 @@ class DivDisClassifier():
     def train(self,
               epochs,
               start_offset=0):
-        self.move_to_gpu()
+        
+        if self.use_gpu:
+            self.move_to_gpu()
+            
         self.classifier.train()
+        
         for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0

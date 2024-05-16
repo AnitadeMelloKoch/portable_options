@@ -14,7 +14,6 @@ class PrintLayer(torch.nn.Module):
 
 class MinigridCNN(nn.Module):
     def __init__(self,
-                 num_input_channels,
                  num_classes,
                  num_heads):
         super().__init__()
