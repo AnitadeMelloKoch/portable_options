@@ -12,6 +12,7 @@ DivDisMetaExperiment.use_gpu                                        = True
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
 DivDisMetaExperiment.use_global_option                              = True
+DivDisMetaExperiment.gpu_list                                       = [0]
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (4, 84, 84)
