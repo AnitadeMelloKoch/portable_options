@@ -304,15 +304,10 @@ class ActionPPO():
         obs_normalizer = pfrl.nn.EmpiricalNormalization(state_shape,
                                                         clip_threshold=5)
         
-        if use_gpu is False:
-            gpu = -1
-        else:
-            gpu = 0
-        
         self.agent = PPO(model,
                          opt,
                          obs_normalizer=obs_normalizer,
-                         gpu=gpu,
+                         gpu=use_gpu,
                          phi=phi,
                          entropy_coef=entropy_coef,
                          update_interval=update_interval,

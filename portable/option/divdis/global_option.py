@@ -19,7 +19,6 @@ class GlobalOption():
                  save_dir,
                  policy_phi,
                  video_generator=None):
-        self.use_gpu = use_gpu
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
@@ -45,7 +44,7 @@ class GlobalOption():
                      obs,
                      info,
                      make_video=False):
-        self.policy.move_to_gpu()
+        # self.policy.move_to_gpu()
         action = self.policy.act(obs)
         
         next_obs, reward, done, info = env.step(action)
@@ -55,7 +54,7 @@ class GlobalOption():
                             reward,
                             next_obs,
                             done)
-        self.policy.move_to_cpu()
+        # self.policy.move_to_cpu()
         return next_obs, reward, done, info, 1
     
     def eval_policy(self,

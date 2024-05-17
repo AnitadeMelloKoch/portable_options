@@ -42,7 +42,11 @@ class DivDisClassifier():
                  summary_writer=None,
                  model_name='minigrid_cnn') -> None:
         
-        self.use_gpu = use_gpu,
+        if use_gpu == -1:
+            self.device = torch.device('cpu')
+        else:
+            self.device = torch.device('cuda:{}'.format(use_gpu)) 
+        
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize,
                                   unlabelled_batchsize=unlabelled_dataset_batchsize,
@@ -61,10 +65,10 @@ class DivDisClassifier():
             self.classifier = MonteCNN(num_input_channels=input_dim,
                                        num_classes=num_classes,
                                        num_heads=head_num)
-
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
+        self.classifier.to(self.device)
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
                                           weight_decay=l2_reg_weight # weight decay also works as L2 regularization
@@ -107,7 +111,7 @@ class DivDisClassifier():
     def train(self,
               epochs,
               start_offset=0):
-        self.move_to_gpu()
+        # self.move_to_gpu()
         self.classifier.train()
         for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
@@ -125,10 +129,9 @@ class DivDisClassifier():
                 x, y = self.dataset.get_batch()
                 unlabelled_x = self.dataset.get_unlabelled_batch()
                 
-                if self.use_gpu:
-                    x = x.to("cuda")
-                    y = y.to("cuda")
-                    unlabelled_x = unlabelled_x.to("cuda")
+                x = x.to(self.device)
+                y = y.to(self.device)
+                unlabelled_x = unlabelled_x.to(self.device)
                 
                 unlabelled_pred = self.classifier(unlabelled_x)
                 pred_y = self.classifier(x)
@@ -170,8 +173,7 @@ class DivDisClassifier():
         if len(x.shape) == self.state_dim:
             x = x.unsqueeze(0)
         
-        if self.use_gpu:
-            x = x.to("cuda")
+        x = x.to(self.device)
         
         with torch.no_grad():
             pred_y = self.classifier(x)
@@ -186,8 +188,7 @@ class DivDisClassifier():
     def predict_idx(self, x, idx):
         self.classifier.eval()
         
-        if self.use_gpu:
-            x = x.to("cuda")
+        x = x.to(self.device)
         
         with torch.no_grad():
             pred_y = self.classifier(x)

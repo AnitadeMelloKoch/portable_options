@@ -33,6 +33,7 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 gpu_list=[0],
                  start_epsilon=0.0,
                  end_epsilon=0.0,
                  decay_steps=5e5,
@@ -92,7 +93,7 @@ class DivDisMetaExperiment():
         else:
             self.video_generator = None
         
-        self.meta_agent = ActionPPO(use_gpu=use_gpu,
+        self.meta_agent = ActionPPO(use_gpu=gpu_list[-1],
                                     policy=action_policy,
                                     value_function=action_vf,
                                     model=action_model,
@@ -106,8 +107,11 @@ class DivDisMetaExperiment():
             [math.pow(discount_rate, n) for n in range(100)]
         )
         
+        gpu_assign_list = self._assign_gpus(self.use_gpu, num_options*option_head_num, gpu_list)
+        
         if self.use_global_option:
-            self.global_option = GlobalOption(use_gpu=use_gpu,
+            gpu_assign_list = self._assign_gpus(self.use_gpu, (num_options*option_head_num)+1, gpu_list)
+            self.global_option = GlobalOption(use_gpu=gpu_assign_list[-1],
                                               log_dir=os.path.join(self.log_dir),
                                               save_dir=os.path.join(self.save_dir),
                                               policy_phi=option_policy_phi)
@@ -115,7 +119,7 @@ class DivDisMetaExperiment():
         if self.option_type == "mock":
             assert len(terminations) == num_options
             for idx, termination_list in enumerate(terminations):
-                self.options.append(DivDisMockOption(use_gpu=use_gpu,
+                self.options.append(DivDisMockOption(use_gpu=gpu_assign_list[idx*option_head_num: (idx+1)*option_head_num],
                                                     log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
                                                     save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
                                                     terminations=termination_list,
@@ -131,7 +135,7 @@ class DivDisMetaExperiment():
         elif self.option_type == "divdis":
             self.num_heads = option_head_num
             for idx in range(self.num_options):
-                self.options.append(DivDisOption(use_gpu=use_gpu,
+                self.options.append(DivDisOption(use_gpu=gpu_assign_list[idx*option_head_num: (idx+1)*option_head_num],
                                                  log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
                                                  save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
                                                  num_heads=option_head_num,
@@ -145,6 +149,14 @@ class DivDisMetaExperiment():
         
         self.experiment_data = []
         
+    @staticmethod
+    def _assign_gpus(use_gpu, num_models, gpu_list):
+        assign_list_idx = [
+            idx%len(gpu_list) for idx in range(num_models)
+        ]
+        if use_gpu is False:
+            assign_list_idx = [-1]*num_models
+        return assign_list_idx
     
     def save(self):
         for option in self.options:
@@ -349,7 +361,7 @@ class DivDisMetaExperiment():
             
             self.plot_learning_curve(episode_rewards)
             
-            if episode % 50:
+            if episode % 50 == 0:
                 self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
                 self.save()
             

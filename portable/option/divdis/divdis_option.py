@@ -31,7 +31,9 @@ class DivDisOption():
                  video_generator=None,
                  plot_dir=None):
         
-        self.use_gpu = use_gpu
+        assert len(use_gpu) == num_heads
+        
+        self.gpu_list = use_gpu
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
@@ -39,7 +41,7 @@ class DivDisOption():
         
         self.use_seed_for_initiation = use_seed_for_initiation
         
-        self.terminations = DivDisClassifier(use_gpu=use_gpu,
+        self.terminations = DivDisClassifier(use_gpu=use_gpu[0],
                                              head_num=num_heads,
                                              log_dir=os.path.join(log_dir, 'termination'))
         
@@ -102,7 +104,7 @@ class DivDisOption():
                 with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                     keys = pickle.load(f)
                 for key in keys:
-                    policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
+                    policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
                                                         policy_phi=self.policy_phi,
                                                         learn_initiation=(not self.use_seed_for_initiation))
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
@@ -117,7 +119,7 @@ class DivDisOption():
     
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
+        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
                                                             policy_phi=self.policy_phi))
     
     def find_possible_policy(self, *kwargs):
@@ -159,19 +161,19 @@ class DivDisOption():
     def _get_policy(self, head_idx, option_idx):
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
-                self.policies[head_idx][option_idx] = self._get_new_policy()
+                self.policies[head_idx][option_idx] = self._get_new_policy(head_idx)
             return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
         else:
             if len(self.initiable_policies[head_idx]) > 0:
                 return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
             else:
-                policy = self._get_new_policy()
+                policy = self._get_new_policy(head_idx)
                 self.policies[head_idx].append(policy)
                 policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
-    def _get_new_policy(self):
-        return PolicyWithInitiation(use_gpu=self.use_gpu,
+    def _get_new_policy(self, head_idx):
+        return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
                                     policy_phi=self.policy_phi,
                                     learn_initiation=(not self.use_seed_for_initiation))
     
@@ -200,8 +202,8 @@ class DivDisOption():
         should_terminate = False
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
-        policy.move_to_gpu()
-        self.terminations.move_to_gpu()
+        # policy.move_to_gpu()
+        # self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
@@ -251,8 +253,8 @@ class DivDisOption():
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
         
-        policy.move_to_cpu()
-        self.terminations.move_to_cpu()
+        # policy.move_to_cpu()
+        # self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(extrinsic_rewards))
         
@@ -371,8 +373,8 @@ class DivDisOption():
         
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
-        policy.move_to_gpu()
-        self.terminations.move_to_gpu()
+        # policy.move_to_gpu()
+        # self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
@@ -427,8 +429,8 @@ class DivDisOption():
                 else:
                     self.video_generator.make_image(env.render("rgb_array"))
             
-            policy.move_to_cpu()
-            self.terminations.move_to_cpu()
+            # policy.move_to_cpu()
+            # self.terminations.move_to_cpu()
             policy.store_buffer(buffer_dir)
             
             return state, info, steps, rewards, option_rewards, states, infos
