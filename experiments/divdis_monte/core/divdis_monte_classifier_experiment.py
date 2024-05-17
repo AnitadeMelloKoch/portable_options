@@ -106,8 +106,10 @@ class MonteDivDisClassifierExperiment():
                                  negative_files=negative_files,
                                  unlabelled_files=unlabelled_files)
     
-    def train_classifier(self):
-        self.classifier.train(epochs=self.train_epochs)
+    def train_classifier(self, epochs=None):
+        if epochs is None:
+            epochs = self.train_epochs
+        self.classifier.train(epochs)
     
     def test_classifier(self,
                         test_positive_files,
@@ -174,7 +176,7 @@ class MonteDivDisClassifierExperiment():
             )
         logging.info("=================================================")
         
-        return accuracy, weighted_acc
+        return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
 
     def test_uncertainty(self, uncertain_files):
@@ -293,7 +295,7 @@ class MonteDivDisClassifierExperiment():
             )
         logging.info("=================================================")
         
-        return accuracy, weighted_acc
+        return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
     
     def explain_classifiers(self,
@@ -329,5 +331,23 @@ class MonteDivDisClassifierExperiment():
         return torch.std_mean(true_data, dim=0), torch.std_mean(false_data, dim=0)
         
         
-    
-    
+    def plot_metrics(self, history, x_label, plot_name):
+        epochs = range(1, len(history['weighted_accuracy']) + 1)
+        
+        plt.figure(figsize=(12, 8))
+        
+        plt.plot(epochs, history['weighted_accuracy'], 'b-', label='Weighted Accuracy', linewidth=2)
+        plt.plot(epochs, history['raw_accuracy'], 'g-', label='Raw Accuracy')
+        #plt.plot(epochs, history['true_accuracy'], 'r-', label='True Accuracy')
+        #plt.plot(epochs, history['false_accuracy'], 'c-', label='False Accuracy')
+        plt.plot(epochs, history['uncertainty'], 'm-', label='Uncertainty Rate')
+        
+        plt.xlabel(x_label)
+        plt.ylabel('Metrics')
+        plt.title('Training Metrics Over Time')
+        plt.legend()
+        
+        plt.grid(True)
+        plt.show()
+        plt.savefig(os.path.join(self.plot_dir, plot_name))
+        

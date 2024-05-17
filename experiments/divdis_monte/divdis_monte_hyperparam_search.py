@@ -236,8 +236,8 @@ if __name__ == "__main__":
     results = tuner.fit()
 
     # save results to pickle
-    with open(os.path.join(experiment.log_dir, results), 'wb') as f:
-        pickle.dump("monte_hyperparam_search_results", f)
+    with open(os.path.join(experiment.log_dir, "monte_hyperparam_results"), 'wb') as f:
+        pickle.dump(results, f)
     
     
     

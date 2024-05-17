@@ -20,16 +20,16 @@ negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.n
 initial_unlabelled_train_files = [
                             #img_dir+"screen_climb_down_ladder_initiation_positive.npy",
                             #img_dir+"screen_climb_down_ladder_initiation_negative.npy",
-                            img_dir+"climb_down_ladder_room0_initiation_positive.npy",
-                            img_dir+"climb_down_ladder_room0_initiation_negative.npy",
+                            #img_dir+"climb_down_ladder_room0_initiation_positive.npy",
+                            #img_dir+"climb_down_ladder_room0_initiation_negative.npy",
         ]
 room_list = [0,4,3,9,8,10,11,5,13,7,6,14,22,21,19,18]
 
 unlabelled_train_files = [
                         #0
                         [
-                         #img_dir+"climb_down_ladder_room0_initiation_positive.npy",
-                         #img_dir+"climb_down_ladder_room0_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room0_initiation_positive.npy",
+                         img_dir+"climb_down_ladder_room0_initiation_negative.npy",
                          img_dir+"climb_down_ladder_room0_termination_negative.npy",
                          img_dir+"climb_down_ladder_room0_uncertain.npy"],
                          #4
@@ -167,19 +167,36 @@ if __name__ == "__main__":
         experiment.add_datafiles(positive_train_files,
                                  negative_train_files,
                                  initial_unlabelled_train_files)
-        experiment.classifier.train(300)
+        experiment.train_classifier(200)
 
         print("Training on room 1 only")
         logging.info("Training on room 1 only")
-        accuracy = experiment.test_classifier(positive_test_files,
-                                              negative_test_files)
+        accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier(positive_test_files, negative_test_files)
         uncertainty = experiment.test_uncertainty(uncertain_test_files)
-        print(f"Accuracy: {accuracy[0]}")
-        print(f"Weighted Accuracy: {accuracy[1]}")
+                                                    
+        print(f"Weighted Accuracy: {weighted_acc}")
+        print(f"Accuracy: {accuracy}")
         print(f"Uncertainty: {uncertainty}")
+
+        best_weighted_acc = np.max(weighted_acc)
+        best_head_idx = np.argmax(weighted_acc)
+        best_accuracy = accuracy[best_head_idx]
+        best_true_acc = accuracy_pos[best_head_idx]
+        best_false_acc = accuracy_neg[best_head_idx]
+        best_head_uncertainty = uncertainty[best_head_idx]
+
+        history = {
+        'weighted_accuracy': [best_weighted_acc],
+        'raw_accuracy': [best_accuracy],
+        'true_accuracy': [best_true_acc], 
+        'false_accuracy': [best_false_acc],
+        'uncertainty': [best_head_uncertainty]
+    }
 
         for room_idx in range(len(room_list)):
             room = room_list[room_idx]
+            print('===============================')
+            print('===============================')
             print(f"Training on room {room}")
             logging.info(f"Training on room {room}")
             cur_room_unlab = unlabelled_train_files[room_idx]
@@ -187,14 +204,65 @@ if __name__ == "__main__":
             cur_room_unlab = [img for list in cur_room_unlab for img in list]
             cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
             experiment.classifier.dataset.add_unlabelled_data(cur_room_unlab)
-            experiment.classifier.train(30)
+            experiment.train_classifier(200)
                 
-            accuracy = experiment.test_classifier(positive_test_files, negative_test_files)
+            accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier(positive_test_files, negative_test_files)
             uncertainty = experiment.test_uncertainty(uncertain_test_files)
                                                         
-            print(f"Accuracy: {accuracy[0]}")
-            print(f"Weighted Accuracy: {accuracy[1]}")
+            print(f"Weighted Accuracy: {weighted_acc}")
+            print(f"Accuracy: {accuracy}")
             print(f"Uncertainty: {uncertainty}")
+
+            best_weighted_acc = np.max(weighted_acc)
+            best_head_idx = np.argmax(weighted_acc)
+            best_accuracy = accuracy[best_head_idx]
+            best_true_acc = accuracy_pos[best_head_idx]
+            best_false_acc = accuracy_neg[best_head_idx]
+            best_head_uncertainty = uncertainty[best_head_idx]
+
+            history['weighted_accuracy'].append(best_weighted_acc)
+            history['raw_accuracy'].append(best_accuracy)
+            history['true_accuracy'].append(best_true_acc)
+            history['false_accuracy'].append(best_false_acc)
+            history['uncertainty'].append(best_head_uncertainty)
+
+        experiment.plot_metrics(history, 'room', 'room_progression_metrics')
+
+        print("All unlabelled rooms added, now running additional training loops")
+        logging.info("All unlabelled rooms added, now running additional training loops")
+
+
+        for i in range(20):
+            print('===============================')
+            print('===============================')
+            print(f"Additional Training Loop {i}")
+            logging.info(f"Additional Training Loop {i}")
+            
+            experiment.train_classifier(200)
+
+            accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier(positive_test_files, negative_test_files)
+            uncertainty = experiment.test_uncertainty(uncertain_test_files)
+                                                        
+            print(f"Weighted Accuracy: {weighted_acc}")
+            print(f"Accuracy: {accuracy}")
+            print(f"Uncertainty: {uncertainty}")
+
+            best_weighted_acc = np.max(weighted_acc)
+            best_head_idx = np.argmax(weighted_acc)
+            best_accuracy = accuracy[best_head_idx]
+            best_true_acc = accuracy_pos[best_head_idx]
+            best_false_acc = accuracy_neg[best_head_idx]
+            best_head_uncertainty = uncertainty[best_head_idx]
+
+            history['weighted_accuracy'].append(best_weighted_acc)
+            history['raw_accuracy'].append(best_accuracy)
+            history['true_accuracy'].append(best_true_acc)
+            history['false_accuracy'].append(best_false_acc)
+            history['uncertainty'].append(best_head_uncertainty)
+
+        experiment.plot_metrics(history, 'additional_loops', 'additional_train_metrics')
+
+            
 
         #num_batch = 1
         #view_acc = experiment.view_false_predictions(positive_test_files, negative_test_files, num_batch)
