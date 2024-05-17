@@ -46,7 +46,7 @@ if __name__ == "__main__":
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_model=create_atari_model(4, 5),
+                                      action_model=create_atari_model(4, 22),
                                       option_type="mock",
                                       terminations=terminations)
     
