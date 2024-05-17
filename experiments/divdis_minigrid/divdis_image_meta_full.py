@@ -47,10 +47,10 @@ if __name__ == "__main__":
                              minigrid_negative_files,
                              minigrid_unlabelled_files)
     
-    # experiment.train_option_classifiers()
+    experiment.train_option_classifiers()
     
-    # experiment.test_classifiers(minigrid_test_files_positive,
-    #                             minigrid_test_files_negative)
+    experiment.test_classifiers(minigrid_test_files_positive,
+                                minigrid_test_files_negative)
     
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
