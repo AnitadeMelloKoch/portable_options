@@ -1,4 +1,5 @@
 import argparse
+import pickle
 import random
 import time
 import os
@@ -20,8 +21,8 @@ from experiments.divdis_minigrid.core.advanced_minigrid_divdis_hyperparam_search
 
 
 color = 'grey'
-#task = f'get{color}key'
-task = f'open{color}door'
+task = f'get{color}key'
+#task = f'open{color}door'
 init_term = 'termination'
 RANDOM_TRAIN = True
 RANDOM_UNLABELLED = True
@@ -71,19 +72,19 @@ if __name__ == "__main__":
 
 
     search_space = {
-        "lr": tune.loguniform(1e-5, 1e-1),
+        "lr": tune.loguniform(1e-5, 1e-2),
         "l2_reg": tune.loguniform(1e-5, 1e-1),
         "div_weight":  tune.loguniform(1e-5, 1e-1),
         "num_heads": tune.randint(1, 6),
-        "num_epochs": tune.randint(50, 300),
+        "num_epochs": tune.randint(50, 1000),
         "unlabelled_batch_size": tune.choice([16, 32, 64, 128, 256]),
     }
 
     #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
-    optuna_search = OptunaSearch(metric=["best_weighted_acc", "num_heads"], mode=["max", "min"])
+    optuna_search = OptunaSearch(metric="best_weighted_acc", mode="max")
     #optuna_search = OptunaSearch(metric="best_weighted_acc", mode="max")
 
-    #re_search_alg = Repeater(optuna_search, repeat=1)
+    re_search_alg = Repeater(optuna_search, repeat=3)
 
     train_dataset = SetDataset(max_size=1e6, batchsize=32, unlabelled_batchsize=None)
     train_dataset.add_true_files(positive_train_files)
@@ -107,15 +108,18 @@ if __name__ == "__main__":
             resources={"cpu":16, "gpu":1}
         ),
         tune_config=tune.TuneConfig(
-        search_alg=optuna_search,
-        num_samples=5,
+        search_alg=re_search_alg,
+        num_samples=120,
         max_concurrent_trials=1,
     ),
         param_space=search_space,
     )
     results = tuner.fit()
+
+    with open(os.path.join(experiment.log_dir, results), 'wb') as f:
+        pickle.dump("minigrid_hyperparam_search_results", f)
     
-    best_result = results.get_best_result("loss", "min")
+    best_result = results.get_best_result("best_weighted_acc", "max")
 
     print("Best trial config: {}".format(best_result.config))
     print("Best trial final train loss: {}".format(
