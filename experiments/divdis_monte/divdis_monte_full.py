@@ -39,11 +39,13 @@ if __name__ == "__main__":
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_model=create_atari_model(4,17),
+                                      action_model=create_atari_model(4,13),
                                       option_type="divdis")
     
     experiment.add_datafiles(
-        
+        positive_files=monte_positive_files,
+        negative_files=monte_negative_files,
+        unlabelled_files=monte_unlabelled_files
     )
     
     experiment.train_option_classifiers()
@@ -51,7 +53,7 @@ if __name__ == "__main__":
     # experiment.test_classifiers()
     
     env = atari_wrappers.wrap_deepmind(
-        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
         episode_life=True,
         clip_rewards=True,
         frame_stack=False
@@ -62,7 +64,7 @@ if __name__ == "__main__":
     
     experiment.train_meta_agent(env,
                                 args.seed,
-                                2e6,
+                                4e6,
                                 0.9)
     
 
