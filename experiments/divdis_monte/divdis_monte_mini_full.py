@@ -9,16 +9,71 @@ from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapp
 from portable.utils import load_init_states
 from pfrl.wrappers import atari_wrappers
 from experiments.divdis_monte.core.monte_terminations import *
+from experiments.divdis_monte.experiment_files import *
 
 init_states = [
-    ["resources/monte_images/screen_climb_down_ladder_initiation"]
+    ["resources/monte_env_states/room0/ladder/top_0.pkl"],
+    ["resources/monte_env_states/room11/enemy/left_of_left_snake.pkl"],
+    ["resources/monte_env_states/room21/platforms/left.pkl"]
 ]
 
-termination_point = []
+termination_point = [
+    [(5, 235, 4)],
+    [(77, 235, 19)],
+    [(79, 235, 7)]
+]
 
-positive_files = []
-negative_files = []
-unlabelled_files = []
+# climb down ladder
+# climb up ladder
+# move left enemy
+# move right enemy
+
+positive_files = [
+    ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
+    ["resources/monte_images/climb_up_ladder_room1_termination_positive.npy"],
+    ["resources/monte_images/move_left_enemy_room1_termination_positive.npy"],
+    ["resources/monte_images/move_right_enemy_room1_termination_positive.npy"],
+]
+negative_files = [
+    ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
+     "resources/monte_images/screen_death_1.npy",
+     "resources/monte_images/screen_death_2.npy",
+     "resources/monte_images/screen_death_3.npy",
+     "resources/monte_images/screen_death_4.npy"],
+    ["resources/monte_images/climb_up_ladder_room1_termination_negative.npy",
+     "resources/monte_images/screen_death_1.npy",
+     "resources/monte_images/screen_death_2.npy",
+     "resources/monte_images/screen_death_3.npy",
+     "resources/monte_images/screen_death_4.npy"],
+    ["resources/monte_images/move_left_enemy_room1_termination_negative.npy",
+     "resources/monte_images/screen_death_1.npy",
+     "resources/monte_images/screen_death_2.npy",
+     "resources/monte_images/screen_death_3.npy",
+     "resources/monte_images/screen_death_4.npy"],
+    ["resources/monte_images/move_right_enemy_room1_termination_negative.npy",
+     "resources/monte_images/screen_death_1.npy",
+     "resources/monte_images/screen_death_2.npy",
+     "resources/monte_images/screen_death_3.npy",
+     "resources/monte_images/screen_death_4.npy"],
+]
+unlabelled_files = [
+    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_negative.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_positive.npy",],
+    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_negative.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_positive.npy",],
+    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_negative.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_positive.npy",],
+    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/climb_down_ladder_room0_initiation_positive.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_negative.npy",
+     "resources/monte_images/move_left_enemy_room11left_termination_positive.npy",],
+]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -46,31 +101,39 @@ if __name__ == "__main__":
         return x
     # monte has 18 actions
     
-    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
-                                      seed=args.seed,
-                                      option_policy_phi=policy_phi,
-                                      agent_phi=option_agent_phi,
-                                      action_model=create_atari_model(4, 22),
-                                      option_type="divdis",
-                                      add_unlabelled_data=True)
+    for idx in range(len(init_states)):
     
-    env = atari_wrappers.wrap_deepmind(
-        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
-        episode_life=True,
-        clip_rewards=True,
-        frame_stack=False
-    )
-    env.seed(args.seed)
+        experiment = DivDisMetaExperiment(base_dir=args.base_dir,
+                                        seed=args.seed,
+                                        option_policy_phi=policy_phi,
+                                        agent_phi=option_agent_phi,
+                                        action_model=create_atari_model(4, 13),
+                                        option_type="divdis",
+                                        add_unlabelled_data=True)
+        
+        env = atari_wrappers.wrap_deepmind(
+            atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
+            episode_life=True,
+            clip_rewards=True,
+            frame_stack=False
+        )
+        env.seed(args.seed)
 
-    env = MonteAgentWrapper(env, agent_space=False)
-    env = MonteBootstrapWrapper(env,
-                                agent_space=False,
-                                list_init_states=,
-                                check_true_termination=,
-                                list_termination_points=,
-                                max_steps=int(2e4))
-    
-    experiment.train_meta_agent(env,
-                                args.seed,
-                                1e6,
-                                0.9)
+        env = MonteAgentWrapper(env, agent_space=False, stack_observations=False)
+        env = MonteBootstrapWrapper(env,
+                                    agent_space=False,
+                                    list_init_states=load_init_states(init_states[idx]),
+                                    check_true_termination=epsilon_ball_termination,
+                                    list_termination_points=termination_point[idx],
+                                    max_steps=int(2e4))
+        
+        experiment.add_datafiles(positive_files=positive_files,
+                                negative_files=negative_files,
+                                unlabelled_files=unlabelled_files)
+        
+        experiment.train_option_classifiers()
+        
+        experiment.train_meta_agent(env,
+                                    args.seed,
+                                    2e6,
+                                    0.9)

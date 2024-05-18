@@ -48,7 +48,9 @@ class MonteAgentWrapper(gym.Wrapper):
 
     def update_state(self, obs, state):
         state = torch.roll(state, -1, 0)
-        state[-1, ...] = torch.from_numpy(obs)
+        if type(obs) == np.ndarray:
+            obs = torch.from_numpy(obs)
+        state[-1, ...] = obs
 
         return state
 
