@@ -158,6 +158,9 @@ class DivDisOption():
                                    negative_files,
                                    unlabelled_files)
     
+    def add_unlabelled_data(self, data):
+        self.terminations.add_unlabelled_data(data)
+    
     def _get_policy(self, head_idx, option_idx):
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
@@ -394,7 +397,7 @@ class DivDisOption():
                 
                 next_state, reward, done, info = env.step(action)
                 if type(next_state) is np.ndarray:
-                    next_state = torch.from_numpy(next_state).float()
+                    next_state = torch.from_numpy(next_state)
                 term_state = self.policy_phi(next_state).unsqueeze(0)
                 should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
                 steps += 1

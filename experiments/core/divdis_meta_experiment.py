@@ -33,6 +33,7 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 add_unlabelled_data=False,
                  gpu_list=[0],
                  start_epsilon=0.0,
                  end_epsilon=0.0,
@@ -62,6 +63,7 @@ class DivDisMetaExperiment():
         self.classifier_epochs = classifier_epochs
         self.option_timeout = option_timeout
         self.use_global_option = use_global_option
+        self.add_unlabelled_data = add_unlabelled_data
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -209,12 +211,11 @@ class DivDisMetaExperiment():
                                                      0.98,
                                                      seed)
     
-    def train_option_classifiers(self):
+    def train_option_classifiers(self, epochs=None):
+        if epochs is None:
+            epochs = self.classifier_epochs
         for idx in range(self.num_options):
-            self.options[idx].terminations.train(self.classifier_epochs)
-        
-        self.save()
-        
+            self.options[idx].terminations.train(epochs)
     
     def get_masks_from_seed(self,
                             seed):
@@ -281,7 +282,7 @@ class DivDisMetaExperiment():
                          env,
                          seed,
                          max_steps,
-                         min_performance):
+                         min_performance=1.0):
         total_steps = 0
         episode_rewards = deque(maxlen=200)
         episode = 0
@@ -324,7 +325,7 @@ class DivDisMetaExperiment():
                     action_offset = action-self.num_primitive_actions
                     option_num = int(action_offset/self.num_heads)
                     option_head = action_offset%self.num_heads
-                    next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].train_policy(option_head,
+                    next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
                                                                                                             env,
                                                                                                             obs,
                                                                                                             info,
@@ -335,6 +336,8 @@ class DivDisMetaExperiment():
                 self.decisions += 1
                 total_steps += steps
                 
+                if self.add_unlabelled_data is True:
+                    self.options[option_num].add_unlabelled_data(states)
                 
                 self.experiment_data.append({
                     "meta_step": self.decisions,
@@ -347,6 +350,9 @@ class DivDisMetaExperiment():
                             rewards,
                             done)
                 obs = next_obs
+            if self.add_unlabelled_data is True:
+                self.train_option_classifiers(10)
+            
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
                                                                                      self.decisions,  
@@ -365,10 +371,10 @@ class DivDisMetaExperiment():
                 self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
                 self.save()
             
-            if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
-                logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
-                                                                                        total_steps))
-                return
+            # if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
+            #     logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
+            #                                                                             total_steps))
+            #     return
     
     def plot_learning_curve(self,
                             rewards):

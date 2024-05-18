@@ -37,3 +37,19 @@ monte_test_negative_files = [
     [],
     [],
 ]
+
+def epsilon_ball_termination(current_position, term_position, env):
+    epsilon = 2
+    if current_position[0] <= (term_position[0] + epsilon) and \
+        current_position[0] >= (term_position[0] - epsilon) and \
+        current_position[1] <= (term_position[1] + epsilon) and \
+        current_position[1] >= (term_position[1] - epsilon):
+        return True
+    return False 
+
+
+def in_room_termination(current_position, term_position, env):
+    return current_position[2] == term_position[2]
+    
+
+

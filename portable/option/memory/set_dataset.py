@@ -269,6 +269,18 @@ class SetDataset():
         self._set_batch_num()
         self.counter = 0
         self.shuffle()
+    
+    def add_unlabelled_data(self, data_list):
+        data = torch.squeeze(
+            torch.stack(data_list), 1
+        )
+        self.unlabelled_data = self.concatenate(data, self.unlabelled_data)
+        if len(self.unlabelled_data) > self.list_max_size:
+            self.unlabelled_data = self.unlabelled_data[:self.list_max_size]
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.unlabelled_counter = 0
+        self.shuffle()
 
     def add_priority_false_data(self, data_list):
         data = torch.squeeze(
