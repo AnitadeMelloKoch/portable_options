@@ -62,5 +62,5 @@ if __name__ == "__main__":
     
     experiment.train_meta_agent(env,
                                 args.seed,
-                                2e6,
+                                4e6,
                                 0.9)
