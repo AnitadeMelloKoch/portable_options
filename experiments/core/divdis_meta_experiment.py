@@ -150,6 +150,7 @@ class DivDisMetaExperiment():
         self.gamma = discount_rate
         
         self.experiment_data = []
+        self.episode_data = []
         
     @staticmethod
     def _assign_gpus(use_gpu, num_models, gpu_list):
@@ -166,6 +167,9 @@ class DivDisMetaExperiment():
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.experiment_data, f)
         
+        with open(os.path.join(self.save_dir, "episode_results.pkl"), 'wb') as f:
+            pickle.dump(self.episode_data, f)
+        
         if self.use_global_option:
             self.global_option.save()
         
@@ -176,6 +180,9 @@ class DivDisMetaExperiment():
             option.load()
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.experiment_data = pickle.load(f)
+        
+        with open(os.path.join(self.save_dir, "episode_results.pkl"), 'rb') as f:
+            self.episode_data = pickle.load(f)
         
         if self.use_global_option:
             self.global_option.load()
@@ -365,16 +372,22 @@ class DivDisMetaExperiment():
             episode += 1
             episode_rewards.append(undiscounted_reward)
             
+            self.episode_data.append({
+                "episode": episode,
+                "episode_rewards": episode_rewards,
+                "frames": total_steps
+            })
+            
             self.plot_learning_curve(episode_rewards)
             
             if episode % 50 == 0:
                 self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
                 self.save()
             
-            # if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
-            #     logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
-            #                                                                             total_steps))
-            #     return
+            if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
+                logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
+                                                                                        total_steps))
+                return
     
     def plot_learning_curve(self,
                             rewards):
