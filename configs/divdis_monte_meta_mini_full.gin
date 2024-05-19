@@ -13,7 +13,7 @@ DivDisMetaExperiment.use_gpu                                        = True
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 400
 DivDisMetaExperiment.use_global_option                              = True
-DivDisMetaExperiment.gpu_list                                       = [0,1]
+DivDisMetaExperiment.gpu_list                                       = [0]
 DivDisMetaExperiment.option_timeout                                 = 100
 
 ActionPPO.learning_rate                                             = 2.5e-4
@@ -23,7 +23,7 @@ ActionPPO.update_interval                                           = 100
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 100000
+PolicyWithInitiation.buffer_length                                  = 200000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4

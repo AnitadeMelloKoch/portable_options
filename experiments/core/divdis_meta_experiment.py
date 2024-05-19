@@ -351,7 +351,7 @@ class DivDisMetaExperiment():
                             done)
                 obs = next_obs
             if self.add_unlabelled_data is True:
-                self.train_option_classifiers(10)
+                self.train_option_classifiers(1)
             
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,

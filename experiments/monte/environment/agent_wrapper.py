@@ -107,7 +107,6 @@ class MonteAgentWrapper(gym.Wrapper):
         else:
             if self.use_stacked_obs:
                 obs = self.stacked_state
-    
         return obs, reward, done, info
     
     def agent_space(self):
