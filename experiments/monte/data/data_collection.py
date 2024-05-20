@@ -5,7 +5,6 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from pfrl.wrappers import atari_wrappers
-from skimage import color
 
 from .port_wrapper import MontezumaPortWrapper, actions
 
@@ -83,10 +82,13 @@ def set_player_position(env, x, y, room):
 
 class MonteDataCollector:
     def __init__(self, env_name, seed, max_frames):
+        self.save_dir = 'resources/monte_images/'
+        
         self.env = make_env(env_name, seed, max_frames)
         self.env.reset()
+        
         self.state = np.zeros((4, 84, 84))
-        self.save_dir = 'resources/monte_images/'
+        self.prev_state = None # Buffer to hold the previous frame's state
         
         self.init_positive_states = []
         self.init_negative_states = []
@@ -132,26 +134,99 @@ class MonteDataCollector:
         self.env.unwrapped.ale.deleteState(new_state_ref)
         obs, _, _, _ = self.env.step(0)  # NO-OP action to update the RAM state
 
+        if type(state) != np.ndarray:
+            state = np.array(state)
+
         # check state shape
         try:
             assert state.shape == (4, 84, 84)
         except AssertionError:
-            state = state.squeeze.numpy()
+            state = state.squeeze()
 
         self.state = state
 
         if self.INITIATION:
-            self.init_positive_states = [state.copy()]
+            self.init_positive_states = [state]
         else:
-            self.init_negative_states = [state.copy()]
+            self.init_negative_states = [state]
 
         if self.TERMINATION:
-            self.term_positive_states = [state.copy()]
+            self.term_positive_states = [state]
         else:
-            self.term_negative_states = [state.copy()]
+            self.term_negative_states = [state]
 
         self.visualize_env()
         
+
+    def save_data(self, prefix):       
+        if len(self.init_positive_states) > 0:
+            np.save(f'{self.save_dir+prefix}_initiation_positive.npy', np.array(self.init_positive_states))
+        if len(self.init_negative_states) > 0:
+            np.save(f'{self.save_dir+prefix}_initiation_negative.npy', np.array(self.init_negative_states))
+        if len(self.term_positive_states) > 0:
+            np.save(f'{self.save_dir+prefix}_termination_positive.npy', np.array(self.term_positive_states))
+        if len(self.term_negative_states) > 0:
+            np.save(f'{self.save_dir+prefix}_termination_negative.npy', np.array(self.term_negative_states))
+        if len(self.uncertain_states) > 0:
+            np.save(f'{self.save_dir+prefix}_uncertain.npy', np.array(self.uncertain_states))
+
+
+    def perform_action(self, action, steps):
+
+        for _ in range(steps):
+            # At every step, visualize current state and save previous state, saving is delayed by 1 step
+            if self.prev_state is not None:
+                # uncertain should not include other init or term states
+                if self.UNCERTAIN:
+                    self.uncertain_states.append(self.state.copy())
+                # not uncertain, then save accordingly
+                else:
+                    if self.INITIATION:
+                        self.init_positive_states.append(self.state.copy())
+                    else:
+                        self.init_negative_states.append(self.state.copy())
+
+                    if self.TERMINATION:
+                        self.term_positive_states.append(self.state.copy())
+                    else:
+                        self.term_negative_states.append(self.state.copy())
+
+                    
+            # env step and update state images
+            obs, _, _, _ = self.env.step(action)
+            self.state = update_state(obs, self.state)
+
+            self.visualize_env()
+            
+            self.prev_state = self.state.copy()
+            
+
+    def perform_action_with_delay(self, key):
+            action_map = {
+                ord('w'): actions.UP,
+                ord('s'): actions.DOWN,
+                ord('a'): actions.LEFT,
+                ord('d'): actions.RIGHT,
+                ord('q'): actions.UP_LEFT,
+                ord('e'): actions.UP_RIGHT,
+                ord('z'): actions.DOWN_LEFT,
+                ord('c'): actions.DOWN_RIGHT,
+                curses.KEY_UP: actions.UP_FIRE,
+                curses.KEY_DOWN: actions.DOWN_FIRE,
+                curses.KEY_LEFT: actions.LEFT_FIRE,
+                curses.KEY_RIGHT: actions.RIGHT_FIRE,
+                ord('1'): actions.FIRE,
+                ord(' '): actions.NOOP,
+            }
+
+            if key in action_map:
+                action = action_map[key]
+                self.perform_action(action, 1)
+
+
+    def run(self):
+        curses.wrapper(self.collect_data)
+
 
     def collect_data(self, stdscr):
         curses.cbreak()
@@ -178,22 +253,23 @@ class MonteDataCollector:
                 self.INITIATION = True
                 self.TERMINATION = False
                 self.UNCERTAIN = False
-                stdscr.addstr(f"Initiation set to: {self.INITIATION}\n")
+                stdscr.addstr(f"Initiation set to: {self.INITIATION} for current state shown.\n")
+                
             elif key == ord('t'):
                 self.TERMINATION = True
                 self.INITIATION = False
                 self.UNCERTAIN = False
-                stdscr.addstr(f"Termination set to: {self.TERMINATION}\n")
+                stdscr.addstr(f"Termination set to: {self.TERMINATION} for current state shown.\n")
             elif key == ord('u'):
                 self.UNCERTAIN = True
                 self.INITIATION = False
                 self.TERMINATION = False
-                stdscr.addstr(f"Uncertainty set to: {self.UNCERTAIN}\n")
+                stdscr.addstr(f"Uncertainty set to: {self.UNCERTAIN} for current state shown.\n")
             elif key == ord('f'):
                 self.INITIATION = False
                 self.TERMINATION = False
                 self.UNCERTAIN = False
-                stdscr.addstr(f"All set to: {self.INITIATION}\n")
+                stdscr.addstr(f"All set to: {self.INITIATION} for current state shown.\n")
                 
 
             elif key == ord('b'):
@@ -210,105 +286,26 @@ class MonteDataCollector:
                 else:
                     stdscr.addstr("Data not saved. Still collecting data.\n")
                 
-            elif key == (ord('w') or ord('W')):
+            elif key in (ord('w'), ord('s'), ord('a'), ord('d'), ord('q'), ord('e'), ord('z'), ord('c'),
+                         curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT, ord('1'), ord(' ')):
                 i += 1
-                self.perform_action(actions.UP, 1)
-            elif key == (ord('s') or ord('S')):
-                i += 1
-                self.perform_action(actions.DOWN, 1)
-            elif key == (ord('a') or ord('A')):
-                i += 1
-                self.perform_action(actions.LEFT, 1)
-            elif key == (ord('d') or ord('D')):
-                i += 1
-                self.perform_action(actions.RIGHT, 1)
-
-            elif key == ord('q'):
-                i += 1
-                self.perform_action(actions.UP_LEFT, 1)
-            elif key == ord('e'):
-                i += 1
-                self.perform_action(actions.UP_RIGHT, 1)
-            elif key == ord('z'):
-                i += 1
-                self.perform_action(actions.DOWN_LEFT, 1)
-            elif key == ord('c'):
-                i += 1
-                self.perform_action(actions.DOWN_RIGHT, 1)
-
-            elif key == ord('f'): # jump
-                i += 1
-                self.perform_action(actions.FIRE, 1)
-
-            elif key == curses.KEY_UP:
-                i += 1
-                self.perform_action(actions.UP_FIRE, 1)
-            elif key == curses.KEY_DOWN:
-                i += 1
-                self.perform_action(actions.DOWN_FIRE, 1)
-            elif key == curses.KEY_LEFT:
-                i += 1
-                self.perform_action(actions.LEFT_FIRE, 1)
-            elif key == curses.KEY_RIGHT:
-                i += 1
-                self.perform_action(actions.RIGHT_FIRE, 1)
-            elif key == ord(' '): 
-                i += 1
-                self.perform_action(actions.NOOP, 1)
+                self.perform_action_with_delay(key)
                 
             stdscr.refresh()
-
-
-    def perform_action(self, action, steps):
-
-        for _ in range(steps):
-            # env step and update state images
-            obs, _, _, _ = self.env.step(action)
-            self.state = update_state(obs, self.state)
-
-            # store in init or term dataset
-            if self.INITIATION:
-                self.init_positive_states.append(self.state.copy())
-            else:
-                self.init_negative_states.append(self.state.copy())
-
-            if self.TERMINATION:
-                self.term_positive_states.append(self.state.copy())
-            else:
-                self.term_negative_states.append(self.state.copy())
-
-            if self.UNCERTAIN:
-                self.uncertain_states.append(self.state.copy())
-
-            self.visualize_env()
-            
-
-    def save_data(self, prefix):       
-        if len(self.init_positive_states) > 0:
-            np.save(f'{self.save_dir+prefix}_initiation_positive.npy', np.array(self.init_positive_states))
-        if len(self.init_negative_states) > 0:
-            np.save(f'{self.save_dir+prefix}_initiation_negative.npy', np.array(self.init_negative_states))
-        if len(self.term_positive_states) > 0:
-            np.save(f'{self.save_dir+prefix}_termination_positive.npy', np.array(self.term_positive_states))
-        if len(self.term_negative_states) > 0:
-            np.save(f'{self.save_dir+prefix}_termination_negative.npy', np.array(self.term_negative_states))
-        if len(self.uncertain_states) > 0:
-            np.save(f'{self.save_dir+prefix}_uncertain.npy', np.array(self.uncertain_states))
-
-
-    def run(self):
-        curses.wrapper(self.collect_data)
-
 
 
 if __name__ == "__main__":
     collector = MonteDataCollector('MontezumaRevengeNoFrameskip-v4', 0, 30*60*60)
     collector.INITIATION = False
-    collector.TERMINATION = True
+    collector.TERMINATION = False
 
-    start_filename = "resources/monte_env_states/room21/ladder/bottom_0.pkl"
-    #start_filename = "resources/monte_env_states/room6/platforms/left.pkl"
-    #start_filename = "resources/monte_env_states/room18/bridge/right_bridge.pkl"
+    room_num = 22
+    #start_filename = f"resources/monte_env_states/room{room_num}/ladder/top_0.pkl"
+    start_filename = f"resources/monte_env_states/room{room_num}/platforms/left.pkl"
+    #start_filename = f"resources/monte_env_states/room{room_num}/bridge/right_bridge.pkl"
+    #start_filename = f"resources/monte_env_states/room{room_num}/enemy/left_of_left_snake.pkl"
+    #start_filename = f"resources/monte_env_states/room{room_num}/enemy/skull_left_0.pkl"
+    
     
     with open(start_filename, "rb") as f:
         start_ram = pickle.load(f)
