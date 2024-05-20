@@ -28,7 +28,7 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
     def __init__(self,
                  base_dir,
                  experiment_name,
-                 #use_gpu,
+                 use_gpu,
                  
                  train_positive_files,
                  train_negative_files,
@@ -38,7 +38,7 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
 
         
         self.experiment_name = experiment_name
-        #self.use_gpu = use_gpu
+        self.use_gpu = use_gpu
         
         self.base_dir = os.path.join(base_dir, experiment_name)
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -241,15 +241,8 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
         random_seed = np.random.randint(0, 100000)
         set_seed(random_seed)
 
-
-        if torch.cuda.is_available():
-            use_gpu = True
-        else:
-            use_gpu = False
-
-        print(f"Using GPU: {use_gpu}")
         
-        classifier = DivDisClassifier(use_gpu=use_gpu,
+        classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                     log_dir=self.log_dir,
                                     num_classes=2,
                                     diversity_weight=config['div_weight'],
@@ -259,7 +252,13 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
                                     unlabelled_dataset_batchsize=config['unlabelled_batch_size'],
                                     model_name='minigrid_cnn')
         
-        train_dataset.unlabelled_batchsize = config['unlabelled_batch_size']
+
+        if config['unlabelled_batch_size'] is not None:
+            train_dataset.dynamic_unlabelled_batchsize = False
+            train_dataset.unlabelled_batchsize = config['unlabelled_batch_size']
+        else:
+            train_dataset.dynamic_unlabelled_batchsize = True
+            train_dataset.unlabelled_batchsize = 0
         classifier.dataset = train_dataset
         
         #classifier.add_data(self.train_positive_files, self.train_negative_files, self.unlabelled_files)

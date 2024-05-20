@@ -9,9 +9,9 @@ import ray
 import torch
 from tqdm import tqdm
 from ray import tune
-from ray.tune.search.optuna import OptunaSearch
 from ray.tune.search import Repeater
-from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.optuna import OptunaSearch
+from ray.tune.search.hebo import HEBOSearch
 
 from experiments import experiment
 from portable.option.memory.set_dataset import SetDataset
@@ -21,7 +21,7 @@ from experiments.divdis_monte.core.divdis_monte_hyperparam_search_experiment imp
 
 
 
-img_dir = "/home/bingnan/portable_options/resources/monte_images/"
+img_dir = "/home/nick/portable_options/resources/monte_images/"
 # train using room 1 only
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
@@ -33,16 +33,16 @@ negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.n
 initial_unlabelled_train_files = [
                             #img_dir+"screen_climb_down_ladder_initiation_positive.npy",
                             #img_dir+"screen_climb_down_ladder_initiation_negative.npy",
-                            img_dir+"climb_down_ladder_room0_initiation_positive.npy",
-                            img_dir+"climb_down_ladder_room0_initiation_negative.npy",
+                            #img_dir+"climb_down_ladder_room0_initiation_positive.npy",
+                            #img_dir+"climb_down_ladder_room0_initiation_negative.npy",
         ]
 room_list = [0,4,3,9,8,10,11,5,13,7,6,14,22,21,19,18]
 
 unlabelled_train_files = [
                         #0
                         [
-                         #img_dir+"climb_down_ladder_room0_initiation_positive.npy",
-                         #img_dir+"climb_down_ladder_room0_initiation_negative.npy",
+                         img_dir+"climb_down_ladder_room0_initiation_positive.npy",
+                         img_dir+"climb_down_ladder_room0_initiation_negative.npy",
                          img_dir+"climb_down_ladder_room0_termination_negative.npy",
                          img_dir+"climb_down_ladder_room0_uncertain.npy"],
                          #4
@@ -180,18 +180,19 @@ if __name__ == "__main__":
 
 
     search_space = {
-        "lr": tune.loguniform(1e-5, 1e-1),
-        "l2_reg": tune.loguniform(1e-5, 1e-1),
-        "div_weight":  tune.loguniform(1e-5, 1e-1),
-        "num_heads": tune.randint(1, 6),
+        "lr": tune.loguniform(1e-6, 1e-2),
+        "l2_reg": tune.loguniform(1e-6, 1e-1),
+        "div_weight":  tune.loguniform(1e-6, 1e-1),
+        "num_heads": tune.randint(4, 11),
         "initial_epochs": tune.randint(50, 1000), # 50, 1000
-        "epochs_per_room": tune.randint(10, 100), # 10, 100
+        "epochs_per_room": tune.randint(10, 300), # 10, 100
         "unlabelled_batch_size": tune.choice([None, 16, 32, 64, 128, 256]),
     }
 
     #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
-    optuna_search = OptunaSearch(metric="best_weighted_acc", mode="max")
-    re_search_alg = Repeater(optuna_search, repeat=3)
+    #search_alg = OptunaSearch(metric="best_weighted_acc", mode="max")
+    search_alg = HEBOSearch(metric="best_weighted_acc", mode="max")
+    re_search_alg = Repeater(search_alg, repeat=3)
 
     train_dataset = SetDataset(max_size=1e6, batchsize=32, unlabelled_batchsize=None)
     #train_dataset.add_true_files(positive_train_files)
@@ -229,7 +230,7 @@ if __name__ == "__main__":
         ),
         tune_config=tune.TuneConfig(
         search_alg=re_search_alg,
-        num_samples=120,
+        num_samples=150,
     ),
         param_space=search_space,
     )

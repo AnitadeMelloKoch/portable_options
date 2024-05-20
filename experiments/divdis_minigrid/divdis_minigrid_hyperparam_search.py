@@ -61,6 +61,7 @@ if __name__ == "__main__":
 
 
     experiment = AdvancedMinigridDivDisHyperparamSearchExperiment(experiment_name="minigrid_hyperparam_search",
+                                                                  use_gpu=True,
                                                                   base_dir=args.base_dir,
                                                                   train_positive_files=positive_train_files,
                                                                   train_negative_files=negative_train_files,
@@ -75,9 +76,9 @@ if __name__ == "__main__":
         "lr": tune.loguniform(1e-5, 1e-2),
         "l2_reg": tune.loguniform(1e-5, 1e-1),
         "div_weight":  tune.loguniform(1e-5, 1e-1),
-        "num_heads": tune.randint(1, 6),
-        "num_epochs": tune.randint(50, 1000),
-        "unlabelled_batch_size": tune.choice([16, 32, 64, 128, 256]),
+        "num_heads": tune.randint(1, 7),
+        "num_epochs": tune.randint(50, 500),
+        "unlabelled_batch_size": tune.choice(['None',16, 32, 64, 128, 256]),
     }
 
     #scheduler = ASHAScheduler(max_t=1000, grace_period=10, reduction_factor=2)
@@ -116,8 +117,8 @@ if __name__ == "__main__":
     )
     results = tuner.fit()
 
-    with open(os.path.join(experiment.log_dir, results), 'wb') as f:
-        pickle.dump("minigrid_hyperparam_search_results", f)
+    with open(os.path.join(experiment.log_dir, "minigrid_hyperparam_search_results"), 'wb') as f:
+        pickle.dump(results, f)
     
     best_result = results.get_best_result("best_weighted_acc", "max")
 
