@@ -1,4 +1,5 @@
 # monte experiment files
+from experiments.divdis_monte.core.monte_terminations import check_termination_correct_enemy_left, check_termination_correct_enemy_right
 
 monte_positive_files = [
     ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
@@ -75,6 +76,11 @@ def epsilon_ball_termination(current_position, term_position, env):
 
 def in_room_termination(current_position, term_position, env):
     return current_position[2] == term_position[2]
-    
+
+def enemy_right_termination(current_position, term_position, env):
+    return check_termination_correct_enemy_right(current_position, env)
+
+def enemy_left_termination(current_position, term_position, env):
+    return check_termination_correct_enemy_left(current_position, env)
 
 

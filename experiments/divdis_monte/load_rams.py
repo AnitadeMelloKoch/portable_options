@@ -13,13 +13,13 @@ env = atari_wrappers.wrap_deepmind(
     )
 env = MonteAgentWrapper(env, agent_space=False)
 
-ram_dict = load_init_states(["resources/monte_env_states/room11/enemy/left_of_left_snake.pkl"])[0]
+ram_dict = load_init_states(["resources/monte_env_states/room1/enemy/skull_right_1.pkl"])[0]
 
 env.reset()
 
 set_player_ram(env, ram_dict["ram"])
 
-print(env.get_current_info({})["position"])
+print(env.get_current_info({})["player_pos"])
 
 img = env.render("rgb_array")
 plt.imshow(img)

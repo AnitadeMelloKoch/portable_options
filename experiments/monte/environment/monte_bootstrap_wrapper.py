@@ -34,7 +34,9 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self._check_termination = check_true_termination
 
     def reset(self,
-              agent_reposition_attempts=0):
+              agent_reposition_attempts=0,
+              random_start=None,
+              agent_position=None):
         self.env.reset()
         rand_idx = random.randint(0, len(self.init_states)-1)
         rand_state = self.init_states[rand_idx]
