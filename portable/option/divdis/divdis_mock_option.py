@@ -5,6 +5,7 @@ import gin
 import random 
 import torch 
 import pickle
+from torch.utils.tensorboard import SummaryWriter 
 
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.policy.agents import evaluating
@@ -58,6 +59,7 @@ class DivDisMockOption():
         self.initiable_policies = None
         self.video_generator = video_generator
         self.make_plots = False
+        self.writer = SummaryWriter(log_dir=self.log_dir)
         
         if plot_dir is not None:
             self.make_plots = True
@@ -264,6 +266,8 @@ class DivDisMockOption():
             "option_rewards": option_rewards,
             "extrinsic_rewards": extrinsic_rewards
         })
+        
+        self.writer.add_scalar('rewards_{}'.format(idx), sum(option_rewards), self.option_steps[idx])
         
         return state, info, done, steps, rewards, extrinsic_rewards, states, infos
     

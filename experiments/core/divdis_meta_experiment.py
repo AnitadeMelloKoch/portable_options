@@ -75,6 +75,8 @@ class DivDisMetaExperiment():
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         self.plot_dir = os.path.join(self.base_dir, 'plots')
         
+        self.writer = SummaryWriter(log_dir=self.log_dir)
+        
         self.decisions = 0
         
         os.makedirs(self.log_dir, exist_ok=True)
@@ -377,6 +379,8 @@ class DivDisMetaExperiment():
                 "episode_rewards": episode_rewards,
                 "frames": total_steps
             })
+            
+            self.writer.add_scalar('episode_rewards', sum(undiscounted_rewards), total_steps)
             
             self.plot_learning_curve(episode_rewards)
             
