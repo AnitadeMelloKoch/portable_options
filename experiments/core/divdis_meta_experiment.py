@@ -372,11 +372,11 @@ class DivDisMetaExperiment():
             
             undiscounted_rewards.append(undiscounted_reward)
             episode += 1
-            episode_rewards.append(undiscounted_reward)
+            episode_rewards.append(undiscounted_rewards)
             
             self.episode_data.append({
                 "episode": episode,
-                "episode_rewards": episode_rewards,
+                "episode_rewards": undiscounted_reward,
                 "frames": total_steps
             })
             
