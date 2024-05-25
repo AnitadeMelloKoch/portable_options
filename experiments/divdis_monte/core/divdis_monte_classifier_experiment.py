@@ -9,6 +9,7 @@ from multiprocessing import Pool
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory import SetDataset
@@ -49,12 +50,15 @@ class MonteDivDisClassifierExperiment():
                  classifier_learning_rate,
                  classifier_diversity_weight,
                  classifier_l2_reg_weight,
-                 classifier_train_epochs):
+                 classifier_initial_epochs,
+                 classifier_per_room_epochs
+                 ):
         
         self.seed = seed 
         self.base_dir = base_dir
         self.experiment_name = experiment_name 
-        self.train_epochs = classifier_train_epochs
+        self.initial_epochs = classifier_initial_epochs
+        self.per_room_epochs = classifier_per_room_epochs
         
         set_seed(seed)
         
@@ -62,6 +66,10 @@ class MonteDivDisClassifierExperiment():
         self.log_dir = os.path.join(self.base_dir, 'logs')
         self.plot_dir = os.path.join(self.base_dir, 'plots')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.plot_dir, exist_ok=True)
+        os.makedirs(self.save_dir, exist_ok=True)
+        
         
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
                                            log_dir=self.log_dir,
@@ -73,6 +81,11 @@ class MonteDivDisClassifierExperiment():
                                            model_name='monte_cnn'
                                            )
         #self.classifier.dataset.set_transform_function(transform)
+
+        self.positive_test_files = []
+        self.negative_test_files = []
+        self.uncertain_test_files = []
+        
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         log_file = os.path.join(self.log_dir,
@@ -89,7 +102,8 @@ class MonteDivDisClassifierExperiment():
         logging.info("Learning rate: {}".format(classifier_learning_rate))
         logging.info("Diversity weight: {}".format(classifier_diversity_weight))
         logging.info("L2 reg weight: {}".format(classifier_l2_reg_weight))
-        logging.info("Train epochs: {}".format(classifier_train_epochs))
+        logging.info("Initial epochs: {}".format(classifier_initial_epochs))
+        logging.info("Per room epochs: {}".format(classifier_per_room_epochs))
     
     def save(self):
         self.classifier.save(path=self.save_dir)
@@ -97,7 +111,7 @@ class MonteDivDisClassifierExperiment():
     def load(self):
         self.classifier.load(path=self.save_dir)
     
-    def add_datafiles(self,
+    def add_train_files(self,
                       positive_files,
                       negative_files,
                       unlabelled_files):
@@ -105,16 +119,21 @@ class MonteDivDisClassifierExperiment():
         self.classifier.add_data(positive_files=positive_files,
                                  negative_files=negative_files,
                                  unlabelled_files=unlabelled_files)
+
+    def add_test_files(self,
+                        positive_files,
+                        negative_files,
+                        uncertain_files=None):
+        self.positive_test_files = positive_files
+        self.negative_test_files = negative_files
+        self.uncertain_test_files = uncertain_files
     
     def train_classifier(self, epochs=None):
         if epochs is None:
-            epochs = self.train_epochs
+            epochs = self.initial_epochs
         self.classifier.train(epochs)
     
-    def test_classifier(self,
-                        test_positive_files,
-                        test_negative_files,
-                        ):
+    def test_classifier(self):
         dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
         
@@ -124,8 +143,8 @@ class MonteDivDisClassifierExperiment():
         #dataset_positive.set_transform_function(transform)
         #dataset_negative.set_transform_function(transform)
         
-        dataset_positive.add_true_files(test_positive_files)
-        dataset_negative.add_false_files(test_negative_files)
+        dataset_positive.add_true_files(self.positive_test_files)
+        dataset_negative.add_false_files(self.negative_test_files)
     
         counter = 0
         accuracy = np.zeros(self.classifier.head_num)
@@ -179,12 +198,12 @@ class MonteDivDisClassifierExperiment():
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
 
-    def test_uncertainty(self, uncertain_files):
+    def test_uncertainty(self):
         dataset_positive = SetDataset(max_size=1e6,
                                       batchsize=64)
         #dataset_positive.set_transform_function(transform)
         
-        dataset_positive.add_true_files(uncertain_files)
+        dataset_positive.add_true_files(self.uncertain_test_files)
     
         counter = 0
         uncertainty = np.zeros(self.classifier.head_num)
@@ -332,22 +351,157 @@ class MonteDivDisClassifierExperiment():
         
         
     def plot_metrics(self, history, x_label, plot_name):
-        epochs = range(1, len(history['weighted_accuracy']) + 1)
+        if isinstance(history, dict):
+            epochs = range(1, len(history['weighted_accuracy']) + 1)
+            
+            plt.figure(figsize=(12, 8))
+            
+            plt.plot(epochs, history['weighted_accuracy'], 'b-', label='Weighted Accuracy', linewidth=2)
+            plt.plot(epochs, history['raw_accuracy'], 'g-', label='Raw Accuracy')
+            #plt.plot(epochs, history['true_accuracy'], 'r-', label='True Accuracy')
+            #plt.plot(epochs, history['false_accuracy'], 'c-', label='False Accuracy')
+            if 'uncertainty' in history:
+                plt.plot(epochs, history['uncertainty'], 'm-', label='Uncertainty Rate')
+            
+            plt.xlabel(x_label)
+            plt.xticks(epochs)
+            plt.ylabel('Metrics')
+            plt.title('Training Metrics Over Time')
+            plt.legend()
+            
+            plt.grid(True)
+            
+            plt.show(block=False)
+            plt.savefig(os.path.join(self.plot_dir, plot_name))
+
+        elif isinstance(history, list):
+            # plot the average of given histories and use fill_between to show the variance
+            epochs = range(1, len(history[0]['weighted_accuracy']) + 1)
+
+            plt.figure(figsize=(12, 8))
+
+            plt.plot(epochs, np.mean([hist['weighted_accuracy'] for hist in history], axis=0), 'b-', label='Weighted Accuracy', linewidth=3)
+            plt.fill_between(epochs,
+                             np.mean([hist['weighted_accuracy'] for hist in history], axis=0) - np.std([hist['weighted_accuracy'] for hist in history], axis=0),
+                             np.mean([hist['weighted_accuracy'] for hist in history], axis=0) + np.std([hist['weighted_accuracy'] for hist in history], axis=0),
+                             alpha=0.2, color='b')
+            plt.plot(epochs, np.mean([hist['raw_accuracy'] for hist in history], axis=0), 'g-', label='Raw Accuracy')
+            plt.fill_between(epochs,
+                             np.mean([hist['raw_accuracy'] for hist in history], axis=0) - np.std([hist['raw_accuracy'] for hist in history], axis=0),
+                             np.mean([hist['raw_accuracy'] for hist in history], axis=0) + np.std([hist['raw_accuracy'] for hist in history], axis=0),
+                             alpha=0.2, color='g')
+            if 'uncertainty' in history[0]:
+                plt.plot(epochs, np.mean([hist['uncertainty'] for hist in history], axis=0), 'm-', label='Uncertainty Rate')
+                plt.fill_between(epochs,
+                                np.mean([hist['uncertainty'] for hist in history], axis=0) - np.std([hist['uncertainty'] for hist in history], axis=0),
+                                np.mean([hist['uncertainty'] for hist in history], axis=0) + np.std([hist['uncertainty'] for hist in history], axis=0),
+                                alpha=0.2, color='m')
+            plt.xlabel(x_label)
+            plt.xticks(epochs)
+            plt.ylabel('Metrics')
+            plt.title('Training Metrics Over Time')
+            plt.legend()
+
+            plt.grid(True)
+            plt.show(block=False)
+            plt.savefig(os.path.join(self.plot_dir, plot_name))
+            
+
+            
+    def room_by_room_train(self, room_list, unlabelled_train_files, history):
+        for room_idx in tqdm(range(len(room_list)), desc='Room Progression'):
+            room = room_list[room_idx]
+            print('===============================')
+            print('===============================')
+            print(f"Training on room {room}")
+            logging.info(f"Training on room {room}")
+            
+            cur_room_unlab = unlabelled_train_files[room_idx]
+            cur_room_unlab = [np.load(file) for file in cur_room_unlab]
+            cur_room_unlab = [img for list in cur_room_unlab for img in list]
+            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
+            self.classifier.dataset.add_unlabelled_data(cur_room_unlab)
+            
+            self.train_classifier(self.per_room_epochs)
+                
+            accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_classifier()
+                                                        
+            print(f"Weighted Accuracy: \n{np.round(weighted_acc, 2)}")
+            print(f"Accuracy: \n{np.round(accuracy, 2)}")
+
+            best_weighted_acc = np.max(weighted_acc)
+            best_head_idx = np.argmax(weighted_acc)
+            best_accuracy = accuracy[best_head_idx]
+            best_true_acc = accuracy_pos[best_head_idx]
+            best_false_acc = accuracy_neg[best_head_idx]
+            
+            history['weighted_accuracy'].append(best_weighted_acc)
+            history['raw_accuracy'].append(best_accuracy)
+            history['true_accuracy'].append(best_true_acc)
+            history['false_accuracy'].append(best_false_acc)
+            
+            if self.uncertain_test_files is not None:
+                uncertainty = self.test_uncertainty()
+                print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
+                best_head_uncertainty = uncertainty[best_head_idx]
+                history['uncertainty'].append(best_head_uncertainty)
+
+        # save history to pickle
+        with open(os.path.join(self.log_dir, 'room_progression_metrics'), 'wb') as f:
+            pickle.dump(history, f)
+        self.plot_metrics(history, 'room', 'room_progression_metrics')
+
+        print("All unlabelled rooms added, now running additional training loops")
+        logging.info("All unlabelled rooms added, now running additional training loops")
+
+        return history
         
-        plt.figure(figsize=(12, 8))
-        
-        plt.plot(epochs, history['weighted_accuracy'], 'b-', label='Weighted Accuracy', linewidth=2)
-        plt.plot(epochs, history['raw_accuracy'], 'g-', label='Raw Accuracy')
-        #plt.plot(epochs, history['true_accuracy'], 'r-', label='True Accuracy')
-        #plt.plot(epochs, history['false_accuracy'], 'c-', label='False Accuracy')
-        plt.plot(epochs, history['uncertainty'], 'm-', label='Uncertainty Rate')
-        
-        plt.xlabel(x_label)
-        plt.ylabel('Metrics')
-        plt.title('Training Metrics Over Time')
-        plt.legend()
-        
-        plt.grid(True)
-        plt.show()
-        plt.savefig(os.path.join(self.plot_dir, plot_name))
-        
+
+    def additional_train(self, num_loops=20): 
+        history = {
+            'weighted_accuracy': [],
+            'raw_accuracy': [],
+            'true_accuracy': [],
+            'false_accuracy': [],
+        }
+        if self.uncertain_test_files is not None:
+            history['uncertainty'] = []
+
+            
+        for i in tqdm(range(num_loops), desc='Additional Training Loops'):
+
+            print(f"Additional Training Loop {i}")
+            logging.info(f"Additional Training Loop {i}")
+            
+            self.train_classifier(self.per_room_epochs)
+
+            accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_classifier()
+                                                        
+            print(f"Weighted Accuracy: \n{np.round(weighted_acc, 2)}")
+            print(f"Accuracy: \n{np.round(accuracy, 2)}")
+
+            best_weighted_acc = np.max(weighted_acc)
+            best_head_idx = np.argmax(weighted_acc)
+            best_accuracy = accuracy[best_head_idx]
+            best_true_acc = accuracy_pos[best_head_idx]
+            best_false_acc = accuracy_neg[best_head_idx]
+            
+            history['weighted_accuracy'].append(best_weighted_acc)
+            history['raw_accuracy'].append(best_accuracy)
+            history['true_accuracy'].append(best_true_acc)
+            history['false_accuracy'].append(best_false_acc)
+
+            if self.uncertain_test_files is not None:
+                uncertainty = self.test_uncertainty()
+                print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
+                best_head_uncertainty = uncertainty[best_head_idx]
+                history['uncertainty'].append(best_head_uncertainty)
+
+
+        # save history to pickle
+        with open(os.path.join(self.log_dir, 'additional_loops'), 'wb') as f:
+            pickle.dump(history, f)
+        self.plot_metrics(history, 'additional_loops', 'additional_train_metrics')
+
+        return history
+
