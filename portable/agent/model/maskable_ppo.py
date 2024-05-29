@@ -1,7 +1,8 @@
 from pfrl.utils.batch_states import batch_states
+import itertools
 from sb3_contrib.common.maskable.distributions import MaskableCategoricalDistribution
 from pfrl.agents import PPO
-from pfrl.agents.ppo import _yield_minibatches
+from pfrl.agents.ppo import _yield_minibatches, _add_advantage_and_value_target_to_episodes, _make_dataset_recurrent, _compute_explained_variance
 from pfrl.utils.recurrent import (
     concatenate_recurrent_states,
     flatten_sequences_time_first,
@@ -15,6 +16,64 @@ import torch
 import pfrl
 import gin
 import os
+
+def _add_log_prob_and_value_to_episodes(
+    episodes,
+    model,
+    action_distrib,
+    phi,
+    batch_states,
+    obs_normalizer,
+    device,
+):
+
+    dataset = list(itertools.chain.from_iterable(episodes))
+
+    # Compute v_pred and next_v_pred
+    states = batch_states([b["state"] for b in dataset], device, phi)
+    next_states = batch_states([b["next_state"] for b in dataset], device, phi)
+
+    if obs_normalizer:
+        states = obs_normalizer(states, update=False)
+        next_states = obs_normalizer(next_states, update=False)
+
+    with torch.no_grad(), pfrl.utils.evaluating(model):
+        action_logits, vs_pred = model(states)
+        distribs = action_distrib.proba_distribution(action_logits)
+        masks = torch.tensor([b["mask"] for b in dataset], device=device)
+        distribs.apply_masking(masks)
+        _, next_vs_pred = model(next_states)
+
+        actions = torch.tensor([b["action"] for b in dataset], device=device)
+        log_probs = distribs.log_prob(actions).cpu().numpy()
+        vs_pred = vs_pred.cpu().numpy().ravel()
+        next_vs_pred = next_vs_pred.cpu().numpy().ravel()
+
+    for transition, log_prob, v_pred, next_v_pred in zip(
+        dataset, log_probs, vs_pred, next_vs_pred
+    ):
+        transition["log_prob"] = log_prob
+        transition["v_pred"] = v_pred
+        transition["next_v_pred"] = next_v_pred
+
+def _make_dataset(
+    episodes, model, phi, action_distrib, batch_states, obs_normalizer, gamma, lambd, device
+):
+    """Make a list of transitions with necessary information."""
+
+    _add_log_prob_and_value_to_episodes(
+        episodes=episodes,
+        model=model,
+        action_distrib=action_distrib,
+        phi=phi,
+        batch_states=batch_states,
+        obs_normalizer=obs_normalizer,
+        device=device,
+    )
+
+    _add_advantage_and_value_target_to_episodes(episodes, gamma=gamma, lambd=lambd)
+
+    return list(itertools.chain.from_iterable(episodes))
 
 class MaskablePPO(PPO):
     
@@ -216,6 +275,8 @@ class MaskablePPO(PPO):
         
         return batch_action
     
+    
+    
     def _update(self, dataset):
         """Update both the policy and the value function."""
 
@@ -368,6 +429,50 @@ class MaskablePPO(PPO):
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
         self.optimizer.step()
         self.n_updates += 1
+    
+    def _update_if_dataset_is_ready(self):
+        dataset_size = (
+            sum(len(episode) for episode in self.memory)
+            + len(self.last_episode)
+            + (
+                0
+                if self.batch_last_episode is None
+                else sum(len(episode) for episode in self.batch_last_episode)
+            )
+        )
+        if dataset_size >= self.update_interval:
+            self._flush_last_episode()
+            if self.recurrent:
+                dataset = _make_dataset_recurrent(
+                    episodes=self.memory,
+                    model=self.model,
+                    phi=self.phi,
+                    batch_states=self.batch_states,
+                    obs_normalizer=self.obs_normalizer,
+                    gamma=self.gamma,
+                    lambd=self.lambd,
+                    max_recurrent_sequence_len=self.max_recurrent_sequence_len,
+                    device=self.device,
+                )
+                self._update_recurrent(dataset)
+            else:
+                dataset = _make_dataset(
+                    episodes=self.memory,
+                    model=self.model,
+                    action_distrib=self.action_dist,
+                    phi=self.phi,
+                    batch_states=self.batch_states,
+                    obs_normalizer=self.obs_normalizer,
+                    gamma=self.gamma,
+                    lambd=self.lambd,
+                    device=self.device,
+                )
+                assert len(dataset) == dataset_size
+                self._update(dataset)
+            self.explained_variance = _compute_explained_variance(
+                list(itertools.chain.from_iterable(self.memory))
+            )
+            self.memory = []
 
 @gin.configurable
 class MaskablePPOAgent():
