@@ -179,6 +179,9 @@ class DivDisMockOption():
         policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
         policy.store_buffer_to_disk = store_buffer_bool
     
+    def check_termination(self, idx, state, env):
+        return self.terminations[idx](state, env)
+    
     def train_policy(self, 
                      idx,
                      env,

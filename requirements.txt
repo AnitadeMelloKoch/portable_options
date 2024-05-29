@@ -21,3 +21,4 @@ minigrid
 moviepy
 einops
 tensorboard
+sb3-contrib

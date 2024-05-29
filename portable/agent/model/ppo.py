@@ -119,13 +119,7 @@ def create_cnn_policy(n_channels, action_space, hidden_feature_size=128):
         nn.Tanh(),
         nn.Linear(64, 64),
         nn.Tanh(),
-        nn.Linear(64, action_space),
-        pfrl.policies.GaussianHeadWithStateIndependentCovariance(
-            action_size=action_space,
-            var_type="diagonal",
-            var_func=lambda x: torch.exp(2*x),
-            var_param_init=0
-        )
+        nn.Linear(64, action_space)
     )
 
 class CNNPolicy(nn.Module):
@@ -152,20 +146,11 @@ class CNNPolicy(nn.Module):
             nn.Tanh(),
             nn.Linear(64, action_space),
         )
-        
-        self.head = pfrl.policies.GaussianHeadWithStateIndependentCovariance(
-            action_size=action_space,
-            var_type="diagonal",
-            var_func=lambda x: torch.exp(2*x),
-            var_param_init=0
-        )
     
     def forward(self, x):
         action_vals = self.model(x)
         
-        masked_vals = action_vals
-        
-        return self.head(masked_vals)
+        return action_vals
 
 class CNNVF(nn.Module):
     def __init__(self, n_channels, hidden_feature_size=128):
@@ -352,7 +337,7 @@ class ActionPPO():
         done = [done]
         reset = [reset]
 
-        return self.agent.batch_observe(obs,
+        self.agent.batch_observe(obs,
                                         reward,
                                         done,
                                         reset)

@@ -34,7 +34,7 @@ class MinigridInfoWrapper(Wrapper):
         self.official_start_obs, self.official_start_info = self.reset()
 
     def reset(self):
-        obs, info = self.env.reset()
+        obs, info = self.env.reset(seed=self.env_seed)
         info = self._modify_info_dict(info)
         return obs, info
 
@@ -347,7 +347,7 @@ def environment_builder(
     else:
         env = gym.make(level_name,
                        render_mode="rgb_array")
-    env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
+    # env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
     env = RGBImgObsWrapper(env) # Get pixel observations
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
     if normalize_obs:

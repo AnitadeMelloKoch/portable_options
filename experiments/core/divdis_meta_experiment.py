@@ -15,7 +15,8 @@ from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from portable.option.divdis.divdis_option import DivDisOption
 from portable.option.divdis.global_option import GlobalOption
 from experiments.experiment_logger import VideoGenerator
-from portable.agent.model.ppo import ActionPPO 
+from portable.agent.model.ppo import ActionPPO
+from portable.agent.model.maskable_ppo import MaskablePPOAgent
 import math
 from portable.option.memory import SetDataset
 
@@ -97,11 +98,11 @@ class DivDisMetaExperiment():
         else:
             self.video_generator = None
         
-        self.meta_agent = ActionPPO(use_gpu=gpu_list[-1],
-                                    policy=action_policy,
-                                    value_function=action_vf,
-                                    model=action_model,
-                                    phi=agent_phi)
+        self.meta_agent = MaskablePPOAgent(use_gpu=gpu_list[-1],
+                                           policy=action_policy,
+                                           value_function=action_vf,
+                                           model=action_model,
+                                           phi=agent_phi)
         
         self.options = []
         self.num_options = num_options
@@ -236,14 +237,22 @@ class DivDisMetaExperiment():
         
         return action_mask
     
-    def act(self, obs):
-        # TODO Add action mask 
-        action, q_vals = self.meta_agent.act(obs)
+    def get_termination_masks(self, state, env):
+        masks = []
+        for option in self.options:
+            for idx in range(option.num_heads):
+                masks.append(option.check_termination(idx, state, env))
+        
+        return masks
+    
+    def act(self, obs, mask):
+        action, q_vals = self.meta_agent.act(obs, mask)
         
         return action, q_vals
     
     def observe(self, 
-                obs, 
+                obs,
+                mask, 
                 rewards, 
                 done):
         
@@ -255,6 +264,7 @@ class DivDisMetaExperiment():
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
         
         self.meta_agent.observe(obs,
+                                mask,
                                 reward,
                                 done,
                                 done)
@@ -310,8 +320,8 @@ class DivDisMetaExperiment():
                 self.save_image(env)
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
-                action_mask = self.get_masks_from_seed(seed)
-                action, q_vals = self.act(obs)
+                action_mask = self.get_termination_masks(obs, env)
+                action, q_vals = self.act(obs, action_mask)
                 
                 self._video_log("action: {}".format(action))
                 self._video_log("action q vals: {}".format(q_vals))
@@ -356,8 +366,9 @@ class DivDisMetaExperiment():
                 })
                 
                 self.observe(obs,
-                            rewards,
-                            done)
+                             action_mask,
+                             rewards,
+                             done)
                 obs = next_obs
             if self.add_unlabelled_data is True:
                 self.train_option_classifiers(1)
@@ -424,8 +435,8 @@ class DivDisMetaExperiment():
                     self.save_image(env)
                     if type(obs) == np.ndarray:
                         obs = torch.from_numpy(obs).float()
-                    action_mask = self.get_masks_from_seed(seed)
-                    action, q_vals = self.act(obs)
+                    action_mask = self.get_termination_masks(obs, env)
+                    action, q_vals = self.act(obs, action_mask)
                     
                     self._video_log("[meta] action: {}".format(action))
                     self._video_log("[meta] action q values")
@@ -460,8 +471,9 @@ class DivDisMetaExperiment():
                         total_steps += steps
                     
                         self.observe(obs,
-                                    rewards,
-                                    done)
+                                     action_mask,
+                                     rewards,
+                                     done)
                         obs = next_obs
                 
                 logging.info("Eval {} total steps: {} undiscounted reward: {}".format(run,
