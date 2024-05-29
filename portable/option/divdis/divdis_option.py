@@ -10,7 +10,6 @@ from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
-from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
 
 from portable.option.sets.utils import BayesianWeighting
 
@@ -24,29 +23,23 @@ class DivDisOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
-                 exp_type,
-                 tabular_beta=0.0,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
                  plot_dir=None):
         
-        assert len(use_gpu) == num_heads
-        
-        self.gpu_list = use_gpu
+        self.use_gpu = use_gpu
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
-        self.exp_type = exp_type
         
         self.use_seed_for_initiation = use_seed_for_initiation
         
-        self.terminations = DivDisClassifier(use_gpu=use_gpu[0],
+        self.terminations = DivDisClassifier(use_gpu=use_gpu,
                                              head_num=num_heads,
                                              log_dir=os.path.join(log_dir, 'termination'))
         
         self.num_heads = num_heads
-        self.option_steps = [0]*self.num_heads
         
         if self.use_seed_for_initiation:
             self.policies = [
@@ -61,16 +54,15 @@ class DivDisOption():
         self.video_generator = video_generator
         self.make_plots = False
         
-
+        # if plot_dir is not None:
+        #     self.make_plots = True
+        #     self.plot_dir = plot_dir
+        #     self.term_states = []
+        #     self.missed_term_states = []
+        
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              num_heads)
-        
-        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(num_heads)]
-        
-        self.train_data = {}
-        for idx in range(self.num_heads):
-            self.train_data[idx] = []
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -91,11 +83,6 @@ class DivDisOption():
                 pickle.dump(list(policies.keys()), f)
         
         self.confidences.save(os.path.join(self.save_dir, 'confidence.pkl'))
-
-        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
-            pickle.dump(self.train_data, f)
-        for idx, bonus in enumerate(self.intrinsic_bonuses):
-            bonus.save(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
     
     def load(self):
         if os.path.exists(self._get_termination_save_path()):
@@ -106,23 +93,18 @@ class DivDisOption():
                 with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                     keys = pickle.load(f)
                 for key in keys:
-                    policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
+                    policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
                                                         policy_phi=self.policy_phi,
                                                         learn_initiation=(not self.use_seed_for_initiation))
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
-
-            with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
-                self.train_data = pickle.load(f)
-            for idx, bonus in enumerate(self.intrinsic_bonuses):
-                bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
+        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
                                                             policy_phi=self.policy_phi))
     
     def find_possible_policy(self, *kwargs):
@@ -161,25 +143,22 @@ class DivDisOption():
                                    negative_files,
                                    unlabelled_files)
     
-    def add_unlabelled_data(self, data):
-        self.terminations.add_unlabelled_data(data)
-    
     def _get_policy(self, head_idx, option_idx):
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
-                self.policies[head_idx][option_idx] = self._get_new_policy(head_idx)
+                self.policies[head_idx][option_idx] = self._get_new_policy()
             return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
         else:
             if len(self.initiable_policies[head_idx]) > 0:
                 return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
             else:
-                policy = self._get_new_policy(head_idx)
+                policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
                 policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
-    def _get_new_policy(self, head_idx):
-        return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
+    def _get_new_policy(self):
+        return PolicyWithInitiation(use_gpu=self.use_gpu,
                                     policy_phi=self.policy_phi,
                                     learn_initiation=(not self.use_seed_for_initiation))
     
@@ -200,7 +179,6 @@ class DivDisOption():
         steps = 0
         rewards = []
         option_rewards = []
-        extrinsic_rewards = []
         states = []
         infos = []
         
@@ -208,10 +186,12 @@ class DivDisOption():
         should_terminate = False
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
-
-        # policy.move_to_gpu()
-        # self.terminations.move_to_gpu()
+        policy.move_to_gpu()
+        self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
+        
+        img_state = None
+        img_next_state = env.render()
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -220,17 +200,15 @@ class DivDisOption():
             action = policy.act(state)
             if make_video and self.video_generator:
                 self._video_log("[option] action: {}".format(action))
-                if self.exp_type == "minigrid":
-                    self.video_generator.make_image(env.render())
-                else:
-                    self.video_generator.make_image(env.render("rgb_array"))
+                self.video_generator.make_image(env.render())
             
             next_state, reward, done, info = env.step(action)
+            img_state = img_next_state
+            img_next_state = env.render()
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = torch.argmax(pred_y) == 1
             steps += 1
-            self.option_steps[idx] += 1
             rewards.append(reward)
             
             if make_video:
@@ -238,10 +216,31 @@ class DivDisOption():
             
             if should_terminate:
                 reward = 1
-                extrinsic_rewards.append(1)
+                if self.make_plots:
+                    np_next_state = list(next_state.cpu().numpy())
+                    if np_next_state not in self.term_states:
+                        self.plot_term_state(state.cpu().numpy(),
+                                             img_state, 
+                                             next_state.cpu().numpy(),
+                                             img_next_state, 
+                                             idx, 
+                                             success=True,
+                                             pred_y=pred_y)
+                        self.term_states.append(np_next_state)
             else:
-                extrinsic_rewards.append(0)
-                reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
+                reward = 0
+                if self.make_plots:
+                    if perfect_term(env) is True:
+                        np_next_state = list(next_state.cpu().numpy())
+                        if np_next_state not in self.missed_term_states:
+                            self.plot_term_state(state.cpu().numpy(),
+                                                 img_state, 
+                                                 next_state.cpu().numpy(),
+                                                 img_next_state, 
+                                                 idx, 
+                                                 success=False,
+                                                 pred_y=pred_y)
+                            self.missed_term_states.append(np_next_state)
             
             policy.observe(state,
                            action,
@@ -260,21 +259,10 @@ class DivDisOption():
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
         
-
-        # policy.move_to_cpu()
-        # self.terminations.move_to_cpu()
+        policy.move_to_cpu()
+        self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
-        policy.end_skill(sum(extrinsic_rewards))
-        
-        self.train_data[int(idx)].append({
-            "head_idx": idx,
-            "frames": self.option_steps[idx],
-            "policy_idx": policy_idx,
-            "rewards": rewards,
-            "option_length": steps,
-            "option_rewards": option_rewards,
-            "extrinsic_rewards": extrinsic_rewards
-        })
+        policy.end_skill(sum(option_rewards))
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     
@@ -381,9 +369,8 @@ class DivDisOption():
         
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
-
-        # policy.move_to_gpu()
-        # self.terminations.move_to_gpu()
+        policy.move_to_gpu()
+        self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
@@ -395,15 +382,12 @@ class DivDisOption():
                 self._video_log("action: {}".format(action))
                 self._video_log("State representation: {}".format(state))
                 if self.video_generator is not None:
-                    if self.exp_type == "minigrid":
-                        img = env.render()
-                    else:
-                        img = env.render("rgb_array")
+                    img = env.render()
                     self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
                 if type(next_state) is np.ndarray:
-                    next_state = torch.from_numpy(next_state)
+                    next_state = torch.from_numpy(next_state).float()
                 term_state = self.policy_phi(next_state).unsqueeze(0)
                 should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
                 steps += 1
@@ -433,13 +417,11 @@ class DivDisOption():
                     self._video_log("option timed out")
             
             if self.video_generator is not None and make_video:
-                if self.exp_type == "minigrid":
-                    self.video_generator.make_image(env.render())
-                else:
-                    self.video_generator.make_image(env.render("rgb_array"))
+                img = env.render()
+                self.video_generator.make_image(img)
             
-            # policy.move_to_cpu()
-            # self.terminations.move_to_cpu()
+            policy.move_to_cpu()
+            self.terminations.move_to_cpu()
             policy.store_buffer(buffer_dir)
             
             return state, info, steps, rewards, option_rewards, states, infos

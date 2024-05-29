@@ -9,7 +9,7 @@ from portable.utils.utils import set_seed
 from torch.utils.tensorboard import SummaryWriter
 import torch
 
-from portable.option.divdis.divdis_classifier import DivDisClassifier
+from portable.option.divdis.divdis_classifier import DivDisClassifier, transform
 from portable.option.memory import SetDataset
 
 @gin.configurable 
@@ -141,6 +141,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         dataset = SetDataset(max_size=1e6,
                              batchsize=64)
         
+        dataset.set_transform_function(transform)
         
         dataset.add_true_files(test_data)
         
@@ -180,6 +181,7 @@ class AdvancedMinigridFactoredDivDisClassifierExperiment():
         
         test_dataset = SetDataset(max_size=1e6,
                                 batchsize=16)
+        test_dataset.set_transform_function(transform)
         test_dataset.add_true_files(test_positive_files)
         test_dataset.add_false_files(test_negative_files)
         

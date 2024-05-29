@@ -110,7 +110,6 @@ class AdvancedMinigridDivDisClassifierExperiment():
             counter += 1
             x, y = dataset_positive.get_batch()
             pred_y, votes = self.classifier.predict(x)
-
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
@@ -127,7 +126,6 @@ class AdvancedMinigridDivDisClassifierExperiment():
             counter += 1
             x, y = dataset_negative.get_batch()
             pred_y, votes = self.classifier.predict(x)
-
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
@@ -168,7 +166,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         
         for _ in range(dataset.num_batches):
             x, _ = dataset.get_batch()
-            pred_y, _ = self.classifier.predict(x)
+            pred_y = self.classifier.predict(x)
             pred_y = pred_y.cpu()
             
             pred_class = torch.argmax(pred_y[:,test_head,:], dim=1).detach()

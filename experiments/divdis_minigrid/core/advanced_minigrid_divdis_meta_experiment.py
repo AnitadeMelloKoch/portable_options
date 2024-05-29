@@ -77,6 +77,7 @@ class AdvancedMinigridDivDisMetaExperiment():
                                     phi=agent_phi)
         
         self.options = []
+        assert len(terminations) == num_options
         self.num_options = num_options
         self.num_primitive_actions = num_primitive_actions
         
@@ -84,8 +85,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             [math.pow(discount_rate, n) for n in range(100)]
         )
         
-        if self.option_type == "mock":
-            assert len(terminations) == num_options
+        if self.option_type is "mock":
             for idx, termination_list in enumerate(terminations):
                 self.options.append(DivDisMockOption(use_gpu=use_gpu,
                                                     log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
@@ -100,7 +100,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             else:
                 self.num_heads = 0
         
-        elif self.option_type == "divdis":
+        elif self.option_type is "divdis":
             self.num_heads = option_head_num
             for idx in range(self.num_options):
                 self.options.append(DivDisOption(use_gpu=use_gpu,
@@ -209,7 +209,6 @@ class AdvancedMinigridDivDisMetaExperiment():
                          max_steps,
                          min_performance):
         total_steps = 0
-        decisions = 0
         episode_rewards = deque(maxlen=200)
         episode = 0
         undiscounted_rewards = []
@@ -239,7 +238,6 @@ class AdvancedMinigridDivDisMetaExperiment():
                     undiscounted_reward += reward
                     rewards = [reward]
                     total_steps += 1
-                    decisions += 1
                     steps = 1
                 else:
                     # if (action_mask[action] is False):
@@ -259,24 +257,20 @@ class AdvancedMinigridDivDisMetaExperiment():
                                                                                                             max_steps=50,
                                                                                                             make_video=True)
                 undiscounted_reward += np.sum(rewards)
-                decisions += 1
-                total_steps += steps
-                
+                total_steps += 1
                 
                 self.experiment_data.append({
-                    "meta_step": decisions,
+                    "meta_step": total_steps,
                     "option_length": steps,
-                    "option_rewards": rewards,
-                    "frames": total_steps
+                    "option_rewards": rewards
                 })
                 
                 self.observe(obs,
                             rewards,
                             done)
                 obs = next_obs
-            logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
+            logging.info("Episode {} total steps: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
-                                                                                     decisions,  
                                                                                      np.mean(episode_rewards)))
             
             if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
@@ -402,8 +396,7 @@ class AdvancedMinigridDivDisMetaExperiment():
             for _ in range(dataset_positive.num_batches):
                 counter += 1
                 x, y = dataset_positive.get_batch()
-                pred_y, _ = self.options[option_idx].terminations.predict(x)
-                pred_y = pred_y.cpu()
+                pred_y = self.options[option_idx].terminations.predict(x).cpu()
                 
                 for idx in range(self.num_heads):
                     pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
@@ -418,17 +411,15 @@ class AdvancedMinigridDivDisMetaExperiment():
             for _ in range(dataset_negative.num_batches):
                 counter += 1
                 x, y = dataset_negative.get_batch()
-                pred_y, _ = self.options[option_idx].terminations.predict(x)
-                pred_y = pred_y.cpu()
+                pred_y = self.options[option_idx].terminations.predict(x).cpu()
                 
                 for idx in range(self.num_heads):
                     pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach()
-                    accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
+                    accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
                     accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
             
             accuracy_neg /= counter
             total_counter += counter
-            
             
             accuracy /= total_counter
             
@@ -451,7 +442,6 @@ class AdvancedMinigridDivDisMetaExperiment():
             self.weighted_accuracy.append(weighted_acc)
         
         save_dir = os.path.join(self.save_dir, "classifier_accuracies")
-        os.makedirs(save_dir, exist_ok=True)
         np.save(os.path.join(save_dir, 'accuracy.npy'), self.accuracy)
         np.save(os.path.join(save_dir, 'accuracy_pos.npy'), self.accuracy_pos)
         np.save(os.path.join(save_dir, 'accuracy_neg.npy'), self.accuracy_neg)

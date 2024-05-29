@@ -5,15 +5,14 @@ import gin
 import random 
 import torch 
 import pickle
-from torch.utils.tensorboard import SummaryWriter 
 
+from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from collections import deque
 
 from portable.option.sets.utils import BayesianWeighting
-from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
 
 @gin.configurable 
 class DivDisMockOption():
@@ -25,20 +24,15 @@ class DivDisMockOption():
                  
                  policy_phi,
                  use_seed_for_initiation,
-                 exp_type,
-                 tabular_beta=0.0,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
                  plot_dir=None):
         
-        assert len(use_gpu) == len(terminations)
-        
-        self.gpu_list = use_gpu
+        self.use_gpu = use_gpu
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
-        self.exp_type = exp_type
         # this is for debugging. By using seed for initiation we do not need to 
         # learn the initiation set and are assuming the initiation set is the seed
         self.use_seed_for_initiation = use_seed_for_initiation
@@ -59,7 +53,6 @@ class DivDisMockOption():
         self.initiable_policies = None
         self.video_generator = video_generator
         self.make_plots = False
-        self.writer = SummaryWriter(log_dir=self.log_dir)
         
         if plot_dir is not None:
             self.make_plots = True
@@ -68,17 +61,11 @@ class DivDisMockOption():
             self.missed_term_states = []
         
         self.train_rewards = deque(maxlen=200)
-        self.option_steps = [0]*self.num_heads
+        self.option_steps = 0
         
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              self.num_heads)
-        
-        self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(self.num_heads)]
-        
-        self.train_data = {}
-        for idx in range(self.num_heads):
-            self.train_data[idx] = []
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -95,10 +82,6 @@ class DivDisMockOption():
         
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "wb") as f:
                 pickle.dump(list(policies.keys()), f)
-        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
-            pickle.dump(self.train_data, f)
-        for idx, bonus in enumerate(self.intrinsic_bonuses):
-            bonus.save(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
     
     def load(self):
         for idx, policies in enumerate(self.policies):
@@ -109,15 +92,10 @@ class DivDisMockOption():
                                                      policy_phi=self.policy_phi,
                                                      learn_initiation=(not self.use_seed_for_initiation))
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
-        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
-            self.train_data = pickle.load(f)
-        for idx, bonus in enumerate(self.intrinsic_bonuses):
-            bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
-        
-    
+
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
+        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.use_gpu,
                                                             policy_phi=self.policy_phi))
     
     def find_possible_policy(self, *kwargs):
@@ -159,19 +137,19 @@ class DivDisMockOption():
     def _get_policy(self, head_idx, option_idx):
         if self.use_seed_for_initiation:
             if option_idx not in self.policies[head_idx].keys():
-                self.policies[head_idx][option_idx] = self._get_new_policy(head_idx)
+                self.policies[head_idx][option_idx] = self._get_new_policy()
             return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
         else:
             if len(self.initiable_policies[head_idx]) > 0:
                 return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
             else:
-                policy = self._get_new_policy(head_idx)
+                policy = self._get_new_policy()
                 self.policies[head_idx].append(policy)
                 policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
-    def _get_new_policy(self, head_idx):
-        return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
+    def _get_new_policy(self):
+        return PolicyWithInitiation(use_gpu=self.use_gpu,
                                     policy_phi=self.policy_phi,
                                     learn_initiation=(not self.use_seed_for_initiation))
     
@@ -190,7 +168,6 @@ class DivDisMockOption():
         steps = 0
         rewards = []
         option_rewards = []
-        extrinsic_rewards = []
         states = []
         infos = []
         
@@ -198,7 +175,7 @@ class DivDisMockOption():
         should_terminate = False
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
-        # policy.move_to_gpu()
+        policy.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
@@ -208,15 +185,11 @@ class DivDisMockOption():
             action = policy.act(state)
             if make_video and self.video_generator:
                 self._video_log("[option] action: {}".format(action))
-                if self.exp_type == "minigrid":
-                    self.video_generator.make_image(env.render())
-                else:
-                    self.video_generator.make_image(env.render("rgb_array"))
-                    
+                self.video_generator.make_image(env.render())
             
             next_state, reward, done, info = env.step(action)
             
-            self.option_steps[idx] += 1
+            self.option_steps += 1
             
             should_terminate = self.terminations[idx](state,
                                                       env)
@@ -231,10 +204,8 @@ class DivDisMockOption():
             
             if should_terminate:
                 reward = 1
-                extrinsic_rewards.append(1)
             else:
-                extrinsic_rewards.append(0)
-                reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
+                reward = 0
             
             policy.observe(state,
                            action,
@@ -253,23 +224,11 @@ class DivDisMockOption():
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
         
-        # policy.move_to_cpu()
+        policy.move_to_cpu()
         policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
         
-        self.train_data[int(idx)].append({
-            "head_idx": idx,
-            "frames": self.option_steps[idx],
-            "policy_idx": policy_idx,
-            "rewards": rewards,
-            "option_length": steps,
-            "option_rewards": option_rewards,
-            "extrinsic_rewards": extrinsic_rewards
-        })
-        
-        self.writer.add_scalar('rewards_{}'.format(idx), sum(option_rewards), self.option_steps[idx])
-        
-        return state, info, done, steps, rewards, extrinsic_rewards, states, infos
+        return state, info, done, steps, rewards, option_rewards, states, infos
     
     def bootstrap_policy(self,
                          idx,
@@ -418,7 +377,7 @@ class DivDisMockOption():
         
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
-        # policy.move_to_gpu()
+        policy.move_to_gpu()
         policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
@@ -432,10 +391,8 @@ class DivDisMockOption():
                     for x in range(len(q_vals[0])):
                         self._video_log("[option] action {} value {}".format(x, q_vals[0][x]))
                 if self.video_generator is not None and make_video:
-                    if self.exp_type == "minigrid":
-                        self.video_generator.make_image(env.render())
-                    else:
-                        self.video_generator.make_image(env.render("rgb_array"))
+                    img = env.render()
+                    self.video_generator.make_image(img)
                 
                 next_state, reward, done, info = env.step(action)
                 should_terminate = self.terminations[idx](state,
@@ -467,12 +424,10 @@ class DivDisMockOption():
                     self._video_log("option timed out")
             
             if self.video_generator is not None and make_video:
-                if self.exp_type == "minigrid":
-                    self.video_generator.make_image(env.render())
-                else:
-                    self.video_generator.make_image(env.render("rgb_array"))
+                img = env.render()
+                self.video_generator.make_image(img)
             
-            # policy.move_to_cpu()
+            policy.move_to_cpu()
             policy.store_buffer(buffer_dir)
             
             return state, info, done, steps, rewards, option_rewards, states, infos
@@ -481,9 +436,9 @@ class DivDisMockOption():
                         idx,
                         states,
                         seed):
-        # self.policies[idx][seed].move_to_gpu()
+        self.policies[idx][seed].move_to_gpu()
         actions, q_vals = self.policies[idx][seed].batch_act(states)
-        # self.policies[idx][seed].move_to_cpu()
+        self.policies[idx][seed].move_to_cpu()
         return actions, q_vals
     
     def get_confidences(self):

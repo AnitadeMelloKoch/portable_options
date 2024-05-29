@@ -15,6 +15,7 @@ from collections import deque
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
+from portable.option.divdis.policy.models.cnn_q_function import CNNQFunction
 from portable.option.divdis.policy.models.factored_initiation_model import FactoredInitiationClassifier
 from portable.option.divdis.policy.models.factored_context_model import FactoredContextClassifier
 
@@ -45,9 +46,7 @@ class PolicyWithInitiation(Agent):
                  initiation_maxlen=100):
         super().__init__()
 
-        self.device = torch.device('cuda:{}'.format(use_gpu)) 
-        if use_gpu == -1:
-            self.device = torch.device('cpu')
+        self.use_gpu = use_gpu 
         self.warmup_steps = warmup_steps
         self.prioritized_replay_anneal_steps = prioritized_replay_anneal_steps
         self.buffer_length = buffer_length
@@ -81,20 +80,17 @@ class PolicyWithInitiation(Agent):
                 
                 nn.Flatten()
             )
-            self.cnn.to(self.device)
         
         self.q_network = LinearQFunction(in_features=gru_hidden_size,
                                          n_actions=num_actions,
                                          hidden_size=q_hidden_size)
-        self.q_network.to(self.device)
         
         self.recurrent_memory = nn.GRU(input_size=policy_infeature_size,
                                        hidden_size=gru_hidden_size,
                                        batch_first=True)
-        self.recurrent_memory.to(self.device)
         
         self.target_q_network = deepcopy(self.q_network)
-        self.target_q_network.eval().to(self.device)
+        self.target_q_network.eval()
         
         self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) \
             + list(self.recurrent_memory.parameters())\
@@ -233,10 +229,14 @@ class PolicyWithInitiation(Agent):
     def update(self, experiences, errors_out=None):
         if self.training:
             has_weight = "weight" in experiences[0][0]
+            if self.use_gpu:
+                device = torch.device("cuda")
+            else:
+                device = torch.device("cpu")
             
             exp_batch = batch_experiences(
                 experiences,
-                device=self.device,
+                device=device,
                 phi=self.phi,
                 gamma=self.gamma,
                 batch_states=batch_states
@@ -245,7 +245,7 @@ class PolicyWithInitiation(Agent):
             if has_weight:
                 exp_batch["weights"] = torch.tensor(
                     [elem[0]["weight"] for elem in experiences],
-                    device=self.device,
+                    device=device,
                     dtype=torch.float32
                 )
                 if errors_out is None:
@@ -305,7 +305,12 @@ class PolicyWithInitiation(Agent):
             self.target_q_network.load_state_dict(self.q_network.state_dict())
     
     def act(self, obs, return_q=False):
-        obs = batch_states([obs], self.device, self.phi)
+        if self.use_gpu:
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        
+        obs = batch_states([obs], device, self.phi)
         obs = obs.float()
         if self.image_input:
             obs = self.cnn(obs)
@@ -330,7 +335,11 @@ class PolicyWithInitiation(Agent):
         return a
 
     def batch_act(self, obs):
-        obs = batch_states(obs, self.device, self.phi)
+        if self.use_gpu:
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+        obs = batch_states(obs, device, self.phi)
         if self.image_input:
             obs = self.cnn(obs)
         obs = obs.unsqueeze(1).float()

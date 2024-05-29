@@ -5,12 +5,10 @@ import numpy as np
 from PIL import Image
 import gymnasium as gym
 from gymnasium.core import Env, Wrapper, ObservationWrapper
-from minigrid.wrappers import ImgObsWrapper, ReseedWrapper
+from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper, ReseedWrapper
 from enum import IntEnum
 import collections
 from enum import IntEnum
-from gymnasium import spaces
-
 
 class actions(IntEnum):
     LEFT        = 0
@@ -202,16 +200,9 @@ class GrayscaleWrapper(ObservationWrapper):
         return observation.astype(np.uint8)
 
 class ScaleObsWrapper(ObservationWrapper):
-    def __init__(self, 
-                 env: Env,
-                 image_size: tuple):
-        super().__init__(env)
-        
-        self.image_size = image_size
-    
     def observation(self, observation):
         img = Image.fromarray(observation)
-        return np.asarray(img.resize(self.image_size, Image.BICUBIC))
+        return np.asarray(img.resize((128, 128), Image.BILINEAR))
 
 class NormalizeObsWrapper(ObservationWrapper):
     def observation(self, observation):
@@ -299,32 +290,6 @@ def determine_is_door_open(env):
             if isinstance(tile, Door):
                 return tile.is_open
 
-class RGBImgObsWrapper(ObservationWrapper):
-    """
-    Wrapper to use fully observable RGB image as observation,
-    This can be used to have the agent to solve the gridworld in pixel space.
-    """
-
-    def __init__(self, env, tile_size=8):
-        super().__init__(env)
-
-        self.tile_size = tile_size
-
-        new_image_space = spaces.Box(
-            low=0,
-            high=255,
-            shape=(self.env.width * tile_size, self.env.height * tile_size, 3),
-            dtype="uint8",
-        )
-
-        self.observation_space = spaces.Dict(
-            {**self.observation_space.spaces, "image": new_image_space}
-        )
-
-    def observation(self, obs):
-        rgb_img = self.get_frame(highlight=False, tile_size=self.tile_size)
-
-        return {**obs, "image": rgb_img}
 
 def environment_builder(
     level_name='MiniGrid-Empty-8x8-v0',
@@ -355,9 +320,10 @@ def environment_builder(
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
     if scale_obs:
-        env = ScaleObsWrapper(env, final_image_size)
+        env = ScaleObsWrapper(env)
     if pad_obs:
         env = PadObsWrapper(env, final_image_size)
+    # env = ResizeObsWrapper(env)
     env = TransposeObsWrapper(env)
     if grayscale:
         env = GrayscaleWrapper(env)

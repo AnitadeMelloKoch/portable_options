@@ -299,7 +299,7 @@ if __name__ == "__main__":
     
     def create_env(seed):
         env = environment_builder(
-            'LockedRoom-v0',
+            'MiniGrid-LockedRoom-v0',
             seed=seed,
             grayscale=False
         )

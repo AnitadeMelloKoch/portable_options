@@ -48,9 +48,7 @@ class MonteAgentWrapper(gym.Wrapper):
 
     def update_state(self, obs, state):
         state = torch.roll(state, -1, 0)
-        if type(obs) == np.ndarray:
-            obs = torch.from_numpy(obs)
-        state[-1, ...] = obs
+        state[-1, ...] = torch.from_numpy(obs)
 
         return state
 
@@ -107,6 +105,7 @@ class MonteAgentWrapper(gym.Wrapper):
         else:
             if self.use_stacked_obs:
                 obs = self.stacked_state
+    
         return obs, reward, done, info
     
     def agent_space(self):
@@ -144,7 +143,7 @@ class MonteAgentWrapper(gym.Wrapper):
         info["player_y"] = self.get_player_y(ram)
         info["dead"] = int(info["lives"] < self.num_lives)
         info["screen_num"] = self.get_screen_num(ram)
-        info["player_pos"] = (info["player_x"], info["player_y"], info["screen_num"])
+        info["position"] = (info["player_x"], info["player_y"], info["screen_num"])
         info["jumping"] = self.get_is_jumping(ram)
         info["needs_reset"] = False
         info["elapsed_steps"] = self._elapsed_steps

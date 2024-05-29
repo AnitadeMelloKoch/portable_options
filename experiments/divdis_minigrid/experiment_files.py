@@ -84,48 +84,48 @@ minigrid_test_files_positive = [
 ]
 minigrid_test_files_negative = [
     [
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_3_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_4_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_5_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_6_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_7_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_8_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_9_termination_negative.npy",
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_3_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_4_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_5_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_6_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_7_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_8_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_9_termination_negative.npy"
     ],
     [
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_3_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_4_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_5_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_6_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_7_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_8_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_9_termination_negative.npy",
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_3_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_4_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_5_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_6_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_7_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_8_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_9_termination_negative.npy"
     ],
     [
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_termination_negative.npy",
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_3_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_4_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_5_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_6_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_7_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_8_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_9_termination_negative.npy"
     ],
     [
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_3_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_4_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_5_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_6_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_7_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_8_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_9_termination_negative.npy",
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_3_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_4_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_5_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_6_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_7_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_8_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_9_termination_negative.npy"
     ],
     [
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_3_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_4_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_5_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_6_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_7_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_8_termination_negative.npy",
-        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_9_termination_negative.npy",
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_3_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_4_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_5_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_6_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_7_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_8_termination_negative.npy"
+        "resources/minigrid_images/adv_doorkey_8x8_v2_togoal_9_termination_negative.npy"
     ],
 ]

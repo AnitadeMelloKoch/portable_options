@@ -12,7 +12,6 @@ class TabularCount():
         self.counts = defaultdict(int)
     
     def save(self, dir):
-        os.makedirs(dir, exist_ok=True)
         save_file = os.path.join(dir, 'counts.pkl')
         with open(save_file, 'wb') as f:
             pickle.dump(self.counts, f)
