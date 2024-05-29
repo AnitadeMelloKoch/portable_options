@@ -9,6 +9,10 @@ from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 from experiments.divdis_minigrid.experiment_files import *
 import numpy as np
 
+import cProfile
+import pstats
+import io
+from pstats import SortKey
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -58,8 +62,18 @@ if __name__ == "__main__":
                                    grayscale=False,
                                    normalize_obs=False)
     
+    ob = cProfile.Profile()
+    ob.enable()
+    
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                3e6,
-                                0.98)
+                                50000,
+                                0.9)
     
+    ob.disable()
+    sec = io.StringIO()
+    sortby = SortKey.TIME
+    ps = pstats.Stats(ob, stream=sec).sort_stats(sortby)
+    ps.print_stats()
+    
+    print(sec.getvalue())

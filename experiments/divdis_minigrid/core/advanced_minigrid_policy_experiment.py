@@ -409,7 +409,7 @@ class AdvancedMinigridDivDisOptionExperiment():
             
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
-        test_states = []
+        test_states = []        
         while len(test_states) < num_states:
             rand_num = np.random.randint(80)
             obs, info = env.reset(agent_reposition_attempts=rand_num)
@@ -487,84 +487,46 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            use_seed_for_initiation=True,
                                            policy_phi=self.policy_phi,
                                            video_generator=self.video_generator)
-
         
         self.train_policy(original_option, env_1, seed_1, max_steps=2e4)
         
         head_scores = np.zeros(len(terminations_2))
         
         for seed_2 in seeds_2:
-            logging.info("=======================================")
-            print("Now training new option for seed: {}".format(seed_2))
-            logging.info("Now training new option for seed: {}".format(seed_2))
+
             new_option = DivDisMockOption(use_gpu=self.use_gpu,
-                                terminations=terminations_2,
-                                log_dir=os.path.join(self.log_dir, "new"),
-                                save_dir=os.path.join(self.save_dir, "new"),
-                                use_seed_for_initiation=True,
-                                policy_phi=self.policy_phi,
-                                video_generator=self.video_generator)
+                                        terminations=terminations_2,
+                                        log_dir=os.path.join(self.log_dir, "new"),
+                                        save_dir=os.path.join(self.save_dir, "new"),
+                                        use_seed_for_initiation=True,
+                                        policy_phi=self.policy_phi,
+                                        video_generator=self.video_generator)
             env_2 = env_2_builder(seed_2)
             self.train_policy(new_option, env_2, seed_2, max_steps=2e4)
-            if evaluation_type == "psm":
-                test_buffer_traj = self.get_test_buffer_trajectories(original_option, 
-                                                env_1, 
-                                                20,
-                                                0,
-                                                seed_1)
-                test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
-                original_q_values = [original_option.evaluate_states(0,traj,seed_1)[1] for traj in test_buffer_traj]
-                original_q_values = [q_values.detach().cpu().squeeze() for q_values in original_q_values]
-            
             for head_idx in range(new_option.num_heads):
-                print("Now evaluating head: {}".format(head_idx))
-                logging.info("----------------------------------------")
-                logging.info("Now evaluating head: {}".format(head_idx))
-
-                if evaluation_type != "psm":
-                    test_buffer = self.get_test_buffer(new_option,
-                                                    env_2,
-                                                    500,
-                                                    head_idx,
-                                                    seed_2)
-                    test_buffer = test_buffer.to("cuda")
-
-                    
-                    _, original_q_values = original_option.evaluate_states(0,
-                                                                        test_buffer,
-                                                                        seed_1)
-                    
-                    _, new_q_values = new_option.evaluate_states(head_idx,
-                                                                test_buffer,
-                                                                seed_2)
-                    
-                    original_q_values = original_q_values.detach().cpu().squeeze()
-                    new_q_values = new_q_values.detach().cpu().squeeze()
-                    
-                    if evaluation_type == "wass":
-                        score = get_wasserstain_distance(original_q_values, new_q_values)
-                    if evaluation_type == "kl":
-                        score = get_kl_distance(original_q_values, new_q_values)
-                        
-                else:
-                    test_buffer_traj_new = self.get_test_buffer_trajectories(new_option,
-                                                            env_2,
-                                                            20,
-                                                            head_idx,
-                                                            seed_2)
-                    test_buffer_traj_new = [traj.to("cuda") for traj in test_buffer_traj_new]
-                    
-                    new_q_values = [new_option.evaluate_states(head_idx,traj,seed_2)[1] for traj in test_buffer_traj_new]
-                    new_q_values = [q_values.detach().cpu().squeeze() for q_values in new_q_values]
-                    
-                    score = []
-                    for original_idx in range(20): # one trajectory from original option
-                        for new_idx in range(20):
-                            score.append(get_policy_similarity_metric(original_q_values[original_idx], new_q_values[new_idx], use_gpu=self.use_gpu)) # 20*20 pair wise traj q val comparisons.
-
-                    logging.info(f"DEBUG: head {head_idx} score list: {score}")
-                    score = sum(score) / len(score)
-
+                test_buffer = self.get_test_buffer(new_option,
+                                                env_2,
+                                                500,
+                                                head_idx,
+                                                seed_2)
+                
+                test_buffer = test_buffer.to("cuda")
+                
+                _, original_q_values = original_option.evaluate_states(0,
+                                                                    test_buffer,
+                                                                    seed_1)
+                
+                _, new_q_values = new_option.evaluate_states(head_idx,
+                                                             test_buffer,
+                                                             seed_2)
+                
+                original_q_values = original_q_values.detach().cpu().squeeze()
+                new_q_values = new_q_values.detach().cpu().squeeze()
+                
+                if evaluation_type == "wass":
+                    score = get_wasserstain_distance(original_q_values, new_q_values)
+                if evaluation_type == "kl":
+                    score = get_kl_distance(original_q_values, new_q_values)
                 
                 print("head {} score {}".format(head_idx, score))
                 logging.info("head {} score {}".format(head_idx, score))

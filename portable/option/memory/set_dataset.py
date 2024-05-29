@@ -13,7 +13,8 @@ class SetDataset():
             unlabelled_batchsize=None,
             max_size=100000,
             pad_func=lambda x: x,
-            create_validation_set=False
+            create_validation_set=False,
+            store_int=True,
         ):
         self.true_data = torch.from_numpy(np.array([])).float()
         self.false_data = torch.from_numpy(np.array([])).float()
@@ -48,6 +49,7 @@ class SetDataset():
         self.unlabelled_counter = 0
         self.num_batches = 0
         self.list_max_size = max_size//2
+        self.store_int = store_int 
 
         self.shuffled_indices_true = None
         self.shuffled_indices_false = None
@@ -62,7 +64,7 @@ class SetDataset():
     @staticmethod
     def transform(x):
         if torch.max(x) > 1:
-            return x/255.0
+            return (x/255.0).float()
         else:
             return x
 
@@ -169,7 +171,10 @@ class SetDataset():
         for file in file_list:
             data = np.load(file, allow_pickle=True)
             data = self.pad(data)
-            data = torch.from_numpy(data).float()
+            data = torch.from_numpy(data)
+            if torch.max(data) <= 1:
+                data = data*255
+            data = data.int()
             data = data.squeeze()
             self.true_data = self.concatenate(self.true_data, data)
         self.true_length = len(self.true_data)
@@ -201,7 +206,10 @@ class SetDataset():
         for file in file_list:
             data = np.load(file)
             data = self.pad(data)
-            data = torch.from_numpy(data).float()
+            data = torch.from_numpy(data)
+            if torch.max(data) <= 1:
+                data = data*255
+            data = data.int()
             data = data.squeeze()
             self.false_data = self.concatenate(self.false_data, data)
         self.false_length = len(self.false_data)
@@ -234,7 +242,10 @@ class SetDataset():
         for file in file_list:
             data = np.load(file)
             data = self.pad(data)
-            data = torch.from_numpy(data).float()
+            data = torch.from_numpy(data)
+            if torch.max(data) <= 1:
+                data = data*255
+            data = data.int()
             data = data.squeeze()
             self.priority_false_data = self.concatenate(self.priority_false_data, data)
         self.priority_false_length = len(self.priority_false_data)
@@ -250,7 +261,10 @@ class SetDataset():
     def add_unlabelled_files(self, file_list):
         for file in file_list:
             data = np.load(file)
-            data = torch.from_numpy(data).float()
+            data = torch.from_numpy(data)
+            if torch.max(data) <= 1:
+                data = data*255
+            data = data.int()
             data = data.squeeze()
             self.unlabelled_data = self.concatenate(self.unlabelled_data, data)
         self.unlabelled_data_length = len(self.unlabelled_data)
@@ -281,6 +295,18 @@ class SetDataset():
         self.false_length = len(self.false_data)
         self._set_batch_num()
         self.counter = 0
+        self.shuffle()
+    
+    def add_unlabelled_data(self, data_list):
+        data = torch.squeeze(
+            torch.stack(data_list), 1
+        )
+        self.unlabelled_data = self.concatenate(data, self.unlabelled_data)
+        if len(self.unlabelled_data) > self.list_max_size:
+            self.unlabelled_data = self.unlabelled_data[:self.list_max_size]
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.unlabelled_counter = 0
         self.shuffle()
 
     def add_priority_false_data(self, data_list):
@@ -355,14 +381,12 @@ class SetDataset():
                 self.data_batchsize // 2,
                 self.shuffled_indices_false
             )
-            # print(torch.max(normal_false[0]))
             priority_false = self._get_minibatch(
                 self.priority_false_index(),
                 self.priority_false_data,
                 self.data_batchsize - self.data_batchsize//2,
                 self.shuffled_indices_false_priority
             )
-            # print(torch.max(priority_false[0]))
             false_batch = self.concatenate(normal_false, priority_false)
         else:
             false_batch = self._get_minibatch(
@@ -375,7 +399,6 @@ class SetDataset():
             self.true_data,
             self.data_batchsize,
             self.shuffled_indices_true)
-        # print(torch.max(true_batch[0]))
 
         labels = [0]*len(false_batch) + [1]*len(true_batch)
         labels = torch.from_numpy(np.array(labels))

@@ -174,9 +174,9 @@ if __name__ == "__main__":
                                                               terminations=terminations)
     
     
-    # experiment.train_option_policies(train_envs,
-    #                                  env_seed,
-    #                                  1e6)
+    experiment.train_option_policies(train_envs,
+                                     env_seed,
+                                     1e6)
     
     # experiment.load()
     

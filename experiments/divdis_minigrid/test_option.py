@@ -42,24 +42,15 @@ if __name__ == "__main__":
                                       action_policy=create_cnn_policy(3,25),
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
+
     
-    experiment.add_datafiles(minigrid_positive_files,
-                             minigrid_negative_files,
-                             minigrid_unlabelled_files)
-    
-    experiment.train_option_classifiers()
-    
-    experiment.test_classifiers(minigrid_test_files_positive,
-                                minigrid_test_files_negative)
+    experiment.load()
     
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
-                                   max_steps=int(1500),
+                                   max_steps=int(1e4),
                                    grayscale=False,
                                    normalize_obs=False)
     
-    experiment.train_meta_agent(meta_env,
-                                args.seed,
-                                3e6,
-                                0.98)
+    import pdb; pdb.set_trace()
     

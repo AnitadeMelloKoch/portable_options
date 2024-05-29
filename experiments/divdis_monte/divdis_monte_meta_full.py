@@ -1,14 +1,13 @@
 from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
-import torch 
-from experiments.minigrid.utils import environment_builder
-from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
-import random
-from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
-from experiments.divdis_minigrid.experiment_files import *
+from portable.agent.model.ppo import create_atari_model
 import numpy as np
+import torch
 
+from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
+from pfrl.wrappers import atari_wrappers
+from experiments.divdis_monte.experiment_files import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -34,32 +33,40 @@ if __name__ == "__main__":
             x = torch.from_numpy(x)
         x = (x/255.0).float()
         return x
+    # monte has 18 actions
     
     experiment = DivDisMetaExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_policy=create_cnn_policy(3,25),
-                                      action_vf=create_cnn_vf(3),
+                                      action_model=create_atari_model(4,13),
                                       option_type="divdis")
     
-    experiment.add_datafiles(minigrid_positive_files,
-                             minigrid_negative_files,
-                             minigrid_unlabelled_files)
+    experiment.add_datafiles(
+        positive_files=monte_positive_files,
+        negative_files=monte_negative_files,
+        unlabelled_files=monte_unlabelled_files
+    )
     
     experiment.train_option_classifiers()
     
-    experiment.test_classifiers(minigrid_test_files_positive,
-                                minigrid_test_files_negative)
+    # experiment.test_classifiers()
     
-    meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
-                                   seed=args.seed,
-                                   max_steps=int(1500),
-                                   grayscale=False,
-                                   normalize_obs=False)
+    env = atari_wrappers.wrap_deepmind(
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
+        episode_life=True,
+        clip_rewards=True,
+        frame_stack=False
+    )
+    env.seed(args.seed)
+
+    env = MonteAgentWrapper(env, agent_space=False)
     
-    experiment.train_meta_agent(meta_env,
+    experiment.train_meta_agent(env,
                                 args.seed,
-                                3e6,
-                                0.98)
+                                4e6,
+                                0.9)
     
+
+
+
