@@ -79,6 +79,33 @@ class SetDataset():
 
         return true_filename, false_filename, priority_false_filename
 
+    def reset(self):
+        self.true_data = torch.from_numpy(np.array([])).float()
+        self.false_data = torch.from_numpy(np.array([])).float()
+        self.priority_false_data = torch.from_numpy(np.array([])).float()
+        self.unlabelled_data = torch.from_numpy(np.array([])).float()
+
+        self.true_length = 0
+        self.false_length = 0
+        self.priority_false_length = 0
+        self.unlabelled_data_length = 0
+
+        self.counter = 0
+        self.unlabelled_counter = 0
+
+        self.num_batches = 0
+
+        self.shuffled_indices_true = None
+        self.shuffled_indices_false = None
+        self.shuffled_indices_false_priority = None
+        self.shuffled_indices_unlabelled = None
+
+        self.validate_indicies_true = []
+        self.validate_indicies_false = []
+        self.validate_indicies_priority_false = []
+        
+
+
     def save(self, path):
         true_filename, false_filename, priority_false_filename = self._getfilenames(path)
         if not os.path.exists(path):
@@ -294,6 +321,18 @@ class SetDataset():
         self.counter = 0
         self.shuffle()
 
+    def add_unlabelled_data(self, data_list):
+        data = torch.squeeze(
+            torch.stack(data_list), 1
+        )
+        self.unlabelled_data = self.concatenate(data, self.unlabelled_data)
+        if len(self.unlabelled_data) > self.list_max_size:
+            self.unlabelled_data = self.unlabelled_data[:self.list_max_size]
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.counter = 0
+        self.shuffle()
+
     def shuffle(self):
         self.shuffled_indices_true = np.setdiff1d(range(self.true_length), self.validate_indicies_true)
         self.shuffled_indices_true = np.random.permutation(self.shuffled_indices_true)
@@ -321,6 +360,7 @@ class SetDataset():
         minibatch = np.array([])
         if (index + minibatch_size) > len(data):
             num_remaining = len(data) - index
+            #minibatch = np.copy(data[shuffled_indices[index:]])
             minibatch = data[shuffled_indices[index:]]
             minibatch = SetDataset.concatenate(minibatch, data[shuffled_indices[:minibatch_size-num_remaining]])
         else:

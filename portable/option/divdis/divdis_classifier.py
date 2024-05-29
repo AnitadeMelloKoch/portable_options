@@ -30,7 +30,6 @@ class DivDisClassifier():
                  
                  head_num,
                  learning_rate,
-                 input_dim,
                  num_classes,
                  diversity_weight,
                  
@@ -42,6 +41,7 @@ class DivDisClassifier():
                  summary_writer=None,
                  model_name='minigrid_cnn') -> None:
         
+
         if use_gpu == -1:
             self.device = torch.device('cpu')
         else:
@@ -58,17 +58,16 @@ class DivDisClassifier():
         self.log_dir = log_dir
 
         if model_name == "minigrid_cnn":
-            self.classifier = MinigridCNN(num_input_channels=input_dim,
-                                          num_classes=num_classes,
+            self.classifier = MinigridCNN(num_classes=num_classes,
                                           num_heads=head_num)
         elif model_name == "monte_cnn":
-            self.classifier = MonteCNN(num_input_channels=input_dim,
-                                       num_classes=num_classes,
+            self.classifier = MonteCNN(num_classes=num_classes,
                                        num_heads=head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
         self.classifier.to(self.device)
+
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
                                           weight_decay=l2_reg_weight # weight decay also works as L2 regularization
@@ -115,8 +114,10 @@ class DivDisClassifier():
     def train(self,
               epochs,
               start_offset=0):
+
         # self.move_to_gpu()
         self.classifier.train()
+        
         for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0
@@ -127,17 +128,22 @@ class DivDisClassifier():
             total_loss_tracker = 0
             
             self.dataset.shuffle()
+            if self.dataset.unlabelled_data_length == 0:
+                use_unlabelled_data = False
+            else:
+                use_unlabelled_data = True
             
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                unlabelled_x = self.dataset.get_unlabelled_batch()
+                if use_unlabelled_data:
+                    unlabelled_x = self.dataset.get_unlabelled_batch()
                 
                 x = x.to(self.device)
                 y = y.to(self.device)
-                unlabelled_x = unlabelled_x.to(self.device)
-                
-                unlabelled_pred = self.classifier(unlabelled_x)
+                if use_unlabelled_data:
+                    unlabelled_x = unlabelled_x.to(self.device)
+                    unlabelled_pred = self.classifier(unlabelled_x)
                 pred_y = self.classifier(x)
                 labelled_loss = 0
                 for idx in range(self.head_num):
@@ -148,8 +154,11 @@ class DivDisClassifier():
                     labelled_loss += class_loss
                 
                 labelled_loss /= self.head_num
-                
-                div_loss = self.divdis_criterion(unlabelled_pred)
+
+                if use_unlabelled_data:
+                    div_loss = self.divdis_criterion(unlabelled_pred)
+                else:
+                    div_loss = torch.tensor(0)
                 
                 div_loss_tracker += div_loss.item()
                 
@@ -197,5 +206,5 @@ class DivDisClassifier():
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        
+
         return pred_y[:,idx,:]

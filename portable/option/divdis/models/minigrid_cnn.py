@@ -14,18 +14,17 @@ class PrintLayer(torch.nn.Module):
 
 class MinigridCNN(nn.Module):
     def __init__(self,
-                 num_input_channels,
                  num_classes,
                  num_heads):
         super().__init__()
 
         self.model = nn.ModuleList([nn.Sequential(
-            nn.LazyConv2d(out_channels=32, kernel_size=5, stride=2, padding=0),
+            nn.LazyConv2d(out_channels=32, kernel_size=5, stride=2, padding=0, bias=False),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2),
             
-            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=0),
+            nn.LazyConv2d(out_channels=64, kernel_size=3, stride=2, padding=0, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=4, stride=2), # maybe try global avg pool in future

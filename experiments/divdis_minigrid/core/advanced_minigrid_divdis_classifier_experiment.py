@@ -25,7 +25,6 @@ class AdvancedMinigridDivDisClassifierExperiment():
                  
                  classifier_head_num,
                  classifier_learning_rate,
-                 classifier_input_dim,
                  classifier_num_classes,
                  classifier_diversity_weight,
                  classifier_l2_reg_weight,
@@ -46,7 +45,6 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                            log_dir=self.log_dir,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
-                                           input_dim=classifier_input_dim,
                                            num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
@@ -111,7 +109,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
         for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y, _ = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
+
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
@@ -127,7 +126,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
         for _ in range(dataset_negative.num_batches):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y, _ = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
+
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):

@@ -11,3 +11,4 @@ DivDisClassifier.model_name          = "monte_cnn"
 DivDisClassifier.use_gpu             = True
 
 DivDisClassifier.input_dim           = 4
+

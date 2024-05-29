@@ -1,6 +1,7 @@
 import logging
 import datetime
-import os 
+import os
+import time 
 import gin 
 import pickle 
 import numpy as np 
@@ -8,7 +9,7 @@ import matplotlib.pyplot as plt
 from portable.utils.utils import set_seed
 import torch 
 from collections import deque
-from portable.option.divdis.policy_evaluation import get_wasserstain_distance, get_kl_distance
+from portable.option.divdis.policy_evaluation import get_wasserstain_distance, get_kl_distance, get_policy_similarity_metric
 
 from experiments.experiment_logger import VideoGenerator
 from portable.option.divdis.divdis_option import DivDisOption
@@ -158,48 +159,81 @@ class AdvancedMinigridDivDisOptionExperiment():
                                        policy_phi=self.policy_phi,
                                        video_generator=self.video_generator)
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e5)
-        self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e5)
+        
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e4)
+        self.train_policy(trained_option, env_2, env_seed_2, max_steps=5e4)
         
         for _ in range(evaluate_num):
-        
-            test_buffer = self.get_test_buffer(base_option, 
-                                            env_1, 
-                                            1000,
-                                            0,
-                                            env_seed_1)
-            
-            _, base_q_values = base_option.evaluate_states(0,
-                                                        test_buffer,
-                                                        env_seed_1)
-            
-            _, rand_q_values = rand_policy.batch_act(test_buffer)
-            
-            _, trained_q_values = trained_option.evaluate_states(0,
-                                                                test_buffer,
-                                                                env_seed_2)
-            
-            base_q_values = base_q_values.detach().cpu().squeeze()
-            rand_q_values = rand_q_values.detach().cpu().squeeze()
-            trained_q_values = trained_q_values.detach().cpu().squeeze()
-            
-            if evaluation_type == "wass": 
-                rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
-                trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+            if evaluation_type != "psm":
+                test_buffer = self.get_test_buffer(base_option, 
+                                                env_1, 
+                                                1000,
+                                                0,
+                                                env_seed_1)
                 
-                print("random wass:", rand_wass)
-                logging.info("random wass: {}".format(rand_wass))
-                print("trained wass", trained_wass)
-                logging.info("trained wass: {}".format(trained_wass))
-            
-            if evaluation_type == "kl": 
-                rand_kl = get_kl_distance(base_q_values, rand_q_values)
-                trained_kl = get_kl_distance(base_q_values, trained_q_values)
+                _, base_q_values = base_option.evaluate_states(0,
+                                                            test_buffer,
+                                                            env_seed_1)
                 
-                print("random kl:", rand_kl)
-                logging.info("random kl: {}".format(rand_kl))
-                print("trained kl", trained_kl)
-                logging.info("trained kl {}".format(trained_kl))
+                _, rand_q_values = rand_policy.batch_act(test_buffer)
+                
+                _, trained_q_values = trained_option.evaluate_states(0,
+                                                                    test_buffer,
+                                                                    env_seed_2)
+                
+                base_q_values = base_q_values.detach().cpu().squeeze()
+                rand_q_values = rand_q_values.detach().cpu().squeeze()
+                trained_q_values = trained_q_values.detach().cpu().squeeze()
+                
+                if evaluation_type == "wass": 
+                    rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+                    trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+                    
+                    print("random wass:", rand_wass)
+                    logging.info("random wass: {}".format(rand_wass))
+                    print("trained wass", trained_wass)
+                    logging.info("trained wass: {}".format(trained_wass))
+                
+                if evaluation_type == "kl": 
+                    rand_kl = get_kl_distance(base_q_values, rand_q_values)
+                    trained_kl = get_kl_distance(base_q_values, trained_q_values)
+                    
+                    print("random kl:", rand_kl)
+                    logging.info("random kl: {}".format(rand_kl))
+                    print("trained kl", trained_kl)
+                    logging.info("trained kl {}".format(trained_kl))
+
+            else:
+                test_buffer_traj = self.get_test_buffer_trajectories(base_option, 
+                                                env_1, 
+                                                0,
+                                                env_seed_1)
+                test_buffer_traj_trained = self.get_test_buffer_trajectories(trained_option,
+                                                            env_2,
+                                                            0,
+                                                            env_seed_2)
+                
+                base_q_values = [base_option.evaluate_states(0,traj,env_seed_1)[1] for traj in test_buffer_traj]
+                trained_q_values = [trained_option.evaluate_states(0,traj,env_seed_2)[1] for traj in test_buffer_traj_trained]
+                rand_q_values = [rand_policy.batch_act(traj)[1] for traj in test_buffer_traj]
+                
+                base_q_values = [q_values.detach().cpu().squeeze() for q_values in base_q_values]
+                rand_q_values = [q_values.detach().cpu().squeeze() for q_values in rand_q_values]
+                trained_q_values = [q_values.detach().cpu().squeeze() for q_values in trained_q_values]
+                
+                rand_psm = 0
+                trained_psm = 0
+                for traj_idx in range(5):
+                    rand_psm += get_policy_similarity_metric(base_q_values[traj_idx], rand_q_values[traj_idx], use_gpu=self.use_gpu)
+                    trained_psm += get_policy_similarity_metric(base_q_values[traj_idx], trained_q_values[traj_idx], use_gpu=self.use_gpu)
+                
+                rand_psm /= 5
+                trained_psm /= 5
+                
+                print("random psm:", rand_psm)
+                logging.info("random psm: {}".format(rand_psm))
+                print("trained psm", trained_psm)
+                logging.info("trained psm {}".format(trained_psm))
     
     def evaluate_two_policies_mock_option(self,
                                            env_1,
@@ -225,7 +259,7 @@ class AdvancedMinigridDivDisOptionExperiment():
                                            learn_initiation=False)
         rand_policy.move_to_gpu()
         
-        self.train_policy(base_option, env_1, env_seed_1, max_steps=5e5)
+        self.train_policy(base_option, env_1, env_seed_1, max_steps=3e4)
         
         for idx, seed in enumerate(env_seed_2_list):
             trained_option = DivDisMockOption(use_gpu=self.use_gpu,
@@ -242,63 +276,137 @@ class AdvancedMinigridDivDisOptionExperiment():
                                                     use_seed_for_initiation=True,
                                                     policy_phi=self.policy_phi,
                                                     video_generator=self.video_generator)
+            logging.info(f"Now training new options for seed: {seed}")
             
-            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=5e5)
-            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=5e5)
+            self.train_policy(trained_option, env_2_list[idx], seed, max_steps=3e4)
+            self.train_policy(wrong_trained_option, env_3_list[idx], seed, max_steps=3e4)
+
+            wrong_psm_list = []
+            trained_psm_list = []
+            rand_psm_list = []
             
             for _ in range(evaluate_num):
-                test_buffer = self.get_test_buffer(base_option, 
+                if evaluation_type != "psm":
+                    test_buffer = self.get_test_buffer(base_option, 
                                                 env_1, 
-                                                1000,
+                                                500,
                                                 0,
                                                 env_seed_1)
-                
-                _, base_q_values = base_option.evaluate_states(0,
+                    test_buffer = test_buffer.to("cuda")
+                    
+                    _, base_q_values = base_option.evaluate_states(0,
                                                             test_buffer,
                                                             env_seed_1)
-                
-                _, trained_q_values = trained_option.evaluate_states(0,
-                                                                    test_buffer,
-                                                                    seed)
-                
-                _, wrong_q_values = wrong_trained_option.evaluate_states(0,
+                    _, trained_q_values = trained_option.evaluate_states(0,
                                                                         test_buffer,
                                                                         seed)
+                    
+                    _, wrong_q_values = wrong_trained_option.evaluate_states(0,
+                                                                            test_buffer,
+                                                                            seed)
+                    _, rand_q_values = rand_policy.batch_act(test_buffer)
+
                 
-                _, rand_q_values = rand_policy.batch_act(test_buffer)
+                    base_q_values = base_q_values.detach().cpu().squeeze()
+                    wrong_q_values = wrong_q_values.detach().cpu().squeeze()
+                    trained_q_values = trained_q_values.detach().cpu().squeeze()
+                    rand_q_values = rand_q_values.detach().cpu().squeeze()
                 
-                base_q_values = base_q_values.detach().cpu().squeeze()
-                wrong_q_values = wrong_q_values.detach().cpu().squeeze()
-                trained_q_values = trained_q_values.detach().cpu().squeeze()
-                rand_q_values = rand_q_values.detach().cpu().squeeze()
+                    if evaluation_type == "wass": 
+                        wrong_wass = get_wasserstain_distance(base_q_values, wrong_q_values)
+                        trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
+                        rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+                        
+                        print("Seed:", seed)
+                        logging.info(f"Seed: {seed}")
+                        print("wrong wass:", wrong_wass)
+                        logging.info("wrong wass: {}".format(wrong_wass))
+                        print("right wass", trained_wass)
+                        logging.info("right wass: {}".format(trained_wass))
+                        print("rand wass: {}".format(rand_wass))
+                        logging.info("rand wass: {}".format(rand_wass))
+                    
+                    if evaluation_type == "kl": 
+                        wrong_kl = get_kl_distance(base_q_values, wrong_q_values)
+                        trained_kl = get_kl_distance(base_q_values, trained_q_values)
+                        rand_kl = get_kl_distance(base_q_values, rand_q_values)
+                        
+                        print("Seed:", seed)
+                        logging.info(f"Seed: {seed}")
+                        print("wrong kl:", wrong_kl)
+                        logging.info("wrong kl: {}".format(wrong_kl))
+                        print("trained kl", trained_kl)
+                        logging.info("trained kl {}".format(trained_kl))
+                        print("rand kl", rand_kl)
+                        logging.info("rand kl: {}".format(rand_kl))
+                        
+                else:
+                    logging.info(f"=======================================")
+                    logging.info(f"Now evaluating seed: {seed}")
+                    test_buffer_traj = self.get_test_buffer_trajectories(base_option, 
+                                                env_1, 
+                                                20,
+                                                0,
+                                                env_seed_1)
+                    test_buffer_traj_trained = self.get_test_buffer_trajectories(trained_option,
+                                                                env_2_list[idx],
+                                                                20,
+                                                                0,
+                                                                seed)
+                    test_buffer_traj_wrong = self.get_test_buffer_trajectories(wrong_trained_option,
+                                                                env_3_list[idx],
+                                                                20,
+                                                                0,
+                                                                seed)
+                    
+                    
+                    test_buffer_traj = [traj.to("cuda") for traj in test_buffer_traj]
+                    test_buffer_traj_trained = [traj.to("cuda") for traj in test_buffer_traj_trained]
+                    test_buffer_traj_wrong = [traj.to("cuda") for traj in test_buffer_traj_wrong]
+
+                    base_q_values = [base_option.evaluate_states(0,traj,env_seed_1)[1] for traj in test_buffer_traj]
+                    trained_q_values = [trained_option.evaluate_states(0,traj,seed)[1] for traj in test_buffer_traj_trained]
+                    wrong_q_values = [wrong_trained_option.evaluate_states(0,traj,seed)[1] for traj in test_buffer_traj_wrong]
+                    rand_q_values = [rand_policy.batch_act(traj)[1] for traj in test_buffer_traj]
                 
-                if evaluation_type == "wass": 
-                    wrong_wass = get_wasserstain_distance(base_q_values, wrong_q_values)
-                    trained_wass = get_wasserstain_distance(base_q_values, trained_q_values)
-                    rand_wass = get_wasserstain_distance(base_q_values, rand_q_values)
+                    base_q_values = [q_values.detach().cpu().squeeze() for q_values in base_q_values]
+                    wrong_q_values = [q_values.detach().cpu().squeeze() for q_values in wrong_q_values]
+                    trained_q_values = [q_values.detach().cpu().squeeze() for q_values in trained_q_values]
+                    rand_q_values = [q_values.detach().cpu().squeeze() for q_values in rand_q_values]
+                    
+                    wrong_psm = []
+                    trained_psm = []
+                    rand_psm = []
+
+                    # compare all traj pairs between base and (wrong, trained, random)
+                    for base_idx in range(20):
+                        for other_idx in range(20):
+                            wrong_psm.append(get_policy_similarity_metric(base_q_values[base_idx], wrong_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
+                            trained_psm.append(get_policy_similarity_metric(base_q_values[base_idx], trained_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
+                            rand_psm.append(get_policy_similarity_metric(base_q_values[base_idx], rand_q_values[other_idx], use_gpu=self.use_gpu).detach().cpu())
+
+                    wrong_psm = sum(wrong_psm) / len(wrong_psm)
+                    trained_psm = sum(trained_psm) / len(trained_psm)
+                    rand_psm = sum(rand_psm) / len(rand_psm)
                     
                     print("Seed:", seed)
                     logging.info(f"Seed: {seed}")
-                    print("wrong wass:", wrong_wass)
-                    logging.info("wrong wass: {}".format(wrong_wass))
-                    print("right wass", trained_wass)
-                    logging.info("right wass: {}".format(trained_wass))
-                    print("rand wass: {}".format(rand_wass))
-                    logging.info("rand wass: {}".format(rand_wass))
-                
-                if evaluation_type == "kl": 
-                    wrong_kl = get_kl_distance(base_q_values, wrong_q_values)
-                    trained_kl = get_kl_distance(base_q_values, trained_q_values)
-                    rand_kl = get_kl_distance(base_q_values, rand_q_values)
-                    
-                    print("Seed:", seed)
-                    logging.info(f"Seed: {seed}")
-                    print("wrong kl:", wrong_kl)
-                    logging.info("wrong kl: {}".format(wrong_kl))
-                    print("trained kl", trained_kl)
-                    logging.info("trained kl {}".format(trained_kl))
-                    print("rand kl", rand_kl)
-                    logging.info("rand kl: {}".format(rand_kl))
+                    print("wrong psm:", wrong_psm)
+                    logging.info("wrong psm: {}".format(wrong_psm))
+                    print("trained psm", trained_psm)
+                    logging.info("trained psm {}".format(trained_psm))
+                    print("rand psm", rand_psm)
+                    logging.info("rand psm: {}".format(rand_psm))
+
+                    wrong_psm_list.append(wrong_psm)
+                    trained_psm_list.append(trained_psm)
+                    rand_psm_list.append(rand_psm)
+
+            logging.info("Mean stats for Seed: {}".format(seed))
+            logging.info(f"Wrong PSM: {np.mean(wrong_psm_list), np.std(wrong_psm_list)}")
+            logging.info(f"Trained PSM: {np.mean(trained_psm_list), np.std(trained_psm_list)}")
+            logging.info(f"Rand PSM: {np.mean(rand_psm_list), np.std(rand_psm_list)}")
+            
     
     def get_test_buffer(self, option, env, num_states, head_idx, env_seed):
         test_states = []        
@@ -317,6 +425,25 @@ class AdvancedMinigridDivDisOptionExperiment():
         test_states = torch.cat(test_states, dim=0)
         
         return test_states
+
+    def get_test_buffer_trajectories(self, option, env, num_traj, head_idx, env_seed, max_steps=100):
+        test_trajectories  = []
+        while len(test_trajectories) < num_traj:
+            rand_num = np.random.randint(80)
+            obs, info = env.reset(agent_reposition_attempts=rand_num)
+            _, _, _, _, _, _, states, _ = option.eval_policy(head_idx,
+                                                             env,
+                                                             obs,
+                                                             info,
+                                                             env_seed,
+                                                             max_steps=max_steps)
+            trajectory = [state.unsqueeze(0) for state in states]
+            trajectory = torch.cat(trajectory, dim=0)
+            if trajectory.dim() == 1: # in the rare case that the trajectory is only one state
+                trajectory = trajectory.unsqueeze(0)
+            test_trajectories.append(trajectory)
+        
+        return test_trajectories
     
     def train_policy(self, option, env, env_seed, max_steps=1e6):
         for head_idx in range(option.num_heads):
@@ -366,6 +493,7 @@ class AdvancedMinigridDivDisOptionExperiment():
         head_scores = np.zeros(len(terminations_2))
         
         for seed_2 in seeds_2:
+
             new_option = DivDisMockOption(use_gpu=self.use_gpu,
                                         terminations=terminations_2,
                                         log_dir=os.path.join(self.log_dir, "new"),
@@ -408,8 +536,10 @@ class AdvancedMinigridDivDisOptionExperiment():
             confidence_scores[np.argmax(head_scores)] = 1
             
             new_option.update_confidences(confidence_scores)
+
         
         print("final confidences: {}".format(new_option.get_confidences()))
+        logging.info("final confidences: {}".format(new_option.get_confidences()))
         
     
 

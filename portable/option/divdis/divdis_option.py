@@ -61,6 +61,7 @@ class DivDisOption():
         self.video_generator = video_generator
         self.make_plots = False
         
+
         self.confidences = BayesianWeighting(beta_distribution_alpha,
                                              beta_distribution_beta,
                                              num_heads)
@@ -90,6 +91,7 @@ class DivDisOption():
                 pickle.dump(list(policies.keys()), f)
         
         self.confidences.save(os.path.join(self.save_dir, 'confidence.pkl'))
+
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'wb') as f:
             pickle.dump(self.train_data, f)
         for idx, bonus in enumerate(self.intrinsic_bonuses):
@@ -109,6 +111,7 @@ class DivDisOption():
                                                         learn_initiation=(not self.use_seed_for_initiation))
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
+
             with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
                 self.train_data = pickle.load(f)
             for idx, bonus in enumerate(self.intrinsic_bonuses):
@@ -205,6 +208,7 @@ class DivDisOption():
         should_terminate = False
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
+
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
@@ -256,6 +260,7 @@ class DivDisOption():
                 policy.add_data_initiation(negative_examples=states)
             policy.add_context_examples(states)
         
+
         # policy.move_to_cpu()
         # self.terminations.move_to_cpu()
         policy.store_buffer(buffer_dir)
@@ -376,6 +381,7 @@ class DivDisOption():
         
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
+
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
@@ -451,17 +457,4 @@ class DivDisOption():
     def update_confidences(self,
                            update):
         self.confidences.update_successes(update)
-
-
-
-
-
-
-
-
-
-
-
-
-
 

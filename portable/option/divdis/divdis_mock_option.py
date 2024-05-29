@@ -493,17 +493,3 @@ class DivDisMockOption():
                            update):
         self.confidences.update_successes(update)
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-

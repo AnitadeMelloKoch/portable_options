@@ -20,4 +20,3 @@ PolicyWithInitiation.policy_infeature_size                          = 6272
 PolicyWithInitiation.q_hidden_size                                  = 64
 PolicyWithInitiation.gru_hidden_size                                = 128
 PolicyWithInitiation.image_input                                    = True
-
