@@ -9,10 +9,6 @@ from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 from experiments.divdis_minigrid.experiment_files import *
 import numpy as np
 
-import cProfile
-import pstats
-import io
-from pstats import SortKey
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,7 +39,7 @@ if __name__ == "__main__":
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_policy=create_cnn_policy(3,25),
+                                      action_policy=create_cnn_policy(3,5),
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
     
@@ -56,24 +52,15 @@ if __name__ == "__main__":
     experiment.test_classifiers(minigrid_test_files_positive,
                                 minigrid_test_files_negative)
     
+    
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
                                    max_steps=int(1500),
                                    grayscale=False,
                                    normalize_obs=False)
     
-    ob = cProfile.Profile()
-    ob.enable()
-    
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                50000,
-                                0.9)
+                                3e6,
+                                0.98)
     
-    ob.disable()
-    sec = io.StringIO()
-    sortby = SortKey.TIME
-    ps = pstats.Stats(ob, stream=sec).sort_stats(sortby)
-    ps.print_stats()
-    
-    print(sec.getvalue())

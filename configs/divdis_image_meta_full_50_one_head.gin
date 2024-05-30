@@ -5,19 +5,19 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.maskable_ppo 
 import portable.option.divdis.divdis_classifier
 
-DivDisMetaExperiment.experiment_name                                = "meta_image_full_50_timeout"
+DivDisMetaExperiment.experiment_name                                = "meta_image_full_50_timeout_one_head"
 DivDisMetaExperiment.num_options                                    = 5
-DivDisMetaExperiment.option_head_num                                = 5
+DivDisMetaExperiment.option_head_num                                = 1
 DivDisMetaExperiment.num_primitive_actions                          = 0
 DivDisMetaExperiment.use_gpu                                        = True
-DivDisMetaExperiment.gpu_list                                       = [0,1]
+DivDisMetaExperiment.gpu_list                                       = [0]
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
 DivDisMetaExperiment.option_timeout                                 = 50
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 64, 64)
-MaskablePPOAgent.num_actions                                        = 25
+MaskablePPOAgent.num_actions                                        = 5
 MaskablePPOAgent.update_interval                                    = 100
 MaskablePPOAgent.entropy_coef                                       = 0.01
 
