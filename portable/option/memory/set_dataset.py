@@ -182,14 +182,15 @@ class SetDataset():
                                                       replace=False)
         self.shuffle()
     
-    def add_some_true_files(self, file_list):
+    def add_some_true_files(self, file_list, p=0.5):
         # load data from true file and only add a few random samples
         for file in file_list:
             data = np.load(file)
             data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
-            data = random.sample(data, 20)
+            indices = torch.randperm(len(data))[:int(len(data) * p)]
+            data = data[indices]
             self.true_data = self.concatenate(self.true_data, data)
         self.true_length = len(self.true_data)
         self._set_batch_num()
@@ -214,14 +215,15 @@ class SetDataset():
                                                       replace=False)
         self.shuffle()
 
-    def add_some_false_files(self, file_list):
+    def add_some_false_files(self, file_list, p=0.5):
         # load data from true file and only add a few random samples
         for file in file_list:
             data = np.load(file)
             data = self.pad(data)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
-            data = random.sample(data, 20)
+            indices = torch.randperm(len(data))[:int(len(data) * p)]
+            data = data[indices]
             self.false_data = self.concatenate(self.false_data, data)
         self.false_length = len(self.false_data)
         self._set_batch_num()
@@ -252,6 +254,19 @@ class SetDataset():
             data = np.load(file)
             data = torch.from_numpy(data).float()
             data = data.squeeze()
+            self.unlabelled_data = self.concatenate(self.unlabelled_data, data)
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.unlabelled_counter = 0
+        self.shuffle()
+
+    def add_some_unlabelled_files(self, file_list, p=0.5):
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data).float()
+            data = data.squeeze()
+            indices = torch.randperm(len(data))[:int(len(data) * p)]
+            data = data[indices]
             self.unlabelled_data = self.concatenate(self.unlabelled_data, data)
         self.unlabelled_data_length = len(self.unlabelled_data)
         self._set_batch_num()
