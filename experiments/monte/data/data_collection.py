@@ -299,12 +299,14 @@ if __name__ == "__main__":
     collector.INITIATION = False
     collector.TERMINATION = False
 
-    room_num = 22
+    room_num = 1
     #start_filename = f"resources/monte_env_states/room{room_num}/ladder/top_0.pkl"
-    start_filename = f"resources/monte_env_states/room{room_num}/platforms/left.pkl"
+    #start_filename = f"resources/monte_env_states/room{room_num}/platforms/left.pkl"
     #start_filename = f"resources/monte_env_states/room{room_num}/bridge/right_bridge.pkl"
     #start_filename = f"resources/monte_env_states/room{room_num}/enemy/left_of_left_snake.pkl"
     #start_filename = f"resources/monte_env_states/room{room_num}/enemy/skull_left_0.pkl"
+
+    start_filename = f"resources/monte_env_states/room{room_num}/platforms/left_top_platform_left_with_door.pkl"
     
     
     with open(start_filename, "rb") as f:

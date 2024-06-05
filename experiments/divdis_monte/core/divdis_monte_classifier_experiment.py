@@ -5,7 +5,7 @@ import pickle
 
 import gin
 import matplotlib.pyplot as plt
-from multiprocessing import Pool
+#from multiprocessing import Pool
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -407,8 +407,73 @@ class MonteDivDisClassifierExperiment():
             plt.savefig(os.path.join(self.plot_dir, plot_name))
             
 
+
+    def plot_heads(self, history, x_label, plot_name):
+            num_rooms = len(history['weighted_accuracy'])
+            num_heads = self.classifier.head_num
+
+            epochs = range(1, num_rooms + 1)
             
-    def room_by_room_train(self, room_list, unlabelled_train_files, history):
+            fig, axes = plt.subplots(1, 3 if 'uncertainty' in history else 2, figsize=(18, 6))
+
+            colors = plt.cm.tab10(np.linspace(0, 1, num_heads))
+            # going through rooms and determine width
+            # first to reach 0.7 weighted acc, and the one with highest final weighted acc
+            widths = np.ones(num_heads)
+            for room_idx in range(num_rooms):
+                for head_idx in range(num_heads):
+                    weighted_acc = history['weighted_accuracy'][room_idx]
+                    if np.max(weighted_acc) >= 0.7:
+                        widths[np.argmax(weighted_acc)] = 3
+            widths[np.argmax(history['weighted_accuracy'][-1])] = 3
+            line_style = '-' 
+
+            # Plot weighted accuracy for each head
+            for head_idx in range(num_heads):
+                weighted_acc = np.array([history['weighted_accuracy'][room_idx][head_idx] for room_idx in range(num_rooms)])
+                color = colors[head_idx]
+                axes[0].plot(epochs, weighted_acc, line_style, color=color, label=f'Head {head_idx}', alpha=0.7, linewidth=widths[head_idx])
+
+            axes[0].set_xticks(epochs)
+            axes[0].set_xlabel(x_label)
+            axes[0].set_ylabel('Weighted Accuracy')
+            axes[0].set_title('Weighted Accuracy Over Time')
+            axes[0].legend(loc='lower right')
+            axes[0].grid(True)
+
+            # Plot raw accuracy for each head, bold using the same best head as in weighted accuracy
+            for head_idx in range(num_heads):
+                raw_acc = np.array([history['raw_accuracy'][room_idx][head_idx] for room_idx in range(num_rooms)])
+                color = colors[head_idx]
+                axes[1].plot(epochs, raw_acc, line_style, color=color, label=f'Head {head_idx}', alpha=0.7, linewidth=widths[head_idx])
+
+            axes[1].set_xticks(epochs)
+            axes[1].set_xlabel(x_label)
+            axes[1].set_ylabel('Raw Accuracy')
+            axes[1].set_title('Raw Accuracy Over Time')
+            axes[1].legend(loc='lower right')
+            axes[1].grid(True)
+
+            # Plot uncertainty if present, bold using the same best head as in weighted accuracy
+            if 'uncertainty' in history:
+                for head_idx in range(num_heads):
+                    uncertainty = np.array([history['uncertainty'][room_idx][head_idx] for room_idx in range(num_rooms)])
+                    color = colors[head_idx]
+                    axes[2].plot(epochs, uncertainty, line_style, color=color, label=f'Head {head_idx}', alpha=0.7, linewidth=widths[head_idx])
+
+                axes[2].set_xticks(epochs)
+                axes[2].set_xlabel(x_label)
+                axes[2].set_ylabel('Uncertainty')
+                axes[2].set_title('Uncertainty Over Time')
+                axes[2].legend(loc='lower right')
+                axes[2].grid(True)
+
+            plt.tight_layout()
+            plt.show(block=False)
+            plt.savefig(os.path.join(self.plot_dir, plot_name))
+
+            
+    def room_by_room_train(self, room_list, unlabelled_train_files, history, heads_history):
         for room_idx in tqdm(range(len(room_list)), desc='Room Progression'):
             room = room_list[room_idx]
             print('===============================')
@@ -428,6 +493,9 @@ class MonteDivDisClassifierExperiment():
                                                         
             print(f"Weighted Accuracy: \n{np.round(weighted_acc, 2)}")
             print(f"Accuracy: \n{np.round(accuracy, 2)}")
+            
+            heads_history['weighted_accuracy'].append(weighted_acc)
+            heads_history['raw_accuracy'].append(accuracy)
 
             best_weighted_acc = np.max(weighted_acc)
             best_head_idx = np.argmax(weighted_acc)
@@ -445,16 +513,21 @@ class MonteDivDisClassifierExperiment():
                 print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
                 best_head_uncertainty = uncertainty[best_head_idx]
                 history['uncertainty'].append(best_head_uncertainty)
+                heads_history['uncertainty'].append(uncertainty)
 
         # save history to pickle
-        with open(os.path.join(self.log_dir, 'room_progression_metrics'), 'wb') as f:
+        with open(os.path.join(self.log_dir, 'room_progression_metrics.dict'), 'wb') as f:
             pickle.dump(history, f)
         self.plot_metrics(history, 'room', 'room_progression_metrics')
+
+        with open(os.path.join(self.log_dir, 'heads_progression_metrics.dict'), 'wb') as f:
+            pickle.dump(heads_history, f)
+        self.plot_heads(heads_history, 'room', 'heads_metrics')
 
         print("All unlabelled rooms added, now running additional training loops")
         logging.info("All unlabelled rooms added, now running additional training loops")
 
-        return history
+        return history, heads_history
         
 
     def additional_train(self, num_loops=20): 
@@ -464,8 +537,13 @@ class MonteDivDisClassifierExperiment():
             'true_accuracy': [],
             'false_accuracy': [],
         }
+        heads_history = {
+            'weighted_accuracy': [],
+            'raw_accuracy': [],
+        }
         if self.uncertain_test_files is not None:
             history['uncertainty'] = []
+            heads_history['uncertainty'] = []
 
             
         for i in tqdm(range(num_loops), desc='Additional Training Loops'):
@@ -480,6 +558,9 @@ class MonteDivDisClassifierExperiment():
             print(f"Weighted Accuracy: \n{np.round(weighted_acc, 2)}")
             print(f"Accuracy: \n{np.round(accuracy, 2)}")
 
+            heads_history['weighted_accuracy'].append(weighted_acc)
+            heads_history['raw_accuracy'].append(accuracy)
+
             best_weighted_acc = np.max(weighted_acc)
             best_head_idx = np.argmax(weighted_acc)
             best_accuracy = accuracy[best_head_idx]
@@ -496,12 +577,18 @@ class MonteDivDisClassifierExperiment():
                 print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
                 best_head_uncertainty = uncertainty[best_head_idx]
                 history['uncertainty'].append(best_head_uncertainty)
+                if heads_history is not None:
+                    heads_history['uncertainty'].append(uncertainty)
 
 
         # save history to pickle
-        with open(os.path.join(self.log_dir, 'additional_loops'), 'wb') as f:
+        with open(os.path.join(self.log_dir, 'additional_loops.dict'), 'wb') as f:
             pickle.dump(history, f)
         self.plot_metrics(history, 'additional_loops', 'additional_train_metrics')
 
-        return history
+        with open(os.path.join(self.log_dir, 'heads_additional_loops.dict'), 'wb') as f:
+            pickle.dump(heads_history, f)
+        self.plot_heads(heads_history, 'additional_loops', 'heads_additional_train_metrics')
+        
+        return history, heads_history
 
