@@ -308,7 +308,7 @@ class DivDisMetaExperiment():
         undiscounted_rewards = []
         
         while total_steps < max_steps:
-            undiscounted_reward = 0
+            undiscounted_reward = 0         # episode reward
             done = False
             
             if self.video_generator is not None:
@@ -391,9 +391,9 @@ class DivDisMetaExperiment():
                 "frames": total_steps
             })
             
-            self.writer.add_scalar('episode_rewards', sum(undiscounted_rewards), total_steps)
+            self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
             
-            self.plot_learning_curve(episode_rewards)
+            # self.plot_learning_curve(episode_rewards)
             
             if episode % 50 == 0:
                 self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
