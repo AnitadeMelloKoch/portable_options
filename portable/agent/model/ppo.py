@@ -330,6 +330,7 @@ class ActionPPO():
             return out, None
         
         if mask is not None:
+            mask = torch.stack(mask).unsqueeze(0)
             out[mask] = torch.min(out)
         
         if self.agent.training:
