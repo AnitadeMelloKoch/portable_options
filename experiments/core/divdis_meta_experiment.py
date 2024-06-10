@@ -244,6 +244,7 @@ class DivDisMetaExperiment():
                 term = option.check_termination(idx, state, env)
                 if type(term) is not torch.Tensor:
                     term = torch.tensor(term, dtype=bool)
+                term = term.cpu()
                 masks.append(term)
         
         return masks
