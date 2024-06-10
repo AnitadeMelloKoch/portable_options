@@ -241,7 +241,10 @@ class DivDisMetaExperiment():
         masks = []
         for option in self.options:
             for idx in range(option.num_heads):
-                masks.append(option.check_termination(idx, state, env))
+                term = option.check_termination(idx, state, env)
+                if type(term) is not torch.Tensor:
+                    term = torch.tensor(term, dtype=bool)
+                masks.append(term)
         
         return masks
     
