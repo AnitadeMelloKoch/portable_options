@@ -1,4 +1,4 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_divdis_meta_experiment import AdvancedMinigridDivDisMetaExperiment
+from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -218,19 +218,19 @@ if __name__ == "__main__":
          RandomAtLocation(6,6,0.2)]
     ]
     
-    experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
-                                                      seed=args.seed,
-                                                      option_policy_phi=policy_phi,
-                                                      agent_phi=option_agent_phi,
-                                                      action_policy=create_cnn_policy(3, 10),
-                                                      action_vf=create_cnn_vf(3),
-                                                      terminations=terminations)
+    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
+                                      seed=args.seed,
+                                      option_policy_phi=policy_phi,
+                                      agent_phi=option_agent_phi,
+                                      action_policy=create_cnn_policy(3, 15),
+                                      action_vf=create_cnn_vf(3),
+                                      terminations=terminations,
+                                      option_type="mock",
+                                      option_head_num=3)
     
-    # experiment.load()
-    
-    # experiment.train_option_policies(train_envs,
-    #                                  env_seed,
-    #                                  5e2)
+    experiment.train_option_policies(train_envs,
+                                     env_seed,
+                                     5e2)
     
     meta_env = environment_builder(
                     'AdvancedDoorKey-8x8-v0',

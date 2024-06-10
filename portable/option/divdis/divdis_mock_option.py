@@ -286,7 +286,7 @@ class DivDisMockOption():
         eval_rewards = deque(maxlen=200)
         episode = 0
         
-        self.set_policy_save_to_disk(idx, seed, False)
+        # self.set_policy_save_to_disk(idx, seed, False)
         
         while total_steps < max_steps:
             env = random.choice(envs)
@@ -326,7 +326,7 @@ class DivDisMockOption():
             #     break
         
         self.save()
-        self.set_policy_save_to_disk(idx, seed, True)
+        # self.set_policy_save_to_disk(idx, seed, True)
         
     
     def _get_eval_performance(self,

@@ -98,7 +98,7 @@ class DivDisMetaExperiment():
         else:
             self.video_generator = None
         
-        self.meta_agent = MaskablePPOAgent(use_gpu=gpu_list[-1],
+        self.meta_agent = ActionPPO(use_gpu=gpu_list[-1],
                                            policy=action_policy,
                                            value_function=action_vf,
                                            model=action_model,
@@ -264,7 +264,6 @@ class DivDisMetaExperiment():
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
         
         self.meta_agent.observe(obs,
-                                mask,
                                 reward,
                                 done,
                                 done)

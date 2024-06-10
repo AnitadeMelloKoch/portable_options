@@ -119,7 +119,13 @@ def create_cnn_policy(n_channels, action_space, hidden_feature_size=128):
         nn.Tanh(),
         nn.Linear(64, 64),
         nn.Tanh(),
-        nn.Linear(64, action_space)
+        nn.Linear(64, action_space),
+        pfrl.policies.GaussianHeadWithStateIndependentCovariance(
+                        action_size=action_space,
+                        var_type="diagonal",
+                        var_func=lambda x: torch.exp(2 * x),  # Parameterize log std
+                        var_param_init=0,  # log std = 0 => std = 1
+                    )
     )
 
 class CNNPolicy(nn.Module):
@@ -315,13 +321,16 @@ class ActionPPO():
     def load(self, dir):
         self.agent.load(dir)
     
-    def act(self, obs):
+    def act(self, obs, mask=None):
         self.step += 1
         out = self.agent.batch_act([obs])
         out = torch.from_numpy(out)
         
         if not self.returns_vals:
             return out, None
+        
+        if mask is not None:
+            out[mask] = torch.min(out)
         
         if self.agent.training:
             action = torch.argmax(out)
