@@ -140,7 +140,8 @@ if __name__ == "__main__":
                                       agent_phi=option_agent_phi,
                                       action_model=create_atari_model(4,22),
                                       option_type="mock",
-                                      terminations=terminations)
+                                      terminations=terminations,
+                                      option_head_num=1)
     
     experiment.train_option_policies(
         bootstrap_envs,
