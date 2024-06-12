@@ -241,6 +241,8 @@ class DivDisMetaExperiment():
         masks = []
         if self.use_global_option:
             masks.append(torch.tensor(False, dtype=bool))
+        for _ in range(self.num_primitive_actions):
+            masks.append(torch.tensor(False, dtype=bool))
         for option in self.options:
             for idx in range(option.num_heads):
                 term = option.check_termination(idx, state, env)
@@ -331,31 +333,35 @@ class DivDisMetaExperiment():
                 self._video_log("action: {}".format(action))
                 self._video_log("action q vals: {}".format(q_vals))
                 
+                step_taken = False
+                
                 if self.use_global_option:
                     if action == 0:
                         next_obs, reward, done, info, steps = self.global_option.train_policy(env=env,
-                                                                                    info=info,
-                                                                                    make_video=False,
-                                                                                    obs=obs)
+                                                                                              info=info,
+                                                                                              make_video=False,
+                                                                                              obs=obs)
+                        step_taken = True
                     else:
                         action = action - 1
                 
-                if action < self.num_primitive_actions:
-                    next_obs, reward, done, info = env.step(action)
-                    undiscounted_reward += reward
-                    rewards = [reward]
-                    steps = 1
-                else:
-                    action_offset = action-self.num_primitive_actions
-                    option_num = int(action_offset/self.num_heads)
-                    option_head = action_offset%self.num_heads
-                    next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
-                                                                                                            env,
-                                                                                                            obs,
-                                                                                                            info,
-                                                                                                            seed,
-                                                                                                            max_steps=self.option_timeout,
-                                                                                                            make_video=False)
+                if not step_taken:
+                    if action < self.num_primitive_actions:
+                        next_obs, reward, done, info = env.step(action)
+                        undiscounted_reward += reward
+                        rewards = [reward]
+                        steps = 1
+                    else:
+                        action_offset = action-self.num_primitive_actions
+                        option_num = int(action_offset/self.num_heads)
+                        option_head = action_offset%self.num_heads
+                        next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
+                                                                                                                env,
+                                                                                                                obs,
+                                                                                                                info,
+                                                                                                                seed,
+                                                                                                                max_steps=self.option_timeout,
+                                                                                                                make_video=False)
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
