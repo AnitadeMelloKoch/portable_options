@@ -51,7 +51,8 @@ class MonteDivDisClassifierExperiment():
                  classifier_diversity_weight,
                  classifier_l2_reg_weight,
                  classifier_initial_epochs,
-                 classifier_per_room_epochs
+                 classifier_per_room_epochs,
+                 classifier_model_name,
                  ):
         
         self.seed = seed 
@@ -78,7 +79,7 @@ class MonteDivDisClassifierExperiment():
                                            num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
-                                           model_name='monte_cnn'
+                                           model_name='classifier_model_name'
                                            )
         #self.classifier.dataset.set_transform_function(transform)
 

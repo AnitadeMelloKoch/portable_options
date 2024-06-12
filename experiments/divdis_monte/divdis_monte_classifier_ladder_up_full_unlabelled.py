@@ -270,7 +270,7 @@ if __name__ == "__main__":
             'uncertainty': [best_head_uncertainty]
         }
 
-            history = experiment.additional_train()
+            history, heads_history = experiment.additional_train()
             additional_histories.append(history)
     
         experiment.plot_metrics(additional_histories, 'train loops', 'avg_train_metrics')

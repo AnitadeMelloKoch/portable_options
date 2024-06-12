@@ -281,7 +281,7 @@ if __name__ == "__main__":
             print("All unlabelled rooms added, now running additional training loops")
             logging.info("All unlabelled rooms added, now running additional training loops")
 
-            history = experiment.additional_train()
+            history, heads_history = experiment.additional_train()
             additional_histories.append(history)
     
         experiment.plot_metrics(room_histories, 'room', 'avg_room_train_metrics')
