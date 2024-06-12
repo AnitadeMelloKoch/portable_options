@@ -256,7 +256,12 @@ def create_atari_model(n_channels, n_actions):
         pfrl.nn.Branched(
             nn.Sequential(
                 lecun_init(nn.Linear(512, n_actions), 1e-2),
-                SoftmaxCategoricalHead()
+                pfrl.policies.GaussianHeadWithStateIndependentCovariance(
+                        action_size=n_actions,
+                        var_type="diagonal",
+                        var_func=lambda x: torch.exp(2 * x),  # Parameterize log std
+                        var_param_init=0,  # log std = 0 => std = 1
+                    )
             ),
             lecun_init(nn.Linear(512, 1))
         )
@@ -282,7 +287,7 @@ class ActionPPO():
                  minibatch_size=64,
                  update_interval=2048):
         
-        self.returns_vals = False
+        self.returns_vals = True
         if model is None:
             assert policy is not None
             assert value_function is not None

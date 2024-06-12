@@ -239,6 +239,8 @@ class DivDisMetaExperiment():
     
     def get_termination_masks(self, state, env):
         masks = []
+        if self.use_global_option:
+            masks.append(torch.tensor(False, dtype=bool))
         for option in self.options:
             for idx in range(option.num_heads):
                 term = option.check_termination(idx, state, env)
