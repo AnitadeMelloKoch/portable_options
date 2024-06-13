@@ -146,7 +146,7 @@ if __name__ == "__main__":
     experiment.train_option_policies(
         bootstrap_envs,
         0,
-        max_steps=1e6
+        max_steps=5e5
     )
     
     meta_env = atari_wrappers.wrap_deepmind(
