@@ -14,7 +14,7 @@ DivDisMetaExperiment.gpu_list                                       = [0,1]
 DivDisMetaExperiment.make_videos                                    = False
 DivDisMetaExperiment.classifier_epochs                              = 200
 DivDisMetaExperiment.option_timeout                                 = 10
-DivDisMetaExperiment.log_q_vales                                    = True
+DivDisMetaExperiment.log_q_values                                   = True
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
