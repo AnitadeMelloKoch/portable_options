@@ -34,6 +34,8 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 use_termination_masks=True,
+                 log_q_values=False,
                  add_unlabelled_data=False,
                  gpu_list=[0],
                  start_epsilon=0.0,
@@ -65,6 +67,8 @@ class DivDisMetaExperiment():
         self.option_timeout = option_timeout
         self.use_global_option = use_global_option
         self.add_unlabelled_data = add_unlabelled_data
+        self.use_termination_masks = use_termination_masks
+        self.log_q_values = log_q_values
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -254,7 +258,13 @@ class DivDisMetaExperiment():
         return masks
     
     def act(self, obs, mask):
-        action, q_vals = self.meta_agent.act(obs, mask)
+        if self.use_termination_masks is True:
+            action, q_vals = self.meta_agent.act(obs, mask)
+        else:
+            action, q_vals = self.meta_agent.act(obs)
+        
+        if self.log_q_values is True:
+            logging.info("q_values:", q_vals)
         
         return action, q_vals
     
