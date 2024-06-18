@@ -14,13 +14,24 @@ from portable.utils.utils import load_gin_configs
 img_dir = "resources/monte_images/"
 
 # train using room 1 only
-positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy"]
+"""positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy"]
 
 negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
                         img_dir+"screen_death_1.npy",
                         img_dir+"screen_death_2.npy",
                         img_dir+"screen_death_3.npy",
                         img_dir+"screen_death_4.npy"
+                        ]"""
+positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
+                        img_dir+"climb_down_ladder_room10_termination_positive.npy",]
+
+negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
+                        img_dir+"screen_death_1.npy",
+                        img_dir+"screen_death_2.npy",
+                        img_dir+"screen_death_3.npy",
+                        img_dir+"screen_death_4.npy",
+                        img_dir+"climb_down_ladder_room10_termination_negative.npy",
+                        img_dir+"climb_down_ladder_room10_uncertain.npy"
                         ]
 initial_unlabelled_train_files = [
     # 0
