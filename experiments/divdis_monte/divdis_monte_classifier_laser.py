@@ -7,12 +7,20 @@ import numpy as np
 from experiments.divdis_monte.core.divdis_monte_classifier_experiment import MonteDivDisClassifierExperiment
 from portable.utils.utils import load_gin_configs
 
-positive_train_files = ["resources/monte_images/*"]
-negative_train_files = []
-unlabelled_train_files = []
+positive_train_files = ["resources/monte_images/lasers1_toleft_room0_termination_positive.npy"]
+negative_train_files = ["resources/monte_images/lasers1_toleft_room0_termination_negative.npy"]
+unlabelled_train_files = ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
+                          "resources/monte_images/lasers2_toleft_room0_termination_negative.npy",
+                          "resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
+                          "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
+                          "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",]
 
-positive_test_files = []
-negative_test_files = []
+positive_test_files = ["resources/monte_images/lasers1_toleft_room7_termination_positive.npy",
+                       "resources/monte_images/lasers2_toleft_room7_termination_positive.npy",
+                       "resources/monte_images/lasers_toleft_room12_termination_positive.npy"]
+negative_test_files = ["resources/monte_images/lasers1_toleft_room7_termination_negative.npy",
+                       "resources/monte_images/lasers2_toleft_room7_termination_negative.npy",
+                       "resources/monte_images/lasers_toleft_room12_termination_negative.npy"]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -37,7 +45,7 @@ if __name__ == "__main__":
     experiment.add_test_files(positive_test_files,
                               negative_test_files)
     
-    experiment.train_classifier(300)
+    experiment.train_classifier(150)
     
     accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier()
     
