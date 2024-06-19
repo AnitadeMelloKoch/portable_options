@@ -156,7 +156,7 @@ class SetDataset():
         # randomly get negative samples
         if self.true_length == 0 or self.false_length == 0:
             self.num_batches = math.ceil(
-                max(self.true_length, self.false_length)/(self.data_batchsize)
+                max(self.true_length, self.false_length)/(self.batchsize)
             )
         else:
             self.num_batches = math.ceil(
