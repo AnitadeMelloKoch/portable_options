@@ -28,12 +28,15 @@ class DivDisClassifier():
                  use_gpu,
                  log_dir,
                  
+                 num_classes,
+                 state_dim,
+                 
                  head_num,
                  learning_rate,
-                 num_classes,
                  diversity_weight,
-                 
                  l2_reg_weight=0.001,
+                 class_weight=None,
+                 
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
@@ -46,6 +49,8 @@ class DivDisClassifier():
         self.dataset = SetDataset(max_size=dataset_max_size,
                                   batchsize=dataset_batchsize,
                                   unlabelled_batchsize=unlabelled_dataset_batchsize)
+        self.state_dim = state_dim
+        
         self.learning_rate = learning_rate
         
         self.head_num = head_num
@@ -68,10 +73,18 @@ class DivDisClassifier():
                                           )
         
         self.divdis_criterion = DivDisLoss(heads=head_num)
-        self.ce_criterion = torch.nn.CrossEntropyLoss()
+
+        if class_weight is not None:
+            assert len(class_weight) == num_classes, "class_weight must have the same length as num_classes"
+            class_weight_tensor = torch.tensor(class_weight, dtype=torch.float)
+        else:
+            class_weight_tensor = torch.ones(num_classes, dtype=torch.float)
+        if self.use_gpu:
+            class_weight_tensor = class_weight_tensor.to("cuda")
+        
+        self.ce_criterion = torch.nn.CrossEntropyLoss(weight=class_weight_tensor)
         self.diversity_weight = diversity_weight
         
-        self.state_dim = 3
     
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
@@ -128,16 +141,15 @@ class DivDisClassifier():
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                if use_unlabelled_data:
-                    unlabelled_x = self.dataset.get_unlabelled_batch()
                 
                 if self.use_gpu:
                     x = x.to("cuda")
                     y = y.to("cuda")
-                    if use_unlabelled_data:
-                        unlabelled_x = unlabelled_x.to("cuda")
 
                 if use_unlabelled_data:
+                    unlabelled_x = self.dataset.get_unlabelled_batch()
+                    if self.use_gpu:
+                        unlabelled_x = unlabelled_x.to("cuda")
                     unlabelled_pred = self.classifier(unlabelled_x)
                     
                 pred_y = self.classifier(x)
@@ -188,7 +200,7 @@ class DivDisClassifier():
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        votes = torch.argmax(pred_y, axis=-1)
+        votes = torch.argmax(pred_y, dim=-1)
         
         votes = votes.cpu().numpy()
         self.votes = votes

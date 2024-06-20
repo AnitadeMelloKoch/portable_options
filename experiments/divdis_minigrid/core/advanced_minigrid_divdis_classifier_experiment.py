@@ -43,9 +43,10 @@ class AdvancedMinigridDivDisClassifierExperiment():
         
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
                                            log_dir=self.log_dir,
+                                           num_classes=classifier_num_classes,
+                                           state_dim=3,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
-                                           num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
                                            model_name='minigrid_cnn')
