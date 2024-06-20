@@ -41,6 +41,9 @@ class DivDisEvaluatorClassifier():
         self.head_num = self.classifier.head_num
         self.image_input = image_input
 
+        self.positive_test_files = []
+        self.negative_test_files = []
+
         self.test_batch_size = batch_size
         self.test_dataset = SetDataset(max_size=1e6, batchsize=self.test_batch_size)
         
@@ -62,11 +65,12 @@ class DivDisEvaluatorClassifier():
             image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
 
             # Create a figure with subplots
-            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
+            #fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
+            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*(self.head_num+1)))
             fig.suptitle(f'Attributions for Image {image_idx} (Label: {label})')
 
-            predictions = self.classifier.predict(image)[0]  # Get predictions for the current head
-            predicted_labels = predictions.argmax(dim=-1)  # Assuming single label prediction
+            predictions, votes = self.classifier.predict(image)  # Get predictions for the current head
+            predicted_labels = predictions.squeeze().argmax(dim=-1)  # Assuming single label prediction
 
             for i in range(self.stack_size):
                 ax = axes[0, i]
@@ -95,13 +99,13 @@ class DivDisEvaluatorClassifier():
                     ax.imshow(display_image[:,:,channel_idx], cmap='gray')
                     #ax.imshow(attr[:,:,channel_idx], cmap='seismic', alpha=0.5)
                     
-                    fig, ax = viz.visualize_image_attr(attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
-                                                       original_image=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
-                                                       method='blended_heat_map', sign='positive', 
-                                                       show_colorbar=False, plt_fig_axis=(fig, ax),
-                                                       use_pyplot=False)
+                    fig, ax = viz.visualize_image_attr(
+                        attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                        original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
+                        method='blended_heat_map', sign='positive', 
+                        show_colorbar=False, plt_fig_axis=(fig, ax),
+                        use_pyplot=False)
                     ax.set_axis_off()
-                    
 
                 if(label == 1) & (pred_label_head == 1):
                     row_name = (f'Head {head_idx}: True Positive')
@@ -112,7 +116,9 @@ class DivDisEvaluatorClassifier():
                 elif(label == 1) & (pred_label_head == 0):
                     row_name = (f'Head {head_idx}: False Negative')
             
-                axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
+                #axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
+                #    va='center', ha='right', fontsize=12, fontweight='bold')
+                axes[head_idx+1,0].text(-0.2, 0.5, row_name, transform=axes[head_idx+1,0].transAxes, 
                     va='center', ha='right', fontsize=12, fontweight='bold')
                     
             plt.tight_layout()
@@ -304,5 +310,72 @@ class DivDisEvaluatorClassifier():
         return self.get_head_complexity()
 
     def add_test_files(self, true_files, false_files):
+        self.positive_test_files = true_files
+        self.negative_test_files = false_files
+        
         self.test_dataset.add_true_files(true_files)
         self.test_dataset.add_false_files(false_files)
+
+    def test_classifier(self):
+        dataset_positive = SetDataset(max_size=1e6,
+                                      batchsize=64)
+        
+        dataset_negative = SetDataset(max_size=1e6,
+                                      batchsize=64)
+        
+        #dataset_positive.set_transform_function(transform)
+        #dataset_negative.set_transform_function(transform)
+        
+        dataset_positive.add_true_files(self.positive_test_files)
+        dataset_negative.add_false_files(self.negative_test_files)
+    
+        counter = 0
+        accuracy = np.zeros(self.classifier.head_num)
+        accuracy_pos = np.zeros(self.classifier.head_num)
+        accuracy_neg = np.zeros(self.classifier.head_num)
+        
+        for _ in range(dataset_positive.num_batches):
+            counter += 1
+            x, y = dataset_positive.get_batch()
+            pred_y, votes = self.classifier.predict(x)
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
+                accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+        accuracy_pos /= counter
+        
+        total_count = counter
+        counter = 0
+        
+        for _ in range(dataset_negative.num_batches):
+            counter += 1
+            x, y = dataset_negative.get_batch()
+            pred_y, votes = self.classifier.predict(x)
+            
+            for idx in range(self.classifier.head_num):
+                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
+                accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
+                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
+
+        
+        accuracy_neg /= counter
+        total_count += counter
+        
+        accuracy /= total_count
+        
+        weighted_acc = (accuracy_pos + accuracy_neg)/2
+        
+        '''logging.info("============= Classifiers evaluated =============")
+        for idx in range(self.classifier.head_num):
+            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
+                idx,
+                accuracy_pos[idx],
+                accuracy_neg[idx],
+                accuracy[idx],
+                weighted_acc[idx])
+            )
+        logging.info("=================================================")
+        '''
+        return accuracy_pos, accuracy_neg, accuracy, weighted_acc
