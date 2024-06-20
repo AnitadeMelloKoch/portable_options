@@ -45,6 +45,7 @@ class MonteDivDisClassifierExperiment():
                  use_gpu,
                  
                  classifier_num_classes,
+                 classifier_class_weight,
                  
                  classifier_head_num,
                  classifier_learning_rate,
@@ -74,7 +75,8 @@ class MonteDivDisClassifierExperiment():
         
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
                                            log_dir=self.log_dir,
-                                           num_classes=2,
+                                           num_classes=classifier_num_classes, 
+                                           class_weight=classifier_class_weight,
                                            state_dim=4,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,

@@ -13,6 +13,7 @@ MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 5e-4 #1e-2
 MonteDivDisClassifierExperiment.classifier_initial_epochs      = 150
 MonteDivDisClassifierExperiment.classifier_per_room_epochs     = 130
 MonteDivDisClassifierExperiment.classifier_model_name          = 'monte_cnn'
+MonteDivDisClassifierExperiment.classifier_class_weight        = [1.5, 1]
 
 DivDisClassifier.dataset_batchsize = 64
 

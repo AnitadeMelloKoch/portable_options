@@ -191,8 +191,8 @@ class DivDisClassifier():
     def predict(self, x):
         self.classifier.eval()
         
-        if len(x.shape) == self.state_dim:
-            x = x.unsqueeze(0)
+        #if len(x.shape) == self.state_dim:
+        #    x = x.unsqueeze(0)
         
         if self.use_gpu:
             x = x.to("cuda")
