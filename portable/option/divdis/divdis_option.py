@@ -31,7 +31,10 @@ class DivDisOption():
                  video_generator=None,
                  plot_dir=None):
         
-        assert len(use_gpu) == num_heads
+        if type(use_gpu) is list:
+            assert len(use_gpu) == num_heads
+        else:
+            use_gpu = [use_gpu]*num_heads
         
         self.gpu_list = use_gpu
         self.save_dir = save_dir
