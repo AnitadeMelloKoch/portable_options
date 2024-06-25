@@ -8,6 +8,7 @@ from pfrl.wrappers import atari_wrappers
 from experiments.divdis_monte.core.monte_terminations import *
 from experiments.divdis_monte.experiment_files import *
 import numpy as np
+import os
 
 terminations = [
     [check_termination_bottom_ladder],
@@ -112,6 +113,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--base_dir", type=str, required=True)
+    parser.add_argument("--sub_dir", type=str, default="")
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
@@ -134,7 +136,12 @@ if __name__ == "__main__":
         return x
     # monte has 18 actions
     
-    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
+    if args.subdir == "":
+        base_dir = os.path.join(args.base_dir, args.subdir)
+    else:
+        base_dir = args.base_dir
+    
+    experiment = DivDisMetaExperiment(base_dir=base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
@@ -150,7 +157,7 @@ if __name__ == "__main__":
     )
     
     meta_env = atari_wrappers.wrap_deepmind(
-        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
         episode_life=True,
         clip_rewards=True,
         frame_stack=False
