@@ -286,7 +286,9 @@ class DivDisMetaExperiment():
                                 done,
                                 done)
     
-    def save_image(self, env):
+    def save_image(self, env, save_image):
+        if save_image is False:
+            return
         if self.video_generator is not None:
             if self.exp == "minigrid":
                 img = env.render()
@@ -334,7 +336,11 @@ class DivDisMetaExperiment():
             obs, info = env.reset()
             
             while not done:
-                self.save_image(env)
+                if episode%200 == 0:
+                    save_image = True
+                else:
+                    save_image = False
+                self.save_image(env, save_image)
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
                 action_mask = self.get_termination_masks(obs, env)
@@ -349,7 +355,7 @@ class DivDisMetaExperiment():
                     if action == 0:
                         next_obs, reward, done, info, steps = self.global_option.train_policy(env=env,
                                                                                               info=info,
-                                                                                              make_video=False,
+                                                                                              make_video=save_image,
                                                                                               obs=obs)
                         step_taken = True
                     else:
@@ -371,7 +377,7 @@ class DivDisMetaExperiment():
                                                                                                                 info,
                                                                                                                 seed,
                                                                                                                 max_steps=self.option_timeout,
-                                                                                                                make_video=False)
+                                                                                                                make_video=save_image)
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -399,7 +405,7 @@ class DivDisMetaExperiment():
                                                                                      self.decisions,  
                                                                                      np.mean(episode_rewards)))
             
-            if (undiscounted_reward > 0 or episode%10==0) and self.video_generator is not None:
+            if (undiscounted_reward > 0 or episode%200==0) and self.video_generator is not None:
                 self.video_generator.episode_end("episode_{}".format(episode))
             
             undiscounted_rewards.append(undiscounted_reward)
