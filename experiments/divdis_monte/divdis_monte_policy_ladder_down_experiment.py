@@ -67,8 +67,8 @@ if __name__ == "__main__":
         x = (x/255.0).float()
         return x
     
-    if args.subdir == "":
-        base_dir = os.path.join(args.base_dir, args.subdir)
+    if args.sub_dir == "":
+        base_dir = os.path.join(args.base_dir, args.sub_dir)
     else:
         base_dir = args.base_dir
     
