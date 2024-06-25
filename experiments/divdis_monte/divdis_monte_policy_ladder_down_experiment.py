@@ -3,6 +3,7 @@ import argparse
 from portable.utils.utils import load_gin_configs
 import numpy as np
 import torch
+import os
 
 from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
 from portable.utils import load_init_states
@@ -12,35 +13,39 @@ from experiments.divdis_monte.experiment_files import *
 
 init_states = [
     ["resources/monte_env_states/room0/ladder/top_0.pkl"],
-    ["resources/monte_env_states/room0/lasers/left_with_laser.pkl"],
-    ["resources/monte_env_states/room7/ladder/top_0.pkl"],
-    ["resources/monte_env_states/room7/lasers/between_right_lasers.pkl"]
+    ["resources/monte_env_states/room1/ladder/middle_top_0.pkl",
+     "resources/monte_env_states/room1/ladder/left_top_0.pkl",
+     "resources/monte_env_states/room1/ladder/right_top_0.pkl",],
+    ["resources/monte_env_states/room2/ladder/top_0.pkl"],
+    ["resources/monte_env_states/room3/ladder/top_0.pkl"]
 ]
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/lasers1_toleft_room0_termination_positive.npy"],
-    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy"]
+    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy"],
+    ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room6_termination_positive.npy"]
 ]
 negative_files = [
-    ["resources/monte_images/lasers1_toleft_room0_termination_negative.npy"],
-    ["resources/monte_images/lasers2_toleft_room0_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy"],
+    ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy"],
 ]
 unlabelled_files = [
-    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
-     "resources/monte_images/lasers2_toleft_room0_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
+    ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
-    ["resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",]
+    []
 ]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--base_dir", type=str, required=True)
+    parser.add_argument("--sub_dir", type=str, default="")
     parser.add_argument("--seed", type=int, required=True)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
@@ -62,7 +67,12 @@ if __name__ == "__main__":
         x = (x/255.0).float()
         return x
     
-    experiment = DivDisOptionExperiment(base_dir=args.base_dir,
+    if args.subdir == "":
+        base_dir = os.path.join(args.base_dir, args.subdir)
+    else:
+        base_dir = args.base_dir
+    
+    experiment = DivDisOptionExperiment(base_dir=base_dir,
                                         seed=args.seed,
                                         option_type="divdis",
                                         policy_phi=policy_phi)
@@ -70,7 +80,7 @@ if __name__ == "__main__":
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
         experiment.add_datafiles(pos, neg, unlab)
         experiment.train_classifier()
-        for init_state in init_states:
+        for state_idx, init_state in enumerate(init_states):
             env = atari_wrappers.wrap_deepmind(
                 atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
                 episode_life=True,
@@ -88,7 +98,8 @@ if __name__ == "__main__":
                                         max_steps=int(2e4))
             experiment.train_option(env,
                                     args.seed,
-                                    1e6)
+                                    1e6,
+                                    state_idx)
     
     experiment.save()
 

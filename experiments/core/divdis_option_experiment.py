@@ -112,7 +112,8 @@ class DivDisOptionExperiment():
     def train_option(self,
                      env,
                      seed,
-                     max_steps):
+                     max_steps,
+                     env_idx):
         total_steps = 0
         rolling_rewards = deque(maxlen=200)
         episode = 0
@@ -158,8 +159,8 @@ class DivDisOptionExperiment():
                     logging.info("Head idx: {} Total steps: {} average reward: {}".format(head_idx,
                                                                                           total_steps,
                                                                                           np.mean(rolling_rewards)))
-                    if self.video_generator is not None:
-                        self.video_generator.episode_end("episode_{}".format(episode))
+            if self.video_generator is not None:
+                self.video_generator.episode_end("head{}_env{}".format(head_idx, env_idx))
                     
             self.save()
     
