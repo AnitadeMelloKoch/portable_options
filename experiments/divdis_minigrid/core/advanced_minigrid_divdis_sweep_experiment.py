@@ -279,6 +279,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                 set_seed(seed)
                 classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                               log_dir=self.log_dir,
+                                              num_classes=2,
+                                              state_dim=3,
                                               diversity_weight=weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
