@@ -32,7 +32,10 @@ class DivDisMockOption():
                  video_generator=None,
                  plot_dir=None):
         
-        assert len(use_gpu) == len(terminations)
+        if type(use_gpu) is list:
+            assert len(use_gpu) == len(terminations)
+        else:
+            use_gpu = [use_gpu]*len(terminations)
         
         self.gpu_list = use_gpu
         self.save_dir = save_dir

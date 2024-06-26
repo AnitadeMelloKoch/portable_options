@@ -1,4 +1,4 @@
-from experiments.divdis_minigrid.core.advanced_minigrid_divdis_meta_experiment import AdvancedMinigridDivDisMetaExperiment
+from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -165,13 +165,14 @@ if __name__ == "__main__":
         [PerfectAtLocation(6,6)],
     ]
     
-    experiment = AdvancedMinigridDivDisMetaExperiment(base_dir=args.base_dir,
+    experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                                               seed=args.seed,
                                                               option_policy_phi=policy_phi,
                                                               agent_phi=option_agent_phi,
                                                               action_policy=create_cnn_policy(3, 7),
                                                               action_vf=create_cnn_vf(3),
-                                                              terminations=terminations)
+                                                              terminations=terminations,
+                                                              option_head_num=1)
     
     
     experiment.train_option_policies(train_envs,
