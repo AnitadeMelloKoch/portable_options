@@ -137,9 +137,9 @@ if __name__ == "__main__":
     # monte has 18 actions
     
     if args.sub_dir == "":
-        base_dir = os.path.join(args.base_dir, args.sub_dir)
-    else:
         base_dir = args.base_dir
+    else:
+        base_dir = os.path.join(args.base_dir, args.sub_dir)
     
     experiment = DivDisMetaExperiment(base_dir=base_dir,
                                       seed=args.seed,
