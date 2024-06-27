@@ -94,7 +94,7 @@ if __name__ == "__main__":
                                         agent_space=False,
                                         list_init_states=load_init_states(init_state),
                                         check_true_termination=lambda x,y,z: False,
-                                        list_termination_points=[(0,0,0)],
+                                        list_termination_points=[(0,0,0)]*len(init_state),
                                         max_steps=int(2e4))
             experiment.train_option(env,
                                     args.seed,

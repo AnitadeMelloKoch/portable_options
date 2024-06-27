@@ -118,6 +118,12 @@ class DivDisMockOption():
             bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
         
     
+    def reset_classifiers(self):
+        return
+    
+    def reset_dataset(self):
+        return
+    
     def add_policy(self, 
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],

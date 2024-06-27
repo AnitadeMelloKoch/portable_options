@@ -70,7 +70,7 @@ if __name__ == "__main__":
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
         experiment.add_datafiles(pos, neg, unlab)
         experiment.train_classifier()
-        for init_state in init_states:
+        for env_idx, init_state in enumerate(init_states):
             env = atari_wrappers.wrap_deepmind(
                 atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
                 episode_life=True,
@@ -88,7 +88,8 @@ if __name__ == "__main__":
                                         max_steps=int(2e4))
             experiment.train_option(env,
                                     args.seed,
-                                    1e6)
+                                    1e6,
+                                    env_idx)
     
     experiment.save()
 

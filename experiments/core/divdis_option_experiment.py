@@ -9,6 +9,7 @@ import torch
 from collections import deque
 import matplotlib.pyplot as plt
 import pickle
+from collections import defaultdict
 
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from portable.option.divdis.divdis_option import DivDisOption
@@ -29,6 +30,8 @@ class DivDisOptionExperiment():
                  terminations=[],
                  option_timeout=50,
                  classifier_epochs=100,
+                 reset_classifier_between_runs=True,
+                 train_new_policy_for_each_room=True,
                  make_videos=False):
         assert option_type in OPTION_TYPES
         
@@ -36,6 +39,8 @@ class DivDisOptionExperiment():
         self.seed = seed
         self.option_type = option_type
         self.option_timeout = option_timeout
+        self.reset_classifier = reset_classifier_between_runs
+        self.learn_new_policy = train_new_policy_for_each_room
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -44,6 +49,8 @@ class DivDisOptionExperiment():
         self.classifier_epochs = classifier_epochs
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
+        
+        self.run_numbers = defaultdict(int)
         
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.save_dir, exist_ok=True)
@@ -113,7 +120,8 @@ class DivDisOptionExperiment():
                      env,
                      seed,
                      max_steps,
-                     env_idx):
+                     env_idx,
+                     classifier_epochs=None):
         total_steps = 0
         rolling_rewards = deque(maxlen=200)
         episode = 0
@@ -121,6 +129,9 @@ class DivDisOptionExperiment():
         
         for head_idx in range(self.option.num_heads):
             logging.info("Starting policy training for head idx {}".format(head_idx))
+            if self.reset_classifier:
+                self.option.reset_classifiers()
+                self.train_classifier(classifier_epochs)
             while total_steps < max_steps:
                 if self.video_generator is not None:
                     self.video_generator.episode_start()
@@ -130,11 +141,15 @@ class DivDisOptionExperiment():
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
                 
+                option_seed = seed
+                if self.learn_new_policy:
+                    option_seed = env_idx
+                
                 _, _, _, steps, _, option_rewards, _, _ = self.option.train_policy(head_idx,
                                                                                    env,
                                                                                    obs,
                                                                                    info,
-                                                                                   seed,
+                                                                                   option_seed,
                                                                                    max_steps=self.option_timeout,
                                                                                    make_video=True)
                 
@@ -160,8 +175,11 @@ class DivDisOptionExperiment():
                                                                                           total_steps,
                                                                                           np.mean(rolling_rewards)))
             if self.video_generator is not None:
-                self.video_generator.episode_end("head{}_env{}".format(head_idx, env_idx))
-                    
+                self.video_generator.episode_end("head{}_env{}_{}".format(head_idx, 
+                                                                          env_idx,
+                                                                          self.run_numbers[(head_idx, env_idx)]))
+                self.run_numbers[(head_idx, env_idx)] += 1
+            
             self.save()
     
     def test_classifiers(self,

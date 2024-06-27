@@ -16,10 +16,10 @@ class SetDataset():
             create_validation_set=False,
             store_int=True,
         ):
-        self.true_data = torch.from_numpy(np.array([])).float()
-        self.false_data = torch.from_numpy(np.array([])).float()
-        self.priority_false_data = torch.from_numpy(np.array([])).float()
-        self.unlabelled_data = torch.from_numpy(np.array([])).float()
+        self.true_data = torch.from_numpy(np.array([]))
+        self.false_data = torch.from_numpy(np.array([]))
+        self.priority_false_data = torch.from_numpy(np.array([]))
+        self.unlabelled_data = torch.from_numpy(np.array([]))
 
         self.true_length = 0
         self.false_length = 0
@@ -67,6 +67,12 @@ class SetDataset():
             return (x/255.0).float()
         else:
             return x
+        
+    def reset_memory(self):
+        self.true_data = torch.from_numpy(np.array([]))
+        self.false_data = torch.from_numpy(np.array([]))
+        self.priority_false_data = torch.from_numpy(np.array([]))
+        self.unlabelled_data = torch.from_numpy(np.array([]))
 
     def set_transform_function(self, transform):
         self.transform = transform

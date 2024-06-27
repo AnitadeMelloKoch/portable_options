@@ -123,6 +123,14 @@ class DivDisOption():
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
     
+    def reset_classifiers(self):
+        self.terminations = DivDisClassifier(use_gpu=self.gpu_list[0],
+                                             head_num=self.num_heads,
+                                             log_dir=os.path.join(self.log_dir, 'termination'))
+        
+    def reset_dataset(self):
+        self.terminations.dataset.reset_memory()
+    
     def add_policy(self, 
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
