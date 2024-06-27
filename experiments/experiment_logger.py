@@ -11,7 +11,7 @@ class VideoGenerator():
         self.temp_path = os.path.join(save_path,"tmp")
         
         self.text = ""
-        
+        self.clear_images()
         os.makedirs(self.save_path, exist_ok=True)
         
     def episode_start(self):

@@ -22,14 +22,32 @@ init_states = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/climb_down_ladder_room0_initiation_positive.npy"],
-    ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy",
-     "resources/monte_images/climb_down_ladder_room6_termination_positive.npy"]
+    ["resources/monte_images/climb_down_ladder_room4_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
+    ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room19_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room22_termination_positive.npy"]
 ]
 negative_files = [
-    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy"],
-    ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
+    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
+     "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy"],
+    ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room6_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room9_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room5_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room11_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room19_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room14_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room22_termination_negative.npy"],
 ]
 unlabelled_files = [
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
@@ -38,7 +56,19 @@ unlabelled_files = [
      "resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
-    []
+    ["resources/monte_images/lasers_wait_to_disappear_room12_termination_positive.npy",
+     "resources/monte_images/lasers_wait_to_disappear_room12_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room13_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room7_uncertain.npy"],
+    ["resources/monte_images/climb_down_ladder_room3_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room9_uncertain.npy"],
+    ["resources/monte_images/climb_down_ladder_room2_uncertain.npy"],
+    ["resources/monte_images/climb_down_ladder_room21_uncertain.npy"],
+    ["resources/monte_images/climb_down_ladder_room19_uncertain.npy"]
 ]
 
 if __name__ == "__main__":
@@ -79,7 +109,6 @@ if __name__ == "__main__":
     
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
         experiment.add_datafiles(pos, neg, unlab)
-        experiment.train_classifier()
         for state_idx, init_state in enumerate(init_states):
             env = atari_wrappers.wrap_deepmind(
                 atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),

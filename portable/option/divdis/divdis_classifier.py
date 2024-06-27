@@ -54,19 +54,14 @@ class DivDisClassifier():
         self.learning_rate = learning_rate
         
         self.head_num = head_num
+        self.num_classes = num_classes
         
         self.log_dir = log_dir
 
-        if model_name == "minigrid_cnn":
-            self.classifier = MinigridCNN(num_classes=num_classes,
-                                          num_heads=head_num)
-        elif model_name == "monte_cnn":
-            self.classifier = MonteCNN(num_classes=num_classes,
-                                       num_heads=head_num)
-        else:
-            raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         
-        self.classifier.to(self.device)
+        self.model_name = model_name
+        self.reset_classifier()
+        
 
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
                                           lr=learning_rate,
@@ -88,6 +83,18 @@ class DivDisClassifier():
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
             self.dataset.load(path)
+    
+    def reset_classifier(self):
+        if self.model_name == "minigrid_cnn":
+            self.classifier = MinigridCNN(num_classes=self.num_classes,
+                                          num_heads=self.head_num)
+        elif self.model_name == "monte_cnn":
+            self.classifier = MonteCNN(num_classes=self.num_classes,
+                                       num_heads=self.head_num)
+        else:
+            raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
+        self.classifier.to(self.device)
+        
     
     def move_to_gpu(self):
         if self.use_gpu:
