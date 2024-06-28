@@ -22,8 +22,7 @@ init_states = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/climb_down_ladder_room4_termination_positive.npy",
-     "resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
     ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy"],
