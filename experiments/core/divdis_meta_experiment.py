@@ -80,6 +80,7 @@ class DivDisMetaExperiment():
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         self.plot_dir = os.path.join(self.base_dir, 'plots')
         
+        
         self.writer = SummaryWriter(log_dir=self.log_dir)
         
         self.decisions = 0
@@ -264,7 +265,7 @@ class DivDisMetaExperiment():
             action, q_vals = self.meta_agent.act(obs)
         
         if self.log_q_values is True:
-            logging.info("q_values:", q_vals)
+            logging.info("q_values: {}".format(q_vals.cpu().numpy()))
         
         return action, q_vals
     

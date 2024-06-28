@@ -11,6 +11,7 @@ from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitia
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
+from experiments.experiment_logger import VideoGenerator
 
 from portable.option.sets.utils import BayesianWeighting
 
@@ -25,11 +26,13 @@ class DivDisOption():
                  policy_phi,
                  use_seed_for_initiation,
                  exp_type,
+                 plot_dir,
+                 save_term_states=True,
                  tabular_beta=0.0,
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
-                 plot_dir=None):
+                 ):
         
         if type(use_gpu) is list:
             assert len(use_gpu) == num_heads
@@ -40,6 +43,7 @@ class DivDisOption():
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
+        self.plot_dir = plot_dir
         self.exp_type = exp_type
         
         self.use_seed_for_initiation = use_seed_for_initiation
@@ -63,6 +67,11 @@ class DivDisOption():
         self.initiable_policies = None
         self.video_generator = video_generator
         self.make_plots = False
+        self.save_term_states = save_term_states
+        
+        if self.save_term_states is True:
+            for idx in range(self.num_heads):
+                os.makedirs(os.path.join(self.plot_dir, str(idx)), exist_ok=True)
         
 
         self.confidences = BayesianWeighting(beta_distribution_alpha,
@@ -78,6 +87,18 @@ class DivDisOption():
     def _video_log(self, line):
         if self.video_generator is not None:
             self.video_generator.add_line(line)
+    
+    def save_term_state(self, env, head_idx, prediction):
+        if self.save_term_states is True:
+            if self.exp_type == "minigrid":
+                img = env.render()
+            else:
+                img = env.render("rgb_array")
+            VideoGenerator.save_env_image(os.path.join(self.plot_dir, str(int(head_idx))),
+                                          img,
+                                          "prediction: {}".format(prediction),
+                                          200)
+    
     
     def _get_termination_save_path(self):
         return os.path.join(self.save_dir, 'termination')
@@ -201,6 +222,11 @@ class DivDisOption():
         pred_y = self.terminations.predict_idx(term_state, idx)
         should_terminate = torch.argmax(pred_y) == 1
         
+        if should_terminate is True:
+            self.save_term_state(env,
+                                 idx,
+                                 pred_y)
+        
         return should_terminate
     
     def train_policy(self, 
@@ -244,7 +270,7 @@ class DivDisOption():
             next_state, reward, done, info = env.step(action)
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
-            should_terminate = torch.argmax(pred_y) == 1
+            should_terminate = (torch.argmax(pred_y) == 1).item()
             steps += 1
             self.option_steps[idx] += 1
             rewards.append(reward)
@@ -252,9 +278,12 @@ class DivDisOption():
             if make_video:
                 self._video_log("In termination: {}".format(should_terminate))
             
-            if should_terminate:
+            if should_terminate is True:
                 reward = 1
                 extrinsic_rewards.append(1)
+                self.save_term_state(env,
+                                     idx,
+                                     pred_y)
             else:
                 extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
