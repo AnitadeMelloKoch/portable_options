@@ -178,7 +178,7 @@ if __name__ == "__main__":
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     5e2)
+                                     5e5)
     
     # experiment.load()
     
@@ -194,8 +194,8 @@ if __name__ == "__main__":
                                 2e8,
                                 2)
     
-    experiment.eval_meta_agent(meta_env,
-                               env_seed,
-                               1)
+    # experiment.eval_meta_agent(meta_env,
+    #                            env_seed,
+    #                            1)
     
     
