@@ -16,6 +16,8 @@ import torch
 import pfrl
 import gin
 import os
+from torch import nn
+from pfrl.policies import SoftmaxCategoricalHead
 
 def _add_log_prob_and_value_to_episodes(
     episodes,
@@ -74,6 +76,55 @@ def _make_dataset(
     _add_advantage_and_value_target_to_episodes(episodes, gamma=gamma, lambd=lambd)
 
     return list(itertools.chain.from_iterable(episodes))
+
+def lecun_init(layer, gain=1):
+    if isinstance(layer, (nn.Conv2d, nn.Linear)):
+        pfrl.initializers.init_lecun_normal(layer.weight, gain)
+        nn.init.zeros_(layer.bias)
+    else:
+        pfrl.initializers.init_lecun_normal(layer.weight_ih_l0, gain)
+        pfrl.initializers.init_lecun_normal(layer.weight_hh_l0, gain)
+        nn.init.zeros_(layer.bias_ih_l0)
+        nn.init.zeros_(layer.bias_hh_l0)
+    return layer
+
+def create_mask_atari_model(n_channels, n_actions):
+    return nn.Sequential(
+        lecun_init(nn.Conv2d(n_channels, 32, 8, stride=4)),
+        nn.ReLU(),
+        lecun_init(nn.Conv2d(32, 64, 4, stride=2)),
+        nn.ReLU(),
+        lecun_init(nn.Conv2d(64, 64, 3, stride=1)),
+        nn.ReLU(),
+        nn.Flatten(),
+        lecun_init(nn.Linear(3136,512)),
+        nn.ReLU(),
+        pfrl.nn.Branched(
+            nn.Sequential(
+                lecun_init(nn.Linear(512, n_actions), 1e-2),
+            ),
+            lecun_init(nn.Linear(512, 1))
+        )
+    )
+
+def create_mask_cnn_policy(n_channels, action_space, hidden_feature_size=128):
+    return torch.nn.Sequential(
+        nn.Conv2d(n_channels, 16, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(16, 32, (2,2)),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, (2,2)),
+        nn.ReLU(),
+        nn.Flatten(),
+        nn.LazyLinear(hidden_feature_size),
+        nn.ReLU(),
+        
+        nn.Linear(hidden_feature_size, 64),
+        nn.Tanh(),
+        nn.Linear(64, 64),
+        nn.Tanh(),
+        nn.Linear(64, action_space)
+    )
 
 class MaskablePPO(PPO):
     
@@ -263,7 +314,7 @@ class MaskablePPO(PPO):
                 )
             else:
                 action_logits, batch_value = self.model(b_state)
-            distribution = self.action_dist.proba_distribution(action_logits)
+            distribution = self.action_dist.proba_distribution(action_logits=action_logits)
             if batch_mask is not None:
                 distribution.apply_masking(batch_mask)
             batch_action = distribution.get_actions().cpu().numpy()
@@ -534,16 +585,10 @@ class MaskablePPOAgent():
     
     def act(self, obs, mask):
         self.step += 1
-        out = self.agent.batch_act([obs], [mask])
-        out = torch.from_numpy(out)
-        
-        if not self.returns_vals:
-            return out, None
-        
-        if self.agent.training:
-            action = torch.argmax(out)
-        
-        return action, out
+        action = self.agent.batch_act([obs], [mask])[0]
+        # action = torch.from_numpy(action)
+
+        return action
     
     def q_function(self, obs):
         return self.agent.batch_act(obs)

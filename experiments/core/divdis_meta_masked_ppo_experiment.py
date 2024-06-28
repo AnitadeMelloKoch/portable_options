@@ -244,29 +244,23 @@ class DivDisMetaMaskedPPOExperiment():
     def get_termination_masks(self, state, env):
         masks = []
         if self.use_global_option:
-            masks.append(torch.tensor(False, dtype=bool))
+            masks.append(torch.tensor(True, dtype=bool))
         for _ in range(self.num_primitive_actions):
-            masks.append(torch.tensor(False, dtype=bool))
+            masks.append(torch.tensor(True, dtype=bool))
         for option in self.options:
             for idx in range(option.num_heads):
                 term = option.check_termination(idx, state, env)
                 if type(term) is not torch.Tensor:
-                    term = torch.tensor(term, dtype=bool)
+                    term = torch.tensor(not term, dtype=bool)
                 term = term.cpu()
                 masks.append(term)
         
         return masks
     
     def act(self, obs, mask):
-        if self.use_termination_masks is True:
-            action, q_vals = self.meta_agent.act(obs, mask)
-        else:
-            action, q_vals = self.meta_agent.act(obs)
+        action = self.meta_agent.act(obs, mask)
         
-        if self.log_q_values is True:
-            logging.info("q_values:", q_vals)
-        
-        return action, q_vals
+        return action
     
     def observe(self, 
                 obs,
@@ -282,6 +276,7 @@ class DivDisMetaMaskedPPOExperiment():
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
         
         self.meta_agent.observe(obs,
+                                mask,
                                 reward,
                                 done,
                                 done)
@@ -344,10 +339,10 @@ class DivDisMetaMaskedPPOExperiment():
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
                 action_mask = self.get_termination_masks(obs, env)
-                action, q_vals = self.act(obs, action_mask)
+                action = self.act(obs, action_mask)
                 
                 self._video_log("action: {}".format(action))
-                self._video_log("action q vals: {}".format(q_vals))
+                # self._video_log("action q vals: {}".format(q_vals))
                 
                 step_taken = False
                 
