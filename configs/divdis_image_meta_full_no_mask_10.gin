@@ -7,7 +7,7 @@ import portable.option.divdis.divdis_classifier
 
 DivDisMetaExperiment.experiment_name                                = "meta_image_full_10_timeout_no_mask"
 DivDisMetaExperiment.num_options                                    = 5
-DivDisMetaExperiment.option_head_num                                = 5
+DivDisMetaExperiment.option_head_num                                = 3
 DivDisMetaExperiment.num_primitive_actions                          = 0
 DivDisMetaExperiment.use_gpu                                        = True
 DivDisMetaExperiment.gpu_list                                       = [0,1]
@@ -19,7 +19,7 @@ DivDisMetaExperiment.log_q_values                                   = True
 
 ActionPPO.learning_rate                                             = 2.5e-4
 ActionPPO.state_shape                                               = (3, 64, 64)
-ActionPPO.num_actions                                               = 25
+ActionPPO.num_actions                                               = 15
 ActionPPO.update_interval                                           = 100
 ActionPPO.entropy_coef                                              = 0.01
 

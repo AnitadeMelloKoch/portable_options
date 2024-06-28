@@ -39,7 +39,7 @@ if __name__ == "__main__":
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
-                                      action_policy=create_cnn_policy(3,25),
+                                      action_policy=create_cnn_policy(3,15),
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
     
