@@ -6,7 +6,8 @@ MonteDivDisClassifierExperiment.use_gpu                        = True
 
 MonteDivDisClassifierExperiment.classifier_num_classes         = 2
 
-MonteDivDisClassifierExperiment.classifier_head_num            = 8
+
+MonteDivDisClassifierExperiment.classifier_head_num            = 6
 MonteDivDisClassifierExperiment.classifier_learning_rate       = 5e-4 #1e-3
 MonteDivDisClassifierExperiment.classifier_diversity_weight    = 3e-5 #1e-3
 MonteDivDisClassifierExperiment.classifier_l2_reg_weight       = 5e-4 #1e-2
