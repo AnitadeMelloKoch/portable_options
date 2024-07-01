@@ -10,7 +10,7 @@ DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
 DivDisMetaMaskedPPOExperiment.make_videos                           = True
 DivDisMetaMaskedPPOExperiment.option_type                           = "mock"
-DivDisMetaExperiment.option_timeout                                 = 10
+DivDisMetaMaskedPPOExperiment.option_timeout                        = 10
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 64, 64)
