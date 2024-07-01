@@ -324,6 +324,7 @@ class ActionPPO():
         self.agent.save(dir)
     
     def load(self, dir):
+        print("\033[92m {}\033[00m" .format("PPO model loaded"))
         self.agent.load(dir)
     
     def act(self, obs, mask=None):

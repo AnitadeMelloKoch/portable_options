@@ -450,12 +450,12 @@ class DivDisOption():
                 if type(next_state) is np.ndarray:
                     next_state = torch.from_numpy(next_state)
                 term_state = self.policy_phi(next_state).unsqueeze(0)
-                should_terminate = torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1
+                should_terminate = (torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1).item()
                 steps += 1
                 
                 rewards.append(reward)
                 
-                if should_terminate:
+                if should_terminate is True:
                     reward = 1
                 else:
                     reward = 0
@@ -470,7 +470,7 @@ class DivDisOption():
                 state = next_state
             
             if make_video:
-                if should_terminate:
+                if should_terminate is True:
                     self._video_log("policy hit termination")
                 if done:
                     self._video_log("environment terminated")
