@@ -352,6 +352,10 @@ class DivDisMetaMaskedPPOExperiment():
                 
                 step_taken = False
                 
+                chosen_action = action
+                chosen_option = -1
+                chosen_head = -1
+                
                 if self.use_global_option:
                     if action == 0:
                         next_obs, reward, done, info, steps = self.global_option.train_policy(env=env,
@@ -371,7 +375,9 @@ class DivDisMetaMaskedPPOExperiment():
                     else:
                         action_offset = action-self.num_primitive_actions
                         option_num = int(action_offset/self.num_heads)
+                        chosen_option = option_num
                         option_head = action_offset%self.num_heads
+                        chosen_head = option_head
                         if self.fix_options is True:
                             next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].eval_policy(option_head,
                                                                                                                     env,
@@ -399,7 +405,10 @@ class DivDisMetaMaskedPPOExperiment():
                     "meta_step": self.decisions,
                     "option_length": steps,
                     "option_rewards": rewards,
-                    "frames": total_steps
+                    "frames": total_steps,
+                    "action": chosen_action,
+                    "option": chosen_option,
+                    "head": chosen_head
                 })
                 
                 self.observe(obs,
