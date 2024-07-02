@@ -30,7 +30,6 @@ class DivDisOptionExperiment():
                  terminations=[],
                  option_timeout=50,
                  classifier_epochs=100,
-                 reset_classifier_between_runs=True,
                  train_new_policy_for_each_room=True,
                  make_videos=False):
         assert option_type in OPTION_TYPES
@@ -39,7 +38,6 @@ class DivDisOptionExperiment():
         self.seed = seed
         self.option_type = option_type
         self.option_timeout = option_timeout
-        self.reset_classifier = reset_classifier_between_runs
         self.learn_new_policy = train_new_policy_for_each_room
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
@@ -90,6 +88,15 @@ class DivDisOptionExperiment():
         
         self.experiment_data = []
     
+    def change_option_save(self, name):
+        self.option.reset_policies()
+        self.option.plot_dir = os.path.join(self.plot_dir, name)
+        self.option.log_dir = os.path.join(self.log_dir, name)
+        self.option.save_dir = os.path.join(self.save_dir, name)
+        
+        for idx in range(self.option.num_heads):
+            os.makedirs(os.path.join(self.option.plot_dir, str(idx)), exist_ok=True)
+    
     def save(self):
         self.option.save()
         
@@ -120,18 +127,14 @@ class DivDisOptionExperiment():
                      env,
                      seed,
                      max_steps,
-                     env_idx,
-                     classifier_epochs=None):
-        total_steps = 0
-        rolling_rewards = deque(maxlen=200)
-        episode = 0
-        undiscounted_rewards = []
+                     env_idx):
         
         for head_idx in range(self.option.num_heads):
             logging.info("Starting policy training for head idx {}".format(head_idx))
-            if self.reset_classifier:
-                self.option.reset_classifiers()
-                self.train_classifier(classifier_epochs)
+            total_steps = 0
+            rolling_rewards = deque(maxlen=200)
+            episode = 0
+            undiscounted_rewards = []
             while total_steps < max_steps:
                 if self.video_generator is not None:
                     self.video_generator.episode_start()
@@ -171,9 +174,10 @@ class DivDisOptionExperiment():
                                        total_steps)
                 
                 if episode%10 == 0:
-                    logging.info("Head idx: {} Total steps: {} average reward: {}".format(head_idx,
-                                                                                          total_steps,
-                                                                                          np.mean(rolling_rewards)))
+                    logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {}".format(head_idx,
+                                                                                                      episode,
+                                                                                                      total_steps,
+                                                                                                      np.mean(rolling_rewards)))
             if self.video_generator is not None:
                 self.video_generator.episode_end("head{}_env{}_{}".format(head_idx, 
                                                                           env_idx,
@@ -181,6 +185,7 @@ class DivDisOptionExperiment():
                 self.run_numbers[(head_idx, env_idx)] += 1
             
             self.save()
+        
     
     def test_classifiers(self,
                          test_positive_files,

@@ -12,12 +12,26 @@ from experiments.divdis_monte.core.monte_terminations import *
 from experiments.divdis_monte.experiment_files import *
 
 init_states = [
-    ["resources/monte_env_states/room0/ladder/top_0.pkl"],
+    ["resources/monte_env_states/room0/ladder/top_0.pkl",
+     "resources/monte_env_states/room0/ladder/top_1.pkl",
+     "resources/monte_env_states/room0/ladder/top_2.pkl",
+     "resources/monte_env_states/room0/ladder/top_3.pkl",],
     ["resources/monte_env_states/room1/ladder/middle_top_0.pkl",
      "resources/monte_env_states/room1/ladder/left_top_0.pkl",
      "resources/monte_env_states/room1/ladder/right_top_0.pkl",],
-    ["resources/monte_env_states/room2/ladder/top_0.pkl"],
-    ["resources/monte_env_states/room3/ladder/top_0.pkl"]
+    ["resources/monte_env_states/room2/ladder/top_0.pkl",
+     "resources/monte_env_states/room2/ladder/top_1.pkl",
+     "resources/monte_env_states/room2/ladder/top_2.pkl",],
+    ["resources/monte_env_states/room3/ladder/top_0.pkl"],
+    ["resources/monte_env_states/room5/ladder/top_0.pkl",
+     "resources/monte_env_states/room5/ladder/top_1.pkl",
+     "resources/monte_env_states/room5/ladder/top_2.pkl",],
+    ["resources/monte_env_states/room7/ladder/top_0.pkl",
+     "resources/monte_env_states/room7/ladder/top_1.pkl",
+     "resources/monte_env_states/room7/ladder/top_2.pkl",],
+    ["resources/monte_env_states/room14/ladder/top_0.pkl",
+     "resources/monte_env_states/room14/ladder/top_1.pkl",
+     "resources/monte_env_states/room14/ladder/top_2.pkl"]
 ]
 
 # files for each room
@@ -51,8 +65,7 @@ negative_files = [
 unlabelled_files = [
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room10_uncertain.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
     ["resources/monte_images/lasers_wait_to_disappear_room12_termination_positive.npy",
@@ -106,9 +119,16 @@ if __name__ == "__main__":
                                         option_type="divdis",
                                         policy_phi=policy_phi)
     
+    file_idx = 0
+    
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
+        experiment.option.reset_classifiers()
         experiment.add_datafiles(pos, neg, unlab)
+        experiment.train_classifier()
         for state_idx, init_state in enumerate(init_states):
+            experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
+                                                                               state_idx))
+            file_idx += 1
             env = atari_wrappers.wrap_deepmind(
                 atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
                 episode_life=True,
@@ -126,7 +146,7 @@ if __name__ == "__main__":
                                         max_steps=int(2e4))
             experiment.train_option(env,
                                     args.seed,
-                                    1e6,
+                                    5e5,
                                     state_idx)
     
     experiment.save()

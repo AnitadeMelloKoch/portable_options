@@ -102,9 +102,9 @@ class PolicyWithInitiation(Agent):
                                            lr=learning_rate)
         
         # classifier to determine if in initiation classifier
-        self.initiation = FactoredInitiationClassifier(maxlen=max_len_init_classifier)
-        # classifier to determine if state is part of existing context
-        self.context = FactoredContextClassifier(maxlen=max_len_context_classifier)
+        # self.initiation = FactoredInitiationClassifier(maxlen=max_len_init_classifier)
+        # # classifier to determine if state is part of existing context
+        # self.context = FactoredContextClassifier(maxlen=max_len_context_classifier)
         
         self.phi = policy_phi
         
@@ -214,9 +214,11 @@ class PolicyWithInitiation(Agent):
         
         if type(obs) == np.ndarray:
             obs = torch.from_numpy(obs)
+        obs = obs.int()
         
         if type(next_obs) == np.ndarray:
             next_obs = torch.from_numpy(next_obs)
+        next_obs = next_obs.int()
         
         if self.training:
             transition = {"state": obs,

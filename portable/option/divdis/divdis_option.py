@@ -150,6 +150,16 @@ class DivDisOption():
     def reset_dataset(self):
         self.terminations.dataset.reset_memory()
     
+    def reset_policies(self):
+        if self.use_seed_for_initiation:
+            self.policies = [
+                {} for _ in range(self.num_heads)
+            ]
+        else:
+            self.policies = [
+                [] for _ in range(self.num_heads)
+            ]
+    
     def add_policy(self, 
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],

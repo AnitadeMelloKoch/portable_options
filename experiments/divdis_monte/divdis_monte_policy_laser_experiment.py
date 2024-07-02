@@ -67,9 +67,16 @@ if __name__ == "__main__":
                                         option_type="divdis",
                                         policy_phi=policy_phi)
     
+    file_idx = 0
+    
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
+        experiment.option.reset_classifiers()
         experiment.add_datafiles(pos, neg, unlab)
+        experiment.train_classifier()
         for env_idx, init_state in enumerate(init_states):
+            experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
+                                                                               env_idx))
+            file_idx += 1
             env = atari_wrappers.wrap_deepmind(
                 atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
                 episode_life=True,
@@ -87,7 +94,7 @@ if __name__ == "__main__":
                                         max_steps=int(2e4))
             experiment.train_option(env,
                                     args.seed,
-                                    1e6,
+                                    5e5,
                                     env_idx)
     
     experiment.save()
