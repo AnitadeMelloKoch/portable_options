@@ -2,23 +2,23 @@ import portable.agent.model.linear_q
 import experiments.core.divdis_meta_experiment
 import portable.option.divdis.divdis_option
 import portable.option.divdis.policy.policy_and_initiation
-import portable.agent.model.ppo
+import portable.agent.model.maskable_ppo 
 
-DivDisMetaExperiment.experiment_name                                = "meta_monte_trained"
-DivDisMetaExperiment.num_options                                    = 4
-DivDisMetaExperiment.option_head_num                                = 1
-DivDisMetaExperiment.num_primitive_actions                          = 0
-DivDisMetaExperiment.use_gpu                                        = True
-DivDisMetaExperiment.make_videos                                    = True
-DivDisMetaExperiment.classifier_epochs                              = 200
-DivDisMetaExperiment.use_global_option                              = True
-DivDisMetaExperiment.gpu_list                                       = [0]
-DivDisMetaExperiment.fix_options_during_meta                        = True
+DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_monte_masked_trained"
+DivDisMetaMaskedPPOExperiment.num_options                           = 4
+DivDisMetaMaskedPPOExperiment.option_head_num                       = 1
+DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
+DivDisMetaMaskedPPOExperiment.use_gpu                               = True
+DivDisMetaMaskedPPOExperiment.make_videos                           = True
+DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 200
+DivDisMetaMaskedPPOExperiment.use_global_option                     = True
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0]
+DivDisMetaMaskedPPOExperiment.fix_options_during_meta               = True
 
-ActionPPO.learning_rate                                             = 2.5e-4
-ActionPPO.state_shape                                               = (4, 84, 84)
-ActionPPO.num_actions                                               = 22
-ActionPPO.update_interval                                           = 100
+MaskablePPOAgent.learning_rate                                      = 2.5e-4
+MaskablePPOAgent.state_shape                                        = (4, 84, 84)
+MaskablePPOAgent.num_actions                                        = 5
+MaskablePPOAgent.update_interval                                    = 100
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000

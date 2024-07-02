@@ -242,6 +242,16 @@ def lecun_init(layer, gain=1):
         nn.init.zeros_(layer.bias_hh_l0)
     return layer
 
+class PrintLayer(torch.nn.Module):
+    # print input. For debugging
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        print(x)
+        
+        return x
+
 def create_atari_model(n_channels, n_actions):
     return nn.Sequential(
         lecun_init(nn.Conv2d(n_channels, 32, 8, stride=4)),
@@ -310,6 +320,7 @@ class ActionPPO():
                          minibatch_size=minibatch_size,
                          epochs=epochs_per_update,
                          clip_eps_vf=clip_eps_vf,
+                         max_grad_norm=1,
                          standardize_advantages=standardize_advantages,
                          gamma=gamma,
                          lambd=lambd)
@@ -352,9 +363,9 @@ class ActionPPO():
         reward = [reward]
         done = [done]
         reset = [reset]
-
+        
         self.agent.batch_observe(obs,
-                                        reward,
-                                        done,
-                                        reset)
+                                 reward,
+                                 done,
+                                 reset)
     

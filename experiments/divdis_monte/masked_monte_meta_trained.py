@@ -1,8 +1,8 @@
-from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
+from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
 import argparse
 from portable.utils.utils import load_gin_configs, load_init_states
 import torch 
-from portable.agent.model.ppo import create_atari_model
+from portable.agent.model.maskable_ppo import create_mask_atari_model
 from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
 from pfrl.wrappers import atari_wrappers
 from experiments.divdis_monte.core.monte_terminations import *
@@ -30,7 +30,7 @@ def make_bootstrap_env(init_states, termination_func, term_points):
                                 list_init_states=load_init_states(init_states),
                                 check_true_termination=termination_func,
                                 list_termination_points=term_points,
-                                max_steps=500)
+                                max_steps=200)
     return env
 
 bootstrap_envs = [
@@ -141,20 +141,20 @@ if __name__ == "__main__":
     else:
         base_dir = os.path.join(args.base_dir, args.sub_dir)
     
-    experiment = DivDisMetaExperiment(base_dir=base_dir,
-                                      seed=args.seed,
-                                      option_policy_phi=policy_phi,
-                                      agent_phi=option_agent_phi,
-                                      action_model=create_atari_model(4,5),
-                                      option_type="mock",
-                                      terminations=terminations,
-                                      option_head_num=1)
+    experiment = DivDisMetaMaskedPPOExperiment(base_dir=base_dir,
+                                               seed=args.seed,
+                                               option_policy_phi=policy_phi,
+                                               agent_phi=option_agent_phi,
+                                               action_model=create_mask_atari_model(4,5),
+                                               option_type="mock",
+                                               terminations=terminations,
+                                               option_head_num=1)
     
-    # experiment.train_option_policies(
-    #     bootstrap_envs,
-    #     args.seed,
-    #     max_steps=5e2
-    # )
+    experiment.train_option_policies(
+        bootstrap_envs,
+        0,
+        max_steps=1e6
+    )
     
     experiment.load()
     
@@ -168,13 +168,8 @@ if __name__ == "__main__":
     
     meta_env = MonteAgentWrapper(meta_env, agent_space=False)
     
-    # experiment.train_meta_agent(meta_env,
-    #                             args.seed,
-    #                             4e6)
-    
     experiment.train_meta_agent(meta_env,
-                                0,
+                                args.seed,
                                 4e6)
-
 
 

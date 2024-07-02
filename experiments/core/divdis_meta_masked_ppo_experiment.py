@@ -50,7 +50,8 @@ class DivDisMetaMaskedPPOExperiment():
                  terminations=[],
                  option_head_num=4,
                  discount_rate=0.9,
-                 make_videos=False):
+                 make_videos=False,
+                 fix_options_during_meta=False):
         
         assert option_type in OPTION_TYPES
         
@@ -69,6 +70,7 @@ class DivDisMetaMaskedPPOExperiment():
         self.add_unlabelled_data = add_unlabelled_data
         self.use_termination_masks = use_termination_masks
         self.log_q_values = log_q_values
+        self.fix_options = fix_options_during_meta
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -185,16 +187,20 @@ class DivDisMetaMaskedPPOExperiment():
     def load(self):
         for option in self.options:
             option.load()
-        with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
-            self.experiment_data = pickle.load(f)
         
-        with open(os.path.join(self.save_dir, "episode_results.pkl"), 'rb') as f:
-            self.episode_data = pickle.load(f)
+        if os.path.exists(os.path.join(self.save_dir, "experiment_results.pkl")):
+            with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
+                self.experiment_data = pickle.load(f)
+        
+        if os.path.exists(os.path.join(self.save_dir, "episode_results.pkl")):
+            with open(os.path.join(self.save_dir, "episode_results.pkl"), 'rb') as f:
+                self.episode_data = pickle.load(f)
         
         if self.use_global_option:
             self.global_option.load()
         
-        self.decisions = np.load(os.path.join(self.save_dir, "decisions.npy"))
+        if os.path.exists(os.path.join(self.save_dir, "decisions.npy")):
+            self.decisions = np.load(os.path.join(self.save_dir, "decisions.npy"))
     
     def add_datafiles(self,
                       positive_files,
@@ -366,13 +372,22 @@ class DivDisMetaMaskedPPOExperiment():
                         action_offset = action-self.num_primitive_actions
                         option_num = int(action_offset/self.num_heads)
                         option_head = action_offset%self.num_heads
-                        next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
-                                                                                                                env,
-                                                                                                                obs,
-                                                                                                                info,
-                                                                                                                seed,
-                                                                                                                max_steps=self.option_timeout,
-                                                                                                                make_video=save_image)
+                        if self.fix_options is True:
+                            next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].eval_policy(option_head,
+                                                                                                                    env,
+                                                                                                                    obs,
+                                                                                                                    info,
+                                                                                                                    seed,
+                                                                                                                    max_steps=self.option_timeout,
+                                                                                                                    make_video=save_image)
+                        else:
+                            next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
+                                                                                                                    env,
+                                                                                                                    obs,
+                                                                                                                    info,
+                                                                                                                    seed,
+                                                                                                                    max_steps=self.option_timeout,
+                                                                                                                    make_video=save_image)
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -400,7 +415,7 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                      self.decisions,  
                                                                                      np.mean(episode_rewards)))
             
-            if (undiscounted_reward > 0 or episode%200==0) and self.video_generator is not None:
+            if (undiscounted_reward > 0 or episode%500==0) and self.video_generator is not None:
                 self.video_generator.episode_end("episode_{}".format(episode))
             
             undiscounted_rewards.append(undiscounted_reward)

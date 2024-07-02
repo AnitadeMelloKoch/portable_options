@@ -50,7 +50,8 @@ class DivDisMetaExperiment():
                  terminations=[],
                  option_head_num=4,
                  discount_rate=0.9,
-                 make_videos=False):
+                 make_videos=False,
+                 fix_options_during_meta=False):
         
         assert option_type in OPTION_TYPES
         
@@ -69,6 +70,7 @@ class DivDisMetaExperiment():
         self.add_unlabelled_data = add_unlabelled_data
         self.use_termination_masks = use_termination_masks
         self.log_q_values = log_q_values
+        self.fix_options = fix_options_during_meta
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -196,6 +198,8 @@ class DivDisMetaExperiment():
             self.global_option.load()
         
         self.decisions = np.load(os.path.join(self.save_dir, "decisions.npy"))
+        
+        self.meta_agent.load(os.path.join(self.save_dir, "action_agent"))
     
     def add_datafiles(self,
                       positive_files,
@@ -225,6 +229,7 @@ class DivDisMetaExperiment():
                                                      max_steps,
                                                      0.98,
                                                      seed)
+        self.save()
     
     def train_option_classifiers(self, epochs=None):
         if epochs is None:
@@ -372,13 +377,22 @@ class DivDisMetaExperiment():
                         action_offset = action-self.num_primitive_actions
                         option_num = int(action_offset/self.num_heads)
                         option_head = action_offset%self.num_heads
-                        next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
-                                                                                                                env,
-                                                                                                                obs,
-                                                                                                                info,
-                                                                                                                seed,
-                                                                                                                max_steps=self.option_timeout,
-                                                                                                                make_video=save_image)
+                        if self.fix_options is True:
+                            next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].eval_policy(option_head,
+                                                                                                                    env,
+                                                                                                                    obs,
+                                                                                                                    info,
+                                                                                                                    seed,
+                                                                                                                    max_steps=self.option_timeout,
+                                                                                                                    make_video=save_image)
+                        else:
+                            next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
+                                                                                                                    env,
+                                                                                                                    obs,
+                                                                                                                    info,
+                                                                                                                    seed,
+                                                                                                                    max_steps=self.option_timeout,
+                                                                                                                    make_video=save_image)
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -423,9 +437,9 @@ class DivDisMetaExperiment():
             
             # self.plot_learning_curve(episode_rewards)
             
-            if episode % 50 == 0:
-                self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
-                self.save()
+            # if episode % 50 == 0:
+            #     self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+            #     self.save()
             
             if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
                 logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),

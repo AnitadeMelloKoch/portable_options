@@ -108,7 +108,7 @@ class DivDisMockOption():
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                 keys = pickle.load(f)
             for key in keys:
-                policies[key] = PolicyWithInitiation(use_gpu=self.use_gpu,
+                policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
                                                      policy_phi=self.policy_phi,
                                                      learn_initiation=(not self.use_seed_for_initiation))
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
@@ -438,11 +438,9 @@ class DivDisMockOption():
                 states.append(state)
                 infos.append(info)
                 
-                action, q_vals = policy.act(state, return_q=True)
+                action = policy.act(state)
                 if make_video:
                     self._video_log("[option] action: {}".format(action))
-                    for x in range(len(q_vals[0])):
-                        self._video_log("[option] action {} value {}".format(x, q_vals[0][x]))
                 if self.video_generator is not None and make_video:
                     if self.exp_type == "minigrid":
                         self.video_generator.make_image(env.render())
