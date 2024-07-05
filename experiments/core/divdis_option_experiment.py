@@ -18,6 +18,7 @@ from portable.option.memory import SetDataset
 
 OPTION_TYPES = ["mock", "divdis"]
 
+
 @gin.configurable
 class DivDisOptionExperiment():
     def __init__(self,

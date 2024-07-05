@@ -13,7 +13,7 @@ env = atari_wrappers.wrap_deepmind(
     )
 env = MonteAgentWrapper(env, agent_space=False)
 
-ram_dict = load_init_states(["resources/monte_env_states/room1/enemy/skull_right_1.pkl"])[0]
+ram_dict = load_init_states(["resources/monte_env_states/room22/ladder/bottom_0.pkl"])[0]
 
 env.reset()
 

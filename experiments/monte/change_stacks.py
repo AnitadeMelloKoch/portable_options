@@ -2,7 +2,7 @@ import dill
 import numpy as np
 
 filenames = [
-        'resources/monte_env_states/room7/ladder/top_0.pkl',
+        'resources/monte_env_states/room0/ladder/top_0.pkl',
 ]
 
 rams = []

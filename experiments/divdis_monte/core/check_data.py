@@ -3,23 +3,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 files = [
-    'resources/monte_images/lasers2_toleft_room7_termination_positive.npy',
+    'resources/monte_images/lasers2_toright_room7_termination_positive.npy',
 ]
 
 dataset = SetDataset(batchsize=1)
 
-fig = plt.figure(num=1, clear=True)
-ax = fig.add_subplot()
 
 dataset.add_true_files(files)
 dataset.set_transform_function(lambda x: x)
 print(dataset.true_length)
 
-gs = fig.add_gridspec(nrows=1, ncols=4)
 data = []
 count = 0
 for _ in range(dataset.num_batches):
     x, _ = dataset.get_batch()
+    fig = plt.figure(num=1, clear=True)
+    ax = fig.add_subplot()
+    gs = fig.add_gridspec(nrows=1, ncols=4)
     for im in x:
         count += 1
         print(count)
@@ -33,9 +33,9 @@ for _ in range(dataset.num_batches):
             data.append(x.numpy())
             
 
-data = np.array(data)
+# data = np.array(data)
 
-print(data[0])
-print(len(data))
+# print(data[0])
+# print(len(data))
 
-np.save(files[0], data)
+# np.save(files[0], data)

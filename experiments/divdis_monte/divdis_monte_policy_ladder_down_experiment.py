@@ -36,21 +36,21 @@ init_states = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
     ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room19_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room22_termination_positive.npy"]
 ]
 negative_files = [
-    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
-     "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy"],
     ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room6_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
+     "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room9_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room7_termination_negative.npy",

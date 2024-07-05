@@ -7,7 +7,7 @@ from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapp
 
 
 files = [
-        'resources/monte_images/climb_down_ladder_room0_termination_negative.npy',
+        'resources/monte_images/lasers1_toleft_room0_termination_positive.npy',
 ]
 
 dataset = SetDataset(batchsize=16)
