@@ -131,7 +131,7 @@ class DivDisOptionExperiment():
                      env_idx):
         
         for head_idx in range(self.option.num_heads):
-            logging.info("Starting policy training for head idx {}".format(head_idx))
+            logging.info("Starting policy training for head idx {} seed {}".format(head_idx, seed))
             total_steps = 0
             rolling_rewards = deque(maxlen=200)
             episode = 0
@@ -141,6 +141,11 @@ class DivDisOptionExperiment():
                     self.video_generator.episode_start()
                 
                 obs, info = env.reset()
+                
+                if self.option.check_termination(head_idx, env):
+                    print("initiation in termination set. Skip train")
+                    logging.info("initiation in termination set. Skip train")
+                    break
                 
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
