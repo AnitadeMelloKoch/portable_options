@@ -142,13 +142,13 @@ class DivDisOptionExperiment():
                 
                 obs, info = env.reset()
                 
-                if self.option.check_termination(head_idx, env):
+                if type(obs) == np.ndarray:
+                    obs = torch.from_numpy(obs).float()
+                
+                if self.option.check_termination(head_idx, obs, env):
                     print("initiation in termination set. Skip train")
                     logging.info("initiation in termination set. Skip train")
                     break
-                
-                if type(obs) == np.ndarray:
-                    obs = torch.from_numpy(obs).float()
                 
                 option_seed = seed
                 if self.learn_new_policy:
