@@ -52,6 +52,7 @@ class DivDisClassifier():
                                   unlabelled_batchsize=unlabelled_dataset_batchsize,
                                   store_int=True)
         self.learning_rate = learning_rate
+        self.l2_reg_weight = l2_reg_weight
         
         self.head_num = head_num
         self.num_classes = num_classes
@@ -94,6 +95,10 @@ class DivDisClassifier():
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         self.classifier.to(self.device)
+        self.optimizer = torch.optim.Adam(self.classifier.parameters(),
+                                          lr=self.learning_rate,
+                                          weight_decay=self.l2_reg_weight # weight decay also works as L2 regularization
+                                          )
         
     
     def move_to_gpu(self):
