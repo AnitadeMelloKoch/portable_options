@@ -5,7 +5,7 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.option.divdis.divdis_classifier
 
 DivDisOptionExperiment.experiment_name                              = "meta_monte_lasers"
-DivDisOptionExperiment.make_videos                                  = True
+DivDisOptionExperiment.make_videos                                  = False
 DivDisOptionExperiment.classifier_epochs                            = 130
 DivDisOptionExperiment.gpu_id                                       = 0
 DivDisOptionExperiment.option_timeout                               = 1000
@@ -27,7 +27,7 @@ PolicyWithInitiation.image_input                                    = True
 
 DivDisOption.tabular_beta                                           = 0.0001
 DivDisOption.exp_type                                               = "monte"
-DivDisOption.num_heads                                              = 8
+DivDisOption.num_heads                                              = 5
 
 DivDisClassifier.learning_rate                                      = 0.00025
 DivDisClassifier.num_classes                                        = 2
