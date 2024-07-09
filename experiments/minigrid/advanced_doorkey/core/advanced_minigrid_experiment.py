@@ -41,7 +41,7 @@ class AdvancedMinigridExperiment():
                  policy_lr=1e-4,
                  policy_max_steps=1e6,
                  policy_success_threshold=0.98,
-                 use_gpu=True,
+                 use_gpu=False,
                  names=None,
                  use_oracle_for_term=False,
                  termination_oracles=None,

@@ -23,7 +23,7 @@ def get_kl_distance(policy_a_samples, policy_b_samples):
     ).numpy()
 
 
-def get_policy_similarity_metric(policy_a_samples, policy_b_samples, gamma=0.9, epsilon=1e-8, distribution=True, use_gpu=True):
+def get_policy_similarity_metric(policy_a_samples, policy_b_samples, gamma=0.9, epsilon=1e-8, distribution=True, use_gpu=False):
     # Reference: https://doi.org/10.48550/arXiv.2101.05265
     if policy_a_samples.dim() == 1:
         policy_a_samples = policy_a_samples.unsqueeze(0)

@@ -43,7 +43,6 @@ class MonteCNN(nn.Module):
     
     def forward(self, x, logits=False):
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
-        
         for idx in range(self.num_heads):
             if logits:
                 y = self.model[idx](x)

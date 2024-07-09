@@ -33,7 +33,7 @@ class MonteExperiment():
                  policy_lr=1e-4,
                  policy_max_steps=1e6,
                  policy_success_threshold=0.98,
-                 use_gpu=True,
+                 use_gpu=False,
                  max_episodes_in_trial=100,
                  use_agent_state=False,
                  max_option_tries=5,

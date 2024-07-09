@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
     experiment = MonteDivDisHyperparamSearchExperiment(experiment_name="monte_hyperparam_search",
                                                        base_dir=args.base_dir,
-                                                       use_gpu=True)
+                                                       use_gpu=False)
 
 
 

@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
 
     experiment = AdvancedMinigridDivDisHyperparamSearchExperiment(experiment_name="minigrid_hyperparam_search",
-                                                                  use_gpu=True,
+                                                                  use_gpu=False,
                                                                   base_dir=args.base_dir,
                                                                   train_positive_files=positive_train_files,
                                                                   train_negative_files=negative_train_files,

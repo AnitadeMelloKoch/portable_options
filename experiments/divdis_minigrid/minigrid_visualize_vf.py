@@ -66,7 +66,7 @@ if __name__ == "__main__":
                 x = x/255.0
         return x
     
-    meta_action_agent = ActionPPO(use_gpu=True,
+    meta_action_agent = ActionPPO(use_gpu=False,
                                   policy=create_cnn_policy(3, 7),
                                   value_function=create_cnn_vf(3),
                                   phi=policy_phi)

@@ -35,7 +35,7 @@ class AdvancedMinigridFactoredExperiment():
                  policy_lr=1e-4,
                  policy_max_steps=1e6,
                  policy_success_threshold=0.98,
-                 use_gpu=True,
+                 use_gpu=False,
                  names=None,
                  termination_oracles=None,
                  make_videos=False):
