@@ -245,6 +245,7 @@ class AdvancedMinigridDivDisHyperparamSearchExperiment():
         classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                     log_dir=self.log_dir,
                                     num_classes=2,
+                                    state_dim=3,
                                     diversity_weight=config['div_weight'],
                                     head_num=config['num_heads'],
                                     learning_rate=config['lr'],
