@@ -19,6 +19,7 @@ MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (4, 84, 84)
 MaskablePPOAgent.num_actions                                        = 5
 MaskablePPOAgent.update_interval                                    = 100
+MaskablePPOAgent.entropy_coef                                       = 0.01
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000

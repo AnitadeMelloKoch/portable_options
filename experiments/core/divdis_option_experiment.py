@@ -131,7 +131,7 @@ class DivDisOptionExperiment():
                      env_idx):
         
         for head_idx in range(self.option.num_heads):
-            logging.info("Starting policy training for head idx {} seed {}".format(head_idx, seed))
+            logging.info("Starting policy training for head idx {} seed {}".format(head_idx, env_idx))
             total_steps = 0
             rolling_rewards = deque(maxlen=200)
             episode = 0
