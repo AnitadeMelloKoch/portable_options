@@ -10,6 +10,7 @@ from portable.option.memory import SetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
+from portable.option.divdis.models.lrn_cnn import LRN_CNN
 from portable.option.divdis.divdis import DivDisLoss
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,8 @@ MODEL_TYPE = [
     "one_head_mlp",
     "multi_head_mlp",
     "minigrid_cnn",
-    "monte_cnn"
+    "monte_cnn",
+    "lrn"
 ]
 
 
@@ -63,6 +65,8 @@ class DivDisClassifier():
         elif model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=num_classes,
                                        num_heads=head_num)
+        elif model_name == "lrn":
+            self.classifier = LRN_CNN(num_classes=num_classes, num_heads=head_num)
 
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
