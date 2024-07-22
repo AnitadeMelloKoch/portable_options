@@ -6,13 +6,16 @@ import pickle
 from portable.utils import plot_state
 import random
 
+def pad_func(x):
+    return x
+
 class SetDataset():
     def __init__(
             self, 
             batchsize=16,
             unlabelled_batchsize=None,
             max_size=100000,
-            pad_func=lambda x: x,
+            pad_func=pad_func,
             create_validation_set=False,
             store_int=True,
         ):

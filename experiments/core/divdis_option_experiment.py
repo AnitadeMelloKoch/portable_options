@@ -16,8 +16,42 @@ from portable.option.divdis.divdis_option import DivDisOption
 from experiments.experiment_logger import VideoGenerator
 from portable.option.memory import SetDataset
 
+from torch.multiprocessing import Process, Pipe, set_start_method
+from experiments import train_head, train_head2
+
+from portable.utils import load_init_states
+from pfrl.wrappers import atari_wrappers
+from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
+
 OPTION_TYPES = ["mock", "divdis"]
 
+def policy_phi(x):
+    if type(x) == np.ndarray:
+        x = torch.from_numpy(x)
+    x = (x/255.0).float()
+    return x
+
+def mock_check_true(x,y,z):
+    return False
+
+def make_monte_env(seed, init_state):
+    env = atari_wrappers.wrap_deepmind(
+        atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
+        episode_life=True,
+        clip_rewards=True,
+        frame_stack=False
+    )
+    env.seed(seed)
+
+    # env = MonteAgentWrapper(env, agent_space=False, stack_observations=False)
+    env = MonteBootstrapWrapper(env,
+                                agent_space=False,
+                                list_init_states=load_init_states(init_state),
+                                check_true_termination=mock_check_true,
+                                list_termination_points=[(0,0,0)]*len(init_state),
+                                max_steps=int(1e4))
+    
+    return env
 
 @gin.configurable
 class DivDisOptionExperiment():
@@ -25,9 +59,11 @@ class DivDisOptionExperiment():
                  base_dir,
                  experiment_name,
                  seed,
-                 policy_phi,
                  gpu_id,
                  option_type,
+                 config_file,
+                 gin_bindings,
+                 num_processes=4,
                  terminations=[],
                  option_timeout=50,
                  classifier_epochs=100,
@@ -40,6 +76,9 @@ class DivDisOptionExperiment():
         self.option_type = option_type
         self.option_timeout = option_timeout
         self.learn_new_policy = train_new_policy_for_each_room
+        self.num_processes = num_processes
+        self.config_file =config_file
+        self.gin_bindings = gin_bindings
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -80,13 +119,14 @@ class DivDisOptionExperiment():
                                            use_seed_for_initiation=True)
         elif option_type == "divdis":
             self.option = DivDisOption(use_gpu=gpu_id,
-                                       log_dir=os.path.join(self.log_dir, "option"),
-                                       save_dir=os.path.join(self.save_dir, "option"),
-                                       policy_phi=policy_phi,
-                                       video_generator=self.video_generator,
-                                       plot_dir=os.path.join(self.plot_dir, "option"),
-                                       use_seed_for_initiation=True)
+                                        log_dir=os.path.join(self.log_dir, "option"),
+                                        save_dir=os.path.join(self.save_dir, "option"),
+                                        policy_phi=policy_phi,
+                                        video_generator=self.video_generator,
+                                        plot_dir=os.path.join(self.plot_dir, "option"),
+                                        use_seed_for_initiation=True)
         
+        set_start_method('spawn')
         self.experiment_data = []
     
     def change_option_save(self, name):
@@ -99,7 +139,7 @@ class DivDisOptionExperiment():
             os.makedirs(os.path.join(self.option.plot_dir, str(idx)), exist_ok=True)
     
     def save(self):
-        self.option.save()
+        # self.option.save()
         
         with open(os.path.join(self.save_dir, "experiment_data.pkl"), "wb") as f:
             pickle.dump(self.experiment_data, f)
@@ -124,73 +164,49 @@ class DivDisOptionExperiment():
             epochs = self.classifier_epochs
         self.option.terminations.train(epochs)
     
+    
+    
     def train_option(self,
-                     env,
+                     init_states,
                      seed,
                      max_steps,
                      env_idx):
         
-        for head_idx in range(self.option.num_heads):
-            logging.info("Starting policy training for head idx {} seed {}".format(head_idx, seed))
-            total_steps = 0
-            rolling_rewards = deque(maxlen=200)
-            episode = 0
-            undiscounted_rewards = []
-            while total_steps < max_steps:
-                if self.video_generator is not None:
-                    self.video_generator.episode_start()
-                
-                obs, info = env.reset()
-                
-                if type(obs) == np.ndarray:
-                    obs = torch.from_numpy(obs).float()
-                
-                if self.option.check_termination(head_idx, obs, env):
-                    print("initiation in termination set. Skip train")
-                    logging.info("initiation in termination set. Skip train")
-                    break
-                
-                option_seed = seed
-                if self.learn_new_policy:
-                    option_seed = env_idx
-                
-                _, _, _, steps, _, option_rewards, _, _ = self.option.train_policy(head_idx,
-                                                                                   env,
-                                                                                   obs,
-                                                                                   info,
-                                                                                   option_seed,
-                                                                                   max_steps=self.option_timeout,
-                                                                                   make_video=True)
-                
-                undiscounted_rewards.append(option_rewards)
-                rolling_rewards.append(np.sum(option_rewards))
-                episode += 1
-                
-                total_steps += steps
-                
-                self.experiment_data.append({
-                    "idx": head_idx,
-                    "option_length": steps,
-                    "steps": total_steps,
-                    "reward": option_rewards
-                })
-                
-                self.writer.add_scalar('rewards/{}'.format(head_idx),
-                                       sum(option_rewards),
-                                       total_steps)
-                
-                if episode%10 == 0:
-                    logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {}".format(head_idx,
-                                                                                                      episode,
-                                                                                                      total_steps,
-                                                                                                      np.mean(rolling_rewards)))
-            if self.video_generator is not None:
-                self.video_generator.episode_end("head{}_env{}_{}".format(head_idx, 
-                                                                          env_idx,
-                                                                          self.run_numbers[(head_idx, env_idx)]))
-                self.run_numbers[(head_idx, env_idx)] += 1
+        head_idx = 0
+        processes = []
+        parent_pipes, child_pipes = [], []
+        for p_idx in range(self.num_processes):
+            if head_idx >= self.option.num_heads:
+                continue
             
-            self.save()
+            parent_con, child_con = Pipe()
+            
+            p = Process(target=train_head, args=(head_idx, 
+                                                  child_con,
+                                                  max_steps,
+                                                  self.option_timeout,
+                                                  make_monte_env,
+                                                  self.option,
+                                                  seed,
+                                                  self.learn_new_policy,
+                                                  env_idx,
+                                                  self.log_dir,
+                                                  init_states,
+                                                  self.config_file,
+                                                  self.gin_bindings))
+            
+            head_idx += 1
+            processes.append(p)
+            parent_pipes.append(parent_con)
+            child_pipes.append(child_con)
+            p.start()
+            
+        for p, parent_con in zip(processes, parent_pipes):
+            exp_data = parent_con.recv()
+            self.experiment_data.extend(exp_data)
+            p.join()
+        
+        self.save()
         
     
     def test_classifiers(self,

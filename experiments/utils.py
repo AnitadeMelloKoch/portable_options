@@ -1,4 +1,11 @@
 from portable.utils.ale_utils import get_object_position, get_skull_position
+import numpy as np
+import torch 
+from collections import deque
+import logging
+import os
+import datetime
+from portable.utils.utils import load_gin_configs
 
 def get_snake_x_left(position):
     if position[2] == 9:
@@ -181,3 +188,103 @@ def check_termination_correct_enemy_right(state, env):
             return False
     else:
         return False
+
+def train_head2(head_idx, con, option, log_dir, env_idx, env):
+    print("hello")
+    log_dir = os.path.join(log_dir, str(head_idx), str(env_idx))
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir,  
+                                "{}.log".format(datetime.datetime.now()))
+    logging.basicConfig(filename=log_file, 
+                        format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.INFO)
+    logging.info("hello")
+
+def train_head(head_idx, 
+                conn,
+                max_steps,
+                option_timeout,
+                make_env,
+                option,
+                seed,
+                learn_new_policy,
+                env_idx,
+                log_dir,
+                init_states,
+                config_file,
+                gin_bindings):
+    env = make_env(seed, init_states)
+    total_steps = 0
+    rolling_rewards = deque(maxlen=200)
+    episode = 0
+    undiscounted_rewards = []
+    
+    load_gin_configs(config_file, gin_bindings)
+    
+    experiment_data = []
+    
+    log_dir = os.path.join(log_dir, str(head_idx), str(env_idx))
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir,  
+                                "{}.log".format(datetime.datetime.now()))
+    logging.basicConfig(filename=log_file, 
+                        format='%(asctime)s %(levelname)s: %(message)s',
+                        level=logging.INFO)
+    
+    logging.info("Starting policy training for head idx {} seed {}".format(head_idx, env_idx))
+    while total_steps < max_steps:
+        # if video_generator is not None:
+        #     video_generator.episode_start()
+        # print(env)
+        obs, info = env.reset()
+        
+        if type(obs) == np.ndarray:
+            obs = torch.from_numpy(obs).float()
+        
+        if option.check_termination(head_idx, obs, env):
+            print("initiation in termination set. Skip train")
+            logging.info("initiation in termination set. Skip train")
+            break
+        
+        option_seed = seed
+        if learn_new_policy:
+            option_seed = env_idx
+        
+        _, _, _, steps, _, option_rewards, _, _ = option.train_policy(head_idx,
+                                                                            env,
+                                                                            obs,
+                                                                            info,
+                                                                            option_seed,
+                                                                            max_steps=option_timeout,
+                                                                            make_video=True)
+        
+        undiscounted_rewards.append(option_rewards)
+        rolling_rewards.append(np.sum(option_rewards))
+        episode += 1
+        
+        total_steps += steps
+        
+        experiment_data.append({
+            "idx": head_idx,
+            "option_length": steps,
+            "steps": total_steps,
+            "reward": option_rewards
+        })
+        
+        # writer.add_scalar('rewards/{}'.format(head_idx),
+        #                         sum(option_rewards),
+        #                         total_steps)
+        
+        if episode%10 == 0:
+            logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {}".format(head_idx,
+                                                                                                episode,
+                                                                                                total_steps,
+                                                                                                np.mean(rolling_rewards)))
+    # if video_generator is not None:
+    #     video_generator.episode_end("head{}_env{}_{}".format(head_idx, 
+    #                                                                 env_idx,
+    #                                                                 run_numbers[(head_idx, env_idx)]))
+        # run_numbers[(head_idx, env_idx)] += 1
+    
+    conn.send(experiment_data)
+    conn.close()
