@@ -17,6 +17,7 @@ import pfrl
 import gin
 import os
 from torch import nn
+import numpy as np
 from pfrl.policies import SoftmaxCategoricalHead
 
 def _add_log_prob_and_value_to_episodes(
@@ -107,6 +108,56 @@ def create_mask_atari_model(n_channels, n_actions):
         )
     )
 
+def create_mask_linear_atari_model(in_features, n_actions):
+    return nn.Sequential(
+        lecun_init(nn.Linear(in_features, 512)),
+        nn.ReLU(),
+        lecun_init(nn.Linear(512, 256)),
+        nn.ReLU(),
+        pfrl.nn.Branched(
+            nn.Sequential(
+                lecun_init(nn.Linear(256, n_actions), 1e-2),
+            ),
+            lecun_init(nn.Linear(256, 1))
+        )
+    )
+
+class TabularAgent:
+    def __init__(self, n_states, n_actions, alpha=0.1, gamma=0.99, epsilon=0.1):
+        self.n_states = n_states
+        self.n_actions = n_actions
+        self.alpha = alpha  # Learning rate
+        self.gamma = gamma  # Discount factor
+        self.epsilon = epsilon  # Exploration rate
+        self.Q = np.zeros((n_states, n_actions))  # Initialize Q-table
+        self.save_iter = 0
+
+    def act(self, state, mask=None):
+        if mask is None:
+            mask = np.ones(self.n_actions, dtype=bool)
+        
+        valid_actions = np.where(mask)[0]
+
+        if np.random.uniform(0, 1) < self.epsilon:
+            return np.random.choice(valid_actions)  # Explore
+        else:
+            # Filter Q-values to only consider valid actions
+            masked_Q_values = np.full(self.n_actions, -np.inf)
+            masked_Q_values[mask] = self.Q[state, mask]
+            return np.argmax(masked_Q_values)  # Exploit
+
+    def update(self, state, action, reward, next_state):
+        best_next_action = np.argmax(self.Q[next_state, :])
+        td_target = reward + self.gamma * self.Q[next_state, best_next_action]
+        td_error = td_target - self.Q[state, action]
+        self.Q[state, action] += self.alpha * td_error
+
+    def save(self, path):
+        path = os.path.join(path, f"Q-{self.save_iter}")
+        os.makedirs(path, exist_ok=True)
+        np.save(path, self.Q)
+        self.save_iter += 1
+
 def create_mask_cnn_policy(n_channels, action_space, hidden_feature_size=128):
     return torch.nn.Sequential(
         nn.Conv2d(n_channels, 16, (2,2)),
@@ -138,7 +189,8 @@ class MaskablePPO(PPO):
                  lambd=0.95, 
                  phi=lambda x: x, 
                  value_func_coef=1, 
-                 entropy_coef=0.01, 
+                 f=0.01, 
+                 entropy_coef=0.01,
                  update_interval=2048, 
                  minibatch_size=64, 
                  epochs=10, 

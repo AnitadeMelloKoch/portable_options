@@ -1,0 +1,19 @@
+import experiments.divdis_monte.monte_perfect_options
+import portable.option.divdis.policy.policy_and_initiation
+import portable.agent.model.ppo 
+
+__main__.MontePerfectOptionsExperiment.experiment_name                = "monte_meta_perfect_options_privileged_state_with_primitives"
+__main__.MontePerfectOptionsExperiment.use_gpu                        = True
+__main__.MontePerfectOptionsExperiment.make_videos                    = False
+__main__.MontePerfectOptionsExperiment.use_privileged_state           = True
+
+__main__.make_monte_with_skills_env.sticky_actions                    = False
+__main__.make_monte_with_skills_env.clip_rewards                      = False
+__main__.make_monte_with_skills_env.single_life                       = False
+__main__.make_monte_with_skills_env.episode_life                      = True
+__main__.make_monte_with_skills_env.expose_primitive_actions          = True
+
+
+ActionPPO.learning_rate                                               = 2.5e-5
+ActionPPO.state_shape                                                 = (91,)
+ActionPPO.num_actions                                                 = 45

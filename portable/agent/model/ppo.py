@@ -231,6 +231,26 @@ def create_cnn_vf(n_channels, hidden_feature_size=128):
         nn.Linear(64, 1)
     )
 
+def create_linear_atari_model(in_features, n_actions):
+    return torch.nn.Sequential(
+                            lecun_init(nn.Linear(in_features, 512)),
+                            nn.ReLU(),
+                            lecun_init(nn.Linear(512, 256)),
+                            nn.ReLU(),
+                            pfrl.nn.Branched(
+                                nn.Sequential(
+                                    lecun_init(nn.Linear(256, n_actions), 1e-2),
+                                    pfrl.policies.GaussianHeadWithStateIndependentCovariance(
+                                            action_size=n_actions,
+                                            var_type="diagonal",
+                                            var_func=lambda x: torch.exp(2 * x),  # Parameterize log std
+                                            var_param_init=0,  # log std = 0 => std = 1
+                                        )
+                                ),
+                                lecun_init(nn.Linear(256, 1))
+                            )
+                        )
+
 def lecun_init(layer, gain=1):
     if isinstance(layer, (nn.Conv2d, nn.Linear)):
         pfrl.initializers.init_lecun_normal(layer.weight, gain)
