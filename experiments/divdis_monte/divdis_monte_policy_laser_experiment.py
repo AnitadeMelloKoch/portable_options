@@ -73,29 +73,14 @@ if __name__ == "__main__":
         experiment.option.reset_classifiers()
         experiment.add_datafiles(pos, neg, unlab)
         experiment.train_classifier()
-        for env_idx, init_state in enumerate(init_states):
+        for state_idx, init_state in enumerate(init_states):
             experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
-                                                                               env_idx))
+                                                                               state_idx))
             file_idx += 1
-            env = atari_wrappers.wrap_deepmind(
-                atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4', max_frames=1000),
-                episode_life=True,
-                clip_rewards=True,
-                frame_stack=False
-            )
-            env.seed(args.seed)
-
-            env = MonteAgentWrapper(env, agent_space=False, stack_observations=False)
-            env = MonteBootstrapWrapper(env,
-                                        agent_space=False,
-                                        list_init_states=load_init_states(init_state),
-                                        check_true_termination=lambda x,y,z: False,
-                                        list_termination_points=[(0,0,0)],
-                                        max_steps=int(2e4))
-            experiment.train_option(env,
+            experiment.train_option(init_state,
                                     args.seed,
                                     5e5,
-                                    env_idx)
+                                    state_idx)
     
     experiment.save()
 
