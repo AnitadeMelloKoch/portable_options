@@ -364,6 +364,7 @@ class DivDisMetaExperiment():
                                                                                               make_video=save_image,
                                                                                               obs=obs)
                         step_taken = True
+                        rewards = [reward]
                     else:
                         action = action - 1
                 
