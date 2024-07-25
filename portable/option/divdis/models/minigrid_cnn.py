@@ -44,12 +44,18 @@ class MinigridCNN(nn.Module):
     
     def forward(self, x, logits=False):
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
-        
         for idx in range(self.num_heads):
             if logits:
                 y = self.model[idx](x)
+                print(f"If: {y.size()}")
+                exit()
             else:
                 y = F.softmax(self.model[idx](x), dim=-1)
+                
+                
+            print(f"else: {pred.size()}")
+            exit()
+                
             pred[:,idx,:] = y
                 
         return pred
