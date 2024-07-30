@@ -91,11 +91,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     load_gin_configs(args.config_file, args.gin_bindings)
     
-    def policy_phi(x):
-        if type(x) == np.ndarray:
-            x = torch.from_numpy(x)
-        x = (x/255.0).float()
-        return x
+
     
     def option_agent_phi(x):
         if type(x) == np.ndarray:
@@ -106,7 +102,8 @@ if __name__ == "__main__":
     experiment = DivDisOptionExperiment(base_dir=args.base_dir,
                                         seed=args.seed,
                                         option_type="divdis",
-                                        policy_phi=policy_phi)
+                                        config_file=args.config_file,
+                                        gin_bindings=args.gin_bindings)
     
     file_idx = 0
     
