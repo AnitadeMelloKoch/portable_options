@@ -17,14 +17,36 @@ init_states = [
     ["resources/monte_env_states/room7/lasers/between_right_lasers.pkl"]
 ]
 
+term_points = [
+    [
+        [(5, 235, 0)],
+    ],
+    [
+        [(100, 235, 0)]
+    ],
+    [
+        [(20, 235, 7)]
+    ],
+    [
+        [(103, 235, 7)]
+    ]
+]
+
 # files for each room
 positive_files = [
     ["resources/monte_images/lasers1_toleft_room0_termination_positive.npy"],
-    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy"]
+    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy"],
+    ["resources/monte_images/lasers1_toleft_room7_termination_positive.npy"],
+    ["resources/monte_images/lasers2_toleft_room7_termination_positive.npy"],
+    ["resources/monte_images/lasers_toleft_room12_termination_positive.npy"],
 ]
 negative_files = [
     ["resources/monte_images/lasers1_toleft_room0_termination_negative.npy"],
     ["resources/monte_images/lasers2_toleft_room0_termination_negative.npy"],
+    ["resources/monte_images/lasers1_toleft_room7_termination_negative.npy"],
+    ["resources/monte_images/lasers2_toleft_room7_termination_negative.npy"],
+    ["resources/monte_images/lasers_toleft_room12_termination_negative.npy",
+     "resources/monte_images/lasers_death_fromleft_room12_termination_negative.npy"],
 ]
 unlabelled_files = [
     ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
@@ -34,7 +56,26 @@ unlabelled_files = [
      "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
     ["resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
      "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",]
+     "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
+    ["resources/monte_images/lasers_wait_disappear_room12_termination_negative.npy",
+     "resources/monte_images/lasers_wait_disappear_room12_termination_positive.npy"],
+    []
+]
+
+test_positive_files = [
+    "resources/monte_images/lasers1_toleft_room0_termination_positive.npy",
+    "resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
+    "resources/monte_images/lasers1_toleft_room7_termination_positive.npy",
+    "resources/monte_images/lasers2_toleft_room7_termination_positive.npy",
+    "resources/monte_images/lasers_toleft_room12_termination_positive.npy"
+]
+
+test_negative_files = [
+    "resources/monte_images/lasers1_toleft_room0_termination_negative.npy",
+    "resources/monte_images/lasers2_toleft_room0_termination_negative.npy",
+    "resources/monte_images/lasers1_toleft_room7_termination_negative.npy",
+    "resources/monte_images/lasers2_toleft_room7_termination_negative.npy",
+    "resources/monte_images/lasers_toleft_room12_termination_negative.npy"
 ]
 
 if __name__ == "__main__":
@@ -73,13 +114,16 @@ if __name__ == "__main__":
         experiment.option.reset_classifiers()
         experiment.add_datafiles(pos, neg, unlab)
         experiment.train_classifier()
+        experiment.test_classifiers(test_positive_files=test_positive_files,
+                                    test_negative_files=test_negative_files)
         for state_idx, init_state in enumerate(init_states):
             experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
                                                                                state_idx))
             file_idx += 1
             experiment.train_option(init_state,
+                                    term_points[state_idx],
                                     args.seed,
-                                    5e5,
+                                    2e5,
                                     state_idx)
     
     experiment.save()
