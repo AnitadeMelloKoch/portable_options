@@ -189,16 +189,15 @@ def check_termination_correct_enemy_right(state, env):
     else:
         return False
 
-def train_head2(head_idx, con, option, log_dir, env_idx, env):
-    print("hello")
-    log_dir = os.path.join(log_dir, str(head_idx), str(env_idx))
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir,  
-                                "{}.log".format(datetime.datetime.now()))
-    logging.basicConfig(filename=log_file, 
-                        format='%(asctime)s %(levelname)s: %(message)s',
-                        level=logging.INFO)
-    logging.info("hello")
+def epsilon_ball_from_list(current_position, term_positions):
+    epsilon = 4
+    for term_position in term_positions:
+        if current_position[0] <= (term_position[0] + epsilon) and \
+            current_position[0] >= (term_position[0] - epsilon) and \
+            current_position[1] <= (term_position[1] + epsilon) and \
+            current_position[1] >= (term_position[1] - epsilon):
+            return 1
+    return 0 
 
 def train_head(head_idx, 
                 conn,
@@ -211,12 +210,15 @@ def train_head(head_idx,
                 env_idx,
                 log_dir,
                 init_states,
+                term_states,
                 config_file,
                 gin_bindings):
     env = make_env(seed, init_states)
     total_steps = 0
+    rolling_success = deque(maxlen=200)
     rolling_rewards = deque(maxlen=200)
     episode = 0
+    true_successes = []
     undiscounted_rewards = []
     
     load_gin_configs(config_file, gin_bindings)
@@ -236,7 +238,8 @@ def train_head(head_idx,
         # if video_generator is not None:
         #     video_generator.episode_start()
         # print(env)
-        obs, info = env.reset()
+        obs, info, rand_idx = env.reset(return_rand_state_idx=True)
+        term_state = term_states[rand_idx]
         
         if type(obs) == np.ndarray:
             obs = torch.from_numpy(obs).float()
@@ -264,11 +267,18 @@ def train_head(head_idx,
         
         total_steps += steps
         
+        true_success = epsilon_ball_from_list(env.get_current_position(),
+                                              term_state)
+        
+        rolling_success.append(true_success)
+        true_successes.append(true_success)
+        
         experiment_data.append({
             "idx": head_idx,
             "option_length": steps,
             "steps": total_steps,
-            "reward": option_rewards
+            "reward": option_rewards,
+            "true_success": true_success
         })
         
         # writer.add_scalar('rewards/{}'.format(head_idx),
@@ -276,10 +286,11 @@ def train_head(head_idx,
         #                         total_steps)
         
         if episode%10 == 0:
-            logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {}".format(head_idx,
+            logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {} true success: {}".format(head_idx,
                                                                                                 episode,
                                                                                                 total_steps,
-                                                                                                np.mean(rolling_rewards)))
+                                                                                                np.mean(rolling_rewards),
+                                                                                                np.mean(rolling_success)))
     # if video_generator is not None:
     #     video_generator.episode_end("head{}_env{}_{}".format(head_idx, 
     #                                                                 env_idx,

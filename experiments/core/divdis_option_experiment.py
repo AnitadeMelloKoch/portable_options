@@ -17,11 +17,12 @@ from experiments.experiment_logger import VideoGenerator
 from portable.option.memory import SetDataset
 
 from torch.multiprocessing import Process, Pipe, set_start_method
-from experiments import train_head, train_head2
+from experiments import train_head
 
 from portable.utils import load_init_states
 from pfrl.wrappers import atari_wrappers
 from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
+from experiments.divdis_monte.core.monte_terminations import *
 
 OPTION_TYPES = ["mock", "divdis"]
 
@@ -42,7 +43,7 @@ def make_monte_env(seed, init_state):
         frame_stack=False
     )
     env.seed(seed)
-
+    
     # env = MonteAgentWrapper(env, agent_space=False, stack_observations=False)
     env = MonteBootstrapWrapper(env,
                                 agent_space=False,
@@ -164,10 +165,9 @@ class DivDisOptionExperiment():
             epochs = self.classifier_epochs
         self.option.terminations.train(epochs)
     
-    
-    
     def train_option(self,
                      init_states,
+                     term_points,
                      seed,
                      max_steps,
                      env_idx):
@@ -192,8 +192,26 @@ class DivDisOptionExperiment():
                                                   env_idx,
                                                   self.log_dir,
                                                   init_states,
+                                                  term_points,
                                                   self.config_file,
                                                   self.gin_bindings))
+            
+            # train_head(
+            #     head_idx, 
+            #     child_con,
+            #     max_steps,
+            #     self.option_timeout,
+            #     make_monte_env,
+            #     self.option,
+            #     seed,
+            #     self.learn_new_policy,
+            #     env_idx,
+            #     self.log_dir,
+            #     init_states,
+            #     term_points,
+            #     self.config_file,
+            #     self.gin_bindings
+            # )
             
             head_idx += 1
             processes.append(p)
@@ -267,7 +285,7 @@ class DivDisOptionExperiment():
         weighted_acc = (accuracy_pos+accuracy_neg)/2
         
         logging.info("============= Classifiers Evaluated =============")
-        for idx in range(self.num_heads):
+        for idx in range(self.option.num_heads):
             logging.info("idx:{} true accuracy: {:.4f} false accuracy: {:.4f} total accuracy: {:.4f} weighted accuracy: {:.4f}".format(
                 idx,
                 accuracy_pos[idx],

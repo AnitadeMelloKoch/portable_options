@@ -264,7 +264,7 @@ class DivDisOption():
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
         policy.load_buffer(buffer_dir)
-        
+        # print("restart")
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
             infos.append(info)
@@ -276,6 +276,11 @@ class DivDisOption():
                     self.video_generator.make_image(env.render())
                 else:
                     self.video_generator.make_image(env.render("rgb_array"))
+            
+            # print("action", action)
+            # plt.imshow(env.render("rgb_array"))
+            # plt.show(block=False)
+            # input("continue")
             
             next_state, reward, done, info = env.step(action)
             term_state = self.policy_phi(next_state).unsqueeze(0)
@@ -289,6 +294,10 @@ class DivDisOption():
                 self._video_log("In termination: {}".format(should_terminate))
             
             if should_terminate is True:
+                # print("should terminate is True")
+                # plt.imshow(env.render("rgb_array"))
+                # plt.show(block=False)
+                # input("continue")
                 reward = 1
                 extrinsic_rewards.append(1)
                 self.save_term_state(env,
