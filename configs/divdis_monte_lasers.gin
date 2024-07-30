@@ -9,6 +9,7 @@ DivDisOptionExperiment.make_videos                                  = False
 DivDisOptionExperiment.classifier_epochs                            = 130
 DivDisOptionExperiment.gpu_id                                       = 0
 DivDisOptionExperiment.option_timeout                               = 1000
+DivDisOptionExperiment.num_processes                                = 6
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
@@ -27,9 +28,9 @@ PolicyWithInitiation.image_input                                    = True
 
 DivDisOption.tabular_beta                                           = 0.0001
 DivDisOption.exp_type                                               = "monte"
-DivDisOption.num_heads                                              = 5
+DivDisOption.num_heads                                              = 6
 
-DivDisClassifier.learning_rate                                      = 0.00025
+DivDisClassifier.learning_rate                                      = 5e-4
 DivDisClassifier.num_classes                                        = 2
-DivDisClassifier.diversity_weight                                   = 0.01
-DivDisClassifier.l2_reg_weight                                      = 0.0002
+DivDisClassifier.diversity_weight                                   = 3e-5
+DivDisClassifier.l2_reg_weight                                      = 5e-4
