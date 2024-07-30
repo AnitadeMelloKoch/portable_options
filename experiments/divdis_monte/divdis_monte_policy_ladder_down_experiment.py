@@ -254,7 +254,7 @@ if __name__ == "__main__":
                                         term_points[state_idx],
                                         args.seed,
                                         # 1e3,
-                                        5e5,
+                                        2e5,
                                         state_idx)
     
     experiment.save()
