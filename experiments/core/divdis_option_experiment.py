@@ -175,26 +175,26 @@ class DivDisOptionExperiment():
         head_idx = 0
         processes = []
         parent_pipes, child_pipes = [], []
-        for p_idx in range(self.num_processes):
+        for _ in range(self.num_processes):
             if head_idx >= self.option.num_heads:
                 continue
             
             parent_con, child_con = Pipe()
             
             p = Process(target=train_head, args=(head_idx, 
-                                                  child_con,
-                                                  max_steps,
-                                                  self.option_timeout,
-                                                  make_monte_env,
-                                                  self.option,
-                                                  seed,
-                                                  self.learn_new_policy,
-                                                  env_idx,
-                                                  self.log_dir,
-                                                  init_states,
-                                                  term_points,
-                                                  self.config_file,
-                                                  self.gin_bindings))
+                                                 child_con,
+                                                 max_steps,
+                                                 self.option_timeout,
+                                                 make_monte_env,
+                                                 self.option,
+                                                 seed,
+                                                 self.learn_new_policy,
+                                                 env_idx,
+                                                 self.log_dir,
+                                                 init_states,
+                                                 term_points,
+                                                 self.config_file,
+                                                 self.gin_bindings))
             
             # train_head(
             #     head_idx, 

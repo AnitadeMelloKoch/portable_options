@@ -2,35 +2,22 @@ from portable.option.memory import SetDataset
 import matplotlib.pyplot as plt 
 import numpy as np
 
-files = [
-    'resources/monte_images/lasers2_toright_room7_termination_positive.npy',
-]
+file = 'resources/monte_images/climb_down_ladder_room4_termination_negative.npy'
 
-dataset = SetDataset(batchsize=1)
+data = np.load(file)
 
+print(data.shape)
 
-dataset.add_true_files(files)
-dataset.set_transform_function(lambda x: x)
-print(dataset.true_length)
-
-data = []
-count = 0
-for _ in range(dataset.num_batches):
-    x, _ = dataset.get_batch()
+for im in data:
     fig = plt.figure(num=1, clear=True)
     ax = fig.add_subplot()
     gs = fig.add_gridspec(nrows=1, ncols=4)
-    for im in x:
-        count += 1
-        print(count)
-        for idx in range(4):
-            ax = fig.add_subplot(gs[0,idx])
-            ax.imshow(im[idx], cmap='gray')
-            ax.axis('off')
-        plt.show(block=False)
-        keep = input("press y to keep")
-        if keep == 'y':
-            data.append(x.numpy())
+    for idx in range(4):
+        ax = fig.add_subplot(gs[0,idx])
+        ax.imshow(im[idx], cmap='gray')
+        ax.axis('off')
+    plt.show(block=False)
+    input("continue")
             
 
 # data = np.array(data)

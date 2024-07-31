@@ -120,7 +120,7 @@ term_points = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/screen_climb_down_ladder_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy"],
@@ -129,14 +129,17 @@ positive_files = [
     ["resources/monte_images/climb_down_ladder_room22_termination_positive.npy"]
 ]
 negative_files = [
-    ["resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
+    ["resources/monte_images/climb_down_ladder_room1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room1_extra_termination_negative.npy",
      "resources/monte_images/screen_death_1.npy",
      "resources/monte_images/screen_death_2.npy",
      "resources/monte_images/screen_death_3.npy",
      "resources/monte_images/screen_death_4.npy"],
     ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room2_extra_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room6_termination_negative.npy"],
-    ["resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
+    ["resources/monte_images/climb_down_ladder_room0_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room0_extra_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room10_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
@@ -189,11 +192,14 @@ test_negative_files = [
     "resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room1_extra_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
+    "resources/monte_images/climb_down_ladder_room2_extra_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room0_extra_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
@@ -237,8 +243,8 @@ if __name__ == "__main__":
                                         config_file=args.config_file,
                                         gin_bindings=args.gin_bindings)
     
-    file_idx = 0
     
+    file_idx = 0
     for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
         experiment.option.reset_classifiers()
         experiment.add_datafiles(pos, neg, unlab)
@@ -248,14 +254,14 @@ if __name__ == "__main__":
         for state_idx, init_state in enumerate(init_states):
             experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
                                                                                state_idx))
-            file_idx += 1
-            if file_idx > 1:
-                experiment.train_option(init_state,
-                                        term_points[state_idx],
-                                        args.seed,
-                                        # 1e3,
-                                        2e5,
-                                        state_idx)
+            
+            experiment.train_option(init_state,
+                                    term_points[state_idx],
+                                    args.seed,
+                                    # 1e3,
+                                    2e5,
+                                    state_idx)
+        file_idx += 1
     
     experiment.save()
 
