@@ -8,21 +8,21 @@ import numpy as np
 import random
 import gin
 import os
+import matplotlib.pyplot as plt 
 import torch
+import json
 from math import floor
 import pickle
 import gym
 from torch.utils.tensorboard import SummaryWriter 
 
-
-from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
 from experiments.experiment_logger import VideoGenerator
 # from portable.agent.model.ppo import ActionPPO, create_atari_model, create_linear_atari_model
 from portable.agent.model.maskable_ppo import MaskablePPOAgent, create_mask_atari_model, create_mask_linear_atari_model, TabularAgent
 from portable.utils.utils import load_gin_configs, set_seed
 
 sys.path.append("../pix2sym")
-from gym_montezuma.envs.montezuma_env import make_monte_env_as_atari_deepmind, Option
+from gym_montezuma.envs.montezuma_env import make_monte_env_as_atari_deepmind, Option, MontezumaEnv
 
 '''
 Takes in a dict representing the privileged state parsed from the RAM of 
@@ -177,6 +177,27 @@ def make_monte_with_skills_env(game_name=None,
                                            **d)
     return env
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        return json.JSONEncoder.default(self, obj)
+
+# SEQUENCE_TO_EXECUTE = [1, 9, 19, 18]
+SEQUENCE_TO_EXECUTE = [6, 2, 10, 10, 6, 1]
+
+# log sequence of options that lead to timeouts
+# then log every step of states/screenshots for timeout sequences
+
+# make it continually get to the key, check the probs
+# if it's choosing correct actions but not getting to the goal, skills are broken somewhere
+
 @gin.configurable
 class MontePerfectOptionsExperiment:
     def __init__(self,
@@ -263,10 +284,7 @@ class MontePerfectOptionsExperiment:
         return action
     
     def get_option_name(self, option_num):
-        for name, member in Option.__members__.items():
-            if member == option_num:
-                return name
-        raise ValueError(f"No Option member with value {option_num}")
+        return self.env.get_action_meanings()[option_num]
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -281,6 +299,39 @@ class MontePerfectOptionsExperiment:
         
         np.save(os.path.join(self.save_dir, "decisions.npy"), self.decisions)
     
+    def save_ram_and_screenshot(self, env, option, step, dir_name, trajectory = None):
+        parent_dir = f'./{dir_name}/{self.get_option_name(option)}'
+
+        i = 0
+        while os.path.exists(os.path.join(parent_dir, str(i))):
+            i += 1
+        
+        if i > 100:
+            return
+        
+        dir_path = os.path.join(parent_dir, str(i))
+        os.makedirs(dir_path, exist_ok=True)
+
+        # save RAM state
+        with open(os.path.join(dir_path, 'state.json'), "wt") as f:
+            # f.write(str(env.getState()))
+            state = env.getState()
+            del state['env']
+            json.dump(state, f, indent=4, cls=NumpyEncoder)
+
+        # save initiation screenshot
+        img = np.squeeze(env.render("rgb_array"))
+        fig, (ax1, ax2) = plt.subplots(1,2)
+        ax1.imshow(img)
+        ax1.axis('off')
+        ax2.axis('off')
+        fig.savefig(os.path.join(dir_path, "screenshot.png"))
+        plt.close(fig)
+
+        if trajectory:
+            with open(os.path.join(dir_path, 'trajectory.txt'), 'wt') as f:
+                f.write(str(trajectory))
+
     def observe(self, 
                 obs,
                 mask, 
@@ -313,7 +364,8 @@ class MontePerfectOptionsExperiment:
         episode_rewards = deque(maxlen=200)
         episode = 0
         undiscounted_rewards = []
-        
+        trajectories = []
+
         while total_steps < max_steps:
             undiscounted_reward = 0         # episode reward
             done = False
@@ -325,18 +377,35 @@ class MontePerfectOptionsExperiment:
             if not self.use_privileged_state:
                 obs = self.process_obs(obs)
 
+            trajectories.append([])
+
+            current_steps = 0
+
             while not done:
                 self.save_image(self.env)
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
                 option_mask = self.get_option_mask(self.env)
 
-                action = self.act(obs, option_mask)
+                action, q_values = self.act(obs, option_mask)
+                trajectories[-1].append(action)
                 
                 self._video_log("action: {}".format(action))
-                self._video_log("available actons: {}".format(option_mask))
+                # self._video_log("available actons: {}".format(option_mask))
+                # self._video_log("q values: {}".format(q_values))
                 
+                # self.save_ram_and_screenshot(self.env, SEQUENCE_TO_EXECUTE[current_steps], total_steps, 'seq')
+
+                # action = SEQUENCE_TO_EXECUTE[current_steps]
+                # print(f"executing {self.get_option_name(action)}...")
+
                 next_obs, reward, done, info = self.env.step(action)
+
+                # if total_steps == len(SEQUENCE_TO_EXECUTE) - 1:
+                #     self.video_generator.episode_end("episode_{}".format(episode))
+
+                if info['timeout']:
+                    self.save_ram_and_screenshot(self.env, action, total_steps, 'timeouts', trajectories[-6:])
 
                 if not self.use_privileged_state:
                     next_obs = self.process_obs(next_obs)
@@ -346,6 +415,7 @@ class MontePerfectOptionsExperiment:
                 
                 self.decisions += 1
                 total_steps += steps
+                current_steps += 1
                 
                 self.experiment_data.append({
                     "meta_step": self.decisions,
@@ -413,10 +483,11 @@ class MontePerfectOptionsExperiment:
                     if type(obs) == np.ndarray:
                         obs = torch.from_numpy(obs).float()
                     option_mask = self.get_option_mask(env)
-                    action = self.act(obs, option_mask)
+                    action, q_values = self.act(obs, option_mask)
                     
                     self._video_log("[meta] action: {}".format(action))
-                    self._video_log("available actons: {}".format(np.argwhere(option_mask.reshape(-1))))
+                    # self._video_log("available actons: {}".format(np.argwhere(option_mask.reshape(-1))))
+                    self._video_log("q_values: {}".format(q_values))
                     
                     next_obs, reward, done, info = self.env.step(action)
 
@@ -475,11 +546,13 @@ if __name__ == "__main__":
                                       env=env)
 
 
-    # meta_agent_load_dir = "runs/monte_meta_perfect_options_privileged_state_curiosity/7/checkpoints/action_agent"
+    # meta_agent_load_dir = "runs/monte_meta_perfect_options/8/checkpoints/action_agent"
+    # print('about to load agent', experiment.meta_agent)
     # experiment.meta_agent.load(meta_agent_load_dir)
+    # print('just loaded agent')
 
     # experiment.eval_meta_agent(num_runs=100,
     #                             seed=args.seed)
 
     experiment.train_meta_agent(max_steps=4e7,
-                                seed=args.seed,)
+                                seed=args.seed)

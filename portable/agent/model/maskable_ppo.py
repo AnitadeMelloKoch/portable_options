@@ -336,7 +336,7 @@ class MaskablePPO(PPO):
                 distribution.apply_masking(batch_mask)
             action = distribution.get_actions(deterministic=self.act_deterministically).cpu().numpy()
             
-        return action
+        return action, distribution.distribution.probs
             
     
     def _batch_act_train(self, batch_obs, batch_mask):
@@ -376,7 +376,7 @@ class MaskablePPO(PPO):
         self.batch_last_state = list(batch_obs)
         self.batch_last_action = list(batch_action)
         
-        return batch_action
+        return batch_action, distribution.distribution.probs
     
     
     
@@ -637,10 +637,10 @@ class MaskablePPOAgent():
     
     def act(self, obs, mask):
         self.step += 1
-        action = self.agent.batch_act([obs], [mask])[0]
+        action, logits = self.agent.batch_act([obs], [mask])
         # action = torch.from_numpy(action)
 
-        return action
+        return action[0], logits
     
     def q_function(self, obs):
         return self.agent.batch_act(obs)

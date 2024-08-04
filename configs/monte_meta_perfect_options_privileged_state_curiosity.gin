@@ -3,7 +3,8 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
 __main__.MontePerfectOptionsExperiment.experiment_name                = "monte_meta_perfect_options_privileged_state_curiosity"
-__main__.MontePerfectOptionsExperiment.use_gpu                        = True
+__main__.MontePerfectOptionsExperiment.use_gpu                        = False
+__main__.MontePerfectOptionsExperiment.gpu_list                       = [None]
 __main__.MontePerfectOptionsExperiment.make_videos                    = False
 __main__.MontePerfectOptionsExperiment.use_privileged_state           = True
 __main__.MontePerfectOptionsExperiment.add_curiosity                  = True
@@ -15,8 +16,9 @@ __main__.make_monte_with_skills_env.episode_life                      = True
 __main__.make_monte_with_skills_env.expose_primitive_actions          = False
 
 
-MaskablePPOAgent.learning_rate                                               = 2.5e-5
-MaskablePPOAgent.state_shape                                                 = (91,)
+MaskablePPOAgent.learning_rate                                               = 2.5e-4
+MaskablePPOAgent.state_shape                                                 = (91)
 MaskablePPOAgent.num_actions                                                 = 27
-MaskablePPOAgent.update_interval                                             = 1
 MaskablePPOAgent.entropy_coef                                                = 0.01
+MaskablePPOAgent.update_interval                                             = 500
+MaskablePPOAgent.minibatch_size                                              = 64

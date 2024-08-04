@@ -10,10 +10,11 @@ __main__.MontePerfectOptionsExperiment.use_privileged_state           = False
 __main__.make_monte_with_skills_env.sticky_actions                    = False
 __main__.make_monte_with_skills_env.clip_rewards                      = False
 __main__.make_monte_with_skills_env.single_life                       = False
-__main__.make_monte_with_skills_env.episode_life                      = True
+__main__.make_monte_with_skills_env.episode_life                      = False
 
 MaskablePPOAgent.learning_rate                                               = 2.5e-4
 MaskablePPOAgent.state_shape                                                 = (4, 84, 84)
 MaskablePPOAgent.num_actions                                                 = 27
-MaskablePPOAgent.update_interval                                             = 100
-MaskablePPOAgent.entropy_coef                                                = 0.04
+MaskablePPOAgent.update_interval                                             = 2048
+MaskablePPOAgent.minibatch_size                                              = 64
+MaskablePPOAgent.entropy_coef                                                = 0.01
