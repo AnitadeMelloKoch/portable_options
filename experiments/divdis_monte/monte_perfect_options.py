@@ -190,7 +190,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 # SEQUENCE_TO_EXECUTE = [1, 9, 19, 18]
-SEQUENCE_TO_EXECUTE = [6, 2, 10, 10, 6, 1]
+SEQUENCE_TO_EXECUTE = [6, 2, 2, 10, 10, 6, 1]
 
 # log sequence of options that lead to timeouts
 # then log every step of states/screenshots for timeout sequences
@@ -245,7 +245,7 @@ class MontePerfectOptionsExperiment:
         set_seed(seed)
         
         log_file = os.path.join(self.log_dir, 
-                                "{}.log".format(datetime.datetime.now()))
+                                "{}.log".format(str(datetime.datetime.now()).replace(":", "_")))
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.INFO)
@@ -397,15 +397,17 @@ class MontePerfectOptionsExperiment:
                 # self.save_ram_and_screenshot(self.env, SEQUENCE_TO_EXECUTE[current_steps], total_steps, 'seq')
 
                 # action = SEQUENCE_TO_EXECUTE[current_steps]
-                # print(f"executing {self.get_option_name(action)}...")
+                print(f'available actions: {np.argwhere(self.get_option_mask(self.env))[:,1]}')
+                action = int(input('enter integer option to execute (0-26): '))
+                print(f"executing {self.get_option_name(action)}...")
 
                 next_obs, reward, done, info = self.env.step(action)
 
                 # if total_steps == len(SEQUENCE_TO_EXECUTE) - 1:
                 #     self.video_generator.episode_end("episode_{}".format(episode))
 
-                if info['timeout']:
-                    self.save_ram_and_screenshot(self.env, action, total_steps, 'timeouts', trajectories[-6:])
+                # if info['timeout']:
+                #     self.save_ram_and_screenshot(self.env, action, total_steps, 'timeouts', trajectories[-6:])
 
                 if not self.use_privileged_state:
                     next_obs = self.process_obs(next_obs)

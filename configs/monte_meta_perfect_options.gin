@@ -3,7 +3,8 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
 __main__.MontePerfectOptionsExperiment.experiment_name                = "monte_meta_perfect_options"
-__main__.MontePerfectOptionsExperiment.use_gpu                        = True
+__main__.MontePerfectOptionsExperiment.use_gpu                        = False
+__main__.MontePerfectOptionsExperiment.gpu_list                       = [None]
 __main__.MontePerfectOptionsExperiment.add_curiosity                  = False
 __main__.MontePerfectOptionsExperiment.use_privileged_state           = False
 
@@ -11,6 +12,7 @@ __main__.make_monte_with_skills_env.sticky_actions                    = False
 __main__.make_monte_with_skills_env.clip_rewards                      = False
 __main__.make_monte_with_skills_env.single_life                       = False
 __main__.make_monte_with_skills_env.episode_life                      = False
+__main__.make_monte_with_skills_env.render_option_execution           = True
 
 MaskablePPOAgent.learning_rate                                               = 2.5e-4
 MaskablePPOAgent.state_shape                                                 = (4, 84, 84)
