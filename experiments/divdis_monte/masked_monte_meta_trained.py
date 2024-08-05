@@ -150,13 +150,19 @@ if __name__ == "__main__":
                                                terminations=terminations,
                                                option_head_num=1)
     
+    # experiment.train_option_policies(
+    #     bootstrap_envs,
+    #     0,
+    #     max_steps=1e6
+    # )
+    
     experiment.train_option_policies(
         bootstrap_envs,
         0,
-        max_steps=1e6
+        max_steps=1e3
     )
     
-    experiment.load()
+    # experiment.load()
     
     meta_env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),

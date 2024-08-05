@@ -19,6 +19,7 @@ from portable.agent.model.ppo import ActionPPO
 from portable.agent.model.maskable_ppo import MaskablePPOAgent
 import math
 from portable.option.memory import SetDataset
+from experiments.core.plotter import MontePlotter
 
 OPTION_TYPES = ["mock", "divdis"]
 
@@ -51,6 +52,8 @@ class DivDisMetaMaskedPPOExperiment():
                  option_head_num=4,
                  discount_rate=0.9,
                  make_videos=False,
+                 make_plots=False,
+                 pick_actions_randomly=False,
                  fix_options_during_meta=False):
         
         assert option_type in OPTION_TYPES
@@ -71,6 +74,8 @@ class DivDisMetaMaskedPPOExperiment():
         self.use_termination_masks = use_termination_masks
         self.log_q_values = log_q_values
         self.fix_options = fix_options_during_meta
+        self.make_plots = make_plots
+        self.pick_actions_randomly = pick_actions_randomly
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -160,6 +165,12 @@ class DivDisMetaMaskedPPOExperiment():
         
         self.experiment_data = []
         self.episode_data = []
+        
+        self.plotter = None
+        if self.make_plots and self.exp == "monte":
+            self.plotter = MontePlotter(self.plot_dir)
+        
+        self.num_actions = self.meta_agent.num_actions
         
     @staticmethod
     def _assign_gpus(use_gpu, num_models, gpu_list):
@@ -266,6 +277,9 @@ class DivDisMetaMaskedPPOExperiment():
     def act(self, obs, mask):
         action = self.meta_agent.act(obs, mask)
         
+        if self.pick_actions_randomly is True:
+            action = np.random.randint(0, self.num_actions)
+        
         return action
     
     def observe(self, 
@@ -352,6 +366,9 @@ class DivDisMetaMaskedPPOExperiment():
                 
                 step_taken = False
                 
+                if self.plotter is not None:
+                    self.plotter.record_init_location(action, info["player_pos"])
+                
                 chosen_action = action
                 chosen_option = -1
                 chosen_head = -1
@@ -394,6 +411,10 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                     seed,
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
+                if self.plotter is not None:
+                    self.plotter.record_term_location(action, info["player_pos"])
+                
+                
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -418,6 +439,10 @@ class DivDisMetaMaskedPPOExperiment():
                 obs = next_obs
             if self.add_unlabelled_data is True:
                 self.train_option_classifiers(1)
+            
+            if self.plotter is not None:
+                self.plotter.plot("action_plots_ep{}".format(episode))
+                self.plotter.reset()
             
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,

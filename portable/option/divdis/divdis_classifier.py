@@ -6,7 +6,7 @@ import gin
 import os
 import numpy as np 
 
-from portable.option.memory import SetDataset
+from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
@@ -34,6 +34,7 @@ class DivDisClassifier():
                  diversity_weight,
                  
                  l2_reg_weight=0.001,
+                 class_weight=None,
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
@@ -47,10 +48,9 @@ class DivDisClassifier():
         else:
             self.device = torch.device('cuda:{}'.format(use_gpu)) 
         
-        self.dataset = SetDataset(max_size=dataset_max_size,
-                                  batchsize=dataset_batchsize,
-                                  unlabelled_batchsize=unlabelled_dataset_batchsize,
-                                  store_int=True)
+        self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
+                                            batchsize=dataset_batchsize,
+                                            unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.learning_rate = learning_rate
         self.l2_reg_weight = l2_reg_weight
         
@@ -70,7 +70,14 @@ class DivDisClassifier():
                                           )
         
         self.divdis_criterion = DivDisLoss(heads=head_num)
-        self.ce_criterion = torch.nn.CrossEntropyLoss()
+        
+        if class_weight is not None:
+            assert len(class_weight) == num_classes
+            class_weight_tensor = torch.tensor(class_weight, dtype=torch.float).to(self.device)
+        else:
+            class_weight_tensor = torch.ones(num_classes, dtype=torch.float).to(self.device)
+        
+        self.ce_criterion = torch.nn.CrossEntropyLoss(weight=class_weight_tensor)
         self.diversity_weight = diversity_weight
         
         self.state_dim = 3
@@ -84,6 +91,14 @@ class DivDisClassifier():
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
             self.dataset.load(path)
+    
+    def set_class_weights(self, weights=None):
+        if weights is None:
+            weights = self.dataset.get_equal_class_weight()
+        
+        self.ce_criterion = torch.nn.CrossEntropyLoss(
+            weight=torch.tensor(weights)
+        )
     
     def reset_classifier(self):
         if self.model_name == "minigrid_cnn":
@@ -148,6 +163,8 @@ class DivDisClassifier():
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
+                if torch.sum(y) == 0 or torch.sum(y) == len(y):
+                    continue
                 if use_unlabelled_data:
                     unlabelled_x = self.dataset.get_unlabelled_batch()
                 

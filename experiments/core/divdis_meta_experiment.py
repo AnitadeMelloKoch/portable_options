@@ -19,6 +19,7 @@ from portable.agent.model.ppo import ActionPPO
 from portable.agent.model.maskable_ppo import MaskablePPOAgent
 import math
 from portable.option.memory import SetDataset
+from experiments.core.plotter import MontePlotter
 
 OPTION_TYPES = ["mock", "divdis"]
 
@@ -51,6 +52,8 @@ class DivDisMetaExperiment():
                  option_head_num=4,
                  discount_rate=0.9,
                  make_videos=False,
+                 make_plots=False,
+                 pick_actions_randomly=False,
                  fix_options_during_meta=False):
         
         assert option_type in OPTION_TYPES
@@ -71,6 +74,8 @@ class DivDisMetaExperiment():
         self.use_termination_masks = use_termination_masks
         self.log_q_values = log_q_values
         self.fix_options = fix_options_during_meta
+        self.make_plots = make_plots
+        self.pick_actions_randomly = pick_actions_randomly
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -81,7 +86,6 @@ class DivDisMetaExperiment():
         self.log_dir = os.path.join(self.base_dir, 'logs')
         self.save_dir = os.path.join(self.base_dir, 'checkpoints')
         self.plot_dir = os.path.join(self.base_dir, 'plots')
-        
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         
@@ -162,6 +166,12 @@ class DivDisMetaExperiment():
         self.experiment_data = []
         self.episode_data = []
         
+        self.plotter = None
+        if self.make_plots and self.exp == "monte":
+            self.plotter = MontePlotter(self.plot_dir)
+        
+        self.num_actions = self.meta_agent.num_actions
+    
     @staticmethod
     def _assign_gpus(use_gpu, num_models, gpu_list):
         assign_list_idx = [
@@ -272,6 +282,9 @@ class DivDisMetaExperiment():
         if self.log_q_values is True:
             logging.info("q_values: {}".format(q_vals.cpu().numpy()))
         
+        if self.pick_actions_randomly is True:
+            action = np.random.randint(0, self.num_actions)
+        
         return action, q_vals
     
     def observe(self, 
@@ -350,6 +363,7 @@ class DivDisMetaExperiment():
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
                 action_mask = self.get_termination_masks(obs, env)
+                
                 action, q_vals = self.act(obs, action_mask)
                 
                 self._video_log("action: {}".format(action))
@@ -357,12 +371,16 @@ class DivDisMetaExperiment():
                 
                 step_taken = False
                 
+                if self.plotter is not None:
+                    self.plotter.record_init_location(action, info["player_pos"])
+                
                 if self.use_global_option:
                     if action == 0:
                         next_obs, reward, done, info, steps = self.global_option.train_policy(env=env,
                                                                                               info=info,
                                                                                               make_video=save_image,
                                                                                               obs=obs)
+                        
                         step_taken = True
                         rewards = [reward]
                     else:
@@ -394,6 +412,10 @@ class DivDisMetaExperiment():
                                                                                                                     seed,
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
+                if self.plotter is not None:
+                    self.plotter.record_term_location(action, info["player_pos"])
+                
+                
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -415,6 +437,10 @@ class DivDisMetaExperiment():
                 obs = next_obs
             if self.add_unlabelled_data is True:
                 self.train_option_classifiers(1)
+            
+            if self.plotter is not None:
+                self.plotter.plot("action_plots_ep{}".format(episode))
+                self.plotter.reset()
             
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
