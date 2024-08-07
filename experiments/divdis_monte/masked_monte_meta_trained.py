@@ -150,16 +150,10 @@ if __name__ == "__main__":
                                                terminations=terminations,
                                                option_head_num=1)
     
-    # experiment.train_option_policies(
-    #     bootstrap_envs,
-    #     0,
-    #     max_steps=1e6
-    # )
-    
     experiment.train_option_policies(
         bootstrap_envs,
         0,
-        max_steps=1e3
+        max_steps=1e6
     )
     
     # experiment.load()
