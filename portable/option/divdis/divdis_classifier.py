@@ -97,7 +97,7 @@ class DivDisClassifier():
             weights = self.dataset.get_equal_class_weight()
         
         self.ce_criterion = torch.nn.CrossEntropyLoss(
-            weight=torch.tensor(weights)
+            weight=torch.tensor(weights).to(self.device)
         )
     
     def reset_classifier(self):

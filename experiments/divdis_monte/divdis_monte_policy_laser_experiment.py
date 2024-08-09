@@ -34,48 +34,49 @@ term_points = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/lasers1_toleft_room0_termination_positive.npy"],
-    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy"],
-    ["resources/monte_images/lasers1_toleft_room7_termination_positive.npy"],
-    ["resources/monte_images/lasers2_toleft_room7_termination_positive.npy"],
+    ["resources/monte_images/lasers_left_toleft_room0_termination_positive.npy"],
+    ["resources/monte_images/lasers_right_toleft_room0_termination_positive.npy"],
+    ["resources/monte_images/lasers_left_toleft_room7_termination_positive.npy"],
+    ["resources/monte_images/lasers_right_toleft_room7_termination_positive.npy"],
     ["resources/monte_images/lasers_toleft_room12_termination_positive.npy"],
 ]
 negative_files = [
-    ["resources/monte_images/lasers1_toleft_room0_termination_negative.npy"],
-    ["resources/monte_images/lasers2_toleft_room0_termination_negative.npy"],
-    ["resources/monte_images/lasers1_toleft_room7_termination_negative.npy"],
-    ["resources/monte_images/lasers2_toleft_room7_termination_negative.npy"],
+    ["resources/monte_images/lasers_left_toleft_room0_termination_negative.npy"],
+    ["resources/monte_images/lasers_right_toleft_room0_termination_negative.npy"],
+    ["resources/monte_images/lasers_left_toleft_room7_termination_negative.npy"],
+    ["resources/monte_images/lasers_right_toleft_room7_termination_negative.npy"],
     ["resources/monte_images/lasers_toleft_room12_termination_negative.npy",
      "resources/monte_images/lasers_death_fromleft_room12_termination_negative.npy"],
 ]
 unlabelled_files = [
-    ["resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
-     "resources/monte_images/lasers2_toleft_room0_termination_negative.npy",
+    ["resources/monte_images/lasers_right_toleft_room0_termination_positive.npy",
+     "resources/monte_images/lasers_right_toleft_room0_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
+     "resources/monte_images/lasers_right_toright_room7_termination_positive.npy",
+     "resources/monte_images/lasers_right_toright_room7_termination_negative.npy",],
     ["resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_positive.npy",
-     "resources/monte_images/lasers_wait_disappear_room7_termination_negative.npy",],
-    ["resources/monte_images/lasers_wait_disappear_room12_termination_negative.npy",
-     "resources/monte_images/lasers_wait_disappear_room12_termination_positive.npy"],
+     "resources/monte_images/lasers_left_toright_room7_termination_positive.npy",
+     "resources/monte_images/lasers_left_toright_room7_termination_negative.npy",],
+    ["resources/monte_images/lasers_toright_room12_termination_negative.npy",
+     "resources/monte_images/lasers_toright_room12_termination_positive.npy"],
     []
 ]
 
 test_positive_files = [
-    "resources/monte_images/lasers1_toleft_room0_termination_positive.npy",
-    "resources/monte_images/lasers2_toleft_room0_termination_positive.npy",
-    "resources/monte_images/lasers1_toleft_room7_termination_positive.npy",
-    "resources/monte_images/lasers2_toleft_room7_termination_positive.npy",
-    "resources/monte_images/lasers_toleft_room12_termination_positive.npy"
+    "resources/monte_images/lasers_left_toleft_room0_termination_positive.npy",
+    "resources/monte_images/lasers_right_toleft_room0_termination_positive.npy",
+    "resources/monte_images/lasers_left_toleft_room7_termination_positive.npy",
+    "resources/monte_images/lasers_right_toleft_room7_termination_positive.npy",
+    "resources/monte_images/lasers_toleft_room12_termination_positive.npy",
 ]
 
 test_negative_files = [
-    "resources/monte_images/lasers1_toleft_room0_termination_negative.npy",
-    "resources/monte_images/lasers2_toleft_room0_termination_negative.npy",
-    "resources/monte_images/lasers1_toleft_room7_termination_negative.npy",
-    "resources/monte_images/lasers2_toleft_room7_termination_negative.npy",
-    "resources/monte_images/lasers_toleft_room12_termination_negative.npy"
+    "resources/monte_images/lasers_left_toleft_room0_termination_negative.npy",
+    "resources/monte_images/lasers_right_toleft_room0_termination_negative.npy",
+    "resources/monte_images/lasers_left_toleft_room7_termination_negative.npy",
+    "resources/monte_images/lasers_right_toleft_room7_termination_negative.npy",
+    "resources/monte_images/lasers_toleft_room12_termination_negative.npy",
+     "resources/monte_images/lasers_death_fromleft_room12_termination_negative.npy",
 ]
 
 if __name__ == "__main__":

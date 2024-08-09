@@ -27,8 +27,10 @@ class UnbalancedSetDataset():
         self.unlabelled_data_length = 0
         self.counter = 0
         self.num_batches = 0
+        self.unlabelled_counter = 0
         
         self.shuffled_indices = None
+        self.shuffled_indices_unlabelled = None
     
     @staticmethod
     def transform(x):
@@ -41,14 +43,15 @@ class UnbalancedSetDataset():
         num_positive = torch.sum(self.labels)
         num_negative = self.data_length - num_positive
         
-        return [self.data_length/num_negative, 
-                self.data_length/num_positive]
+        return [self.data_length/num_negative+1e-5, 
+                self.data_length/num_positive+1e-5]
     
     def reset(self):
         self.data = torch.from_numpy(np.array([]))
         self.labels = torch.from_numpy(np.array([]))
         self.counter = 0
         self.num_batches = 0
+        self.unlabelled_counter = 0
         self.shuffled_indices = None
     
     def reset_memory(self):
@@ -87,11 +90,14 @@ class UnbalancedSetDataset():
     
     def shuffle(self):
         self.shuffled_indices = np.random.permutation(self.data_length)
+        self.shuffled_indices_unlabelled = np.random.permutation(range(self.unlabelled_data_length))
     
     def _set_batch_num(self):
         self.num_batches = math.ceil(
             self.data_length/self.batchsize
         )
+        if self.dynamic_unlabelled_batchsize is True:
+            self.unlabelled_batchsize = self.unlabelled_data_length//self.num_batches
     
     def add_true_files(self, file_list):
         for file in file_list:
@@ -129,24 +135,58 @@ class UnbalancedSetDataset():
             
             self.shuffle()
     
+    def add_unlabelled_files(self, file_list):
+        for file in file_list:
+            data = np.load(file)
+            data = torch.from_numpy(data)
+            if torch.max(data) <= 1:
+                data = data*255
+            data = data.int()
+            data = data.squeeze()
+            self.unlabelled_data = self.concatenate(self.unlabelled_data,
+                                                    data)
+        self.unlabelled_data_length = len(self.unlabelled_data)
+        self._set_batch_num()
+        self.unlabelled_counter = 0
+        self.shuffle()
+    
     def get_batch(self, shuffle_batch=True):
         data = []
         labels = []
         if (self.index() + self.batchsize) > self.data_length:
-            data = self.data[self.index():]
-            labels = self.labels[self.index():]
+            data = self.data[self.shuffled_indices[self.index():]]
+            labels = self.labels[self.shuffled_indices[self.index():]]
         else:
-            data = self.data[self.index():self.index() + self.batchsize]
-            labels = self.labels[self.index():self.index() + self.batchsize]
+            data = self.data[self.shuffled_indices[self.index():self.index() + self.batchsize]]
+            labels = self.labels[self.shuffled_indices[self.index():self.index() + self.batchsize]]
         
         data = self.transform(data)
+        labels = labels.long()
         
         self.counter += 1
         
         return data, labels
     
+    def get_unlabelled_batch(self):
+        data = []
+        index = self.unlabelled_index()
+        if (index+self.unlabelled_batchsize) > len(self.unlabelled_data):
+            num_remaining = self.unlabelled_data_length - index
+            data = self.unlabelled_data[self.shuffled_indices_unlabelled[index:]]
+            data = self.concatenate(data,
+                                    data[self.shuffled_indices_unlabelled[:num_remaining]])
+        else:
+            data = self.unlabelled_data[self.shuffled_indices_unlabelled[index:index+self.unlabelled_batchsize]]
+        
+        data = self.transform(data)
+        
+        return data
+    
     def index(self):
         return (self.counter*self.batchsize)%self.data_length
+    
+    def unlabelled_index(self):
+        return (self.unlabelled_counter*self.unlabelled_batchsize)%self.unlabelled_data_length
     
     @staticmethod
     def concatenate(arr1, arr2):

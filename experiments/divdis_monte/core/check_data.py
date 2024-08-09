@@ -2,7 +2,7 @@ from portable.option.memory import SetDataset
 import matplotlib.pyplot as plt 
 import numpy as np
 
-file = 'resources/monte_images/climb_down_ladder_room4_termination_negative.npy'
+file = 'resources/monte_images/lasers_left_toright_room7_termination_positive.npy'
 
 data = np.load(file)
 

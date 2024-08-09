@@ -13,9 +13,9 @@ def collect_seed(seed, task, initiation=None, termination=None):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]        
     for colour in colours:
         states = []
-        for _ in tqdm(range(1000)):
+        for _ in tqdm(range(5000)):
             repos_attempts = np.random.randint(low=0, high=1000)
-            env = environment_builder('AdvancedDoorKey-8x8-v0', seed=seed, grayscale=False)
+            env = environment_builder('AdvancedDoorKey-16x16-v0', seed=seed, grayscale=False)
             #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                     door_colour=colour,
@@ -51,11 +51,11 @@ def collect_seed(seed, task, initiation=None, termination=None):
         base_dir = "resources/minigrid_images/" 
         task_name = f"get{colour}key" if task == "get_key" else f"open{colour}door"
         if (initiation is True) or (termination is False): # init pos, term neg
-            np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_initiation_positive.npy", states)
-            np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_termination_negative.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_initiation_positive.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_termination_negative.npy", states)
         elif (initiation is False) or (termination is True): # init neg, term pos
-            np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_initiation_negative.npy", states)
-            np.save(base_dir+f"adv_doorkey_8x8_v2_{task_name}_door{colour}_{seed}_1_termination_positive.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_initiation_negative.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_termination_positive.npy", states)
         else:
             raise ValueError("initiation and termination cannot be the same")
 
@@ -67,7 +67,7 @@ def collect_seed(seed, task, initiation=None, termination=None):
 if __name__ == '__main__':
 
     # multiprocessing
-    task = 'open_door'
+    task = 'get_key'
     seeds = [0,1,2,3,4,5,6,7,8,9,10,11]
     USE_MP = True
     

@@ -163,6 +163,7 @@ class DivDisOptionExperiment():
                          epochs=None):
         if epochs is None:
             epochs = self.classifier_epochs
+        self.option.terminations.set_class_weights()
         self.option.terminations.train(epochs)
     
     def train_option(self,

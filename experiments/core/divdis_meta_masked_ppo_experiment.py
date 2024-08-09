@@ -348,7 +348,10 @@ class DivDisMetaMaskedPPOExperiment():
             if self.video_generator is not None:
                 self.video_generator.episode_start()
             
-            obs, info = env.reset()
+            if self.exp == "minigrid":
+                obs, info = env.reset(random_reset=True)
+            else:
+                obs, info = env.reset()
             
             while not done:
                 if episode%200 == 0:

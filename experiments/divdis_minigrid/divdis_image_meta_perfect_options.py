@@ -20,7 +20,7 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
     
     return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=seed,
             grayscale=False
         ),
@@ -38,7 +38,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -51,7 +51,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -64,7 +64,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -77,7 +77,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -91,7 +91,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-8x8-v0',
+                'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False
             ),
@@ -104,7 +104,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-8x8-v0',
+                'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False
             ),
@@ -117,7 +117,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-8x8-v0',
+                'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False
             ),
@@ -182,12 +182,14 @@ if __name__ == "__main__":
     
     # experiment.load()
     
-    meta_env = environment_builder(
-                    'AdvancedDoorKey-8x8-v0',
-                    seed=env_seed,
-                    max_steps=int(1e4),
-                    grayscale=False
-                )
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(1500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+                                                 key_collected=False,
+                                                 door_unlocked=False,
+                                                 force_door_closed=True)
     
     experiment.train_meta_agent(meta_env,
                                 env_seed,

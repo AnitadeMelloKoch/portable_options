@@ -352,7 +352,7 @@ class DivDisMetaExperiment():
             if self.video_generator is not None:
                 self.video_generator.episode_start()
             
-            obs, info = env.reset()
+            obs, info = env.reset(random_start=True)
             
             while not done:
                 if episode%200 == 0:

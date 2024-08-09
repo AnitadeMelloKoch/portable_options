@@ -1,4 +1,4 @@
-from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
+from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         x = (x/255.0).float()
         return x
     
-    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
+    experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
@@ -43,11 +43,14 @@ if __name__ == "__main__":
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
     
-    meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
-                                   seed=args.seed,
-                                   max_steps=int(1500),
-                                   grayscale=False,
-                                   normalize_obs=False)
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(1500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+                                                 key_collected=False,
+                                                 door_unlocked=False,
+                                                 force_door_closed=True)
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
