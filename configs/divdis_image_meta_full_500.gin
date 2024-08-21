@@ -4,16 +4,17 @@ import portable.option.divdis.divdis_option
 import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.maskable_ppo
 import portable.option.divdis.divdis_classifier
+import portable.option.memory.unbalanced_set_dataset
 
-DivDisMetaMaskedPPOExperiment.experiment_name                                = "meta_image_full_10_timeout"
+DivDisMetaMaskedPPOExperiment.experiment_name                                = "meta_image_full_500_timeout"
 DivDisMetaMaskedPPOExperiment.num_options                                    = 5
 DivDisMetaMaskedPPOExperiment.option_head_num                                = 3
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                          = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                                        = True
-DivDisMetaMaskedPPOExperiment.gpu_list                                       = [0]
+DivDisMetaMaskedPPOExperiment.gpu_list                                       = [0,1]
 DivDisMetaMaskedPPOExperiment.make_videos                                    = False
 DivDisMetaMaskedPPOExperiment.classifier_epochs                              = 200
-DivDisMetaMaskedPPOExperiment.option_timeout                                 = 10
+DivDisMetaMaskedPPOExperiment.option_timeout                                 = 500
 DivDisMetaMaskedPPOExperiment.log_q_values                                   = False
 
 MaskablePPOAgent.learning_rate                                             = 2.5e-4
@@ -44,6 +45,8 @@ DivDisClassifier.l2_reg_weight                                      = 0.0005
 
 DivDisOption.exp_type                                               = "minigrid"
 DivDisOption.tabular_beta                                           = 0.0001
+
+UnbalancedSetDataset.data_dir                                       = "~/data/ademello"
 
 
 
