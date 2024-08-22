@@ -14,7 +14,7 @@ from collections import defaultdict
 from portable.option.divdis.divdis_mock_option import DivDisMockOption
 from portable.option.divdis.divdis_option import DivDisOption
 from experiments.experiment_logger import VideoGenerator
-from portable.option.memory import SetDataset
+from portable.option.memory import UnbalancedSetDataset
 
 from torch.multiprocessing import Process, Pipe, set_start_method
 from experiments import train_head
@@ -241,10 +241,10 @@ class DivDisOptionExperiment():
         self.weighted_accuracy = []
         self.accuracy = []
         
-        dataset_positive = SetDataset(max_size=1e6,
-                                      batchsize=64)
-        dataset_negative = SetDataset(max_size=1e6,
-                                      batchsize=64)
+        dataset_positive = UnbalancedSetDataset(max_size=1e6,
+                                                batchsize=64)
+        dataset_negative = UnbalancedSetDataset(max_size=1e6,
+                                                batchsize=64)
         
         dataset_positive.add_true_files(test_positive_files)
         dataset_negative.add_false_files(test_negative_files)
