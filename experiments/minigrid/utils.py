@@ -350,19 +350,19 @@ def environment_builder(
     # env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
     env = RGBImgObsWrapper(env) # Get pixel observations
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
-    if normalize_obs:
+    if normalize_obs is True:
         env = NormalizeObsWrapper(env)
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    if scale_obs:
+    if scale_obs is True:
         env = ScaleObsWrapper(env, final_image_size)
-    if pad_obs:
+    if pad_obs is True:
         env = PadObsWrapper(env, final_image_size)
     env = TransposeObsWrapper(env)
-    if grayscale:
+    if grayscale is True:
         env = GrayscaleWrapper(env)
     env = MinigridInfoWrapper(env, seed)
-    if random_reset:
+    if random_reset is True:
         assert exploration_reward_scale == 0, exploration_reward_scale
         assert len(random_starts) > 0
         env = RandomStartWrapper(env, random_starts)

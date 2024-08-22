@@ -8,6 +8,7 @@ import pickle
 from torch.utils.tensorboard import SummaryWriter 
 
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
+from portable.option.divdis.policy.skill_ppo import SkillPPO
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from collections import deque
@@ -109,8 +110,7 @@ class DivDisMockOption():
                 keys = pickle.load(f)
             for key in keys:
                 policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
-                                                     policy_phi=self.policy_phi,
-                                                     learn_initiation=(not self.use_seed_for_initiation))
+                                                     policy_phi=self.policy_phi)
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.train_data = pickle.load(f)
@@ -181,8 +181,7 @@ class DivDisMockOption():
     
     def _get_new_policy(self, head_idx):
         return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
-                                    policy_phi=self.policy_phi,
-                                    learn_initiation=(not self.use_seed_for_initiation))
+                                    policy_phi=self.policy_phi)
     
     def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
         policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
@@ -211,7 +210,7 @@ class DivDisMockOption():
         
         policy, buffer_dir = self._get_policy(idx, policy_idx)
         # policy.move_to_gpu()
-        policy.load_buffer(buffer_dir)
+        # policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -226,7 +225,16 @@ class DivDisMockOption():
                     self.video_generator.make_image(env.render("rgb_array"))
                     
             
+            # print("action", action)
+            # print(state)
+            # plt.imshow(np.transpose(state.cpu().numpy(), (1,2,0)))
+            # plt.show(block=False)
+            # input("continue")
+            
             next_state, reward, done, info = env.step(action)
+            
+            if type(next_state) is np.ndarray:
+                next_state = torch.from_numpy(next_state)
             
             self.option_steps[idx] += 1
             
@@ -266,7 +274,7 @@ class DivDisMockOption():
             policy.add_context_examples(states)
         
         # policy.move_to_cpu()
-        policy.store_buffer(buffer_dir)
+        # policy.store_buffer(buffer_dir)
         policy.end_skill(sum(option_rewards))
         
         self.train_data[int(idx)].append({
@@ -291,7 +299,7 @@ class DivDisMockOption():
                          seed,
                          agent_start_positions=[]):
         total_steps = 0
-        train_rewards = deque(maxlen=200)
+        train_rewards = deque(maxlen=50)
         eval_rewards = deque(maxlen=200)
         episode = 0
         
@@ -308,18 +316,22 @@ class DivDisMockOption():
                                   random_start=True,
                                   agent_position=agent_position)
             
+            if type(obs) is np.ndarray:
+                obs = torch.from_numpy(obs)
+            
             _, _, _, steps, _, rewards, _, _ = self.train_policy(idx,
                                                               env,
                                                               obs,
                                                               info,
                                                               seed)
+            
             total_steps += steps
             train_rewards.append(sum(rewards))
-            eval_run_rewards = self._get_eval_performance(idx,
-                                                          envs,
-                                                          1,
-                                                          seed)
-            eval_rewards.append(sum(eval_run_rewards))
+            # eval_run_rewards = self._get_eval_performance(idx,
+            #                                               envs,
+            #                                               1,
+            #                                               seed)
+            # eval_rewards.append(sum(eval_run_rewards))
             
             if episode % 1 == 0:
                 logging.info("idx {} steps: {} average train reward: {} average eval reward {}".format(idx,
@@ -431,7 +443,7 @@ class DivDisMockOption():
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
         # policy.move_to_gpu()
-        policy.load_buffer(buffer_dir)
+        # policy.load_buffer(buffer_dir)
         
         with evaluating(policy):
             while not (done or should_terminate or (steps >= max_steps)):
@@ -483,7 +495,7 @@ class DivDisMockOption():
                     self.video_generator.make_image(env.render("rgb_array"))
             
             # policy.move_to_cpu()
-            policy.store_buffer(buffer_dir)
+            # policy.store_buffer(buffer_dir)
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     

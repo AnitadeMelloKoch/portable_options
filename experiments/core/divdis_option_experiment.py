@@ -69,7 +69,8 @@ class DivDisOptionExperiment():
                  option_timeout=50,
                  classifier_epochs=100,
                  train_new_policy_for_each_room=True,
-                 make_videos=False):
+                 make_videos=False,
+                 env_ram_dir="."):
         assert option_type in OPTION_TYPES
         
         self.name = experiment_name
@@ -80,6 +81,7 @@ class DivDisOptionExperiment():
         self.num_processes = num_processes
         self.config_file =config_file
         self.gin_bindings = gin_bindings
+        self.env_ram_dir = env_ram_dir
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -176,6 +178,8 @@ class DivDisOptionExperiment():
         head_idx = 0
         processes = []
         parent_pipes, child_pipes = [], []
+        for state_file in init_states:
+            state_file = os.path.join(self.env_ram_dir, state_file)
         for _ in range(self.num_processes):
             if head_idx >= self.option.num_heads:
                 continue

@@ -29,6 +29,7 @@ class LinearQFunction(nn.Module):
         super().__init__()
         self.q_func = nn.Sequential(
             init_chainer_default(nn.Linear(in_features, hidden_size)),
+            nn.Tanh(),
             init_chainer_default(nn.Linear(hidden_size, n_actions, bias=False)),
             SingleSharedBias(),
             DiscreteActionValueHead(),

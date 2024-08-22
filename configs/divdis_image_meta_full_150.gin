@@ -1,21 +1,27 @@
 import portable.agent.model.linear_q
 import experiments.core.divdis_meta_masked_ppo_experiment
-import portable.option.divdis.divdis_mock_option
+import portable.option.divdis.divdis_option
 import portable.option.divdis.policy.policy_and_initiation
-import portable.option.divdis.policy.skill_ppo
-import portable.agent.model.maskable_ppo 
+import portable.agent.model.maskable_ppo
+import portable.option.divdis.divdis_classifier
+import portable.option.memory.unbalanced_set_dataset
 
-DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_policy_perfect_options"
-DivDisMetaMaskedPPOExperiment.num_options                           = 7
+DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_full_150_timeout"
+DivDisMetaMaskedPPOExperiment.num_options                           = 5
+DivDisMetaMaskedPPOExperiment.option_head_num                       = 3
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
-DivDisMetaMaskedPPOExperiment.make_videos                           = True
-DivDisMetaMaskedPPOExperiment.option_type                           = "mock"
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
+DivDisMetaMaskedPPOExperiment.make_videos                           = False
+DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 200
 DivDisMetaMaskedPPOExperiment.option_timeout                        = 150
+DivDisMetaMaskedPPOExperiment.log_q_values                          = False
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 84, 84)
-MaskablePPOAgent.num_actions                                        = 7
+MaskablePPOAgent.num_actions                                        = 15
+MaskablePPOAgent.update_interval                                    = 100
+MaskablePPOAgent.entropy_coef                                       = 0.01
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
@@ -32,11 +38,20 @@ PolicyWithInitiation.q_hidden_size                                  = 128
 PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True
 
-SkillPPO.learning_rate                                              = 2.5e-4
-SkillPPO.state_shape                                                = (3, 84, 84)
-SkillPPO.num_actions                                                = 7 
-SkillPPO.entropy_coef                                               = 0.01
-SkillPPO.minibatch_size                                             = 256
+DivDisClassifier.learning_rate                                      = 0.0002
+DivDisClassifier.num_classes                                        = 2
+DivDisClassifier.diversity_weight                                   = 0.0001
+DivDisClassifier.l2_reg_weight                                      = 0.0005
 
-DivDisMockOption.exp_type                                           = "minigrid"
-DivDisMockOption.tabular_beta                                       = 0
+DivDisOption.exp_type                                               = "minigrid"
+DivDisOption.tabular_beta                                           = 0
+
+UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
+
+
+
+
+
+
+
+

@@ -55,7 +55,7 @@ if __name__ == "__main__":
     
     meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(1500),
+                                                                     max_steps=int(15000),
                                                                      grayscale=False,
                                                                      normalize_obs=False),
                                                  key_collected=False,

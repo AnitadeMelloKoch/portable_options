@@ -35,7 +35,7 @@ class PolicyWithInitiation(Agent):
                  policy_infeature_size,
                  policy_phi,
                  gru_hidden_size,
-                 learn_initiation,
+                 learn_initiation=False,
                  max_len_init_classifier=500,
                  max_len_context_classifier=500,
                  steps_to_bootstrap_init_classifier=1000,
@@ -307,6 +307,7 @@ class PolicyWithInitiation(Agent):
             self.target_q_network.load_state_dict(self.q_network.state_dict())
     
     def act(self, obs, return_q=False):
+                
         obs = batch_states([obs], self.device, self.phi)
         obs = obs.float()
         if self.image_input:

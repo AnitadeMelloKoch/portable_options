@@ -3,12 +3,15 @@ import numpy as np
 import math 
 import os 
 import pickle 
+import gin
 
+@gin.configurable
 class UnbalancedSetDataset():
     def __init__(self,
                  batchsize=64,
                  unlabelled_batchsize=None,
                  max_size=100000,
+                 data_dir="."
                  ):
         self.batchsize = batchsize
         if unlabelled_batchsize is not None:
@@ -31,6 +34,7 @@ class UnbalancedSetDataset():
         
         self.shuffled_indices = None
         self.shuffled_indices_unlabelled = None
+        self.data_dir = data_dir
     
     @staticmethod
     def transform(x):
@@ -101,6 +105,7 @@ class UnbalancedSetDataset():
     
     def add_true_files(self, file_list):
         for file in file_list:
+            file = os.path.join(self.data_dir, file)
             data = np.load(file, allow_pickle=True)
             data = torch.from_numpy(data)
             if torch.max(data) <= 1:
@@ -119,6 +124,7 @@ class UnbalancedSetDataset():
     
     def add_false_files(self, file_list):
         for file in file_list:
+            file = os.path.join(self.data_dir, file)
             data = np.load(file, allow_pickle=True)
             data = torch.from_numpy(data)
             if torch.max(data) <= 1:
@@ -137,6 +143,7 @@ class UnbalancedSetDataset():
     
     def add_unlabelled_files(self, file_list):
         for file in file_list:
+            file = os.path.join(self.data_dir, file)
             data = np.load(file)
             data = torch.from_numpy(data)
             if torch.max(data) <= 1:

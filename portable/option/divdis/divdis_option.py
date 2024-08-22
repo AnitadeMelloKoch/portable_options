@@ -131,8 +131,7 @@ class DivDisOption():
                     keys = pickle.load(f)
                 for key in keys:
                     policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
-                                                        policy_phi=self.policy_phi,
-                                                        learn_initiation=(not self.use_seed_for_initiation))
+                                                         policy_phi=self.policy_phi)
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
 
@@ -220,8 +219,7 @@ class DivDisOption():
     
     def _get_new_policy(self, head_idx):
         return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
-                                    policy_phi=self.policy_phi,
-                                    learn_initiation=(not self.use_seed_for_initiation))
+                                    policy_phi=self.policy_phi)
     
     def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
         policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
@@ -263,7 +261,7 @@ class DivDisOption():
 
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
-        policy.load_buffer(buffer_dir)
+        # policy.load_buffer(buffer_dir)
         # print("restart")
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -276,11 +274,6 @@ class DivDisOption():
                     self.video_generator.make_image(env.render())
                 else:
                     self.video_generator.make_image(env.render("rgb_array"))
-            
-            # print("action", action)
-            # plt.imshow(env.render("rgb_array"))
-            # plt.show(block=False)
-            # input("continue")
             
             next_state, reward, done, info = env.step(action)
             term_state = self.policy_phi(next_state).unsqueeze(0)
@@ -327,7 +320,7 @@ class DivDisOption():
 
         # policy.move_to_cpu()
         # self.terminations.move_to_cpu()
-        policy.store_buffer(buffer_dir)
+        # policy.store_buffer(buffer_dir)
         policy.end_skill(sum(extrinsic_rewards))
         
         self.train_data[int(idx)].append({

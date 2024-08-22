@@ -10,7 +10,7 @@ from portable.agent.model.ppo import create_cnn_vf
 from portable.agent.model.maskable_ppo import create_mask_cnn_policy
 
 def make_random_getkey_env(train_colour, seed, collect_key=False):
-    colours = ["red", "green", "blue", "purple", "yellow", "grey"]
+    colours = ["red","yellow", "grey"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
     
     door_colour = random.choice(possible_key_colours)
@@ -22,11 +22,14 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         environment_builder(
             'AdvancedDoorKey-16x16-v0',
             seed=seed,
-            grayscale=False
+            grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
         ),
         door_colour=door_colour,
         key_colours=key_cols,
-        time_limit=10,
+        time_limit=500,
         image_input=True,
         key_collected=collect_key,
         keep_colour=train_colour
@@ -40,10 +43,13 @@ train_envs = [
         environment_builder(
             'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
-            grayscale=False
+            grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
         ),
         door_colour="red",
-        time_limit=10,
+        time_limit=500,
         image_input=True,
         keep_colour="red"
         )],
@@ -53,10 +59,13 @@ train_envs = [
         environment_builder(
             'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
-            grayscale=False
+            grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
         ),
         door_colour="red",
-        time_limit=10,
+        time_limit=500,
         image_input=True,
         keep_colour="yellow"
         )],
@@ -66,10 +75,13 @@ train_envs = [
         environment_builder(
             'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
-            grayscale=False
+            grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
         ),
         door_colour="red",
-        time_limit=10,
+        time_limit=500,
         image_input=True,
         keep_colour="grey"
         )],
@@ -79,10 +91,13 @@ train_envs = [
         environment_builder(
             'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
-            grayscale=False
+            grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
         ),
         door_colour="red",
-        time_limit=10,
+        time_limit=500,
         image_input=True,
         pickup_colour="red",
         force_door_closed=True
@@ -93,10 +108,13 @@ train_envs = [
             environment_builder(
                 'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
-                grayscale=False
+                grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
             ),
             door_colour="red",
-            time_limit=10,
+            time_limit=500,
             image_input=True,
             force_door_open=True
         )]
@@ -106,10 +124,13 @@ train_envs = [
             environment_builder(
                 'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
-                grayscale=False
+                grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
             ),
             door_colour="red",
-            time_limit=10,
+            time_limit=500,
             image_input=True,
             force_door_open=True
         )]
@@ -119,10 +140,13 @@ train_envs = [
             environment_builder(
                 'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
-                grayscale=False
+                grayscale=False,
+            scale_obs=True,
+            final_image_size=(84,84),
+            normalize_obs=False
             ),
             door_colour="red",
-            time_limit=10,
+            time_limit=500,
             image_input=True,
             force_door_open=True
         )]
@@ -151,6 +175,7 @@ if __name__ == "__main__":
         else:
             if torch.max(x) > 1:
                 x = x/255.0
+        x = x.float()
         return x
     
     def option_agent_phi(x):
@@ -178,7 +203,7 @@ if __name__ == "__main__":
     
     experiment.train_option_policies(train_envs,
                                      env_seed,
-                                     5e5)
+                                     4e6)
     
     # experiment.load()
     
