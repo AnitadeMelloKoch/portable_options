@@ -18,7 +18,7 @@ from experiments.experiment_logger import VideoGenerator
 from portable.agent.model.ppo import ActionPPO
 from portable.agent.model.maskable_ppo import MaskablePPOAgent
 import math
-from portable.option.memory import SetDataset
+from portable.option.memory import UnbalancedSetDataset
 from experiments.core.plotter import MontePlotter
 
 OPTION_TYPES = ["mock", "divdis"]
@@ -571,10 +571,10 @@ class DivDisMetaMaskedPPOExperiment():
         self.accuracy = []
         
         for option_idx in range(self.num_options):
-            dataset_positive = SetDataset(max_size=1e6,
-                                          batchsize=64)
-            dataset_negative = SetDataset(max_size=1e6,
-                                          batchsize=64)
+            dataset_positive = UnbalancedSetDataset(max_size=1e6,
+                                                    batchsize=64)
+            dataset_negative = UnbalancedSetDataset(max_size=1e6,
+                                                    batchsize=64)
             
             dataset_positive.add_true_files(test_positive_files[option_idx])
             dataset_negative.add_false_files(test_negative_files[option_idx])
