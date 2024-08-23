@@ -57,6 +57,8 @@ if __name__ == "__main__":
                                                                      seed=args.seed,
                                                                      max_steps=int(15000),
                                                                      grayscale=False,
+                                                                     scale_obs=True,
+                                                                     final_image_size=(84,84),
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,

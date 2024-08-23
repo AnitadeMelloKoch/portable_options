@@ -15,7 +15,8 @@ def collect_seed(seed, task, initiation=None, termination=None):
         states = []
         for _ in tqdm(range(5000)):
             repos_attempts = np.random.randint(low=0, high=1000)
-            env = environment_builder('AdvancedDoorKey-16x16-v0', seed=seed, grayscale=False)
+            env = environment_builder('AdvancedDoorKey-16x16-v0', seed=seed, grayscale=False,
+                                      scale_obs=True, final_image_size=(84,84), normalize_obs=False)
             #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                     door_colour=colour,
@@ -67,7 +68,7 @@ def collect_seed(seed, task, initiation=None, termination=None):
 if __name__ == '__main__':
 
     # multiprocessing
-    task = 'get_key'
+    task = 'open_door'
     seeds = [0,1,2,3,4,5,6,7,8,9,10,11]
     USE_MP = True
     
