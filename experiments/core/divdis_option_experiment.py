@@ -38,7 +38,7 @@ def mock_check_true(x,y,z):
 def make_monte_env(seed, init_state):
     env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=True,
+        episode_life=False,
         clip_rewards=True,
         frame_stack=False
     )

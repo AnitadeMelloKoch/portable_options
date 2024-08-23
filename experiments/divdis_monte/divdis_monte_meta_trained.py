@@ -20,7 +20,7 @@ terminations = [
 def make_bootstrap_env(init_states, termination_func, term_points):
     env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=True,
+        episode_life=False,
         clip_rewards=True,
         frame_stack=False
     )
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     
     meta_env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=True,
+        episode_life=False,
         clip_rewards=True,
         frame_stack=False
     )
