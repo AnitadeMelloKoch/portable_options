@@ -36,4 +36,6 @@ DivDisClassifier.learning_rate                                      = 5e-4
 DivDisClassifier.num_classes                                        = 2
 DivDisClassifier.diversity_weight                                   = 3e-5
 DivDisClassifier.l2_reg_weight                                      = 5e-4
+DivDisClassifier.model_name                                         = "monte_cnn"
+
 UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
