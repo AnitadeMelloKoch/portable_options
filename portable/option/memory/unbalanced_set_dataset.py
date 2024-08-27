@@ -68,10 +68,10 @@ class UnbalancedSetDataset():
     def save(self, path):
         os.makedirs(path, exist_ok=True)
         
-        with open(os.path.join(path, "data.pkl")) as f:
+        with open(os.path.join(path, "data.pkl"), "wb") as f:
             pickle.dump(self.data, f)
         
-        with open(os.path.join(path, "label.pkl")) as f:
+        with open(os.path.join(path, "label.pkl"), "wb") as f:
             pickle.dump(self.labels, f)
     
     def load(self, path):
