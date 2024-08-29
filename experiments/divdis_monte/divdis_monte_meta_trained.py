@@ -152,11 +152,11 @@ if __name__ == "__main__":
                                       terminations=terminations,
                                       option_head_num=1)
     
-    # experiment.train_option_policies(
-    #     bootstrap_envs,
-    #     args.seed,
-    #     max_steps=5e2
-    # )
+    experiment.train_option_policies(
+        bootstrap_envs,
+        args.seed,
+        max_steps=5e2
+    )
     
     experiment.load()
     
@@ -170,12 +170,8 @@ if __name__ == "__main__":
     
     meta_env = MonteAgentWrapper(meta_env, agent_space=False)
     
-    # experiment.train_meta_agent(meta_env,
-    #                             args.seed,
-    #                             4e6)
-    
     experiment.train_meta_agent(meta_env,
-                                0,
+                                args.seed,
                                 4e6)
 
 
