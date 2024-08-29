@@ -154,7 +154,7 @@ if __name__ == "__main__":
     
     experiment.train_option_policies(
         bootstrap_envs,
-        0,
+        args.seed,
         max_steps=1e6
     )
     
