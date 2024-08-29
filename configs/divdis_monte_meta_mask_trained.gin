@@ -1,5 +1,5 @@
 import portable.agent.model.linear_q
-import experiments.core.divdis_meta_experiment
+import experiments.core.divdis_meta_masked_ppo_experiment
 import portable.option.divdis.divdis_option
 import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.maskable_ppo 
@@ -14,7 +14,7 @@ DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 200
 DivDisMetaMaskedPPOExperiment.use_global_option                     = True
 DivDisMetaMaskedPPOExperiment.gpu_list                              = [0]
 DivDisMetaMaskedPPOExperiment.fix_options_during_meta               = True
-DivDisMetaMaskedPPOExperiment.make_plots                            = True
+DivDisMetaMaskedPPOExperiment.make_plots                            = False
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (4, 84, 84)

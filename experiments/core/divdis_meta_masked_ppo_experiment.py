@@ -35,6 +35,7 @@ class DivDisMetaMaskedPPOExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 available_actions_function=None,
                  use_termination_masks=True,
                  log_q_values=False,
                  add_unlabelled_data=False,
@@ -76,6 +77,7 @@ class DivDisMetaMaskedPPOExperiment():
         self.fix_options = fix_options_during_meta
         self.make_plots = make_plots
         self.pick_actions_randomly = pick_actions_randomly
+        self.available_actions_function = available_actions_function
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -259,6 +261,9 @@ class DivDisMetaMaskedPPOExperiment():
         return action_mask
     
     def get_termination_masks(self, state, env):
+        if self.available_actions_function:
+            return self.available_actions_function()
+        
         masks = []
         if self.use_global_option:
             masks.append(torch.tensor(True, dtype=bool))
