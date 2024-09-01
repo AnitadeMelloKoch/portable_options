@@ -371,6 +371,7 @@ class DivDisMetaMaskedPPOExperiment():
                 
                 step_taken = False
                 
+                
                 if self.plotter is not None:
                     self.plotter.record_init_location(action, info["player_pos"])
                 
@@ -417,6 +418,7 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                     seed,
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
+                
                 if self.plotter is not None:
                     self.plotter.record_term_location(action, info["player_pos"])
                 

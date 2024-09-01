@@ -20,7 +20,7 @@ terminations = [
 def make_bootstrap_env(init_states, termination_func, term_points):
     env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=True,
+        episode_life=False,
         clip_rewards=True,
         frame_stack=False
     )
@@ -33,6 +33,7 @@ def make_bootstrap_env(init_states, termination_func, term_points):
                                 max_steps=200)
     return env
 
+# env_state_dir = "./"
 env_state_dir = "/users/ademello/data/ademello/"
 
 bootstrap_envs = [
@@ -158,11 +159,12 @@ if __name__ == "__main__":
         max_steps=1e6
     )
     
+    experiment.save()
     # experiment.load()
     
     meta_env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=True,
+        episode_life=False,
         clip_rewards=True,
         frame_stack=False
     )

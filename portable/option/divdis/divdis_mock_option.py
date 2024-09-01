@@ -81,6 +81,8 @@ class DivDisMockOption():
         self.intrinsic_bonuses = [TabularCount(beta=tabular_beta) for _ in range(self.num_heads)]
         
         self.train_data = {}
+        self.writer = SummaryWriter(log_dir=log_dir)
+        
         for idx in range(self.num_heads):
             self.train_data[idx] = []
     
@@ -243,8 +245,8 @@ class DivDisMockOption():
             
             if make_video:
                 self._video_log("In termination: {}".format(should_terminate))
-                if policy.initiation.is_initialized():
-                    self._video_log("Initiation: {}".format(policy.initiation.pessimistic_predict(next_state)))
+                # if policy.initiation.is_initialized():
+                #     self._video_log("Initiation: {}".format(policy.initiation.pessimistic_predict(next_state)))
             
             steps += 1
             rewards.append(reward)
@@ -287,7 +289,9 @@ class DivDisMockOption():
             "extrinsic_rewards": extrinsic_rewards
         })
         
-        self.writer.add_scalar('rewards_{}'.format(idx), sum(option_rewards), self.option_steps[idx])
+        self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
+        self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
+        self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
         
         return state, info, done, steps, rewards, extrinsic_rewards, states, infos
     
@@ -437,8 +441,8 @@ class DivDisMockOption():
         done = False
         should_terminate = False
         
-        if seed not in self.policies[idx]:
-            raise Exception("Policy has not been initialized. Train policy before evaluating")
+        # if seed not in self.policies[idx]:
+        #     raise Exception("Policy has not been initialized. Train policy before evaluating")
         
         policy = self.policies[idx][seed]
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
@@ -496,6 +500,9 @@ class DivDisMockOption():
             
             # policy.move_to_cpu()
             # policy.store_buffer(buffer_dir)
+            
+            self.writer.add_scalar('eval_option_length/{}'.format(idx), steps, policy.option_runs)
+            self.writer.add_scalar('eval_intrinsic_reward/{}'.format(idx), sum(option_rewards), policy.option_runs)
             
             return state, info, done, steps, rewards, option_rewards, states, infos
     

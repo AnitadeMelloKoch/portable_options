@@ -40,7 +40,7 @@ class MontePlotter():
                 fig = plt.figure(num=1)
                 ax = fig.add_subplot()
                 ax.set_ylim([0, 300])
-                ax.set_xlim([0,160])
+                ax.set_xlim([0, 160])
                 ax.scatter(room_x[room], room_y[room])
                 fig.savefig(plot_name)
                 plt.close(fig)

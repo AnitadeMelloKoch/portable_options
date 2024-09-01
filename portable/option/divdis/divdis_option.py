@@ -14,6 +14,7 @@ from portable.option.policy.intrinsic_motivation.tabular_count import TabularCou
 from experiments.experiment_logger import VideoGenerator
 
 from portable.option.sets.utils import BayesianWeighting
+from torch.utils.tensorboard import SummaryWriter
 
 @gin.configurable 
 class DivDisOption():
@@ -83,6 +84,8 @@ class DivDisOption():
         self.train_data = {}
         for idx in range(self.num_heads):
             self.train_data[idx] = []
+        
+        self.writer = SummaryWriter(log_dir=log_dir)
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -332,6 +335,10 @@ class DivDisOption():
             "option_rewards": option_rewards,
             "extrinsic_rewards": extrinsic_rewards
         })
+        
+        self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
+        self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
+        self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     

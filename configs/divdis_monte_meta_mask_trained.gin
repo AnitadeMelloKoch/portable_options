@@ -14,7 +14,7 @@ DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 200
 DivDisMetaMaskedPPOExperiment.use_global_option                     = True
 DivDisMetaMaskedPPOExperiment.gpu_list                              = [0]
 DivDisMetaMaskedPPOExperiment.fix_options_during_meta               = True
-DivDisMetaMaskedPPOExperiment.make_plots                            = False
+DivDisMetaMaskedPPOExperiment.make_plots                            = True
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (4, 84, 84)
