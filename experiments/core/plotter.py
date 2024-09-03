@@ -1,13 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
+from collections import defaultdict, deque
 import os
+from functools import partial
 
 class MontePlotter():
     def __init__(self,
                  plot_dir) -> None:
-        self.locations_init = defaultdict(list)
-        self.locations_term = defaultdict(list)
+        self.locations_init = defaultdict(partial(deque, maxlen=200))
+        self.locations_term = defaultdict(partial(deque, maxlen=200))
         self.plot_dir = plot_dir
     
     def record_init_location(self,
@@ -23,9 +24,9 @@ class MontePlotter():
     def _plot(self, 
               locations,
               plot_dir_name):
-        room_x = defaultdict(list)
-        room_y = defaultdict(list)
         for action in locations.keys():
+            room_x = defaultdict(list)
+            room_y = defaultdict(list)
             for location in locations[action]:
                 room_x[location[2]].append(location[0])
                 room_y[location[2]].append(location[1])

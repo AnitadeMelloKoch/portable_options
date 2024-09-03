@@ -420,7 +420,7 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                     make_video=save_image)
                 
                 if self.plotter is not None:
-                    self.plotter.record_term_location(action, info["player_pos"])
+                    self.plotter.record_term_location(chosen_action, info["player_pos"])
                 
                 
                 undiscounted_reward += np.sum(rewards)
@@ -449,8 +449,7 @@ class DivDisMetaMaskedPPOExperiment():
                 self.train_option_classifiers(1)
             
             if self.plotter is not None:
-                self.plotter.plot("action_plots_ep{}".format(episode))
-                self.plotter.reset()
+                self.plotter.plot("action_plots".format(episode))
             
             logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
