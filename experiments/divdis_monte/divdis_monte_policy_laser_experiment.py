@@ -55,12 +55,15 @@ unlabelled_files = [
      "resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
      "resources/monte_images/lasers_right_toright_room7_termination_positive.npy",
      "resources/monte_images/lasers_right_toright_room7_termination_negative.npy",],
-    ["resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",
-     "resources/monte_images/lasers_left_toright_room7_termination_positive.npy",
-     "resources/monte_images/lasers_left_toright_room7_termination_negative.npy",],
+    ["resources/monte_images/climb_down_ladder_room2_initiation_positive.npy",],
     ["resources/monte_images/lasers_toright_room12_termination_negative.npy",
      "resources/monte_images/lasers_toright_room12_termination_positive.npy"],
-    []
+    ["resources/monte_images/climb_down_ladder_room0_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room0_extra_termination_negative.npy",],
+    ["resources/monte_images/climb_down_ladder_room22_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room22_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room22_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room22_1_termination_positive.npy"]
 ]
 
 test_positive_files = [
