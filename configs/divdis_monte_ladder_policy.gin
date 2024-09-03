@@ -31,6 +31,7 @@ PolicyWithInitiation.image_input                                    = True
 DivDisOption.tabular_beta                                           = 0.0001
 DivDisOption.exp_type                                               = "monte"
 DivDisOption.num_heads                                              = 6
+DivDisOption.write_summary                                          = False
 
 DivDisClassifier.learning_rate                                      = 5e-4
 DivDisClassifier.num_classes                                        = 2

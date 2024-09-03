@@ -237,7 +237,6 @@ def train_head(head_idx,
     while total_steps < max_steps:
         # if video_generator is not None:
         #     video_generator.episode_start()
-        # print(env)
         obs, info, rand_idx = env.reset(return_rand_state_idx=True)
         term_state = term_states[rand_idx]
         
@@ -280,10 +279,6 @@ def train_head(head_idx,
             "reward": option_rewards,
             "true_success": true_success
         })
-        
-        # writer.add_scalar('rewards/{}'.format(head_idx),
-        #                         sum(option_rewards),
-        #                         total_steps)
         
         if episode%10 == 0:
             logging.info("Head idx: {} Episode: {} Total steps: {} average reward: {} true success: {}".format(head_idx,

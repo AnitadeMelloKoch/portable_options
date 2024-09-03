@@ -5,9 +5,6 @@ import numpy as np
 import torch
 import os
 
-from experiments.monte.environment import MonteBootstrapWrapper, MonteAgentWrapper
-from portable.utils import load_init_states
-from pfrl.wrappers import atari_wrappers
 from experiments.divdis_monte.core.monte_terminations import *
 from experiments.divdis_monte.experiment_files import *
 
@@ -266,6 +263,8 @@ if __name__ == "__main__":
     parser.add_argument("--base_dir", type=str, required=True)
     parser.add_argument("--sub_dir", type=str, default="")
     parser.add_argument("--seed", type=int, required=True)
+    # number of rooms to train classifier
+    parser.add_argument("--num_rooms", type=int, required=True)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
             ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
@@ -273,9 +272,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     load_gin_configs(args.config_file, args.gin_bindings)
-    
-    
-    
+
     def option_agent_phi(x):
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
@@ -283,9 +280,9 @@ if __name__ == "__main__":
         return x
     
     if args.sub_dir == "":
-        base_dir = os.path.join(args.base_dir, args.sub_dir)
-    else:
         base_dir = args.base_dir
+    else:
+        base_dir = os.path.join(args.base_dir, args.sub_dir)
     
     experiment = DivDisOptionExperiment(base_dir=base_dir,
                                         seed=args.seed,
@@ -293,25 +290,21 @@ if __name__ == "__main__":
                                         config_file=args.config_file,
                                         gin_bindings=args.gin_bindings)
     
+    for file_idx in range(args.num_rooms):
+        experiment.add_datafiles(positive_files[file_idx],
+                                 negative_files[file_idx],
+                                 unlabelled_files[file_idx])
+    experiment.train_classifier()
+    experiment.test_classifiers(test_files_positive,
+                                test_negative_files)
     
-    file_idx = 0
-    for pos, neg, unlab in zip(positive_files,negative_files,unlabelled_files):
-        experiment.option.reset_classifiers()
-        experiment.add_datafiles(pos, neg, unlab)
-        experiment.train_classifier()
-        experiment.test_classifiers(test_positive_files=test_files_positive,
-                                    test_negative_files=test_negative_files)
-        for state_idx, init_state in enumerate(init_states):
-            experiment.change_option_save(name="option_files{}_state{}".format(file_idx,
-                                                                               state_idx))
-            
-            experiment.train_option(init_state,
-                                    term_points[state_idx],
-                                    args.seed,
-                                    # 1e3,
-                                    2e5,
-                                    state_idx)
-        file_idx += 1
-    
-    experiment.save()
+    for state_idx, init_state in enumerate(init_states):
+        experiment.change_option_save(name="room_idx_{}".format(state_idx))
+        experiment.train_option(init_state,
+                                term_points[state_idx],
+                                args.seed,
+                                2e5,
+                                state_idx)
+        experiment.save()
+
 

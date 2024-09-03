@@ -33,6 +33,7 @@ class DivDisOption():
                  beta_distribution_alpha=100,
                  beta_distribution_beta=100,
                  video_generator=None,
+                 write_summary=True,
                  ):
         
         if type(use_gpu) is list:
@@ -85,7 +86,11 @@ class DivDisOption():
         for idx in range(self.num_heads):
             self.train_data[idx] = []
         
-        self.writer = SummaryWriter(log_dir=log_dir)
+        
+        if write_summary is True:
+            self.writer = SummaryWriter(log_dir=log_dir)
+        else:
+            self.writer = None
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -336,9 +341,10 @@ class DivDisOption():
             "extrinsic_rewards": extrinsic_rewards
         })
         
-        self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
-        self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
-        self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
+        if self.writer is not None:
+            self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
+            self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
+            self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
         
         return state, info, done, steps, rewards, option_rewards, states, infos
     

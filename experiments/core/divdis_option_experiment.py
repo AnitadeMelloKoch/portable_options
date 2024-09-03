@@ -178,8 +178,10 @@ class DivDisOptionExperiment():
         head_idx = 0
         processes = []
         parent_pipes, child_pipes = [], []
+        new_states = []
         for state_file in init_states:
-            state_file = os.path.join(self.env_ram_dir, state_file)
+            new_states.append(os.path.join(self.env_ram_dir, state_file))
+        init_states = new_states
         for _ in range(self.num_processes):
             if head_idx >= self.option.num_heads:
                 continue
@@ -200,23 +202,6 @@ class DivDisOptionExperiment():
                                                  term_points,
                                                  self.config_file,
                                                  self.gin_bindings))
-            
-            # train_head(
-            #     head_idx, 
-            #     child_con,
-            #     max_steps,
-            #     self.option_timeout,
-            #     make_monte_env,
-            #     self.option,
-            #     seed,
-            #     self.learn_new_policy,
-            #     env_idx,
-            #     self.log_dir,
-            #     init_states,
-            #     term_points,
-            #     self.config_file,
-            #     self.gin_bindings
-            # )
             
             head_idx += 1
             processes.append(p)
