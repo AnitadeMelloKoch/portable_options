@@ -8,7 +8,7 @@ import portable.option.memory.unbalanced_set_dataset
 
 DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_full_150_timeout"
 DivDisMetaMaskedPPOExperiment.num_options                           = 5
-DivDisMetaMaskedPPOExperiment.option_head_num                       = 6
+DivDisMetaMaskedPPOExperiment.option_head_num                       = 4
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
 DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
