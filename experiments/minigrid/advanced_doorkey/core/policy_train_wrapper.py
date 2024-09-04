@@ -175,6 +175,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         # randomly open/unlock door
         
         split_idx = self.env.unwrapped.splitIdx
+        height = self.env.unwrapped.height - 1
         
         if keep_colour == "":
             keep_colour = self.keep_colour
@@ -188,14 +189,11 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         all_pos = [key.position for key in self.objects["keys"]]
         
         for key in self.objects["keys"]:
-            if key.colour == keep_colour:
-                continue
-            
             pos = key.position
             all_pos.remove(pos)
             
             randval = np.random.rand()
-            if (randval < 0.1) or (key.colour == pickup_colour):
+            if ((randval < 0.1) or (key.colour == pickup_colour)) and (key.colour != keep_colour):
                 key_obj = self.env.unwrapped.grid.get(pos[0], pos[1])
                 self.env.unwrapped.carrying.append(key_obj)
                 key_obj.cur_pos = np.array([-1, -1])
@@ -204,7 +202,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             else:
                 new_pos_found = False
                 while new_pos_found is False:
-                    new_pos = (np.random.randint(1, split_idx), np.random.randint(1,7))
+                    new_pos = (np.random.randint(1, split_idx), np.random.randint(1,height))
                     if not new_pos in all_pos:
                         new_pos_found = True
                 
@@ -571,34 +569,33 @@ class LockedRoomPolicyTrainWrapper(Wrapper):
                 )
                 door_obj.is_open = False
         
-        if not force_key_pickedup is False:
-            randval = np.random.rand()
-            if force_key_pickedup is True or randval < 0.3:
-                key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
-                                                      self.objects["key"].position[1])
-                key_obj.cur_pos = np.array([-1, -1])
-                self.env.unwrapped.carrying = key_obj
-                self.env.unwrapped.grid.set(self.objects["key"].position[0],
-                                            self.objects["key"].position[1],
-                                            None)
-            else:
-                new_pos_found = False
-                while new_pos_found is False:
-                    new_pos = (np.random.randint(1, 18),
-                               np.random.randint(1, 18))
-                    
-                    obj = self.env.unwrapped.grid.get(new_pos[0],
-                                                      new_pos[1])
-                    if obj is None:
-                        key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
-                                                              self.objects["key"].position[1])
-                        self.env.unwrapped.grid.set(self.objects["key"].position[0],
-                                                    self.objects["key"].position[1],
-                                                    None)
-                        self.env.unwrapped.grid.set(new_pos[0],
-                                                    new_pos[1],
-                                                    key_obj)
-                        new_pos_found = True
+        randval = np.random.rand()
+        if (force_key_pickedup is True or randval < 0.3) and (force_key_pickedup is not False):
+            key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
+                                                    self.objects["key"].position[1])
+            key_obj.cur_pos = np.array([-1, -1])
+            self.env.unwrapped.carrying = key_obj
+            self.env.unwrapped.grid.set(self.objects["key"].position[0],
+                                        self.objects["key"].position[1],
+                                        None)
+        else:
+            new_pos_found = False
+            while new_pos_found is False:
+                new_pos = (np.random.randint(1, 18),
+                            np.random.randint(1, 18))
+                
+                obj = self.env.unwrapped.grid.get(new_pos[0],
+                                                    new_pos[1])
+                if obj is None:
+                    key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
+                                                            self.objects["key"].position[1])
+                    self.env.unwrapped.grid.set(self.objects["key"].position[0],
+                                                self.objects["key"].position[1],
+                                                None)
+                    self.env.unwrapped.grid.set(new_pos[0],
+                                                new_pos[1],
+                                                key_obj)
+                    new_pos_found = True
         
         if randomly_place_agent is True:
             new_pos_found = False
@@ -625,4 +622,74 @@ class LockedRoomPolicyTrainWrapper(Wrapper):
             return obs, 1, True, info
         else:
             return obs, 0, done, info
+
+
+class CorridorWrapper(Wrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
     
+    def _find_key(self):
+        for x in range(self.env.unwrapped.width):
+            for y in range(self.env.unwrapped.height):
+                cell = self.env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "key":
+                        return x, y, cell
+    
+    def _modify_info_dict(self, info):
+        info['timestep'] = self._timestep
+        info['player_dir'] = self.env.unwrapped.agent_dir
+        
+        return info
+    
+    def reset(self):
+        
+        obs, info = self.env.reset()
+        
+        
+        x, y, key = self._find_key()
+        key.cur_pos = np.array([-1,-1])
+        self.env.unwrapped.grid.set(x, y, None)
+        self.env.unwrapped.carrying = key
+        
+        self.env.unwrapped.agent_pos = (3,5)
+        
+        obs, _, _, info = self.env.step(actions.LEFT)
+        obs, _, _, info = self.env.step(actions.RIGHT)
+        
+        self.env.unwrapped.time_step = 0
+        self._timestep = 0
+        
+        info = self._modify_info_dict(info)
+        
+        return obs, info
+    
+    def available_actions(self):
+        mask = [torch.tensor(True, dtype=bool)]*7
+        
+        agent_dir = self.env.unwrapped.agent_dir
+        if agent_dir == 0 or agent_dir == 2:
+            mask[2] = torch.tensor(False, dtype=bool)
+        
+        mask[3] = torch.tensor(False, dtype=bool)
+        mask[4] = torch.tensor(False, dtype=bool)
+        mask[5] = torch.tensor(False, dtype=bool)
+        mask[6] = torch.tensor(False, dtype=bool)
+        
+        return mask
+    
+    def step(self, action):
+        obs, reward, done, info = self.env.step(action)
+        
+        _, agent_y = self.env.unwrapped.agent_pos
+        
+        if agent_y == 1:
+            reward = 1
+            done = True
+        else:
+            reward = 0
+        
+        info = self._modify_info_dict(info)
+        
+        return obs, reward, done, info
+

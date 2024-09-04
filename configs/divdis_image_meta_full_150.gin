@@ -8,24 +8,24 @@ import portable.option.memory.unbalanced_set_dataset
 
 DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_full_150_timeout"
 DivDisMetaMaskedPPOExperiment.num_options                           = 5
-DivDisMetaMaskedPPOExperiment.option_head_num                       = 3
+DivDisMetaMaskedPPOExperiment.option_head_num                       = 6
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
 DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
 DivDisMetaMaskedPPOExperiment.make_videos                           = False
-DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 200
+DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 30
 DivDisMetaMaskedPPOExperiment.option_timeout                        = 150
 DivDisMetaMaskedPPOExperiment.log_q_values                          = False
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 84, 84)
-MaskablePPOAgent.num_actions                                        = 15
+MaskablePPOAgent.num_actions                                        = 20
 MaskablePPOAgent.update_interval                                    = 100
 MaskablePPOAgent.entropy_coef                                       = 0.01
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 200000
+PolicyWithInitiation.buffer_length                                  = 100000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
@@ -38,10 +38,11 @@ PolicyWithInitiation.q_hidden_size                                  = 128
 PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True
 
-DivDisClassifier.learning_rate                                      = 0.0002
+DivDisClassifier.learning_rate                                      = 0.001
 DivDisClassifier.num_classes                                        = 2
-DivDisClassifier.diversity_weight                                   = 0.0001
-DivDisClassifier.l2_reg_weight                                      = 0.0005
+DivDisClassifier.diversity_weight                                   = 0.001
+DivDisClassifier.l2_reg_weight                                      = 0.0002
+DivDisClassifier.model_name                                         = "minigrid_cnn"
 
 DivDisOption.exp_type                                               = "minigrid"
 DivDisOption.tabular_beta                                           = 0
