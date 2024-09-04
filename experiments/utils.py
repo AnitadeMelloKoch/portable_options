@@ -277,7 +277,8 @@ def train_head(head_idx,
             "option_length": steps,
             "steps": total_steps,
             "reward": option_rewards,
-            "true_success": true_success
+            "true_success": true_success,
+            "final_location": env.get_current_position()
         })
         
         if episode%10 == 0:
