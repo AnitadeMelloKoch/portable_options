@@ -93,7 +93,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y = classifier.predict(x)
+            pred_y, votes = classifier.predict(x)
             pred_y = pred_y.cpu()
             
             for idx in range(classifier.head_num):
@@ -109,7 +109,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         for _ in range(dataset_negative.num_batches):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y = classifier.predict(x)
+            pred_y, votes = classifier.predict(x)
             pred_y = pred_y.cpu()
             
             for idx in range(classifier.head_num):
@@ -129,11 +129,12 @@ class AdvancedMinigridDivDisSweepExperiment():
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
     def head_complexity(self, classifier):
-        evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=32, base_dir=self.base_dir)
-        evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
-        #evaluator.test_dataset.set_transform_function(transform)
-        evaluator.evaluate(test_sample_size=self.evaluation_sample_size)
-        return evaluator.get_head_complexity()
+        #evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=32, base_dir=self.base_dir)
+        #evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
+        ##evaluator.test_dataset.set_transform_function(transform)
+        #evaluator.evaluate(test_sample_size=self.evaluation_sample_size)
+        #return evaluator.get_head_complexity()
+        return np.zeros(classifier.head_num)
 
 
     def save_results_dict(self,

@@ -1,15 +1,14 @@
 import experiments.divdis_minigrid.core.advanced_minigrid_divdis_sweep_experiment
 import portable.option.divdis.divdis_classifier 
 
-AdvancedMinigridDivDisSweepExperiment.experiment_name         = "sweeps_cnn"
+AdvancedMinigridDivDisSweepExperiment.experiment_name         = "sweeps_cnn_16x16"
 AdvancedMinigridDivDisSweepExperiment.use_gpu                 = True
 AdvancedMinigridDivDisSweepExperiment.default_epochs          = 100   # default was 100
 AdvancedMinigridDivDisSweepExperiment.default_div_lr          = 0.0002
 AdvancedMinigridDivDisSweepExperiment.default_div_weight      = 0.00001
 AdvancedMinigridDivDisSweepExperiment.default_num_heads       = 6
 AdvancedMinigridDivDisSweepExperiment.default_l2_reg_weight   = 0.001
-AdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.15  # 0.25 on cluster, 0.15 on local
+AdvancedMinigridDivDisSweepExperiment.evaluation_sample_size  = 0.0001  # 0.25 on cluster, 0.15 on local
 
 DivDisClassifier.num_classes                                  = 2
 DivDisClassifier.state_dim                                    = 3
-

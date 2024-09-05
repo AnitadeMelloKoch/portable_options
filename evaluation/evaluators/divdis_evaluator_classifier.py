@@ -34,7 +34,7 @@ class DivDisEvaluatorClassifier():
         self.classifier = classifier
 
         self.base_dir = base_dir
-        self.plot_dir = os.path.join(self.base_dir, 'plots')
+        self.plot_dir = os.path.join(self.base_dir,'plots')
         if self.plot_dir:
             os.makedirs(self.plot_dir, exist_ok=True)
         
@@ -66,8 +66,9 @@ class DivDisEvaluatorClassifier():
 
             # Create a figure with subplots
             #fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
-            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*(self.head_num+1)))
-            fig.suptitle(f'Attributions for Image {image_idx} (Label: {label})')
+            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(4.1*self.stack_size, 4.5*(self.head_num+1)))
+            fig.suptitle(f'Attributions for Image {image_idx} (Label: {"Positive" if label else "Negative"})', 
+                         ha='center', fontsize=20, fontweight='bold')
 
             predictions, votes = self.classifier.predict(image)  # Get predictions for the current head
             predicted_labels = predictions.squeeze().argmax(dim=-1)  # Assuming single label prediction
@@ -77,8 +78,8 @@ class DivDisEvaluatorClassifier():
                 ax.imshow(image[0, i].cpu().numpy(), cmap='gray')
                 ax.set_xticks([])
                 ax.set_yticks([])
-            axes[0, 0].text(-0.2, 0.5, "Original Image", transform=axes[0, 0].transAxes, 
-                va='center', ha='right', fontsize=12, fontweight='bold')
+            axes[0, 0].text(-0.1, 0.5, "Original Image", transform=axes[0, 0].transAxes, 
+                va='center', ha='center', fontsize=12, rotation='vertical')
                 
             # Loop through each classifier head
             for head_idx in range(self.head_num):
@@ -102,7 +103,7 @@ class DivDisEvaluatorClassifier():
                     fig, ax = viz.visualize_image_attr(
                         attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
                         original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
-                        method='blended_heat_map', sign='positive', 
+                        method='blended_heat_map', sign='all', alpha_overlay=0.6, cmap='Spectral',#'gnuplot2', #
                         show_colorbar=False, plt_fig_axis=(fig, ax),
                         use_pyplot=False)
                     ax.set_axis_off()
@@ -118,11 +119,21 @@ class DivDisEvaluatorClassifier():
             
                 #axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
                 #    va='center', ha='right', fontsize=12, fontweight='bold')
-                axes[head_idx+1,0].text(-0.2, 0.5, row_name, transform=axes[head_idx+1,0].transAxes, 
-                    va='center', ha='right', fontsize=12, fontweight='bold')
-                    
+                axes[head_idx+1,0].text(-0.1, 0.5, row_name, transform=axes[head_idx+1,0].transAxes, 
+                    va='center', ha='center', fontsize=12, rotation='vertical')
+
+                        
             plt.tight_layout()
             #plt.show()
+
+            for row in range(1, self.head_num + 1):
+                pos_prev = axes[row-1, 0].get_position()
+                pos_next = axes[row, 0].get_position()
+                y = (pos_prev.y0 + pos_next.y1) / 2
+                
+                line = plt.Line2D([0, 1], [y, y], transform=fig.transFigure, color='black', linewidth=2)
+                fig.add_artist(line)
+            
             # Optionally save the figure
             fig.savefig(os.path.join(self.plot_dir, f'attributions_image_{image_idx}.png'))
             plt.close(fig)
@@ -167,11 +178,16 @@ class DivDisEvaluatorClassifier():
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
                 states_fn = states[(labels == 1) & (labels_pred_head == 0)]
 
-                self.ig_attr_test[head_idx]['all'           ].append(self.integrated_gradients[head_idx].attribute(states,    nt_samples=10, n_steps=10, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true positive' ].append(self.integrated_gradients[head_idx].attribute(states_tp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true negative' ].append(self.integrated_gradients[head_idx].attribute(states_tn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['all'           ].append(self.integrated_gradients[head_idx].attribute(
+                    states,    nt_samples=10, n_steps=10, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true positive' ].append(self.integrated_gradients[head_idx].attribute(
+                    states_tp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true negative' ].append(self.integrated_gradients[head_idx].attribute(
+                    states_tn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(
+                    states_fp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(
+                    states_fn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
 
         # concatenate all attributions from all batches, independently for each head and each attribution type
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]

@@ -28,7 +28,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
                  classifier_num_classes,
                  classifier_diversity_weight,
                  classifier_l2_reg_weight,
-                 classifier_train_epochs):
+                 classifier_train_epochs,
+                 classifier_model):
         
         self.seed = seed 
         self.base_dir = base_dir
@@ -49,7 +50,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                            learning_rate=classifier_learning_rate,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
-                                           model_name='minigrid_cnn')
+                                           model_name=classifier_model)
         self.train_epochs = classifier_train_epochs
         
         self.writer = SummaryWriter(log_dir=self.log_dir)

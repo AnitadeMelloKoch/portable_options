@@ -230,17 +230,19 @@ if __name__ == "__main__":
 
     set_seed(args.seed)
 
-    classifier = DivDisClassifier(log_dir=args.base_dir+"logs")
+    base_dir = os.path.join(args.base_dir, str(args.seed))
+
+    classifier = DivDisClassifier(log_dir=os.path.join(base_dir, "logs"))
     classifier.add_data(positive_train_files,
                         negative_train_files,
                         initial_unlabelled_train_files)
-    classifier.train(200)
+    classifier.train(150)
 
     
 
     evaluator = DivDisEvaluatorClassifier(
                     classifier,
-                    base_dir=args.base_dir)
+                    base_dir=base_dir)
     evaluator.add_test_files(positive_test_files, negative_test_files)
     acc_pos, acc_neg, acc, weighted_acc = evaluator.test_classifier()
     print(f"weighted_acc: {weighted_acc}")
@@ -248,7 +250,7 @@ if __name__ == "__main__":
     print(f"acc_pos: {acc_pos}")
     print(f"acc_neg: {acc_neg}")
 
-    evaluator.evaluate_images(25)
+    evaluator.evaluate_images(50)
 
     #evaluator.add_true_from_files(positive_test_files)
     #evaluator.add_false_from_files(negative_test_files)

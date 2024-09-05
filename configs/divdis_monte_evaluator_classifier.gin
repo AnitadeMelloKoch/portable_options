@@ -5,10 +5,10 @@ DivDisClassifier.use_gpu             = True
 DivDisClassifier.num_classes         = 2
 DivDisClassifier.state_dim           = 4
 
-DivDisClassifier.head_num            = 6
-DivDisClassifier.learning_rate       = 5e-4
-DivDisClassifier.diversity_weight    = 3e-5
-DivDisClassifier.l2_reg_weight       = 5e-4
-DivDisClassifier.dataset_batchsize   = 128
+DivDisClassifier.head_num            = 5
+DivDisClassifier.learning_rate       = 4e-4 #4e-4
+DivDisClassifier.diversity_weight    = 3e-2 #3e-5
+DivDisClassifier.l2_reg_weight       = 2e-4 #5e-4
+DivDisClassifier.dataset_batchsize   = 64
 DivDisClassifier.model_name          = "monte_cnn"
 

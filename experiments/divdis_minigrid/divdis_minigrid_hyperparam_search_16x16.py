@@ -28,19 +28,11 @@ RANDOM_TRAIN = True
 RANDOM_UNLABELLED = True
 
 base_img_dir = 'resources/minigrid_images/'
-positive_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_positive.npy"]
-negative_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_{init_term}_negative.npy"]
-unlabelled_train_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
-positive_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_positive.npy" for s in [5,6,7,8,9,10]]
-negative_test_files = [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_{init_term}_negative.npy" for s in [5,6,7,8,9,10]]
-
-if RANDOM_TRAIN:
-    positive_train_files += [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_1_{init_term}_positive.npy"]
-    negative_train_files += [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_0_1_{init_term}_negative.npy"]
-if RANDOM_UNLABELLED:
-    unlabelled_train_files += [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_1_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
-positive_test_files += [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_1_{init_term}_positive.npy" for s in [5,6,7,8,9,10,11]]
-negative_test_files += [f"{base_img_dir}adv_doorkey_8x8_v2_{task}_door{color}_{s}_1_{init_term}_negative.npy" for s in [5,6,7,8,9,10,11]]
+positive_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_0_1_{init_term}_positive.npy"]
+negative_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_0_1_{init_term}_negative.npy"]
+unlabelled_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
+positive_test_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_positive.npy" for s in [5,6,7,8,9,10,11]]
+negative_test_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_negative.npy" for s in [5,6,7,8,9,10,11]]
 
 
 
@@ -60,7 +52,7 @@ if __name__ == "__main__":
 
 
 
-    experiment = AdvancedMinigridDivDisHyperparamSearchExperiment(experiment_name="minigrid_hyperparam_search",
+    experiment = AdvancedMinigridDivDisHyperparamSearchExperiment(experiment_name="minigrid_16x16_hyperparam_search",
                                                                   use_gpu=True,
                                                                   base_dir=args.base_dir,
                                                                   train_positive_files=positive_train_files,
@@ -106,12 +98,12 @@ if __name__ == "__main__":
                 train_dataset=train_dataset,
                 test_dataset_positive=test_dataset_positive,
                 test_dataset_negative=test_dataset_negative),
-            resources={"gpu":1}
+            resources={"cpu":16, "gpu":1}
         ),
         tune_config=tune.TuneConfig(
         search_alg=re_search_alg,
         num_samples=120,
-        #max_concurrent_trials=1,
+        max_concurrent_trials=1,
     ),
         param_space=search_space,
     )
