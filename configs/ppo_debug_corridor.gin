@@ -1,0 +1,17 @@
+import experiments.core.divdis_meta_masked_ppo_experiment
+import portable.agent.model.maskable_ppo
+
+DivDisMetaMaskedPPOExperiment.experiment_name                       = "corridor_ppo"
+DivDisMetaMaskedPPOExperiment.use_gpu                               = True
+DivDisMetaMaskedPPOExperiment.make_videos                           = False
+DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 1
+DivDisMetaMaskedPPOExperiment.use_global_option                     = False
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0]
+DivDisMetaMaskedPPOExperiment.fix_options_during_meta               = True
+DivDisMetaMaskedPPOExperiment.make_plots                            = False
+
+MaskablePPOAgent.learning_rate                                      = 2.5e-4
+MaskablePPOAgent.state_shape                                        = (3, 56, 56)
+MaskablePPOAgent.num_actions                                        = 7
+MaskablePPOAgent.update_interval                                    = 100
+MaskablePPOAgent.entropy_coef                                       = 0.01
