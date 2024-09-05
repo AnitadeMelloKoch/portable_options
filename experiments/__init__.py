@@ -1,2 +1,2 @@
-from experiments.utils import check_termination_correct_enemy, get_percent_completed_enemy
 from experiments.experiment import BaseExperiment
+from experiments.utils import train_head, epsilon_ball_from_list

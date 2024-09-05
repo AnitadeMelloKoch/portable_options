@@ -5,10 +5,12 @@ import numpy as np
 from PIL import Image
 import gymnasium as gym
 from gymnasium.core import Env, Wrapper, ObservationWrapper
-from minigrid.wrappers import RGBImgObsWrapper, ImgObsWrapper, ReseedWrapper
+from minigrid.wrappers import ImgObsWrapper, ReseedWrapper
 from enum import IntEnum
 import collections
 from enum import IntEnum
+from gymnasium import spaces
+
 
 class actions(IntEnum):
     LEFT        = 0
@@ -32,7 +34,7 @@ class MinigridInfoWrapper(Wrapper):
         self.official_start_obs, self.official_start_info = self.reset()
 
     def reset(self):
-        obs, info = self.env.reset()
+        obs, info = self.env.reset(seed=self.env_seed)
         info = self._modify_info_dict(info)
         return obs, info
 
@@ -56,7 +58,7 @@ class MinigridInfoWrapper(Wrapper):
         return info
 
 class FactoredObsWrapperDoorKey(Wrapper):
-    def __init__(self, env: Env):
+    def __init__(self, env: Env, type: int=1):
         super().__init__(env)
         self.colours = {
             "blue": 0,
@@ -66,13 +68,17 @@ class FactoredObsWrapperDoorKey(Wrapper):
             "yellow": 4,
             "purple": 5
         }
+        self.type = type
     
     def reset(self, **kwargs):
         obs, info = super().reset(**kwargs)
-        obs = self._get_factored_obs()
+        if self.type == 1:
+            obs = self._get_factored_obs1()
+        if self.type == 2:
+            obs = self._get_factored_obs2()
         return obs, info
     
-    def _get_factored_obs(self):
+    def _get_factored_obs1(self):
         split_idx = self.env.unwrapped.splitIdx
         
         objects = {
@@ -116,10 +122,55 @@ class FactoredObsWrapperDoorKey(Wrapper):
         
         return factored_obs
     
+    def _get_factored_obs2(self):
+        split_idx = self.env.unwrapped.splitIdx
+        
+        objects = {
+            "door": [-1,-1,-1,-1,-1],
+            "blue": [-1,-1],
+            "red": [-1,-1],
+            "green": [-1,-1],
+            "grey": [-1,-1],
+            "yellow": [-1,-1],
+            "purple": [-1,-1],
+            "agent": [-1,-1,-1],
+            "goal": [-1, -1],
+            "split": [-1]
+        }
+        
+        for x in range(self.env.unwrapped.width):
+            for y in range(self.env.unwrapped.height):
+                cell = self.env.unwrapped.grid.get(x,y)
+                if cell:
+                    if cell.type == "door":
+                        objects["door"] = [x, y, int(cell.is_locked), int(cell.is_open), self.colours[cell.color]]
+                    if cell.type == "key":
+                        objects[cell.color] = [x, y]
+                    if cell.type == "goal":
+                        objects["goal"] = [x, y]
+                
+        agent_pos = self.env.unwrapped.agent_pos
+        agent_dir = self.env.unwrapped.agent_dir
+        
+        objects["agent"] = [agent_pos[0], agent_pos[1], agent_dir]
+        objects["split"] = [split_idx]
+        
+        factored_obs = []
+        
+        for key in objects:
+            factored_obs += objects[key]
+        
+        factored_obs = np.array(factored_obs)
+        
+        return factored_obs
+    
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         
-        factored_obs = self._get_factored_obs()
+        if self.type == 1:
+            factored_obs = self._get_factored_obs1()
+        if self.type == 2:
+            factored_obs = self._get_factored_obs2()
         
         return factored_obs, reward, terminated, truncated, info
 
@@ -151,9 +202,16 @@ class GrayscaleWrapper(ObservationWrapper):
         return observation.astype(np.uint8)
 
 class ScaleObsWrapper(ObservationWrapper):
+    def __init__(self, 
+                 env: Env,
+                 image_size: tuple):
+        super().__init__(env)
+        
+        self.image_size = image_size
+    
     def observation(self, observation):
         img = Image.fromarray(observation)
-        return np.asarray(img.resize((128, 128), Image.BILINEAR))
+        return np.asarray(img.resize(self.image_size, Image.BICUBIC))
 
 class NormalizeObsWrapper(ObservationWrapper):
     def observation(self, observation):
@@ -241,6 +299,32 @@ def determine_is_door_open(env):
             if isinstance(tile, Door):
                 return tile.is_open
 
+class RGBImgObsWrapper(ObservationWrapper):
+    """
+    Wrapper to use fully observable RGB image as observation,
+    This can be used to have the agent to solve the gridworld in pixel space.
+    """
+
+    def __init__(self, env, tile_size=8):
+        super().__init__(env)
+
+        self.tile_size = tile_size
+
+        new_image_space = spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.env.width * tile_size, self.env.height * tile_size, 3),
+            dtype="uint8",
+        )
+
+        self.observation_space = spaces.Dict(
+            {**self.observation_space.spaces, "image": new_image_space}
+        )
+
+    def observation(self, obs):
+        rgb_img = self.get_frame(highlight=False, tile_size=self.tile_size)
+
+        return {**obs, "image": rgb_img}
 
 def environment_builder(
     level_name='MiniGrid-Empty-8x8-v0',
@@ -263,23 +347,22 @@ def environment_builder(
     else:
         env = gym.make(level_name,
                        render_mode="rgb_array")
-    env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
+    # env = ReseedWrapper(env, seeds=[seed])  # To fix the start-goal config
     env = RGBImgObsWrapper(env) # Get pixel observations
     env = ImgObsWrapper(env) # Get rid of the 'mission' field
-    if normalize_obs:
+    if normalize_obs is True:
         env = NormalizeObsWrapper(env)
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    if scale_obs:
-        env = ScaleObsWrapper(env)
-    if pad_obs:
+    if scale_obs is True:
+        env = ScaleObsWrapper(env, final_image_size)
+    if pad_obs is True:
         env = PadObsWrapper(env, final_image_size)
-    # env = ResizeObsWrapper(env)
     env = TransposeObsWrapper(env)
-    if grayscale:
+    if grayscale is True:
         env = GrayscaleWrapper(env)
     env = MinigridInfoWrapper(env, seed)
-    if random_reset:
+    if random_reset is True:
         assert exploration_reward_scale == 0, exploration_reward_scale
         assert len(random_starts) > 0
         env = RandomStartWrapper(env, random_starts)
@@ -295,7 +378,8 @@ def process_data(array):
 
 def factored_environment_builder(level_name='AdvancedDoorKey-8x8-v0',
                                  seed=42,
-                                 max_steps=None):
+                                 max_steps=None,
+                                 factored_type=1):
     if max_steps is not None and max_steps > 0:
         env = gym.make(level_name, max_steps=max_steps,
                        render_mode="rgb_array")
@@ -303,7 +387,7 @@ def factored_environment_builder(level_name='AdvancedDoorKey-8x8-v0',
         env = gym.make(level_name,
                        render_mode="rgb_array")
     env = ReseedWrapper(env, seeds=[seed])
-    env = FactoredObsWrapperDoorKey(env)
+    env = FactoredObsWrapperDoorKey(env, type=factored_type)
     env = MinigridInfoWrapper(env, seed)
     
     return env

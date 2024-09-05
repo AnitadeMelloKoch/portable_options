@@ -1,13 +1,15 @@
-import logging 
+import logging
+from pyexpat import model 
 import torch
 import torch.nn as nn
 import gin
 import os
 import numpy as np 
 
-from portable.option.memory import SetDataset
-from portable.option.divdis.models.small_cnn import SmallCNN
+from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
+from portable.option.divdis.models.minigrid_cnn import MinigridCNN
+from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
 logger = logging.getLogger(__name__)
@@ -15,7 +17,8 @@ logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
     "multi_head_mlp",
-    "small_cnn"
+    "minigrid_cnn",
+    "monte_cnn"
 ]
 
 
@@ -27,37 +30,57 @@ class DivDisClassifier():
                  
                  head_num,
                  learning_rate,
-                 input_dim,
                  num_classes,
                  diversity_weight,
                  
+                 l2_reg_weight=0.001,
+                 class_weight=None,
                  dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  
                  summary_writer=None,
-                 model_name='classifier') -> None:
+                 model_name='minigrid_cnn') -> None:
         
-        self.use_gpu = use_gpu,
-        self.dataset = SetDataset(max_size=dataset_max_size,
-                                  batchsize=dataset_batchsize,
-                                  unlabelled_batchsize=unlabelled_dataset_batchsize)
+
+        if use_gpu == -1:
+            self.device = torch.device('cpu')
+        else:
+            self.device = torch.device('cuda:{}'.format(use_gpu)) 
+        
+        self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
+                                            batchsize=dataset_batchsize,
+                                            unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.learning_rate = learning_rate
+        self.l2_reg_weight = l2_reg_weight
         
         self.head_num = head_num
+        self.num_classes = num_classes
         
         self.log_dir = log_dir
+
         
-        self.classifier = SmallCNN(num_input_channels=input_dim,
-                                   num_classes=num_classes,
-                                   num_heads=head_num)
+        self.model_name = model_name
+        self.reset_classifier()
         
+
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
-                                          lr=learning_rate)
+                                          lr=learning_rate,
+                                          weight_decay=l2_reg_weight # weight decay also works as L2 regularization
+                                          )
         
         self.divdis_criterion = DivDisLoss(heads=head_num)
-        self.ce_criterion = torch.nn.CrossEntropyLoss()
+        
+        if class_weight is not None:
+            assert len(class_weight) == num_classes
+            class_weight_tensor = torch.tensor(class_weight, dtype=torch.float).to(self.device)
+        else:
+            class_weight_tensor = torch.ones(num_classes, dtype=torch.float).to(self.device)
+        
+        self.ce_criterion = torch.nn.CrossEntropyLoss(weight=class_weight_tensor)
         self.diversity_weight = diversity_weight
+        
+        self.state_dim = 3
     
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
@@ -68,6 +91,30 @@ class DivDisClassifier():
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
             self.dataset.load(path)
+    
+    def set_class_weights(self, weights=None):
+        if weights is None:
+            weights = self.dataset.get_equal_class_weight()
+        
+        self.ce_criterion = torch.nn.CrossEntropyLoss(
+            weight=torch.tensor(weights).to(self.device)
+        )
+    
+    def reset_classifier(self):
+        if self.model_name == "minigrid_cnn":
+            self.classifier = MinigridCNN(num_classes=self.num_classes,
+                                          num_heads=self.head_num)
+        elif self.model_name == "monte_cnn":
+            self.classifier = MonteCNN(num_classes=self.num_classes,
+                                       num_heads=self.head_num)
+        else:
+            raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
+        self.classifier.to(self.device)
+        self.optimizer = torch.optim.Adam(self.classifier.parameters(),
+                                          lr=self.learning_rate,
+                                          weight_decay=self.l2_reg_weight # weight decay also works as L2 regularization
+                                          )
+        
     
     def move_to_gpu(self):
         if self.use_gpu:
@@ -87,11 +134,17 @@ class DivDisClassifier():
         self.dataset.add_false_files(negative_files)
         self.dataset.add_unlabelled_files(unlabelled_files)
     
+    def add_unlabelled_data(self,
+                            states):
+        self.dataset.add_unlabelled_files
+    
     def train(self,
               epochs,
               start_offset=0):
-        self.move_to_gpu()
+
+        # self.move_to_gpu()
         self.classifier.train()
+        
         for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0
@@ -102,18 +155,24 @@ class DivDisClassifier():
             total_loss_tracker = 0
             
             self.dataset.shuffle()
+            if self.dataset.unlabelled_data_length == 0:
+                use_unlabelled_data = False
+            else:
+                use_unlabelled_data = True
             
             for _ in range(self.dataset.num_batches):
                 counter += 1
                 x, y = self.dataset.get_batch()
-                unlabelled_x = self.dataset.get_unlabelled_batch()
+                if torch.sum(y) == 0 or torch.sum(y) == len(y):
+                    continue
+                if use_unlabelled_data:
+                    unlabelled_x = self.dataset.get_unlabelled_batch()
                 
-                if self.use_gpu:
-                    x = x.to("cuda")
-                    y = y.to("cuda")
-                    unlabelled_x = unlabelled_x.to("cuda")
-                
-                unlabelled_pred = self.classifier(unlabelled_x)
+                x = x.to(self.device)
+                y = y.to(self.device)
+                if use_unlabelled_data:
+                    unlabelled_x = unlabelled_x.to(self.device)
+                    unlabelled_pred = self.classifier(unlabelled_x)
                 pred_y = self.classifier(x)
                 labelled_loss = 0
                 for idx in range(self.head_num):
@@ -124,8 +183,11 @@ class DivDisClassifier():
                     labelled_loss += class_loss
                 
                 labelled_loss /= self.head_num
-                
-                div_loss = self.divdis_criterion(unlabelled_pred)
+
+                if use_unlabelled_data:
+                    div_loss = self.divdis_criterion(unlabelled_pred)
+                else:
+                    div_loss = torch.tensor(0)
                 
                 div_loss_tracker += div_loss.item()
                 
@@ -150,23 +212,28 @@ class DivDisClassifier():
     def predict(self, x):
         self.classifier.eval()
         
-        if self.use_gpu:
-            x = x.to("cuda")
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
+        
+        x = x.to(self.device)
         
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        return pred_y
+        votes = torch.argmax(pred_y, axis=-1)
+        
+        votes = votes.cpu().numpy()
+        self.votes = votes
+        
+        return pred_y, votes
         
     def predict_idx(self, x, idx):
         self.classifier.eval()
         
-        if self.use_gpu:
-            x = x.to("cuda")
+        x = x.to(self.device)
         
         with torch.no_grad():
             pred_y = self.classifier(x)
         
-        
+
         return pred_y[:,idx,:]
-    

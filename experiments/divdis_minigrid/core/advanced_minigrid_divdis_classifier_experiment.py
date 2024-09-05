@@ -25,9 +25,10 @@ class AdvancedMinigridDivDisClassifierExperiment():
                  
                  classifier_head_num,
                  classifier_learning_rate,
-                 classifier_input_dim,
                  classifier_num_classes,
-                 classifier_diversity_weight):
+                 classifier_diversity_weight,
+                 classifier_l2_reg_weight,
+                 classifier_train_epochs):
         
         self.seed = seed 
         self.base_dir = base_dir
@@ -44,9 +45,11 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                            log_dir=self.log_dir,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
-                                           input_dim=classifier_input_dim,
                                            num_classes=classifier_num_classes,
-                                           diversity_weight=classifier_diversity_weight)
+                                           diversity_weight=classifier_diversity_weight,
+                                           l2_reg_weight=classifier_l2_reg_weight,
+                                           model_name='minigrid_cnn')
+        self.train_epochs = classifier_train_epochs
         
         self.writer = SummaryWriter(log_dir=self.log_dir)
         log_file = os.path.join(self.log_dir,
@@ -62,6 +65,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
         logging.info("Head num: {}".format(classifier_head_num))
         logging.info("Learning rate: {}".format(classifier_learning_rate))
         logging.info("Diversity weight: {}".format(classifier_diversity_weight))
+        logging.info("L2 reg weight: {}".format(classifier_l2_reg_weight))
+        logging.info("Classifier train epochs: {}".format(classifier_train_epochs))
     
     def save(self):
         self.classifier.save(path=self.save_dir)
@@ -78,8 +83,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                  negative_files=negative_files,
                                  unlabelled_files=unlabelled_files)
     
-    def train_classifier(self, epochs):
-        self.classifier.train(epochs=epochs)
+    def train_classifier(self):
+        self.classifier.train(epochs=self.train_epochs)
     
     def test_classifier(self,
                         test_positive_files,
@@ -104,7 +109,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
         for _ in range(dataset_positive.num_batches):
             counter += 1
             x, y = dataset_positive.get_batch()
-            pred_y = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
+
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
@@ -120,7 +126,8 @@ class AdvancedMinigridDivDisClassifierExperiment():
         for _ in range(dataset_negative.num_batches):
             counter += 1
             x, y = dataset_negative.get_batch()
-            pred_y = self.classifier.predict(x)
+            pred_y, votes = self.classifier.predict(x)
+
             pred_y = pred_y.cpu()
             
             for idx in range(self.classifier.head_num):
@@ -161,7 +168,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         
         for _ in range(dataset.num_batches):
             x, _ = dataset.get_batch()
-            pred_y = self.classifier.predict(x)
+            pred_y, _ = self.classifier.predict(x)
             pred_y = pred_y.cpu()
             
             pred_class = torch.argmax(pred_y[:,test_head,:], dim=1).detach()
