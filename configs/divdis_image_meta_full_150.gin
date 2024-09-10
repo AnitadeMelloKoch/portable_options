@@ -17,11 +17,11 @@ DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 30
 DivDisMetaMaskedPPOExperiment.option_timeout                        = 150
 DivDisMetaMaskedPPOExperiment.log_q_values                          = False
 
-MaskablePPOAgent.learning_rate                                      = 2.5e-4
+MaskablePPOAgent.learning_rate                                      = 1.25e-4
 MaskablePPOAgent.state_shape                                        = (3, 84, 84)
 MaskablePPOAgent.num_actions                                        = 20
 MaskablePPOAgent.update_interval                                    = 100
-MaskablePPOAgent.entropy_coef                                       = 0.01
+MaskablePPOAgent.entropy_coef                                       = 0.05
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
