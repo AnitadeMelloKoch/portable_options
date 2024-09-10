@@ -124,7 +124,10 @@ if __name__ == "__main__":
     experiment.test_classifiers(test_positive_files,
                                 test_negative_files)
     
+    print("Classifiers trained. Starting policy training...")
+    
     for state_idx, init_state in enumerate(init_states):
+        print("Beginning training on env {} out of {}".format(state_idx, len(init_states)))
         experiment.change_option_save(name="room_idx_{}".format(state_idx))
         experiment.train_option(init_state,
                                 term_points[state_idx],
