@@ -273,12 +273,14 @@ def train_head(head_idx,
         true_successes.append(true_success)
         
         experiment_data.append({
-            "idx": head_idx,
+            "head_idx": head_idx,
             "option_length": steps,
             "steps": total_steps,
             "reward": option_rewards,
+            "total_reward": np.sum(option_rewards),
             "true_success": true_success,
-            "final_location": env.get_current_position()
+            "final_location": env.get_current_position(),
+            "env_idx": env_idx
         })
         
         if episode%10 == 0:

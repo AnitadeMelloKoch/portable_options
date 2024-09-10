@@ -303,7 +303,7 @@ if __name__ == "__main__":
         experiment.train_option(init_state,
                                 term_points[state_idx],
                                 args.seed,
-                                2e5,
+                                5e5,
                                 state_idx)
         experiment.save()
 
