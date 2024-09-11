@@ -11,7 +11,8 @@ class UnbalancedSetDataset():
                  batchsize=64,
                  unlabelled_batchsize=None,
                  max_size=100000,
-                 data_dir="."
+                 data_dir=".",
+                 class_weights=[0.5,0.5]
                  ):
         self.batchsize = batchsize
         if unlabelled_batchsize is not None:
@@ -35,6 +36,7 @@ class UnbalancedSetDataset():
         self.shuffled_indices = None
         self.shuffled_indices_unlabelled = None
         self.data_dir = data_dir
+        self.class_weight = class_weights
     
     @staticmethod
     def transform(x):
@@ -47,8 +49,12 @@ class UnbalancedSetDataset():
         num_positive = torch.sum(self.labels)
         num_negative = self.data_length - num_positive
         
-        return [self.data_length/num_negative+1e-5, 
-                self.data_length/num_positive+1e-5]
+        weighting = [
+            self.class_weight[0]*2/num_negative+1e-5,
+            self.class_weight[1]*2/num_positive+1e-5
+        ]
+        
+        return weighting
     
     def reset(self):
         self.data = torch.from_numpy(np.array([]))

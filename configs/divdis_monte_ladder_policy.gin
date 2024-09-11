@@ -9,7 +9,7 @@ DivDisOptionExperiment.experiment_name                              = "meta_mont
 DivDisOptionExperiment.make_videos                                  = False
 DivDisOptionExperiment.classifier_epochs                            = 150
 DivDisOptionExperiment.gpu_id                                       = 0
-DivDisOptionExperiment.option_timeout                               = 1000
+DivDisOptionExperiment.option_timeout                               = 200
 DivDisOptionExperiment.num_processes                                = 6
 DivDisOptionExperiment.env_ram_dir                                  = "/users/ademello/data/ademello"
 
