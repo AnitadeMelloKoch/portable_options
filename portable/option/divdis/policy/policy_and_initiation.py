@@ -230,7 +230,10 @@ class PolicyWithInitiation(Agent):
             self.replay_buffer.append(**transition)
             if terminal:
                 self.replay_buffer.stop_current_episode()
-            self.replay_updater.update_if_necessary(self.step_number)
+            try:
+                self.replay_updater.update_if_necessary(self.step_number)
+            except:
+                print("Policy update failed. Continue without train step.")
     
     def update(self, experiences, errors_out=None):
         if self.training:
