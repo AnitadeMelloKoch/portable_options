@@ -13,14 +13,14 @@ from experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_experi
 
 color = 'grey' # 'grey', 'blue', 'green', 'yellow', 'purple','red'
 task = f'open{color}door'
-task = f'get{color}key'
+#task = f'get{color}key'
 init_term = 'termination'
 RANDOM_TRAIN = True
 RANDOM_UNLABELLED = True
 
 task = f'{task}_door{color}'
 
-tsak = 'gotogoal'
+#task = 'gotogoal'
 
 
 base_img_dir = 'resources/minigrid_images/'
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--base_dir", type=str, required=True)
     parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--n", type=int, default=5)
+    parser.add_argument("--n", type=int, default=3)
     parser.add_argument("--config_file", nargs='+', type=str, required=True)
     parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
         ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +

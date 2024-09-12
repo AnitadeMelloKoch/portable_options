@@ -128,6 +128,7 @@ class AdvancedMinigridDivDisSweepExperiment():
         # weighted_acc: accuracy of pos&neg weighted equally
         return accuracy_pos, accuracy_neg, accuracy, weighted_acc
 
+
     def head_complexity(self, classifier):
         #evaluator = DivDisEvaluatorClassifier(classifier, image_input=True, batch_size=32, base_dir=self.base_dir)
         #evaluator.add_test_files(self.test_positive_files, self.test_negative_files)
@@ -151,7 +152,6 @@ class AdvancedMinigridDivDisSweepExperiment():
              accuracies,
              avg_accuracies,
              losses,
-             complexities,
              
              plot_title,
              x_label,
@@ -162,13 +162,12 @@ class AdvancedMinigridDivDisSweepExperiment():
         losses = np.array(losses)
         accuracies = np.array(accuracies)
         avg_accuracies = np.array(avg_accuracies)
-        complexities = np.array(complexities)
         
-        ax_titles = ['Loss', 'Accuracy', 'Complexity']
-        y_labels = ['Final Training Loss', 'Test Accuracy', 'Head Complexity']
+        ax_titles = ['Loss', 'Accuracy']
+        y_labels = ['Final Training Loss', 'Test Accuracy']
     
         if not categorical: # most cases, line plot
-            fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+            fig, axes = plt.subplots(1, 2, figsize=(10, 5))
             print(accuracies.shape)
             print(accuracies)
             axes[0].plot(x_values, losses.mean(axis=1))
@@ -194,21 +193,13 @@ class AdvancedMinigridDivDisSweepExperiment():
             axes[1].set_ylabel(y_labels[1])
             axes[1].title.set_text(ax_titles[1])
 
-            axes[2].plot(x_values, complexities.mean(axis=1))
-            axes[2].fill_between(x_values,
-                                np.maximum(complexities.mean(axis=1)-complexities.std(axis=1),0),
-                                complexities.mean(axis=1)+complexities.std(axis=1),
-                                alpha=0.2)
-            axes[2].set_xlabel(x_label)
-            axes[2].set_ylabel(y_labels[2])
-            axes[2].title.set_text(ax_titles[2])
             if log_scale:
                 axes[0].set_xscale('log')
                 axes[1].set_xscale('log')
-                axes[2].set_xscale('log')
+
             
         else: # bar plot for categorical data
-            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+            fig, axes = plt.subplots(1, 2, figsize=(12, 6))
             x_axis_data = np.arange(len(x_values))
             x_ticks = x_values
             bar_width = 0.5
@@ -235,14 +226,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             for label in axes[1].get_xticklabels():
                 label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
-            axes[2].bar(x_axis_data, complexities.mean(1), yerr=complexities.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
-            axes[2].set_xlabel(x_label)
-            axes[2].set_ylabel(y_labels[0])
-            axes[2].title.set_text(ax_titles[0])
-            axes[2].set_xticks(x_axis_data)
-            axes[2].set_xticklabels(x_ticks, rotation=35, ha='right')
-            for label in axes[2].get_xticklabels():
-                label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
 
         fig.suptitle(plot_title)
         fig.tight_layout()
@@ -263,7 +246,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         weights = np.logspace(start_weight, end_weight, num_samples)
@@ -273,7 +255,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             weight_acc = []
             weight_avg_acc = []
             weight_loss = []
-            weight_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -300,19 +281,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 weight_acc.append(max(acc))
                 weight_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                weight_comp.append(comps[np.argmax(acc)])
         
             results_acc.append(weight_acc)
             results_avg_acc.append(weight_avg_acc)
             results_loss.append(weight_loss)
-            results_comp.append(weight_comp)
 
         save_dict = {"weights": results_weight,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         self.save_results_dict(save_dict,
                                "weights_sweep.pkl")
 
@@ -322,7 +299,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Diversity Weight",
                   "Diversity Weight",
                   log_scale=True)
@@ -341,7 +317,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         
@@ -350,7 +325,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             epoch_acc = []
             epoch_avg_acc = []
             epoch_loss = []
-            epoch_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -376,19 +350,16 @@ class AdvancedMinigridDivDisSweepExperiment():
                 epoch_acc.append(max(acc))
                 epoch_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                epoch_comp.append(comps[np.argmax(acc)])
+
             
             results_acc.append(epoch_acc)
             results_avg_acc.append(epoch_avg_acc)
             results_loss.append(epoch_loss)
-            results_comp.append(epoch_comp)
         
         save_dict = {"epochs": results_epoch,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc, 
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         self.save_results_dict(save_dict,
                                "epochs_sweep.pkl")
                     
@@ -398,7 +369,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Train Epochs",
                   "Train Epochs")
         
@@ -415,7 +385,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         for num_heads in tqdm(range(start_size, end_size+1, step_size), desc="size", position=0):
@@ -423,7 +392,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             size_acc = []
             size_avg_acc = []
             size_loss = []
-            size_comp = []
             
 
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -447,19 +415,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 size_acc.append(max(acc))
                 size_avg_acc.append(np.mean(acc))
                 
-                comps = self.head_complexity(classifier)
-                size_comp.append(comps[np.argmax(acc)]) # complexity of best head
 
             results_acc.append(size_acc)
             results_avg_acc.append(size_avg_acc)
             results_loss.append(size_loss)
-            results_comp.append(size_comp)
         
         save_dict = {"size": results_size,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc, 
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         self.save_results_dict(save_dict,
                                "size_sweep.pkl")
 
@@ -469,7 +433,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Ensemble Size",
                   "No. Ensemble Members")
 
@@ -486,7 +449,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         for batch_size in tqdm(range(start_batchsize, end_batchsize+1, batch_stepsize), desc="batch_sizes", position=0):
@@ -494,7 +456,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             batch_acc = []
             batch_avg_acc = []
             batch_loss = []
-            batch_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -520,19 +481,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 batch_acc.append(max(acc))
                 batch_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                batch_comp.append(comps[np.argmax(acc)])
                 
             results_acc.append(batch_acc)
             results_avg_acc.append(batch_avg_acc)
             results_loss.append(batch_loss)
-            results_comp.append(batch_comp)
         
         save_dict = {"batchsizes": results_batchsize,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         self.save_results_dict(save_dict,
                                "batch_sweep.pkl")
         
@@ -542,7 +499,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Unlabelled Dataset Batchsize",
                   "Batchsize")
         
@@ -559,7 +515,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         lrs = np.logspace(start_lr, end_lr, num_samples)
@@ -569,7 +524,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             lr_acc = []
             lr_avg_acc = []
             lr_loss = []
-            lr_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -593,19 +547,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 lr_acc.append(max(acc))
                 lr_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                lr_comp.append(comps[np.argmax(acc)])
                 
             results_acc.append(lr_acc)
             results_avg_acc.append(lr_avg_acc)
             results_loss.append(lr_loss)
-            results_comp.append(lr_comp)
 
         save_dict = {"learning_rates": results_lr,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         
         self.save_results_dict(save_dict,
                                "lr_sweep.pkl")
@@ -616,7 +566,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Learning Rate",
                   "Learning Rate",
                   log_scale=True)
@@ -633,7 +582,6 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
 
         
         l2_weights = np.logspace(start_l2, end_l2, num_samples)
@@ -643,7 +591,6 @@ class AdvancedMinigridDivDisSweepExperiment():
             lr_acc = []
             lr_avg_acc = []
             lr_loss = []
-            lr_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -668,19 +615,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 lr_acc.append(max(acc))
                 lr_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                lr_comp.append(comps[np.argmax(acc)])
                 
             results_acc.append(lr_acc)
             results_avg_acc.append(lr_avg_acc)
             results_loss.append(lr_loss)
-            results_comp.append(lr_comp)
 
         save_dict = {"reg_weights": results_reg_weights,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         
         self.save_results_dict(save_dict,
                                "reg_weight_sweep.pkl")
@@ -691,7 +634,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over L2 Regularization Weight",
                   "L2 Regularization Weight",
                   log_scale=True)
@@ -709,14 +651,12 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
         
         for overlap in tqdm(np.linspace(start_ratio, end_ratio, step_size), desc="unlabelled_overlap_ratio", position=0):
             results_overlap.append(overlap)
             overlap_acc = []
             overlap_avg_acc = []
             overlap_loss = []
-            overlap_comp = []
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
                 set_seed(seed)
@@ -744,19 +684,15 @@ class AdvancedMinigridDivDisSweepExperiment():
                 overlap_acc.append(max(acc))
                 overlap_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                overlap_comp.append(comps[np.argmax(acc)])
                  
             results_acc.append(overlap_acc)
             results_avg_acc.append(overlap_avg_acc)
             results_loss.append(overlap_loss)
-            results_comp.append(overlap_comp)
 
         save_dict = {"ratio": results_overlap,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
-                     "losses": results_loss,
-                     "complexities": results_comp}
+                     "losses": results_loss,}
         self.save_results_dict(save_dict,
                                "unlabelled_overlap_ratio_sweep.pkl")
                 
@@ -765,7 +701,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   
                   "Sweep over Unlabelled Overlap Ratio",
                   "Unlabelled Overlap Ratio")
@@ -781,14 +716,12 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_acc = []
         results_avg_acc = []
         results_loss = []
-        results_comp = []
         
         for variety in tqdm(range(len(all_combination_files)), desc="unlabelled_variety_combinations", position=0):
             results_variety.append(variety_combinations[variety])
             variety_acc = []
             variety_avg_acc = []
             variety_loss = []
-            variety_comp = []
 
             
             for seed in tqdm(range(num_seeds), desc="seeds", position=1, leave=False):
@@ -812,20 +745,16 @@ class AdvancedMinigridDivDisSweepExperiment():
                 variety_acc.append(max(acc))
                 variety_avg_acc.append(np.mean(acc))
 
-                comps = self.head_complexity(classifier)
-                variety_comp.append(comps[np.argmax(acc)])
                 
             results_acc.append(variety_acc)
             results_avg_acc.append(variety_avg_acc)
             results_loss.append(variety_loss)
-            results_comp.append(variety_comp)
         
         save_dict = {"variety": results_variety,
                      "variety_combinations": variety_combinations,
                      "accuracies": results_acc,
                      "avg_accuracies": results_avg_acc,
                      "losses": results_loss,
-                     "complexities": results_comp,
                      }
         self.save_results_dict(save_dict,
                                "unlabelled_variety_sweep.pkl")
@@ -835,7 +764,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  results_comp,
                   "Sweep over Unlabelled Variety",
                   "Unlabelled Variety (seed, color, random state)",
                   categorical=True)

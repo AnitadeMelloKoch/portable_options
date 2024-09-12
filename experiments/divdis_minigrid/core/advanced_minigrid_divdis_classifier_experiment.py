@@ -153,7 +153,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
             )
         logging.info("=================================================")
         
-        return accuracy, weighted_acc
+        return accuracy, weighted_acc, accuracy_pos, accuracy_neg
     
     def explain_classifiers(self,
                             test_data,
