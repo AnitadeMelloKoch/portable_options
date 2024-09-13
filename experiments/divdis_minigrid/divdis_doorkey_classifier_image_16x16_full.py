@@ -47,7 +47,8 @@ if __name__ == "__main__":
 
     for cur_task in tasks:
         for cur_color in colors:
-            print("=================================")
+            print("==========================================")
+            print("==========================================")
             print(f"Task: {cur_task}, Color: {cur_color}")
             
             if cur_task == 'opendoor':
@@ -106,13 +107,12 @@ if __name__ == "__main__":
                 avg_weighted_acc.append(np.mean(weighted_acc))
                 
 
+            print('\n')
             print(f"Best Total Accuracy:   {np.mean(best_total_acc):.2f}, {np.std(best_total_acc):.2f}")
             #print(f"Best Weighted Accuracy: {np.mean(best_weighted_acc):.2f}, {np.std(best_weighted_acc):.2f}")
             print(f"Avg Weighted Accuracy: {np.mean(avg_weighted_acc):.2f}, {np.std(avg_weighted_acc):.2f}")
             print(f"Train Time: {np.mean(train_time):.2f}, {np.std(train_time):.2f}")
             print(f"Test Time:  {np.mean(test_time):.2f}, {np.std(test_time):.2f}")
-            print(f"========================================================")
-            print(f"========================================================")
             print('\n')
 
             if task == 'gotogoal':

@@ -266,7 +266,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -334,7 +335,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -401,7 +403,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
@@ -466,7 +469,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
                                               unlabelled_dataset_batchsize=batch_size,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -533,7 +537,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
@@ -600,7 +605,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=reg_weight)
+                                              l2_reg_weight=reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
@@ -665,7 +671,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 unlabelled_num = len(self.unlabelled_files)
                 unlabelled_files = random.sample(self.unlabelled_files, int(unlabelled_num*(1-overlap)))
                 train_files = self.train_positive_files + self.train_negative_files
@@ -731,7 +738,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                                               diversity_weight=self.default_div_weight,
                                               head_num=self.default_num_heads,
                                               learning_rate=self.default_div_lr,
-                                              l2_reg_weight=self.default_l2_reg_weight)
+                                              l2_reg_weight=self.default_l2_reg_weight,
+                                              model_name="minigrid_cnn_16x16")
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=all_combination_files[variety])
@@ -770,4 +778,90 @@ class AdvancedMinigridDivDisSweepExperiment():
 
     
     
-    
+
+    def grid_search(self,
+                    lr_range,
+                    div_weight_range,
+                    l2_reg_range,
+                    head_num_range,
+                    epochs_range,
+                    num_seeds):
+        
+        # Arrays to store results for grid search
+        results_div_weight = []
+        results_head_num = []
+        results_lr = []
+        results_l2_reg_weight = []
+        
+        # 2D array for multiple seeds
+        results_acc = []
+        results_avg_acc = []
+        results_loss = []
+        
+        # Create grid of hyperparameter combinations
+        for div_weight in tqdm(div_weight_range, desc="div_weights", position=0):
+            for head_num in tqdm(head_num_range, desc="head_nums", position=1, leave=False):
+                for lr in tqdm(lr_range, desc="learning_rates", position=2, leave=False):
+                    for l2_reg_weight in tqdm(l2_reg_range, desc="l2_reg_weights", position=3, leave=False):
+                        for epochs in tqdm(epochs_range, desc="epochs", position=4, leave=False):
+                            
+                        
+                            # Record the current hyperparameters being tested
+                            results_div_weight.append(div_weight)
+                            results_head_num.append(head_num)
+                            results_lr.append(lr)
+                            results_l2_reg_weight.append(l2_reg_weight)
+
+                            grid_acc = []
+                            grid_avg_acc = []
+                            grid_loss = []
+
+                            # Train with multiple seeds for robustness
+                            for seed in tqdm(range(num_seeds), desc="seeds", position=4, leave=False):
+                                set_seed(seed)
+                                classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                                            log_dir=self.log_dir,
+                                                            diversity_weight=div_weight,
+                                                            head_num=head_num,
+                                                            learning_rate=lr,
+                                                            l2_reg_weight=l2_reg_weight,
+                                                            model_name="minigrid_cnn_16x16")
+                                classifier.add_data(positive_files=self.train_positive_files,
+                                                    negative_files=self.train_negative_files,
+                                                    unlabelled_files=self.unlabelled_files)
+                                
+                                train_loss = classifier.train(epochs)
+                                grid_loss.append(train_loss)
+                                
+                                _, _, _, acc = self.test_terminations(self.dataset_positive,
+                                                                    self.dataset_negative,
+                                                                    classifier)
+                                grid_acc.append(max(acc))
+                                grid_avg_acc.append(np.mean(acc))
+
+                            # Store results
+                            results_acc.append(grid_acc)
+                            results_avg_acc.append(grid_avg_acc)
+                            results_loss.append(grid_loss)
+
+        # Save the results
+        save_dict = {"div_weights": results_div_weight,
+                    "head_nums": results_head_num,
+                    "learning_rates": results_lr,
+                    "l2_reg_weights": results_l2_reg_weight,
+                    "avg_best_acc": np.mean(results_acc, axis=1),
+                    "accuracies": results_acc,
+                    "avg_accuracies": results_avg_acc,
+                    "losses": results_loss}
+
+        self.save_results_dict(save_dict,
+                            "grid_search_results.pkl")
+
+        # Plot the results (you can customize the x-axis and what to compare)
+        #self.plot(os.path.join(self.plot_dir, "grid_search.png"),
+        #        results_div_weight,  # Example: Plotting against div_weight, you can customize this
+        #        results_acc,
+        #        results_avg_acc,
+        #        results_loss,
+        #        "Grid Search Results",
+        #        "Diversity Weight")

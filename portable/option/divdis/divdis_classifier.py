@@ -11,6 +11,8 @@ from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16
 from portable.option.divdis.models.monte_cnn import MonteCNN
+from portable.option.divdis.models.unet import UNet
+from portable.option.divdis.models.minigrid_cnn_large import MinigridCNNLarge
 from portable.option.divdis.divdis import DivDisLoss
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,9 @@ MODEL_TYPE = [
     "multi_head_mlp",
     "minigrid_cnn",
     "minigrid_cnn_16x16",
+    "minigrid_cnn_large",
     "monte_cnn",
+    "unet"
 ]
 
 
@@ -67,6 +71,12 @@ class DivDisClassifier():
                                        num_heads=head_num)
         elif model_name == "minigrid_cnn_16x16":
             self.classifier = MinigridCNN16x16(num_classes=num_classes,
+                                               num_heads=head_num)
+        elif model_name == "unet":
+            self.classifier = UNet(num_classes=num_classes,
+                                   num_heads=head_num)
+        elif model_name == "minigrid_cnn_large":
+            self.classifier = MinigridCNNLarge(num_classes=num_classes,
                                                num_heads=head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))

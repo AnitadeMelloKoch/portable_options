@@ -1,20 +1,23 @@
 import argparse 
 from datetime import datetime
 
+import numpy as np
+
 from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_sweep_experiment import AdvancedMinigridDivDisSweepExperiment
 
-color = 'grey'
-#task = f'get{color}key'
-task = f'open{color}door'
+color = 'red'
+task = f'get{color}key'
+#task = f'open{color}door'
 init_term = 'termination'
-RANDOM_TRAIN = True
-RANDOM_UNLABELLED = True
+
+#RANDOM_TRAIN = True
+#RANDOM_UNLABELLED = True
 
 base_img_dir = 'resources/minigrid_images/'
 positive_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_0_1_{init_term}_positive.npy"]
 negative_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_0_1_{init_term}_negative.npy"]
-unlabelled_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_{pos_neg}.npy" for s in [1,2] for pos_neg in ['positive', 'negative']]
+unlabelled_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_{pos_neg}.npy" for s in [1,2,3,4] for pos_neg in ['positive', 'negative']]
 positive_test_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_positive.npy" for s in [5,6,7,8,9,10,11]]
 negative_test_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_door{color}_{s}_1_{init_term}_negative.npy" for s in [5,6,7,8,9,10,11]]
 
@@ -47,7 +50,7 @@ if __name__ == "__main__":
 
     
     print(f"[{formatted_time()}] Sweeping learning rate...")
-    experiment.sweep_lr(-5, # 0.00001
+    experiment.sweep_lr(-4, # 0.0001
                         -3,
                         10,
                         NUM_SEEDS)
@@ -55,7 +58,7 @@ if __name__ == "__main__":
 
 
     print(f"[{formatted_time()}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(-7, # 0.0000001
+    experiment.sweep_class_div_weight(-5, # 0.00001
                                       -2,
                                       15,
                                       NUM_SEEDS)
@@ -70,30 +73,38 @@ if __name__ == "__main__":
 
     print(f"[{formatted_time()}] Sweeping ensemble size...")
     experiment.sweep_ensemble_size(1, 
-                                   20,
+                                   8,
                                    1,
                                    NUM_SEEDS)
 
     
+    print(f"[{formatted_time()}] Sweeping epochs...")
+    experiment.sweep_epochs(5, 
+                            100, 
+                            10,
+                            NUM_SEEDS)
+
     print(f"[{formatted_time()}] Sweeping div batch size...")
     experiment.sweep_div_batch_size(16,
                                     400,
                                     16,
                                     NUM_SEEDS)
 
-    print(f"[{formatted_time()}] Sweeping epochs...")
-    experiment.sweep_epochs(100, 
-                            1000, 
-                            100,
-                            NUM_SEEDS)
+    #print(f"[{formatted_time()}] Now running grid search...")
+    #experiment.grid_search(lr_range=np.logspace(-4, -3, 10),
+    #                        div_weight_range=np.logspace(-5, -2, 15),
+    #                        l2_reg_range=np.logspace(-4, -2, 10),
+    #                        head_num_range=range(1, 8),
+    #                        epochs_range=range(5, 55, 10),
+    #                        num_seeds=NUM_SEEDS)
+
+
 
     print(f"[{formatted_time()}] Sweeping div overlap...")
     experiment.sweep_div_overlap(0,
                                  1,
                                  5,
                                  NUM_SEEDS)
-
-
 
     
     print(f"[{formatted_time()}] Sweeping div variety...")
