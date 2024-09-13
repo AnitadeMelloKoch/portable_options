@@ -167,6 +167,7 @@ class DivDisOptionExperiment():
             epochs = self.classifier_epochs
         self.option.terminations.set_class_weights()
         self.option.terminations.train(epochs)
+        self.option.terminations.save()
     
     def train_option(self,
                      init_states,

@@ -20,8 +20,8 @@ def get_rooms_seeds(files, folder_idx):
     rooms, seeds = [], []
     for file in files:
         room, seed = extract_room_seed(file, folder_idx)
-        rooms.append(room)
-        seeds.append(seed)
+        rooms.append(int(room))
+        seeds.append(int(seed))
     
     return rooms, seeds
 
@@ -76,7 +76,8 @@ def get_success_data_from_df(df,
                              seeds, 
                              env_idxs,
                              head_idxs):
-    plot_points = np.zeros(len(seen_rooms))
+    plot_points_avg = np.zeros(len(seen_rooms))
+    plot_points_var = np.zeros(len(seen_rooms))
     for num_rooms in seen_rooms:
         seed_results = []
         for seed in seeds:
@@ -89,32 +90,42 @@ def get_success_data_from_df(df,
                         (df['seed']==seed)&
                         (df['env_idx']==env_idx)&
                         (df['head_idx']==head_idx)]
-                    head_results.append(mini_df.iloc[-1])
+                    if len(mini_df) == 0:
+                        head_results.append(0)
+                    else:
+                        head_results.append(mini_df.iloc[-1]["rolling_success"])
                 env_results.append(max(head_results))
             seed_results.append(np.mean(env_results))
-        plot_points[num_rooms] = np.mean(seed_results)
+        plot_points_avg[num_rooms-1] = np.mean(seed_results)
+        plot_points_var[num_rooms-1] = np.std(seed_results)
     
-    return plot_points
+    return plot_points_avg, plot_points_var
 
-def room_success_by_seen_plot(data_files):
-    pass
+def room_success_by_seen_plot(df):
+    head_idxs = df['head_idx'].unique()
+    env_idxs = df['env_idx'].unique()
+    rooms = df['num_rooms'].unique()
+    seeds = df['seed'].unique()
+    avg, std = get_success_data_from_df(df,
+                                        rooms,
+                                        seeds,
+                                        env_idxs,
+                                        head_idxs)
+    
+    print("===================")
+    print(avg)
+    print(std)
+    print("===================")
+    
+def room_scatter_plots(df, rooms, seeds):
+    head_idxs = df['head_idx'].unique()
 
+file_dir = "runs/"
 
-files = get_data_files("runs/oscar/runs", "lasers")
-
-rooms, seeds = get_rooms_seeds(files, 3)
-
+files = get_data_files(file_dir, "ladders")
+rooms, seeds = get_rooms_seeds(files, 1)
 df = get_combined_df(files, rooms, seeds)
-minidf = df.loc[(df["num_rooms"]==1)&(df["head_idx"]==0)]
-
-# head_df = df.loc[df['idx'] == 0]
-# head_room_df = head_df.loc[df['num_rooms']==1]
-# head_room_df["episode_reward"] = np.sum(head_df["reward"].to_list())
-# head_room_df["rolling_true_success"] = head_df.rolling(100, on='true_success', min_periods=1).mean()
-
-# print(head_room_df)
-
-
+room_success_by_seen_plot(df)
 
 
 

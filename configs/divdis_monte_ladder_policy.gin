@@ -11,7 +11,7 @@ DivDisOptionExperiment.classifier_epochs                            = 150
 DivDisOptionExperiment.gpu_id                                       = 0
 DivDisOptionExperiment.option_timeout                               = 200
 DivDisOptionExperiment.num_processes                                = 6
-DivDisOptionExperiment.env_ram_dir                                  = "/users/ademello/data/ademello"
+DivDisOptionExperiment.env_ram_dir                                  = "./"
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
@@ -40,4 +40,5 @@ DivDisClassifier.l2_reg_weight                                      = 5e-4
 DivDisClassifier.model_name                                         = "monte_cnn"
 
 UnbalancedSetDataset.class_weights                                  = [0.8, 0.2]
-UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
+UnbalancedSetDataset.data_dir                                       = "./"
+
