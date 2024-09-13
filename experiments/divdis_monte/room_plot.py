@@ -101,7 +101,7 @@ def get_success_data_from_df(df,
     
     return plot_points_avg, plot_points_var
 
-def room_success_by_seen_plot(df):
+def room_success_by_seen_plot(df, fig_name):
     head_idxs = df['head_idx'].unique()
     env_idxs = df['env_idx'].unique()
     rooms = df['num_rooms'].unique()
@@ -117,15 +117,47 @@ def room_success_by_seen_plot(df):
     print(std)
     print("===================")
     
-def room_scatter_plots(df, rooms, seeds):
+    fig = plt.figure(num=1, clear=True)
+    ax = fig.add_subplot()
+    ax.plot(avg)
+    fig.savefig(fig_name)
+    
+    
+    
+def room_scatter_plots(df, plot_folder):
     head_idxs = df['head_idx'].unique()
+    env_idxs = df['env_idx'].unique()
+    rooms = df['num_rooms'].unique()
+    seeds = df['seed'].unique()
+    
+    os.makedirs(plot_folder, exist_ok=True)
+    
+    for head_idx in head_idxs:
+        for env_idx in env_idxs:
+            for room in rooms:
+                for seed in seeds:
+                    mini_df = df.loc[
+                        (df['num_rooms']==room)&
+                        (df['seed']==seed)&
+                        (df['env_idx']==env_idx)&
+                        (df['head_idx']==head_idx)
+                    ]
+                    if len(mini_df) > 0:
+                        term_points = mini_df.iloc[-100:]['final_location']
+                        scatter_folder = os.path.join(plot_folder, "head{}_envidx{}_numroom{}_seed{}".format(head_idx,
+                                                                                                             env_idx,
+                                                                                                             room,
+                                                                                                             seed))
+                        scatter_from_terms(term_points, scatter_folder)
 
 file_dir = "runs/"
 
 files = get_data_files(file_dir, "ladders")
 rooms, seeds = get_rooms_seeds(files, 1)
 df = get_combined_df(files, rooms, seeds)
-room_success_by_seen_plot(df)
+print(df)
+# room_success_by_seen_plot(df, "runs/ladder_wip.png")
+room_scatter_plots(df, "runs/scatter_ladder")
 
 
 
