@@ -261,6 +261,7 @@ class DivDisOption():
         extrinsic_rewards = []
         states = []
         infos = []
+        in_term_accuracy = []
         
         done = False
         should_terminate = False
@@ -287,6 +288,7 @@ class DivDisOption():
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = (torch.argmax(pred_y) == 1).item()
+            in_term_accuracy.append(perfect_term(env.get_current_position()))
             steps += 1
             self.option_steps[idx] += 1
             rewards.append(reward)
@@ -346,7 +348,7 @@ class DivDisOption():
             self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
             self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
         
-        return state, info, done, steps, rewards, option_rewards, states, infos
+        return state, info, done, steps, rewards, option_rewards, states, infos, in_term_accuracy
     
     def plot_term_state(self, 
                         state, 

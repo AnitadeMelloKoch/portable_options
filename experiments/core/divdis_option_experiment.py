@@ -168,7 +168,7 @@ class DivDisOptionExperiment():
         self.option.terminations.set_class_weights()
         self.option.terminations.train(epochs)
         os.makedirs(self.option._get_termination_save_path(), exist_ok=True)
-        self.option.terminations.save(self.option._get_termination_save_path)
+        self.option.terminations.save(self.option._get_termination_save_path())
     
     def train_option(self,
                      init_states,

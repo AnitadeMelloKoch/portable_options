@@ -251,14 +251,19 @@ def train_head(head_idx,
         option_seed = seed
         if learn_new_policy:
             option_seed = env_idx
+            
+        def option_term_func(x):
+            return epsilon_ball_from_list(x,
+                                          term_state)
         
-        _, _, _, steps, _, option_rewards, _, _ = option.train_policy(head_idx,
+        _, _, _, steps, _, option_rewards, _, _, term_accuracy = option.train_policy(head_idx,
                                                                             env,
                                                                             obs,
                                                                             info,
                                                                             option_seed,
                                                                             max_steps=option_timeout,
-                                                                            make_video=True)
+                                                                            make_video=True,
+                                                                            perfect_term=option_term_func)
         
         undiscounted_rewards.append(option_rewards)
         rolling_rewards.append(np.sum(option_rewards))
@@ -280,7 +285,8 @@ def train_head(head_idx,
             "total_reward": np.sum(option_rewards),
             "true_success": true_success,
             "final_location": env.get_current_position(),
-            "env_idx": env_idx
+            "env_idx": env_idx,
+            "in_term_accuracy": term_accuracy
         })
         
         if episode%10 == 0:
