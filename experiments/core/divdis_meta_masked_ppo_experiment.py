@@ -248,6 +248,7 @@ class DivDisMetaMaskedPPOExperiment():
         if epochs is None:
             epochs = self.classifier_epochs
         for idx in range(self.num_options):
+            self.options[idx].terminations.set_class_weights()
             self.options[idx].terminations.train(epochs)
     
     def get_masks_from_seed(self,

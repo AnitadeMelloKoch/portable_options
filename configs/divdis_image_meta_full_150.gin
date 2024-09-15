@@ -48,7 +48,7 @@ DivDisOption.exp_type                                               = "minigrid"
 DivDisOption.tabular_beta                                           = 0
 
 UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
-
+UnbalancedSetDataset.class_weights                                  = [0.7,0.3]
 
 
 
