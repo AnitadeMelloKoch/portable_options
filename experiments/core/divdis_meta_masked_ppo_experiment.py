@@ -412,7 +412,7 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
                         else:
-                            next_obs, info, done, steps, rewards, _, states, _ = self.options[option_num].train_policy(option_head,
+                            next_obs, info, done, steps, rewards, _, states, _, _ = self.options[option_num].train_policy(option_head,
                                                                                                                     env,
                                                                                                                     obs,
                                                                                                                     info,

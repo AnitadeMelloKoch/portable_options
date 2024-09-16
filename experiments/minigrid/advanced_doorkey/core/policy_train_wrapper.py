@@ -68,6 +68,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
             if key.colour == self.objects["door"].colour:
                 return key
     
+    def get_current_position(self):
+        return 0
+    
     def get_door_obj(self):
         door = self.env.unwrapped.grid.get(
             self.objects["door"].position[0], 
@@ -642,7 +645,7 @@ class CorridorWrapper(Wrapper):
         
         return info
     
-    def reset(self):
+    def reset(self, random_start=None):
         
         obs, info = self.env.reset()
         
