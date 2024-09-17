@@ -10,7 +10,7 @@ from portable.agent.model.ppo import create_cnn_vf
 from portable.agent.model.maskable_ppo import create_mask_cnn_policy
 
 def make_random_getkey_env(train_colour, seed, collect_key=False):
-    colours = ["red","yellow", "grey"]
+    colours = ["red","green", "blue"]
     possible_key_colours = list(filter(lambda c: c!= train_colour, colours))
     
     door_colour = random.choice(possible_key_colours)
@@ -20,7 +20,7 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
     
     return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'SmallAdvancedDoorKey-16x16-v0',
             seed=seed,
             grayscale=False,
             scale_obs=True,
@@ -41,7 +41,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'SmallAdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False,
             scale_obs=True,
@@ -57,7 +57,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'SmallAdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False,
             scale_obs=True,
@@ -73,7 +73,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'SmallAdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False,
             scale_obs=True,
@@ -89,7 +89,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-16x16-v0',
+            'SmallAdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False,
             scale_obs=True,
@@ -106,7 +106,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'SmallAdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False,
             scale_obs=True,
@@ -122,7 +122,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'SmallAdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False,
             scale_obs=True,
@@ -138,7 +138,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-16x16-v0',
+                'SmallAdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False,
             scale_obs=True,
@@ -179,12 +179,15 @@ if __name__ == "__main__":
         return x
     
     def option_agent_phi(x):
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = (x/255.0).float()
         return x
     
     terminations = [
         [PerfectGetKey("red")],
-        [PerfectGetKey("yellow")],
-        [PerfectGetKey("grey")],
+        [PerfectGetKey("green")],
+        [PerfectGetKey("blue")],
         [PerfectDoorOpen()],
         [PerfectAtLocation(4,1)],
         [PerfectAtLocation(5,3)],
@@ -207,9 +210,9 @@ if __name__ == "__main__":
     
     # experiment.load()
     
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallSmallAdvancedDoorKey-16x16-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(1500),
+                                                                     max_steps=int(15000),
                                                                      grayscale=False,
                                                                      normalize_obs=False),
                                                  key_collected=False,
@@ -218,7 +221,7 @@ if __name__ == "__main__":
     
     experiment.train_meta_agent(meta_env,
                                 env_seed,
-                                2e8,
+                                4e6,
                                 2)
     
     # experiment.eval_meta_agent(meta_env,

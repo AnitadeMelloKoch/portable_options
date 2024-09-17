@@ -23,7 +23,7 @@ def make_random_getkey_env(train_colour,
     
     return AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=seed,
             grayscale=False
         ),
@@ -42,7 +42,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -56,7 +56,7 @@ train_envs = [
         make_random_getkey_env("red", env_seed, keep_colour="red"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -72,7 +72,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -86,7 +86,7 @@ train_envs = [
         make_random_getkey_env("yellow", env_seed, keep_colour="yellow"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -102,7 +102,7 @@ train_envs = [
     [
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -116,7 +116,7 @@ train_envs = [
         make_random_getkey_env("grey", env_seed, keep_colour="grey"),],
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -131,7 +131,7 @@ train_envs = [
     ],[
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -143,7 +143,7 @@ train_envs = [
         )],
         [AdvancedDoorKeyPolicyTrainWrapper(
         environment_builder(
-            'AdvancedDoorKey-8x8-v0',
+            'AdvancedDoorKey-16x16-v0',
             seed=env_seed,
             grayscale=False
         ),
@@ -156,7 +156,7 @@ train_envs = [
     ],[
         [AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-8x8-v0',
+                'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False
             ),
@@ -166,7 +166,7 @@ train_envs = [
             force_door_open=True
         )],[AdvancedDoorKeyPolicyTrainWrapper(
             environment_builder(
-                'AdvancedDoorKey-8x8-v0',
+                'AdvancedDoorKey-16x16-v0',
                 seed=env_seed,
                 grayscale=False
             ),
@@ -233,7 +233,7 @@ if __name__ == "__main__":
                                      5e2)
     
     meta_env = environment_builder(
-                    'AdvancedDoorKey-8x8-v0',
+                    'AdvancedDoorKey-16x16-v0',
                     seed=env_seed,
                     max_steps=int(1e4),
                     grayscale=False

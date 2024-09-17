@@ -9,9 +9,10 @@ DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_imag
 DivDisMetaMaskedPPOExperiment.num_options                           = 7
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
-DivDisMetaMaskedPPOExperiment.make_videos                           = True
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
+DivDisMetaMaskedPPOExperiment.make_videos                           = False
 DivDisMetaMaskedPPOExperiment.option_type                           = "mock"
-DivDisMetaMaskedPPOExperiment.option_timeout                        = 150
+DivDisMetaMaskedPPOExperiment.option_timeout                        = 300
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 84, 84)
@@ -19,7 +20,7 @@ MaskablePPOAgent.num_actions                                        = 7
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 200000
+PolicyWithInitiation.buffer_length                                  = 100000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
@@ -32,11 +33,11 @@ PolicyWithInitiation.q_hidden_size                                  = 128
 PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True
 
-SkillPPO.learning_rate                                              = 2.5e-4
-SkillPPO.state_shape                                                = (3, 84, 84)
-SkillPPO.num_actions                                                = 7 
-SkillPPO.entropy_coef                                               = 0.01
-SkillPPO.minibatch_size                                             = 256
+MaskablePPOAgent.learning_rate                                      = 1.25e-4
+MaskablePPOAgent.state_shape                                        = (3, 84, 84)
+MaskablePPOAgent.num_actions                                        = 20
+MaskablePPOAgent.update_interval                                    = 100
+MaskablePPOAgent.entropy_coef                                       = 0.05
 
 DivDisMockOption.exp_type                                           = "minigrid"
 DivDisMockOption.tabular_beta                                       = 0
