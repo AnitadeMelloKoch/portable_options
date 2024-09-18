@@ -5,19 +5,17 @@ import time
 import numpy as np
 import torch
 from tqdm import tqdm
-#import torch_tensorrt
 
 from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_experiment import \
     AdvancedMinigridDivDisClassifierExperiment
 
-color = 'grey' # 'grey', 'blue', 'green', 'yellow', 'purple','red'
+color = 'red' # 'blue', 'green', 'yellow', 'red'
 
-#task = f'open{color}door'
-task = f'get{color}key'
+task = f'open{color}door'
+#task = f'get{color}key'
 
 init_term = 'termination'
-
 
 task = f'{task}_door{color}'
 
@@ -49,11 +47,7 @@ if __name__ == "__main__":
 
     load_gin_configs(args.config_file, args.gin_bindings)
 
-    #torch.set_float32_matmul_precision('high')
-    #torch.backends.cuda.matmul.allow_tf32 = True
-    #torch.set_float32_matmul_precision('medium')
-    #torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = True
-    #print(torch._dynamo.list_backends())
+
     seeds = [20*i + args.seed for i in range(args.n)]
 
     best_total_acc = []
@@ -79,16 +73,19 @@ if __name__ == "__main__":
         t1 = time.time()
         train_time.append(t1-t0)
         t2 = time.time()
-        accuracy = experiment.test_classifier(positive_test_files,
-                            negative_test_files)
+        acc, weighted_acc, acc_pos, acc_neg = experiment.test_classifier(positive_test_files,negative_test_files)
         test_time.append(time.time()-t2)
         
-        print(f"Total Accuracy: {np.round(accuracy[0], 2)}")
-        #print(f"Weighted Accuracy: {np.round(accuracy[1], 2)}")
-        best_head = np.argmax(accuracy[1])
-        best_weighted_acc.append(accuracy[1][best_head])
-        best_total_acc.append(accuracy[0][best_head])
-        avg_weighted_acc.append(np.mean(accuracy[1]))
+        print(f"*** Seed: {cur_seed}")
+        print(f"Total Accuracy:    {np.round(acc, 2)}")
+        #print(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+        print(f"Positive Accuracy: {np.round(acc_pos, 2)}")
+        print(f"Negative Accuracy: {np.round(acc_neg, 2)}")
+        
+        best_head = np.argmax(weighted_acc)
+        best_weighted_acc.append(weighted_acc[best_head])
+        best_total_acc.append(acc[best_head])
+        avg_weighted_acc.append(np.mean(weighted_acc))
 
     print(f"Best Total Accuracy: {np.mean(best_total_acc):.2f}, {np.std(best_total_acc):.2f}")
     #print(f"Best Weighted Accuracy: {np.mean(best_weighted_acc):.2f}, {np.std(best_weighted_acc):.2f}")

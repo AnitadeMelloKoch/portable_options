@@ -2,15 +2,15 @@ import experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_expe
 import portable.option.divdis.divdis_classifier
 
 AdvancedMinigridDivDisClassifierExperiment.experiment_name                = "minigrid_16x16_large_test"
-AdvancedMinigridDivDisClassifierExperiment.use_gpu                        = True
+AdvancedMinigridDivDisClassifierExperiment.use_gpu                        = 0
 AdvancedMinigridDivDisClassifierExperiment.classifier_num_classes         = 2
 
 AdvancedMinigridDivDisClassifierExperiment.classifier_head_num            = 5
-AdvancedMinigridDivDisClassifierExperiment.classifier_learning_rate       = 0.0003 #0.001
-AdvancedMinigridDivDisClassifierExperiment.classifier_diversity_weight    = 0.0005 #0.001 
-AdvancedMinigridDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.001 #0.0002
-AdvancedMinigridDivDisClassifierExperiment.classifier_train_epochs        = 30
-AdvancedMinigridDivDisClassifierExperiment.classifier_model               = 'minigrid_cnn_large'
+AdvancedMinigridDivDisClassifierExperiment.classifier_learning_rate       = 0.001 #0.001
+AdvancedMinigridDivDisClassifierExperiment.classifier_diversity_weight    = 0.004 #0.004 
+AdvancedMinigridDivDisClassifierExperiment.classifier_l2_reg_weight       = 0.0002 #0.0002
+AdvancedMinigridDivDisClassifierExperiment.classifier_train_epochs        = 10 #150
+AdvancedMinigridDivDisClassifierExperiment.classifier_model               = 'minigrid_cnn'
 
 DivDisClassifier.dataset_batchsize = 64
 

@@ -45,7 +45,6 @@ class AdvancedMinigridDivDisClassifierExperiment():
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
                                            log_dir=self.log_dir,
                                            num_classes=classifier_num_classes,
-                                           state_dim=3,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
                                            diversity_weight=classifier_diversity_weight,
@@ -86,6 +85,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
                                  unlabelled_files=unlabelled_files)
     
     def train_classifier(self):
+        self.classifier.set_class_weights([1, 1.0])
         self.classifier.train(epochs=self.train_epochs)
     
     def test_classifier(self,
@@ -144,7 +144,7 @@ class AdvancedMinigridDivDisClassifierExperiment():
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.classifier.head_num):
-            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
+            logging.info("Head idx:{:<4}, True accuracy: {:.2f}, False accuracy: {:.2f}, Total accuracy: {:.2f}, Weighted accuracy: {:.2f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],

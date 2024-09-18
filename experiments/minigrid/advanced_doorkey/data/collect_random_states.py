@@ -11,7 +11,7 @@ from experiments.minigrid.utils import environment_builder, factored_environment
 
 
 def collect_seed(seed, task, initiation=None, termination=None):
-    colours = ["red", "green", "blue", "purple", "yellow", "grey"]    
+    colours = ["red", "green", "blue", "purple", "yellow", "grey"]
     for colour in colours:
         states = []
         for _ in tqdm(range(3000)):
@@ -72,7 +72,6 @@ if __name__ == '__main__':
     USE_MP = True
     
     for task in ['get_key', 'open_door']:
-        task = 'get_key'
         seeds = [0,1,2,3,4,5,6,7,8,9,10,11]
         
         if USE_MP:

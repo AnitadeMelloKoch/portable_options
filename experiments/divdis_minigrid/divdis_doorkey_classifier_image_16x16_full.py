@@ -2,7 +2,6 @@ import argparse
 import random
 import time
 
-from matplotlib.pylab import f
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -35,11 +34,6 @@ if __name__ == "__main__":
 
     load_gin_configs(args.config_file, args.gin_bindings)
 
-    #torch.set_float32_matmul_precision('high')
-    #torch.backends.cuda.matmul.allow_tf32 = True
-    #torch.set_float32_matmul_precision('medium')
-    #torch.backends.cuda.matmul.allow_bf16_reduced_precision_reduction = True
-    #print(torch._dynamo.list_backends())
     seeds = [20*i + args.seed for i in range(args.n)]
 
     tasks = ['opendoor', 'getkey', 'gotogoal']
@@ -77,7 +71,7 @@ if __name__ == "__main__":
 
             for i in range(args.n):
                 cur_seed = seeds[i]
-                    
+                
                 t0 = time.time()
                 experiment = AdvancedMinigridDivDisClassifierExperiment(
                                     base_dir=args.base_dir,

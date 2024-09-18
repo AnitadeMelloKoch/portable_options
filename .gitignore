@@ -148,3 +148,5 @@ runs/
 debugging/
 temp/
 temp.py
+
+log.txt

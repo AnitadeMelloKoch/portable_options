@@ -9,6 +9,7 @@ import numpy as np
 from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16
+from portable.option.divdis.models.minigrid_cnn_large import MinigridCNNLarge
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
@@ -35,7 +36,7 @@ class DivDisClassifier():
                  
                  l2_reg_weight=0.001,
                  class_weight=None,
-                 dataset_max_size=1e6,
+                 dataset_max_size=int(1e6),
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  
@@ -102,8 +103,10 @@ class DivDisClassifier():
     
     def reset_classifier(self):
         if self.model_name == "minigrid_cnn":
-            self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
-                                               num_heads=self.head_num)
+            #self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
+            #                                   num_heads=self.head_num)
+            self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
+                                                  num_heads=self.head_num)
         elif self.model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
