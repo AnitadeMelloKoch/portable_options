@@ -67,7 +67,7 @@ train_envs = [
         door_colour="red",
         time_limit=500,
         image_input=True,
-        keep_colour="yellow"
+        keep_colour="green"
         )],
     ],
     [
@@ -83,7 +83,7 @@ train_envs = [
         door_colour="red",
         time_limit=500,
         image_input=True,
-        keep_colour="grey"
+        keep_colour="blue"
         )],
     ],
     [
@@ -189,9 +189,9 @@ if __name__ == "__main__":
         [PerfectGetKey("green")],
         [PerfectGetKey("blue")],
         [PerfectDoorOpen()],
-        [PerfectAtLocation(4,1)],
-        [PerfectAtLocation(5,3)],
-        [PerfectAtLocation(6,6)],
+        [PerfectAtLocation(8,1)],
+        [PerfectAtLocation(10,10)],
+        [PerfectAtLocation(15,15)],
     ]
     
     experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
@@ -210,10 +210,12 @@ if __name__ == "__main__":
     
     # experiment.load()
     
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallSmallAdvancedDoorKey-16x16-v0',
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
                                                                      seed=args.seed,
                                                                      max_steps=int(15000),
                                                                      grayscale=False,
+                                                                     scale_obs=True,
+                                                                     final_image_size=(84,84),
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,

@@ -12,7 +12,7 @@ DivDisMetaMaskedPPOExperiment.use_gpu                               = True
 DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
 DivDisMetaMaskedPPOExperiment.make_videos                           = False
 DivDisMetaMaskedPPOExperiment.option_type                           = "mock"
-DivDisMetaMaskedPPOExperiment.option_timeout                        = 300
+DivDisMetaMaskedPPOExperiment.option_timeout                        = 150
 
 MaskablePPOAgent.learning_rate                                      = 2.5e-4
 MaskablePPOAgent.state_shape                                        = (3, 84, 84)
@@ -20,7 +20,7 @@ MaskablePPOAgent.num_actions                                        = 7
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
-PolicyWithInitiation.buffer_length                                  = 100000
+PolicyWithInitiation.buffer_length                                  = 200000
 PolicyWithInitiation.update_interval                                = 4
 PolicyWithInitiation.q_target_update_interval                       = 10
 PolicyWithInitiation.learning_rate                                  = 2.5e-4
