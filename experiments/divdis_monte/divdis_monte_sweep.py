@@ -1,39 +1,28 @@
-import argparse
-import logging
-#import multiprocessing
-import random
+import argparse 
+from datetime import datetime
 
 import numpy as np
-import torch
-from tqdm import tqdm
 
-from experiments.divdis_monte.core.divdis_monte_classifier_experiment import \
-    MonteDivDisClassifierExperiment
 from portable.utils.utils import load_gin_configs
+from experiments.divdis_monte.core.divdis_monte_sweep_experiment import MonteDivDisSweepExperiment
+
 
 img_dir = "resources/monte_images/"
 
-# train using room 1 only
-"""positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy"]
 
-negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
-                        img_dir+"screen_death_1.npy",
-                        img_dir+"screen_death_2.npy",
-                        img_dir+"screen_death_3.npy",
-                        img_dir+"screen_death_4.npy"
-                        ]"""
 positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
-                        img_dir+"climb_down_ladder_room10_termination_positive.npy",]
+                        #img_dir+"climb_down_ladder_room10_termination_positive.npy",
+                        ]
 
 negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
                         img_dir+"screen_death_1.npy",
                         img_dir+"screen_death_2.npy",
                         img_dir+"screen_death_3.npy",
                         img_dir+"screen_death_4.npy",
-                        img_dir+"climb_down_ladder_room10_termination_negative.npy",
+                        #img_dir+"climb_down_ladder_room10_termination_negative.npy",
                         #img_dir+"climb_down_ladder_room10_uncertain.npy"
                         ]
-initial_unlabelled_train_files = [
+unlabelled_train_files = [
     # 0
     img_dir + "climb_up_ladder_room0_termination_positive.npy",
      img_dir + "climb_up_ladder_room0_termination_negative.npy",
@@ -214,77 +203,123 @@ uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room22_uncertain.npy",
                         ]
 
+def formatted_time():
+    now = datetime.now()
+    return now.strftime("%Y-%m-%d %H:%M:%S")
 
 if __name__ == "__main__":
-        parser = argparse.ArgumentParser()
-
-        parser.add_argument("--base_dir", type=str, required=True)
-        parser.add_argument("--seed", type=int, required=True)
-        parser.add_argument("--config_file", nargs='+', type=str, required=True)
-        parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
-                ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
-                ' "create_atari_environment.game_name="Pong"").')
-
-        args = parser.parse_args()
-
-        load_gin_configs(args.config_file, args.gin_bindings)
-
-        #multiprocessing.set_start_method('spawn')
-
-        seeds = [args.seed * i for i in range(1, 6)]
-        room_histories = []
-        additional_histories = []
-
-        for seed in seeds:
-            print(f"Running experiment for seed {seed}")
-        
-            experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir,
-                                                            seed=seed)
-
-            experiment.add_train_files(positive_train_files,
-                                       negative_train_files,
-                                       [])
-            experiment.classifier.dataset.add_unlabelled_files(initial_unlabelled_train_files)
-            
-            experiment.add_test_files(positive_test_files,
-                                      negative_test_files,
-                                      uncertain_test_files)
-
-            experiment.classifier.set_class_weights()
-            
-            experiment.train_classifier(experiment.initial_epochs)
-
-            print("Training on room 1 with full unlabelled data")
-            logging.info("Training on room 1 with full unlabelled data")
-            accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier()
-            uncertainty = experiment.test_uncertainty()
-                                                        
-            print(f"Weighted Accuracy: {weighted_acc}")
-            print(f"Accuracy: {accuracy}")
-            print(f"Uncertainty: {uncertainty}")
-
-            best_weighted_acc = np.max(weighted_acc)
-            best_head_idx = np.argmax(weighted_acc)
-            best_accuracy = accuracy[best_head_idx]
-            best_true_acc = accuracy_pos[best_head_idx]
-            best_false_acc = accuracy_neg[best_head_idx]
-            best_head_uncertainty = uncertainty[best_head_idx]
-
-            history = {
-            'weighted_accuracy': [best_weighted_acc],
-            'raw_accuracy': [best_accuracy],
-            'true_accuracy': [best_true_acc], 
-            'false_accuracy': [best_false_acc],
-            'uncertainty': [best_head_uncertainty]
-        }
-
-            history, heads_history = experiment.additional_train()
-            additional_histories.append(history)
+    parser = argparse.ArgumentParser()
     
-        experiment.plot_metrics(additional_histories, 'train loops', 'avg_train_metrics')
-        
-        #num_batch = 1
-        #view_acc = experiment.view_false_predictions(positive_test_files, negative_test_files, num_batch)
-        #print(f"Viewing {num_batch} of Predictions:")
-        #print(f"Accuracy: {view_acc[0]}")
-        #print(f"Weighted Accuracy: {view_acc[1]}")
+    parser.add_argument("--base_dir", type=str, required=True)
+    parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--config_file", nargs='+', type=str, required=True)
+    parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
+            ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
+            ' "create_atari_environment.game_name="Pong"").')
+    
+    args = parser.parse_args()
+    load_gin_configs(args.config_file, args.gin_bindings)
+
+    experiment = MonteDivDisSweepExperiment(base_dir=args.base_dir,
+                                            train_positive_files=positive_train_files,
+                                            train_negative_files=negative_train_files,
+                                            unlabelled_files=unlabelled_train_files,
+                                            test_positive_files=positive_test_files,
+                                            test_negative_files=negative_test_files,
+                                            seed=args.seed)
+    
+    NUM_SEEDS = 5
+
+    
+    print(f"[{formatted_time()}] Sweeping learning rate...")
+    experiment.sweep_lr(-5, # 0.00001
+                        -3,
+                        8,
+                        NUM_SEEDS)
+
+
+    print(f"[{formatted_time()}] Sweeping class div weight...")
+    experiment.sweep_class_div_weight(-5, # 0.00001
+                                      -3,
+                                      8,
+                                      NUM_SEEDS)
+
+    print(f"[{formatted_time()}] Sweeping L2 reg weight...")
+    experiment.sweep_l2_reg_weight(-6, # 0.0001
+                                   -3,
+                                   8,
+                                   NUM_SEEDS)
+
+
+    print(f"[{formatted_time()}] Sweeping ensemble size...")
+    experiment.sweep_ensemble_size(1, 
+                                   8,
+                                   1,
+                                   NUM_SEEDS,
+                                   )
+
+    
+    print(f"[{formatted_time()}] Sweeping epochs...")
+    experiment.sweep_epochs(5, 
+                            100, 
+                            10,
+                            NUM_SEEDS,
+                            [5,10,30,60,100,130,160,200,250]) # when a list is provided, use this
+
+
+    print(f"[{formatted_time()}] Sweeping div batch size...")
+    experiment.sweep_div_batch_size(16,
+                                    400,
+                                    16,
+                                    NUM_SEEDS)
+
+    
+    #print(f"[{formatted_time()}] Now running grid search...")
+    #experiment.grid_search(lr_range=np.logspace(-4, -3, 10),
+    #                        div_weight_range=np.logspace(-5, -2, 15),
+    #                        l2_reg_range=np.logspace(-4, -2, 10),
+    #                        head_num_range=range(1, 8),
+    #                        epochs_range=range(5, 55, 10),
+    #                        num_seeds=NUM_SEEDS)
+    
+    
+    
+    
+    
+
+
+
+    #print(f"[{formatted_time()}] Sweeping div overlap...")
+    #experiment.sweep_div_overlap(0,
+    #                             1,
+    #                             5,
+    #                             NUM_SEEDS)
+    #
+    #
+    #print(f"[{formatted_time()}] Sweeping div variety...")
+    ## Sweep variety
+    #seed_var = [[0],[1,2],[1,2,3,4]]
+    #color_var = [['red'],['blue','yellow'],['blue','yellow','green','purple','grey']]
+    #variety_names = ['low','medium','high']
+    #rs_var = [True]
+    #variety_combinations = []
+    #all_combination_files = []
+    #
+    #for seed_idx in range(len(seed_var)):
+    #    for color_idx in range(len(color_var)):
+    #        for rs_idx in range(len(rs_var)):
+    #            # 3*3*2 = 18 combinations
+    #            combination_files = []
+    #            for s in seed_var[seed_idx]:
+    #                for c in color_var[color_idx]:
+    #                    if rs_var[rs_idx]:
+    #                        file_name = f"resources/minigrid_images/adv_doorkey_16x16_v2_{task}_door{c}_{s}_1_termination_positive.npy"
+    #                    else:
+    #                        file_name = f"resources/minigrid_images/adv_doorkey_16x16_v2_{task}_door{c}_{s}_termination_positive.npy"
+    #                    combination_files.append(file_name)
+    #            all_combination_files.append(combination_files)
+    #            variety_combinations.append(f'{variety_names[seed_idx]},{variety_names[color_idx]},{"included" if rs_var[rs_idx] else "none"}')
+    #    
+    #experiment.sweep_div_variety(variety_combinations, all_combination_files, NUM_SEEDS)
+
+

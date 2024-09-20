@@ -243,6 +243,8 @@ if __name__ == "__main__":
                                       negative_test_files,
                                       uncertain_test_files)
             
+            experiment.classifier.set_class_weights()
+            
             experiment.train_classifier(experiment.initial_epochs)
 
             print("Training on room 1 only")
@@ -275,7 +277,7 @@ if __name__ == "__main__":
             'uncertainty': [best_head_uncertainty]
         }
 
-            history, heads_history = experiment.room_by_room_train(room_list, unlabelled_train_files, history, heads_history)
+            history, heads_history = experiment.room_by_room_train_unlabelled(room_list, unlabelled_train_files, history, heads_history)
             room_histories.append(history)
 
             print("All unlabelled rooms added, now running additional training loops")

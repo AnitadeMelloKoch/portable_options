@@ -238,11 +238,13 @@ if __name__ == "__main__":
             experiment.add_train_files(positive_train_files,
                                        negative_train_files,
                                        [])
-            experiment.classifier.dataset.add_some_unlabelled_files(initial_unlabelled_train_files, 1)
+            experiment.classifier.add_data([],[],initial_unlabelled_train_files)
             
             experiment.add_test_files(positive_test_files,
                                       negative_test_files,
                                       uncertain_test_files)
+
+            experiment.classifier.set_class_weights()
             
             experiment.train_classifier(experiment.initial_epochs)
 

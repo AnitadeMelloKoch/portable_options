@@ -137,9 +137,6 @@ class DivDisClassifier():
         self.dataset.add_false_files(negative_files)
         self.dataset.add_unlabelled_files(unlabelled_files)
     
-    def add_unlabelled_data(self,
-                            states):
-        self.dataset.add_unlabelled_files
     
     def train(self,
               epochs,

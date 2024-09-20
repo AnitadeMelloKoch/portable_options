@@ -1,11 +1,14 @@
+import copy
 import datetime
 import logging
 import os
 import pickle
+import random
+import re
 
 import gin
 import matplotlib.pyplot as plt
-#from multiprocessing import Pool
+from multiprocessing import Pool
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -36,6 +39,43 @@ def transform(x):
     x = x.unsqueeze(1)
     return x
 
+def get_sorted_filenames(directory):
+    filenames = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            filenames.append(file)
+    filenames.sort()
+    
+    return filenames
+
+
+def get_monte_filenames(filenames, task, room, init_term_uncertain, pos_neg=None):
+    """
+    Filters filenames by task, room, status (initiation/termination/uncertain), and label (positive/negative).
+
+    Parameters:
+    - filenames (list of str): Available filenames in resources folder
+    - task (str): Task name (e.g., "climb_down_ladder").
+    - room (str): Room number (e.g., "2", "14left").
+    - init_term_uncertain (str): 'initiation', 'termination', or 'uncertain'.
+    - pos_neg (str, optional): 'positive' or 'negative', ignored if 'uncertain'.
+
+    Returns:
+    - list of str: Filenames matching the criteria or an empty list.
+    """
+    
+    if init_term_uncertain == 'uncertain':
+        # If uncertain, we don't care about positive/negative
+        pattern = re.compile(rf"{task}_room{room}(_1)?_{init_term_uncertain}\.npy")
+    else:
+        # For initiation/termination, match both positive/negative if pos_neg is not None
+        pattern = re.compile(rf"{task}_room{room}(_1)?_{init_term_uncertain}_{pos_neg}\.npy")
+    
+    return [filename for filename in filenames if pattern.match(filename)]
+
+
+
+
 @gin.configurable 
 class MonteDivDisClassifierExperiment():
     def __init__(self,
@@ -45,7 +85,6 @@ class MonteDivDisClassifierExperiment():
                  use_gpu,
                  
                  classifier_num_classes,
-                 classifier_class_weight,
                  
                  classifier_head_num,
                  classifier_learning_rate,
@@ -58,9 +97,18 @@ class MonteDivDisClassifierExperiment():
         
         self.seed = seed 
         self.base_dir = base_dir
-        self.experiment_name = experiment_name 
+        self.experiment_name = experiment_name
+        self.use_gpu = use_gpu
+        
         self.initial_epochs = classifier_initial_epochs
         self.per_room_epochs = classifier_per_room_epochs
+
+        self.classifier_head_num = classifier_head_num
+        self.classifier_learning_rate = classifier_learning_rate
+        self.classifier_diversity_weight = classifier_diversity_weight
+        self.classifier_l2_reg_weight = classifier_l2_reg_weight
+        self.classifier_model_name = classifier_model_name
+        
         
         set_seed(seed)
         
@@ -76,16 +124,17 @@ class MonteDivDisClassifierExperiment():
         self.classifier = DivDisClassifier(use_gpu=use_gpu,
                                            log_dir=self.log_dir,
                                            num_classes=classifier_num_classes, 
-                                           class_weight=classifier_class_weight,
-                                           state_dim=4,
                                            head_num=classifier_head_num,
                                            learning_rate=classifier_learning_rate,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
                                            model_name=classifier_model_name
                                            )
-        #self.classifier.dataset.set_transform_function(transform)
+        self.classifier.state_dim = 3 #(n,4,84,84) so each has dim3
 
+        self.directory = None
+        self.data_filenames = []
+        
         self.positive_test_files = []
         self.negative_test_files = []
         self.uncertain_test_files = []
@@ -114,6 +163,34 @@ class MonteDivDisClassifierExperiment():
     
     def load(self):
         self.classifier.load(path=self.save_dir)
+
+    def read_directory(self, directory):
+        self.data_filenames = get_sorted_filenames(directory)
+        self.directory = directory
+
+    def get_monte_filenames(self, task, room, init_term_uncertain, pos_neg=None):
+        """
+        Filters filenames by task, room, status (initiation/termination/uncertain), and label (positive/negative).
+
+        Parameters:
+        - filenames (list of str): Available filenames in resources folder
+        - task (str): Task name (e.g., "climb_down_ladder").
+        - room (str): Room number (e.g., "2", "14left").
+        - init_term_uncertain (str): 'initiation', 'termination', or 'uncertain'.
+        - pos_neg (str, optional): 'positive' or 'negative', ignored if 'uncertain'.
+
+        Returns:
+        - list of str: Filenames matching the criteria or an empty list.
+        """
+
+        if init_term_uncertain == 'uncertain':
+            # If uncertain, we don't care about positive/negative
+            pattern = re.compile(rf"{task}_room{room}(_1)?_{init_term_uncertain}\.npy")
+        else:
+            # For initiation/termination, match both positive/negative if pos_neg is not None
+            pattern = re.compile(rf"{task}_room{room}(_1)?_{init_term_uncertain}_{pos_neg}\.npy")
+        
+        return [self.directory+filename for filename in self.data_filenames if pattern.match(filename)]
     
     def add_train_files(self,
                       positive_files,
@@ -190,7 +267,7 @@ class MonteDivDisClassifierExperiment():
         
         logging.info("============= Classifiers evaluated =============")
         for idx in range(self.classifier.head_num):
-            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
+            logging.info("Head idx:{:<4}, True accuracy: {:.2f}, False accuracy: {:.2f}, Total accuracy: {:.2f}, Weighted accuracy: {:.2f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],
@@ -225,7 +302,7 @@ class MonteDivDisClassifierExperiment():
         
         logging.info("============= Classifiers Uncertainty States Measured =============")
         for idx in range(self.classifier.head_num):
-            logging.info("Head idx:{:<4}, Uncertainty: {:.4f}.".format(idx, uncertainty[idx]))
+            logging.info("Head idx:{:<4}, Uncertainty: {:.2f}.".format(idx, uncertainty[idx]))
         logging.info("=================================================")
         
         return uncertainty
@@ -309,7 +386,7 @@ class MonteDivDisClassifierExperiment():
         logging.info("============= Classifiers evaluated =============")
         logging.info(f"Evaluated {num_batch} batches.")
         for idx in range(self.classifier.head_num):
-            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
+            logging.info("Head idx:{:<4}, True accuracy: {:.2f}, False accuracy: {:.2f}, Total accuracy: {:.2f}, Weighted accuracy: {:.2f}".format(
                 idx,
                 accuracy_pos[idx],
                 accuracy_neg[idx],
@@ -477,7 +554,7 @@ class MonteDivDisClassifierExperiment():
             plt.savefig(os.path.join(self.plot_dir, plot_name))
 
             
-    def room_by_room_train(self, room_list, unlabelled_train_files, history, heads_history):
+    def room_by_room_train_unlabelled(self, room_list, unlabelled_train_files, history, heads_history):
         for room_idx in tqdm(range(len(room_list)), desc='Room Progression'):
             room = room_list[room_idx]
             print('===============================')
@@ -486,10 +563,11 @@ class MonteDivDisClassifierExperiment():
             logging.info(f"Training on room {room}")
             
             cur_room_unlab = unlabelled_train_files[room_idx]
-            cur_room_unlab = [np.load(file) for file in cur_room_unlab]
-            cur_room_unlab = [img for list in cur_room_unlab for img in list]
-            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
-            self.classifier.dataset.add_unlabelled_data(cur_room_unlab)
+            #cur_room_unlab = [np.load(file) for file in cur_room_unlab]
+            #cur_room_unlab = [img for list in cur_room_unlab for img in list]
+            #cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
+            #self.classifier.dataset.add_unlabelled_data(cur_room_unlab)
+            self.classifier.add_data([], [], cur_room_unlab)
             
             self.train_classifier(self.per_room_epochs)
                 
@@ -596,3 +674,144 @@ class MonteDivDisClassifierExperiment():
         
         return history, heads_history
 
+
+    def room_by_room_train_labelled(self, task, init_term, combinations_list):
+        # combinations_list: 2D array, (num_rooms, num_combinations)
+
+        num_rooms = range(1,len(combinations_list)+1)
+        weighted_acc_list = [] # nested list of best heads
+        raw_acc_list = []
+        
+        for room_combinations in combinations_list:
+            # each combination include all rooms (with n rooms). e.g. [[1]] for 1 room, [[1,2],[0,1]] for 2 rooms, etc.
+            comb_weighted_acc = []
+            comb_raw_acc = []
+            num_rooms = len(room_combinations[0])
+            
+            print(f"Training on combinations of {num_rooms} rooms of labeled data")
+            logging.info(f"Training on combinations of {num_rooms} rooms of labeled data")
+            
+            for comb in room_combinations:
+                # each combination has n rooms, want to add all these to labelled and measure test performance.
+                positive_train_files = []
+                negative_train_files = []
+
+                print(f"Training on rooms {comb}")
+                logging.info(f"Training on rooms {comb}")
+                
+                for room in comb:
+                    positive_train_files += self.get_monte_filenames(task, room, init_term, 'positive')
+                    negative_train_files += self.get_monte_filenames(task, room, init_term, 'negative')
+                unlabelled_train_files = unlabelled_train_files = [self.directory+file for file in self.data_filenames if (file not in positive_train_files) and (file not in negative_train_files)]
+                unlabelled_train_files = random.sample(unlabelled_train_files, int(1*len(unlabelled_train_files)))
+
+                print(f"Positive files: {positive_train_files}")
+                print(f"Negative files: {negative_train_files}")
+                
+                
+                for s in range(3):
+                    set_seed(self.seed+s)
+                    print(f"Seed {self.seed+s}")
+                    logging.info(f"Seed {self.seed+s}")
+                    
+                    #classifier = copy.deepcopy(self.classifier)
+                    classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                                log_dir=self.log_dir,
+                                                num_classes=self.classifier.num_classes,
+                                                head_num=self.classifier.head_num,
+                                                learning_rate=self.classifier_learning_rate,
+                                                diversity_weight=self.classifier_diversity_weight,
+                                                l2_reg_weight=self.classifier_l2_reg_weight,
+                                                model_name=self.classifier_model_name
+                                                )
+                    self.classifier = classifier
+                    classifier.add_data(positive_train_files, negative_train_files, unlabelled_train_files)
+                    classifier.set_class_weights()
+                    classifier.train(self.per_room_epochs)
+
+                    accuracy_pos, accuracy_neg, raw_acc, weighted_acc = self.test_classifier()
+                    uncertainty = self.test_uncertainty()
+
+                    best_head_idx = np.argmax(weighted_acc)
+                    best_weighted_acc = np.max(weighted_acc)
+                    best_accuracy = raw_acc[best_head_idx]
+                    best_true_acc = accuracy_pos[best_head_idx]
+                    best_false_acc = accuracy_neg[best_head_idx]
+                    
+                    comb_weighted_acc.append(best_weighted_acc)
+                    comb_raw_acc.append(best_accuracy)
+
+                    print(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                    print(f"Accuracy:          {np.round(raw_acc, 2)}")
+                    print(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                    print(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+                    print(f"Uncertainty:       {np.round(uncertainty, 2)}")
+
+                    logging.info(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                    logging.info(f"Accuracy:          {np.round(raw_acc, 2)}")
+                    logging.info(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                    logging.info(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+                    logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
+
+            weighted_acc_list.append(comb_weighted_acc)
+            raw_acc_list.append(comb_raw_acc)
+
+        results = {'rooms': num_rooms, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
+
+        with open(os.path.join(self.log_dir, 'room_combinations.dict'), 'wb') as f:
+            pickle.dump(results, f)
+
+        self.plot("rooms_labeled_vs_acc", num_rooms, weighted_acc_list, "Weighted Accuracy vs Number of Rooms Labeled", "Number of Rooms Labeled")
+        
+
+
+
+
+
+    def plot(self,
+             plot_file,
+             x_values,
+             y_values,
+             
+             plot_title,
+             x_label):
+
+        x_values = np.array(x_values)
+        ys = np.array(y_values)
+        
+        ax_titles = ["#Rooms' Label Data"]
+        y_labels = ['Weighted Accuracy']
+    
+        fig, axes = plt.subplots(1, 1, figsize=(10, 5))
+        print(ys.shape)
+        print(ys)
+        axes[0].plot(x_values, ys.mean(axis=1))
+        axes[0].fill_between(x_values,
+                            ys.mean(axis=1)-ys.std(axis=1),
+                            ys.mean(axis=1)+ys.std(axis=1),
+                            alpha=0.2)
+        axes[0].set_xlabel(x_label)
+        axes[0].set_ylabel(y_labels[0])
+        axes[0].title.set_text(ax_titles[0])
+
+        #axes[1].plot(x_values, accuracies.mean(axis=1))
+        #axes[1].fill_between(x_values,
+        #                    accuracies.mean(axis=1)-accuracies.std(axis=1),
+        #                    accuracies.mean(axis=1)+accuracies.std(axis=1),
+        #                    alpha=0.2)
+        #axes[1].plot(x_values, avg_accuracies.mean(axis=1))
+        #axes[1].fill_between(x_values,
+        #                    avg_accuracies.mean(axis=1)-avg_accuracies.std(axis=1),
+        #                    avg_accuracies.mean(axis=1)+avg_accuracies.std(axis=1),
+        #                    alpha=0.2)
+        #axes[1].set_xlabel(x_label)
+        #axes[1].set_ylabel(y_labels[1])
+        #axes[1].title.set_text(ax_titles[1])
+
+            
+
+        fig.suptitle(plot_title)
+        fig.tight_layout()
+        
+        fig.savefig(plot_file)
+        plt.close(fig)
