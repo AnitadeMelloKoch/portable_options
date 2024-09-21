@@ -228,12 +228,12 @@ if __name__ == "__main__":
                                             test_negative_files=negative_test_files,
                                             seed=args.seed)
     
-    NUM_SEEDS = 3
+    NUM_SEEDS = 5
 
     print(f"[{formatted_time()}] Now running grid search...")
-    experiment.grid_search(lr_range=np.logspace(-5, -3, 3),
-                            div_weight_range=np.logspace(-5, -3, 3),
-                            l2_reg_range=np.logspace(-4, -2, 3),
+    experiment.grid_search(lr_range=np.logspace(-5, -3, 5),
+                            div_weight_range=np.logspace(-5, -3, 5),
+                            l2_reg_range=np.logspace(-4, -2, 5),
                             head_num_range=[3,5,7],
                             epochs_range=[30], #[30,70,150,300]
                             num_seeds=NUM_SEEDS)
