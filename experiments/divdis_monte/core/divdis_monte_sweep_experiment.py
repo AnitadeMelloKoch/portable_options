@@ -791,36 +791,45 @@ class MonteDivDisSweepExperiment():
                     num_seeds):
         
         # Arrays to store results for grid search
-        results_div_weight = []
         results_head_num = []
         results_lr = []
+        results_div_weight = []
         results_l2_reg_weight = []
+        results_epochs = epochs_range
         
         # 2D array for multiple seeds
         results_acc = []
         results_avg_acc = []
         results_loss = []
+
+        results_raw_acc = []
+        results_positive_acc = []
+        results_negative_acc = []
         
         # Create grid of hyperparameter combinations
-        for div_weight in tqdm(div_weight_range, desc="div_weights", position=0):
-            for head_num in tqdm(head_num_range, desc="head_nums", position=1, leave=False):
-                for lr in tqdm(lr_range, desc="learning_rates", position=2, leave=False):
+        for head_num in tqdm(head_num_range, desc="head_nums", position=0, leave=False):
+            for lr in tqdm(lr_range, desc="learning_rates", position=1, leave=False):
+                for div_weight in tqdm(div_weight_range, desc="div_weights", position=2):
                     for l2_reg_weight in tqdm(l2_reg_range, desc="l2_reg_weights", position=3, leave=False):
                         for epochs in tqdm(epochs_range, desc="epochs", position=4, leave=False):
                             
                         
                             # Record the current hyperparameters being tested
-                            results_div_weight.append(div_weight)
                             results_head_num.append(head_num)
                             results_lr.append(lr)
+                            results_div_weight.append(div_weight)
                             results_l2_reg_weight.append(l2_reg_weight)
+                            results_epochs.append(epochs)
 
                             grid_acc = []
                             grid_avg_acc = []
                             grid_loss = []
+                            grid_raw_acc = []
+                            grid_positive_acc = []
+                            grid_negative_acc = []
 
                             # Train with multiple seeds for robustness
-                            for seed in tqdm(range(num_seeds), desc="seeds", position=4, leave=False):
+                            for seed in tqdm(range(num_seeds), desc="seeds", position=5, leave=False):
                                 set_seed(self.seed+seed)
                                 classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                                             log_dir=self.log_dir,
@@ -840,26 +849,44 @@ class MonteDivDisSweepExperiment():
                                 accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_terminations(self.dataset_positive,
                                                                     self.dataset_negative,
                                                                     classifier)
+                                best_idx = np.argmax(weighted_acc)
                                 grid_acc.append(max(weighted_acc))
                                 grid_avg_acc.append(np.mean(weighted_acc))
+                                grid_raw_acc.append(accuracy[best_idx])
+                                grid_positive_acc.append(accuracy_pos[best_idx])
+                                grid_negative_acc.append(accuracy_neg[best_idx])
+
 
                             # Store results
                             results_acc.append(grid_acc)
                             results_avg_acc.append(grid_avg_acc)
                             results_loss.append(grid_loss)
 
+                            results_raw_acc.append(grid_raw_acc)
+                            results_positive_acc.append(grid_positive_acc)
+                            results_negative_acc.append(grid_negative_acc)
+
         # Save the results
         save_dict = {"div_weights": results_div_weight,
                     "head_nums": results_head_num,
                     "learning_rates": results_lr,
                     "l2_reg_weights": results_l2_reg_weight,
-                    "avg_best_acc": np.mean(results_acc, axis=1),
-                    "accuracies": results_acc,
-                    "avg_accuracies": results_avg_acc,
-                    "losses": results_loss}
+                    "epochs": epochs_range,
+                    "avg_best_weighted_acc": np.mean(results_acc, axis=1), # over seeds
+                    "weighted_acc": results_acc,        # 2D (m,num_seeds)
+                    "avg_accuracies": results_avg_acc,  # 2D
+                    "losses": results_loss,
+                    "raw_acc": results_raw_acc,         # 2D
+                    "positive_acc": results_positive_acc, # 2D
+                    "negative_acc": results_negative_acc, # 2D
+                    }
 
         self.save_results_dict(save_dict,
                             "grid_search_results.pkl")
+
+        results_weighted_acc = np.array(results_acc)
+        print(results_weighted_acc.shape)
+        print(results_weighted_acc)
 
         # Plot the results (you can customize the x-axis and what to compare)
         #self.plot(os.path.join(self.plot_dir, "grid_search.png"),

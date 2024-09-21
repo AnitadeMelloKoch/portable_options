@@ -228,10 +228,18 @@ if __name__ == "__main__":
                                             test_negative_files=negative_test_files,
                                             seed=args.seed)
     
-    NUM_SEEDS = 5
+    NUM_SEEDS = 3
+
+    print(f"[{formatted_time()}] Now running grid search...")
+    experiment.grid_search(lr_range=np.logspace(-5, -3, 3),
+                            div_weight_range=np.logspace(-5, -3, 3),
+                            l2_reg_range=np.logspace(-4, -2, 3),
+                            head_num_range=[3,5,7],
+                            epochs_range=[30], #[30,70,150,300]
+                            num_seeds=NUM_SEEDS)
 
     
-    print(f"[{formatted_time()}] Sweeping learning rate...")
+    """print(f"[{formatted_time()}] Sweeping learning rate...")
     experiment.sweep_lr(-5, # 0.00001
                         -3,
                         8,
@@ -245,8 +253,8 @@ if __name__ == "__main__":
                                       NUM_SEEDS)
 
     print(f"[{formatted_time()}] Sweeping L2 reg weight...")
-    experiment.sweep_l2_reg_weight(-6, # 0.0001
-                                   -3,
+    experiment.sweep_l2_reg_weight(-4, # 0.0001
+                                   -2,
                                    8,
                                    NUM_SEEDS)
 
@@ -264,23 +272,16 @@ if __name__ == "__main__":
                             100, 
                             10,
                             NUM_SEEDS,
-                            [5,10,30,60,100,130,160,200,250]) # when a list is provided, use this
+                            [30,60,100,130,160,200,250,350,500]) # when a list is provided, use this
 
 
     print(f"[{formatted_time()}] Sweeping div batch size...")
     experiment.sweep_div_batch_size(16,
                                     400,
                                     16,
-                                    NUM_SEEDS)
+                                    NUM_SEEDS)"""
 
     
-    #print(f"[{formatted_time()}] Now running grid search...")
-    #experiment.grid_search(lr_range=np.logspace(-4, -3, 10),
-    #                        div_weight_range=np.logspace(-5, -2, 15),
-    #                        l2_reg_range=np.logspace(-4, -2, 10),
-    #                        head_num_range=range(1, 8),
-    #                        epochs_range=range(5, 55, 10),
-    #                        num_seeds=NUM_SEEDS)
     
     
     

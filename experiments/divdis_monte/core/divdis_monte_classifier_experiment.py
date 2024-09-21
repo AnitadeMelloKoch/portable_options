@@ -678,7 +678,7 @@ class MonteDivDisClassifierExperiment():
     def room_by_room_train_labelled(self, task, init_term, combinations_list):
         # combinations_list: 2D array, (num_rooms, num_combinations)
 
-        num_rooms = range(1,len(combinations_list)+1)
+        num_ladders = range(1,len(combinations_list)+1)
         weighted_acc_list = [] # nested list of best heads
         raw_acc_list = []
         
@@ -688,16 +688,16 @@ class MonteDivDisClassifierExperiment():
             comb_raw_acc = []
             num_rooms = len(room_combinations[0])
             
-            print(f"Training on combinations of {num_rooms} rooms of labeled data")
-            logging.info(f"Training on combinations of {num_rooms} rooms of labeled data")
+            print(f"==============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
+            logging.info(f"=============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
             
             for comb in room_combinations:
                 # each combination has n rooms, want to add all these to labelled and measure test performance.
                 positive_train_files = []
                 negative_train_files = []
 
-                print(f"Training on rooms {comb}")
-                logging.info(f"Training on rooms {comb}")
+                print(f"***\nTraining on ladders {comb}")
+                logging.info(f"***\nTraining on ladders {comb}")
                 
                 for room in comb:
                     positive_train_files += self.get_monte_filenames(task, room, init_term, 'positive')
@@ -756,12 +756,12 @@ class MonteDivDisClassifierExperiment():
             weighted_acc_list.append(comb_weighted_acc)
             raw_acc_list.append(comb_raw_acc)
 
-        results = {'rooms': num_rooms, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
+        results = {'ladders': num_ladders, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
 
         with open(os.path.join(self.log_dir, 'room_combinations.dict'), 'wb') as f:
             pickle.dump(results, f)
 
-        self.plot("rooms_labeled_vs_acc", num_rooms, weighted_acc_list, "Weighted Accuracy vs Number of Rooms Labeled", "Number of Rooms Labeled")
+        self.plot("ladders_labeled_vs_acc", num_ladders, weighted_acc_list, "Weighted Accuracy vs #Labeled Ladder Data", "#Label Ladder Data")
         
 
 
@@ -777,41 +777,49 @@ class MonteDivDisClassifierExperiment():
              x_label):
 
         x_values = np.array(x_values)
-        ys = np.array(y_values)
+        means = [np.mean(y) for y in y_values]
+        stds = [np.std(y) for y in y_values]
         
-        ax_titles = ["#Rooms' Label Data"]
+        ax_titles = ["#Labeled Ladder Data"]
         y_labels = ['Weighted Accuracy']
     
-        fig, axes = plt.subplots(1, 1, figsize=(10, 5))
-        print(ys.shape)
-        print(ys)
-        axes[0].plot(x_values, ys.mean(axis=1))
-        axes[0].fill_between(x_values,
-                            ys.mean(axis=1)-ys.std(axis=1),
-                            ys.mean(axis=1)+ys.std(axis=1),
-                            alpha=0.2)
-        axes[0].set_xlabel(x_label)
-        axes[0].set_ylabel(y_labels[0])
-        axes[0].title.set_text(ax_titles[0])
+        fig, ax = plt.subplots(figsize=(12, 7))  # Bigger figure size
+        
+        # Plot mean values
+        ax.plot(x_values, means, label='Mean Weighted Accuracy', color='b', marker='o', linestyle='-', linewidth=2)
+        
+        # Fill between mean - std and mean + std to visualize variability
+        ax.fill_between(x_values,
+                        np.array(means) - np.array(stds),
+                        np.array(means) + np.array(stds),
+                        color='b', alpha=0.2, label='Standard Deviation')
+        
+        # Improve the overall aesthetics
+        ax.set_xlabel(x_label, fontsize=14)
+        ax.set_ylabel(y_labels[0], fontsize=14)
+        ax.set_title(plot_title, fontsize=16, fontweight='bold')
 
-        #axes[1].plot(x_values, accuracies.mean(axis=1))
-        #axes[1].fill_between(x_values,
-        #                    accuracies.mean(axis=1)-accuracies.std(axis=1),
-        #                    accuracies.mean(axis=1)+accuracies.std(axis=1),
-        #                    alpha=0.2)
-        #axes[1].plot(x_values, avg_accuracies.mean(axis=1))
-        #axes[1].fill_between(x_values,
-        #                    avg_accuracies.mean(axis=1)-avg_accuracies.std(axis=1),
-        #                    avg_accuracies.mean(axis=1)+avg_accuracies.std(axis=1),
-        #                    alpha=0.2)
-        #axes[1].set_xlabel(x_label)
-        #axes[1].set_ylabel(y_labels[1])
-        #axes[1].title.set_text(ax_titles[1])
+        # Cap the y-axis between 0.65 and 1
+        ax.set_ylim(0.65, 1)
 
-            
+        # Adding grid and improving the axis labels
+        ax.grid(True, linestyle='--', alpha=0.6)
+        ax.tick_params(axis='both', which='major', labelsize=12)
+
+        # Adding legend
+        ax.legend(loc='upper left', fontsize=12)
+        
+        fig.suptitle(plot_title)
+        fig.tight_layout()
+
+        # Save the figure
+        fig.savefig(plot_file, dpi=300)
+        print(f"Figure saved at: {os.path.abspath(plot_file)}")  # Print the path of the saved figure
 
         fig.suptitle(plot_title)
         fig.tight_layout()
         
         fig.savefig(plot_file)
+        plt.show()
+        
         plt.close(fig)
