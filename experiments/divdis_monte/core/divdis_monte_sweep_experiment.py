@@ -82,6 +82,25 @@ class MonteDivDisSweepExperiment():
 
         self.seed = seed
 
+        self.writer = SummaryWriter(log_dir=self.log_dir)
+        log_file = os.path.join(self.log_dir,
+                                "{}.log".format(datetime.datetime.now()))
+        
+        logging.basicConfig(filename=log_file, 
+                            format='%(asctime)s %(levelname)s: %(message)s',
+                            level=logging.INFO)
+        
+        logging.info("[experiment] Beginning sweep experiment {} seed {}".format(self.experiment_name, self.seed))
+        logging.info("======== HYPERPARAMETERS ========")
+        logging.info("Seed: {}".format(seed))
+        logging.info("Default Epochs: {}".format(default_epochs))
+        logging.info("Default Diversity Weight: {}".format(default_div_weight))
+        logging.info("Default Learning Rate: {}".format(default_lr))
+        logging.info("Default Number of Heads: {}".format(default_num_heads))
+        logging.info("Default L2 Regularization Weight: {}".format(default_l2_reg_weight))
+        logging.info("=================================")
+        
+
     
     def test_terminations(self,
                           dataset_positive,
@@ -805,13 +824,37 @@ class MonteDivDisSweepExperiment():
         results_raw_acc = []
         results_positive_acc = []
         results_negative_acc = []
+
+        print("Starting Grid Search")
+        logging.info("Starting Grid Search")
+        print("Head Num Range: ", head_num_range)
+        logging.info("Head Num Range: %s", head_num_range)
+        print("Learning Rate Range: ", lr_range)
+        logging.info("Learning Rate Range: %s", lr_range)
+        print("Diversity Weight Range: ", div_weight_range)
+        logging.info("Diversity Weight Range: %s", div_weight_range)
+        print("L2 Regularization Weight Range: ", l2_reg_range)
+        logging.info("L2 Regularization Weight Range: %s", l2_reg_range)
+        print("Epochs Range: ", epochs_range)
+        logging.info("Epochs Range: %s", epochs_range)
+        
         
         # Create grid of hyperparameter combinations
         for head_num in tqdm(head_num_range, desc="head_nums", position=0, leave=False):
+            print("Head Num: ", head_num)
+            logging.info("Head Num: %d", head_num)
             for lr in tqdm(lr_range, desc="learning_rates", position=1, leave=False):
+                print("Learning Rate: ", lr)
+                logging.info("Learning Rate: %f", lr)
                 for div_weight in tqdm(div_weight_range, desc="div_weights", position=2):
+                    print("Diversity Weight: ", div_weight)
+                    logging.info("Diversity Weight: %f", div_weight)
                     for l2_reg_weight in tqdm(l2_reg_range, desc="l2_reg_weights", position=3, leave=False):
+                        print("L2 Regularization Weight: ", l2_reg_weight)
+                        logging.info("L2 Regularization Weight: %f", l2_reg_weight)
                         for epochs in tqdm(epochs_range, desc="epochs", position=4, leave=False):
+                            print("Epochs: ", epochs)
+                            logging.info("Epochs: %d", epochs)
                             
                         
                             # Record the current hyperparameters being tested
@@ -830,6 +873,8 @@ class MonteDivDisSweepExperiment():
 
                             # Train with multiple seeds for robustness
                             for seed in tqdm(range(num_seeds), desc="seeds", position=5, leave=False):
+                                print("Seed: ", seed)
+                                logging.info("Seed: %d", seed)
                                 set_seed(self.seed+seed)
                                 classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                                             log_dir=self.log_dir,

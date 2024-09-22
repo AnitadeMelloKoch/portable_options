@@ -15,6 +15,7 @@ positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.np
                         ]
 
 negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
+                        img_dir+"climb_down_ladder_room1_1_termination_negative.npy",
                         img_dir+"screen_death_1.npy",
                         img_dir+"screen_death_2.npy",
                         img_dir+"screen_death_3.npy",
@@ -163,14 +164,26 @@ unlabelled_train_files = [
 ]
 
 
-positive_test_files = [img_dir+"climb_down_ladder_room6_termination_positive.npy",
+positive_test_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room6_termination_positive.npy",
                        img_dir+"climb_down_ladder_room9_termination_positive.npy",
                        img_dir+"climb_down_ladder_room10_termination_positive.npy",
                        img_dir+"climb_down_ladder_room19_termination_positive.npy",
                        img_dir+"climb_down_ladder_room21_termination_positive.npy",
                        img_dir+"climb_down_ladder_room22_termination_positive.npy",
+                       
+                       img_dir+"climb_down_ladder_room6_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room9_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room10_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room19_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room21_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room22_1_termination_positive.npy",
                        ]
-negative_test_files = [img_dir+"climb_down_ladder_room0_termination_negative.npy",
+negative_test_files = [img_dir+"screen_death_1.npy",
+                       img_dir+"screen_death_2.npy",
+                       img_dir+"screen_death_3.npy",
+                       img_dir+"screen_death_4.npy",
+                       img_dir+"climb_down_ladder_room1_termination_negative.npy",
                        img_dir+"climb_down_ladder_room2_termination_negative.npy",
                        img_dir+"climb_down_ladder_room3_termination_negative.npy",
                        img_dir+"climb_down_ladder_room4_termination_negative.npy",
@@ -184,7 +197,23 @@ negative_test_files = [img_dir+"climb_down_ladder_room0_termination_negative.npy
                        img_dir+"climb_down_ladder_room14_termination_negative.npy",
                        img_dir+"climb_down_ladder_room19_termination_negative.npy",
                        img_dir+"climb_down_ladder_room21_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room22_termination_negative.npy",                       
+                       img_dir+"climb_down_ladder_room22_termination_negative.npy",
+                       
+                       img_dir+"climb_down_ladder_room1_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room2_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room3_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room4_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room5_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room6_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room7_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room9_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room10_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room11_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room13_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room14_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room19_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room21_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room22_1_termination_negative.npy",        
                        ]
 uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room2_uncertain.npy",
@@ -201,6 +230,17 @@ uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room19_uncertain.npy",
                         img_dir+"climb_down_ladder_room21_uncertain.npy",
                         img_dir+"climb_down_ladder_room22_uncertain.npy",
+
+                        img_dir+"climb_down_ladder_room3_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room4_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room6_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room9_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room10_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room11_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room13_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room19_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room21_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room22_1_uncertain.npy",
                         ]
 
 def formatted_time():
@@ -231,9 +271,9 @@ if __name__ == "__main__":
     NUM_SEEDS = 5
 
     print(f"[{formatted_time()}] Now running grid search...")
-    experiment.grid_search(lr_range=np.logspace(-5, -3, 5),
-                            div_weight_range=np.logspace(-5, -3, 5),
-                            l2_reg_range=np.logspace(-4, -2, 5),
+    experiment.grid_search(lr_range=np.logspace(-4, -3, 3),
+                            div_weight_range=np.logspace(-4, -3, 3),
+                            l2_reg_range=np.logspace(-4, -2, 3),
                             head_num_range=[3,5,7],
                             epochs_range=[30], #[30,70,150,300]
                             num_seeds=NUM_SEEDS)
