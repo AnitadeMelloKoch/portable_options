@@ -274,7 +274,7 @@ if __name__ == "__main__":
     experiment.grid_search(lr_range=np.logspace(-4, -3, 3),
                             div_weight_range=np.logspace(-4, -3, 3),
                             l2_reg_range=np.logspace(-4, -2, 3),
-                            head_num_range=[3,5,7],
+                            head_num_range=[4,6,8],
                             epochs_range=[30], #[30,70,150,300]
                             num_seeds=NUM_SEEDS)
 
