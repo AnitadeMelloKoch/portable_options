@@ -8,7 +8,7 @@ import numpy as np
 
 from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
-from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16
+from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16, MinigridCNNLarge
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
@@ -18,6 +18,7 @@ MODEL_TYPE = [
     "one_head_mlp",
     "multi_head_mlp",
     "minigrid_cnn",
+    "minigrid_large_cnn",
     "monte_cnn"
 ]
 
@@ -32,6 +33,7 @@ class DivDisClassifier():
                  learning_rate,
                  num_classes,
                  diversity_weight,
+                 phi,
                  
                  l2_reg_weight=0.001,
                  class_weight=None,
@@ -58,6 +60,7 @@ class DivDisClassifier():
         self.num_classes = num_classes
         
         self.log_dir = log_dir
+        self.phi = phi
 
         
         self.model_name = model_name
@@ -81,6 +84,18 @@ class DivDisClassifier():
         self.diversity_weight = diversity_weight
         
         self.state_dim = 3
+        
+        logger.info("Classifier hps")
+        logger.info("======================================")
+        logger.info("======================================")
+        logger.info("model name: {}".format(model_name))
+        logger.info("learning rate: {}".format(learning_rate))
+        logger.info("l2: {}".format(l2_reg_weight))
+        logger.info("div weight: {}".format(diversity_weight))
+        logger.info("class weight: {}".format(class_weight))
+        logger.info("======================================")
+        logger.info("======================================")
+        
     
     def save(self, path):
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
@@ -107,6 +122,9 @@ class DivDisClassifier():
         elif self.model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
+        elif self.model_name == "minigrid_large_cnn":
+            self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
+                                               num_heads= self.head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         self.classifier.to(self.device)
@@ -209,11 +227,14 @@ class DivDisClassifier():
         
         return total_loss_tracker/counter
         
-    def predict(self, x):
+    def predict(self, x, use_phi=False):
         self.classifier.eval()
         
-        if len(x.shape) == self.state_dim:
-            x = x.unsqueeze(0)
+        if use_phi is True:
+            x = self.phi(x)
+        
+        # while len(x.shape) != self.state_dim:
+        #     x = x.unsqueeze(0)
         
         x = x.to(self.device)
         
@@ -227,8 +248,14 @@ class DivDisClassifier():
         
         return pred_y, votes
         
-    def predict_idx(self, x, idx):
+    def predict_idx(self, x, idx, use_phi=False):
         self.classifier.eval()
+        
+        if use_phi is True:
+            x = self.phi(x)
+        
+        # while len(x.shape) != self.state_dim:
+        #     x = x.unsqueeze(0)
         
         x = x.to(self.device)
         

@@ -25,6 +25,7 @@ class DivDisOption():
                  num_heads,
                  
                  policy_phi,
+                 termination_phi,
                  use_seed_for_initiation,
                  exp_type,
                  plot_dir,
@@ -52,7 +53,8 @@ class DivDisOption():
         
         self.terminations = DivDisClassifier(use_gpu=use_gpu[0],
                                              head_num=num_heads,
-                                             log_dir=os.path.join(log_dir, 'termination'))
+                                             log_dir=os.path.join(log_dir, 'termination'),
+                                             phi=termination_phi)
         
         self.num_heads = num_heads
         self.option_steps = [0]*self.num_heads
@@ -234,15 +236,16 @@ class DivDisOption():
         policy.store_buffer_to_disk = store_buffer_bool
     
     def check_termination(self, idx, state, env):
-        term_state = self.policy_phi(state).unsqueeze(0)
-        pred_y = self.terminations.predict_idx(term_state, idx)
-        should_terminate = torch.argmax(pred_y) == 1
+        term_state = state
         
+        pred_y = self.terminations.predict_idx(term_state, idx, use_phi=True)
+        should_terminate = torch.argmax(pred_y) == 1
+                
         if should_terminate is True:
             self.save_term_state(env,
                                  idx,
                                  pred_y)
-        
+                
         return should_terminate
     
     def train_policy(self, 
@@ -285,8 +288,8 @@ class DivDisOption():
                     self.video_generator.make_image(env.render("rgb_array"))
             
             next_state, reward, done, info = env.step(action)
-            term_state = self.policy_phi(next_state).unsqueeze(0)
-            pred_y = self.terminations.predict_idx(term_state, idx)
+            term_state = env.get_term_state()
+            pred_y = self.terminations.predict_idx(term_state, idx, use_phi=True)
             should_terminate = (torch.argmax(pred_y) == 1).item()
             in_term_accuracy.append(perfect_term(env.get_current_position()))
             steps += 1

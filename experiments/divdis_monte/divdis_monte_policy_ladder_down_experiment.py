@@ -9,13 +9,13 @@ from experiments.divdis_monte.core.monte_terminations import *
 from experiments.divdis_monte.experiment_files import *
 
 init_states = [
-    ["resources/monte_env_states/room1/ladder/middle_top_0.pkl",
-     "resources/monte_env_states/room1/ladder/left_top_0.pkl",
-     "resources/monte_env_states/room1/ladder/right_top_0.pkl",],
     ["resources/monte_env_states/room0/ladder/top_0.pkl",
      "resources/monte_env_states/room0/ladder/top_1.pkl",
      "resources/monte_env_states/room0/ladder/top_2.pkl",
      "resources/monte_env_states/room0/ladder/top_3.pkl",],
+    ["resources/monte_env_states/room1/ladder/middle_top_0.pkl",
+     "resources/monte_env_states/room1/ladder/left_top_0.pkl",
+     "resources/monte_env_states/room1/ladder/right_top_0.pkl",],
     ["resources/monte_env_states/room2/ladder/top_0.pkl",
      "resources/monte_env_states/room2/ladder/top_1.pkl",
      "resources/monte_env_states/room2/ladder/top_2.pkl",],
@@ -34,6 +34,24 @@ init_states = [
 term_points = [
     [
         [
+            (77,235,4),
+            (77,235,10)
+        ],
+        [
+            (77,235,4),
+            (77,235,10)
+        ],
+        [
+            (77,235,4),
+            (77,235,10)
+        ],
+        [
+            (77,235,4),
+            (77,235,10)
+        ],
+    ],
+    [
+        [
             (76, 192, 1)
         ],
         [
@@ -41,24 +59,6 @@ term_points = [
         ],
         [
             (133, 148, 1)
-        ],
-    ],
-    [
-        [
-            (77,235,4),
-            (77,235,10)
-        ],
-        [
-            (77,235,4),
-            (77,235,10)
-        ],
-        [
-            (77,235,4),
-            (77,235,10)
-        ],
-        [
-            (77,235,4),
-            (77,235,10)
         ],
     ],
     [
@@ -117,9 +117,9 @@ term_points = [
 
 # files for each room
 positive_files = [
-    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room6_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room10_1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
@@ -132,16 +132,16 @@ positive_files = [
      "resources/monte_images/climb_down_ladder_room22_1_termination_positive.npy"]
 ]
 negative_files = [
+    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room2_extra_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room1_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room1_extra_termination_negative.npy",
      "resources/monte_images/screen_death_1.npy",
      "resources/monte_images/screen_death_2.npy",
      "resources/monte_images/screen_death_3.npy",
      "resources/monte_images/screen_death_4.npy"],
-    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room2_extra_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room0_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room0_extra_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
@@ -170,6 +170,11 @@ negative_files = [
      "resources/monte_images/climb_down_ladder_room22_1_termination_negative.npy"],
 ]
 unlabelled_files = [
+    ["resources/monte_images/lasers_toleft_room12_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room11_1_uncertain.npy",],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room10_uncertain.npy",
@@ -177,11 +182,6 @@ unlabelled_files = [
      "resources/monte_images/room18_walk_around.npy",
      "resources/monte_images/lasers_left_toleft_room7_termination_negative.npy",
      "resources/monte_images/lasers_right_toleft_room7_termination_negative.npy",],
-    ["resources/monte_images/lasers_toleft_room12_termination_positive.npy",
-     "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room11_1_uncertain.npy",],
     ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room5_uncertain.npy",
      "resources/monte_images/climb_down_ladder_room13_uncertain.npy",

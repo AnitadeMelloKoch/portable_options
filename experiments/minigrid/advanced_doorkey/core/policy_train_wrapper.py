@@ -1,20 +1,34 @@
 from typing import Tuple
 from gymnasium.core import Env, Wrapper 
-from minigrid.core.world_object import Key, Door
+# from minigrid.core.world_object import Key, Door
 from custom_minigrid.core.custom_world_object import CustomDoor, CustomKey
 from experiments.minigrid.utils import actions 
 import numpy as np 
 import matplotlib.pyplot as plt 
-from collections import namedtuple
 import torch
+from copy import deepcopy, copy
+from PIL import Image
 
-KeyTuple = namedtuple("Key", "position colour")
-DoorTuple = namedtuple("Door", "position colour")
+
+class KeyTuple():
+    def __init__(self, position, colour) -> None:
+        self.position = position
+        self.colour = colour
+
+class DoorTuple():
+    def __init__(self, position, colour) -> None:
+        self.position = position
+        self.colour = colour
+
+def default_check_option_complete(x):
+    return False
 
 class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
     def __init__(self, 
                  env: Env,
-                 check_option_complete=lambda x: False,
+                 check_option_complete=default_check_option_complete,
+                 state_size=(84,84),
+                 term_size=(84,84),
                  option_reward: int=1,
                  key_colours: list=[],
                  door_colour: str=None,
@@ -42,6 +56,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.image_input = image_input
         self.keep_colour = keep_colour
         self.pickup_colour = pickup_colour
+        self.state_size = state_size
+        self.term_size = term_size
         
         self.door = None
         
@@ -54,12 +70,15 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.force_door_closed = force_door_closed
         self.force_door_open = force_door_open
         
+        self.obs = None
+        
     
     def _modify_info_dict(self, info):
         info['timestep'] = self._timestep
         info['keys'] = self.objects["keys"]
         info['door'] = self.objects["door"]
         info['goal'] = self.objects["goal"]
+        info['agent_pos'] = self.get_current_position()
         
         return info
     
@@ -69,7 +88,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                 return key
     
     def get_current_position(self):
-        return 0
+        return self.env.unwrapped.agent_pos
     
     def get_door_obj(self):
         door = self.env.unwrapped.grid.get(
@@ -92,6 +111,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
               door_open=None):
         
         obs, info = self.env.reset()
+        
+        self.obs = deepcopy(obs)
         
         self._find_objs()
         self._set_door_colour()
@@ -150,9 +171,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         
         self._find_objs()
         
-        obs, _, _, info = self.env.step(actions.LEFT)
-        obs, _, _, info = self.env.step(actions.RIGHT)
-        
+        obs, _, _, info = self.step(actions.LEFT)
+        obs, _, _, info = self.step(actions.RIGHT)
+                
         self.env.unwrapped.time_step = 0
         self._timestep = 0
         
@@ -164,10 +185,18 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         # plt.show(block=False)
         # input("Option completed. Continue?")
         
-        if type(obs) is np.ndarray:
-            obs = torch.from_numpy(obs).float()
         
         return obs, info
+    
+    def get_term_state(self):
+        obs = self.obs
+        if type(obs) is not np.ndarray:
+            obs = obs.numpy()
+        img = Image.fromarray(obs)
+        obs = np.asarray(img.resize(self.term_size, Image.BICUBIC))
+        obs = torch.from_numpy(obs)
+        obs = obs.permute((2,0,1))
+        return obs.unsqueeze(0).float()
     
     def random_start(self, 
                      keep_colour="",
@@ -323,376 +352,381 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
+        self.obs = deepcopy(obs)
         self._timestep += 1
         info = self._modify_info_dict(info)
         if self._timestep >= self.time_limit:
             done = True
-        # if self.image_input:
-        #     if np.max(obs) > 1:
-        #         obs = obs/255
-        # if type(obs) is np.ndarray:
-        #     obs = torch.from_numpy(obs).float()
+        
+        if type(obs) is not np.ndarray:
+            obs = obs.numpy()
+        img = Image.fromarray(obs)
+        obs = np.asarray(img.resize(self.state_size, Image.BICUBIC))
+        
+        obs = torch.from_numpy(obs)
+        obs = obs.permute((2,0,1)).float()
+        
         if self.check_option_complete(self):
             return obs, 1, True, info
         else:
             return obs, 0, done, info
 
-class LockedRoomPolicyTrainWrapper(Wrapper):
-    def __init__(self, 
-                 env: Env,
-                 check_option_complete=lambda x: False,
-                 option_reward=1.0,
-                 door_colours=[],
-                 key_colour=None,
-                 key_collected=False,
-                 door_unlocked=False,
-                 time_limit=2000):
-        super().__init__(env)
+# class LockedRoomPolicyTrainWrapper(Wrapper):
+#     def __init__(self, 
+#                  env: Env,
+#                  check_option_complete=lambda x: False,
+#                  option_reward=1.0,
+#                  door_colours=[],
+#                  key_colour=None,
+#                  key_collected=False,
+#                  door_unlocked=False,
+#                  time_limit=2000):
+#         super().__init__(env)
         
-        self.objects = {
-            "doors": [],
-            "key": None,
-            "goal": None
-        }
-        self.door_colours = door_colours
-        self.key_colour = key_colour
-        self.key_door_position = None
-        self._timestep = 0
-        self.time_limit = time_limit
-        self.key = None
+#         self.objects = {
+#             "doors": [],
+#             "key": None,
+#             "goal": None
+#         }
+#         self.door_colours = door_colours
+#         self.key_colour = key_colour
+#         self.key_door_position = None
+#         self._timestep = 0
+#         self.time_limit = time_limit
+#         self.key = None
         
-        self.check_option_complete = check_option_complete
-        self.option_reward = option_reward
+#         self.check_option_complete = check_option_complete
+#         self.option_reward = option_reward
         
-        self.key_collected = key_collected
-        self.door_unlocked = door_unlocked
+#         self.key_collected = key_collected
+#         self.door_unlocked = door_unlocked
     
-    def _modify_info_dict(self, info):
-        info['timestep'] = self._timestep
-        info['key'] = self.objects["key"]
-        info['doors'] = self.objects["doors"]
-        info['goal'] = self.objects["goal"]
+#     def _modify_info_dict(self, info):
+#         info['timestep'] = self._timestep
+#         info['key'] = self.objects["key"]
+#         info['doors'] = self.objects["doors"]
+#         info['goal'] = self.objects["goal"]
         
-        return info
+#         return info
     
-    def _get_key_door(self):
-        for door in self.objects["doors"]:
-            if door.colour == self.objects["key"].colour:
-                return door
+#     def _get_key_door(self):
+#         for door in self.objects["doors"]:
+#             if door.colour == self.objects["key"].colour:
+#                 return door
     
-    def _find_objs(self):
-        self.objects = {
-            "doors": [],
-            "key": None,
-            "goal": None
-        }
-        for x in range(self.env.unwrapped.width):
-            for y in range(self.env.unwrapped.height):
-                cell = self.env.unwrapped.grid.get(x, y)
-                if cell:
-                    if cell.type == "door":
-                        self.objects["doors"].append(
-                            KeyTuple((x, y), cell.color)
-                        )
-                    elif cell.type == "key":
-                        self.key = cell
-                        self.objects["key"] = DoorTuple((x, y), cell.color)
-                    elif cell.type == "goal":
-                        self.objects["goal"] = (x, y)
-                    elif cell.type == "wall":
-                        continue
-                    else:
-                        raise Exception("Unrecognized object {} found at ({},{})".format(cell, x, y))
+#     def _find_objs(self):
+#         self.objects = {
+#             "doors": [],
+#             "key": None,
+#             "goal": None
+#         }
+#         for x in range(self.env.unwrapped.width):
+#             for y in range(self.env.unwrapped.height):
+#                 cell = self.env.unwrapped.grid.get(x, y)
+#                 if cell:
+#                     if cell.type == "door":
+#                         self.objects["doors"].append(
+#                             KeyTuple((x, y), cell.color)
+#                         )
+#                     elif cell.type == "key":
+#                         self.key = cell
+#                         self.objects["key"] = DoorTuple((x, y), cell.color)
+#                     elif cell.type == "goal":
+#                         self.objects["goal"] = (x, y)
+#                     elif cell.type == "wall":
+#                         continue
+#                     else:
+#                         raise Exception("Unrecognized object {} found at ({},{})".format(cell, x, y))
         
-        if self.key_door_position is None:
-            key_door = self._get_key_door()
-            self.key_door_position = key_door.position
+#         if self.key_door_position is None:
+#             key_door = self._get_key_door()
+#             self.key_door_position = key_door.position
     
-    def _set_key_colour(self):
-        if self.key_colour is None:
-            self.key_colour = self.objects["key"].colour
-            return
+#     def _set_key_colour(self):
+#         if self.key_colour is None:
+#             self.key_colour = self.objects["key"].colour
+#             return
         
-        new_key = Key(self.key_colour)
+#         new_key = Key(self.key_colour)
         
-        self.env.unwrapped.grid.set(
-            self.objects["key"].position[0],
-            self.objects["key"].position[1],
-            new_key
-        )
+#         self.env.unwrapped.grid.set(
+#             self.objects["key"].position[0],
+#             self.objects["key"].position[1],
+#             new_key
+#         )
         
-        old_colour = self.objects["key"].colour
-        self.objects["key"] = KeyTuple(self.objects["key"].position,
-                                       self.key_colour)
+#         old_colour = self.objects["key"].colour
+#         self.objects["key"] = KeyTuple(self.objects["key"].position,
+#                                        self.key_colour)
         
-        new_door = Door(self.key_colour)
-        doors = []
-        for door in self.objects["doors"]:
-            if door.colour == old_colour:
-                self.env.unwrapped.grid.set(
-                    door.position[0],
-                    door.position[1],
-                    new_door
-                )
-                doors.append(DoorTuple(door.position,
-                                       self.key_colour))
-            elif door.colour == self.key_colour:
-                replace_door = Door(old_colour)
-                self.env.unwrapped.grid.set(
-                    door.position[0],
-                    door.position[1],
-                    replace_door
-                )
-                doors.append(DoorTuple(door.position,
-                                       old_colour))
-            else:
-                doors.append(door)
-        self.objects["doors"] = doors
+#         new_door = Door(self.key_colour)
+#         doors = []
+#         for door in self.objects["doors"]:
+#             if door.colour == old_colour:
+#                 self.env.unwrapped.grid.set(
+#                     door.position[0],
+#                     door.position[1],
+#                     new_door
+#                 )
+#                 doors.append(DoorTuple(door.position,
+#                                        self.key_colour))
+#             elif door.colour == self.key_colour:
+#                 replace_door = Door(old_colour)
+#                 self.env.unwrapped.grid.set(
+#                     door.position[0],
+#                     door.position[1],
+#                     replace_door
+#                 )
+#                 doors.append(DoorTuple(door.position,
+#                                        old_colour))
+#             else:
+#                 doors.append(door)
+#         self.objects["doors"] = doors
     
-    def _set_door_colours(self):
-        if len(self.door_colours) == 0:
-            return
+#     def _set_door_colours(self):
+#         if len(self.door_colours) == 0:
+#             return
         
-        c_idx = 0
-        for idx, door in enumerate(self.objects["doors"]):
-            if door.colour == self.key_colour:
-                continue
-            if c_idx >= len(self.door_colours):
-                return
+#         c_idx = 0
+#         for idx, door in enumerate(self.objects["doors"]):
+#             if door.colour == self.key_colour:
+#                 continue
+#             if c_idx >= len(self.door_colours):
+#                 return
             
-            colour = self.door_colours[c_idx]
+#             colour = self.door_colours[c_idx]
             
-            new_door = Door(colour)
-            self.env.unwrapped.grid.set(
-                door.position[0],
-                door.position[1],
-                new_door
-            )
-            self.objects["doors"][idx] = DoorTuple(door.position,
-                                                   colour)
-            c_idx += 1
+#             new_door = Door(colour)
+#             self.env.unwrapped.grid.set(
+#                 door.position[0],
+#                 door.position[1],
+#                 new_door
+#             )
+#             self.objects["doors"][idx] = DoorTuple(door.position,
+#                                                    colour)
+#             c_idx += 1
             
     
-    def _get_key_door(self):
-        for door in self.objects["doors"]:
-            if door.colour == self.objects["key"].colour:
-                return door
+#     def _get_key_door(self):
+#         for door in self.objects["doors"]:
+#             if door.colour == self.objects["key"].colour:
+#                 return door
     
-    def reset(self,
-              agent_reposition_attempts=0,
-              random_start=False,
-              agent_position=None,
-              random_doors_open=[],
-              random_doors_closed=[],
-              random_force_key_pickedup=None,
-              random_force_door_unlocked=None,
-              random_move_agent=False):
-        obs, info = self.env.reset()
+#     def reset(self,
+#               agent_reposition_attempts=0,
+#               random_start=False,
+#               agent_position=None,
+#               random_doors_open=[],
+#               random_doors_closed=[],
+#               random_force_key_pickedup=None,
+#               random_force_door_unlocked=None,
+#               random_move_agent=False):
+#         obs, info = self.env.reset()
         
-        self._find_objs()
-        self._set_key_colour()
-        self._set_door_colours()
+#         self._find_objs()
+#         self._set_key_colour()
+#         self._set_door_colours()
         
-        if self.key_collected:
-            key = self.env.unwrapped.grid.get(self.objects["key"].position[0],
-                                              self.objects["key"].position[1])
-            self.env.unwrapped.carrying = key
-            key.cur_pos = np.array([-1,-1])
-            self.env.unwrapped.grid.set(self.objects["key"].position[0],
-                                        self.objects["key"].position[0],
-                                        None)
-        if self.door_unlocked:
-            correct_door = self._get_key_door()
-            door = self.env.unwrapped.grid.get(correct_door.position[0],
-                                               correct_door.position[1])
-            door.is_locked = False
+#         if self.key_collected:
+#             key = self.env.unwrapped.grid.get(self.objects["key"].position[0],
+#                                               self.objects["key"].position[1])
+#             self.env.unwrapped.carrying = key
+#             key.cur_pos = np.array([-1,-1])
+#             self.env.unwrapped.grid.set(self.objects["key"].position[0],
+#                                         self.objects["key"].position[0],
+#                                         None)
+#         if self.door_unlocked:
+#             correct_door = self._get_key_door()
+#             door = self.env.unwrapped.grid.get(correct_door.position[0],
+#                                                correct_door.position[1])
+#             door.is_locked = False
         
-        if agent_position is not None:
-            if self.env.unwrapped.grid.get(agent_position[0],
-                                           agent_position[1]) is None:
-                self.env.unwrapped.agent_pos = agent_position
+#         if agent_position is not None:
+#             if self.env.unwrapped.grid.get(agent_position[0],
+#                                            agent_position[1]) is None:
+#                 self.env.unwrapped.agent_pos = agent_position
         
-        if random_start is True:
-            self.random_start(doors_open=random_doors_open,
-                              doors_closed=random_doors_closed,
-                              force_key_pickedup=random_force_key_pickedup,
-                              force_door_unlocked=random_force_door_unlocked,
-                              randomly_place_agent=random_move_agent)
+#         if random_start is True:
+#             self.random_start(doors_open=random_doors_open,
+#                               doors_closed=random_doors_closed,
+#                               force_key_pickedup=random_force_key_pickedup,
+#                               force_door_unlocked=random_force_door_unlocked,
+#                               randomly_place_agent=random_move_agent)
         
-        self._find_objs()
+#         self._find_objs()
         
-        obs, _, _, info = self.env.step(actions.LEFT)
-        obs, _, _, info = self.env.step(actions.RIGHT)
+#         obs, _, _, info = self.env.step(actions.LEFT)
+#         obs, _, _, info = self.env.step(actions.RIGHT)
         
-        self.env.unwrapped.time_step = 0
-        self._timestep = 0
+#         self.env.unwrapped.time_step = 0
+#         self._timestep = 0
         
-        info = self._modify_info_dict(info)
+#         info = self._modify_info_dict(info)
         
-        if type(obs) is np.ndarray:
-            obs = torch.from_numpy(obs).float()
+#         if type(obs) is np.ndarray:
+#             obs = torch.from_numpy(obs).float()
         
-        return obs, info
+#         return obs, info
     
-    def random_start(self, 
-                     doors_open=[],
-                     doors_closed=[],
-                     force_key_pickedup=None,   # false key not picked up true key picked up
-                     force_door_unlocked=None,
-                     randomly_place_agent=False):
-        for door in self.objects["doors"]:
-            randval = np.random.rand()
-            if randval < 0.5 and door.colour is not self.key_colour:
-                door_obj = self.env.unwrapped.grid.get(
-                    door.position[0],
-                    door.position[1]
-                )
-                door_obj.is_open = True
+#     def random_start(self, 
+#                      doors_open=[],
+#                      doors_closed=[],
+#                      force_key_pickedup=None,   # false key not picked up true key picked up
+#                      force_door_unlocked=None,
+#                      randomly_place_agent=False):
+#         for door in self.objects["doors"]:
+#             randval = np.random.rand()
+#             if randval < 0.5 and door.colour is not self.key_colour:
+#                 door_obj = self.env.unwrapped.grid.get(
+#                     door.position[0],
+#                     door.position[1]
+#                 )
+#                 door_obj.is_open = True
             
-            if force_door_unlocked is None or force_door_unlocked is True:
-                if (door.colour is self.key_colour and randval < 0.3) or force_door_unlocked is True:
-                    door_obj = self.env.unwrapped.grid.get(
-                        door.position[0],
-                        door.position[1]
-                    )
-                    door_obj.is_locked = False
+#             if force_door_unlocked is None or force_door_unlocked is True:
+#                 if (door.colour is self.key_colour and randval < 0.3) or force_door_unlocked is True:
+#                     door_obj = self.env.unwrapped.grid.get(
+#                         door.position[0],
+#                         door.position[1]
+#                     )
+#                     door_obj.is_locked = False
                     
-                    if randval < 0.15:
-                        door_obj.is_open = True
-            if door.colour in doors_open:
-                door_obj = self.env.unwrapped.grid.get(
-                    door.position[0],
-                    door.position[1]
-                )
-                door_obj.is_open = True
-            if door.colour in doors_closed:
-                door_obj = self.env.unwrapped.grid.get(
-                    door.position[0],
-                    door.position[1]
-                )
-                door_obj.is_open = False
+#                     if randval < 0.15:
+#                         door_obj.is_open = True
+#             if door.colour in doors_open:
+#                 door_obj = self.env.unwrapped.grid.get(
+#                     door.position[0],
+#                     door.position[1]
+#                 )
+#                 door_obj.is_open = True
+#             if door.colour in doors_closed:
+#                 door_obj = self.env.unwrapped.grid.get(
+#                     door.position[0],
+#                     door.position[1]
+#                 )
+#                 door_obj.is_open = False
         
-        randval = np.random.rand()
-        if (force_key_pickedup is True or randval < 0.3) and (force_key_pickedup is not False):
-            key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
-                                                    self.objects["key"].position[1])
-            key_obj.cur_pos = np.array([-1, -1])
-            self.env.unwrapped.carrying = key_obj
-            self.env.unwrapped.grid.set(self.objects["key"].position[0],
-                                        self.objects["key"].position[1],
-                                        None)
-        else:
-            new_pos_found = False
-            while new_pos_found is False:
-                new_pos = (np.random.randint(1, 18),
-                            np.random.randint(1, 18))
+#         randval = np.random.rand()
+#         if (force_key_pickedup is True or randval < 0.3) and (force_key_pickedup is not False):
+#             key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
+#                                                     self.objects["key"].position[1])
+#             key_obj.cur_pos = np.array([-1, -1])
+#             self.env.unwrapped.carrying = key_obj
+#             self.env.unwrapped.grid.set(self.objects["key"].position[0],
+#                                         self.objects["key"].position[1],
+#                                         None)
+#         else:
+#             new_pos_found = False
+#             while new_pos_found is False:
+#                 new_pos = (np.random.randint(1, 18),
+#                             np.random.randint(1, 18))
                 
-                obj = self.env.unwrapped.grid.get(new_pos[0],
-                                                    new_pos[1])
-                if obj is None:
-                    key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
-                                                            self.objects["key"].position[1])
-                    self.env.unwrapped.grid.set(self.objects["key"].position[0],
-                                                self.objects["key"].position[1],
-                                                None)
-                    self.env.unwrapped.grid.set(new_pos[0],
-                                                new_pos[1],
-                                                key_obj)
-                    new_pos_found = True
+#                 obj = self.env.unwrapped.grid.get(new_pos[0],
+#                                                     new_pos[1])
+#                 if obj is None:
+#                     key_obj = self.env.unwrapped.grid.get(self.objects["key"].position[0],
+#                                                             self.objects["key"].position[1])
+#                     self.env.unwrapped.grid.set(self.objects["key"].position[0],
+#                                                 self.objects["key"].position[1],
+#                                                 None)
+#                     self.env.unwrapped.grid.set(new_pos[0],
+#                                                 new_pos[1],
+#                                                 key_obj)
+#                     new_pos_found = True
         
-        if randomly_place_agent is True:
-            new_pos_found = False
-            while new_pos_found is False:
-                new_pos = (np.random.randint(1, 18),
-                           np.random.randint(1, 18))
-                obj = self.env.unwrapped.grid.get(new_pos[0],
-                                                  new_pos[1])
-                if obj is None:
-                    self.env.unwrapped.agent_pos = new_pos
-                    self.env.unwrapped.agent_dir = np.random.randint(0,4)
-                    new_pos_found = True
+#         if randomly_place_agent is True:
+#             new_pos_found = False
+#             while new_pos_found is False:
+#                 new_pos = (np.random.randint(1, 18),
+#                            np.random.randint(1, 18))
+#                 obj = self.env.unwrapped.grid.get(new_pos[0],
+#                                                   new_pos[1])
+#                 if obj is None:
+#                     self.env.unwrapped.agent_pos = new_pos
+#                     self.env.unwrapped.agent_dir = np.random.randint(0,4)
+#                     new_pos_found = True
         
     
-    def step(self, action):
-        obs, reward, done, info = self.env.step(action)
-        self._timestep += 1
-        info = self._modify_info_dict(info)
-        if self._timestep >= self.time_limit:
-            done = True
-        if type(obs) is np.ndarray:
-            obs = torch.from_numpy(obs).float()
-        if self.check_option_complete(self):
-            return obs, 1, True, info
-        else:
-            return obs, 0, done, info
+#     def step(self, action):
+#         obs, reward, done, info = self.env.step(action)
+#         self._timestep += 1
+#         info = self._modify_info_dict(info)
+#         if self._timestep >= self.time_limit:
+#             done = True
+#         if type(obs) is np.ndarray:
+#             obs = torch.from_numpy(obs).float()
+#         if self.check_option_complete(self):
+#             return obs, 1, True, info
+#         else:
+#             return obs, 0, done, info
 
 
-class CorridorWrapper(Wrapper):
-    def __init__(self, env: Env):
-        super().__init__(env)
+# class CorridorWrapper(Wrapper):
+#     def __init__(self, env: Env):
+#         super().__init__(env)
     
-    def _find_key(self):
-        for x in range(self.env.unwrapped.width):
-            for y in range(self.env.unwrapped.height):
-                cell = self.env.unwrapped.grid.get(x,y)
-                if cell:
-                    if cell.type == "key":
-                        return x, y, cell
+#     def _find_key(self):
+#         for x in range(self.env.unwrapped.width):
+#             for y in range(self.env.unwrapped.height):
+#                 cell = self.env.unwrapped.grid.get(x,y)
+#                 if cell:
+#                     if cell.type == "key":
+#                         return x, y, cell
     
-    def _modify_info_dict(self, info):
-        info['timestep'] = self._timestep
-        info['player_dir'] = self.env.unwrapped.agent_dir
+#     def _modify_info_dict(self, info):
+#         info['timestep'] = self._timestep
+#         info['player_dir'] = self.env.unwrapped.agent_dir
         
-        return info
+#         return info
     
-    def reset(self, random_start=None):
+#     def reset(self, random_start=None):
         
-        obs, info = self.env.reset()
+#         obs, info = self.env.reset()
         
         
-        x, y, key = self._find_key()
-        key.cur_pos = np.array([-1,-1])
-        self.env.unwrapped.grid.set(x, y, None)
-        self.env.unwrapped.carrying = key
+#         x, y, key = self._find_key()
+#         key.cur_pos = np.array([-1,-1])
+#         self.env.unwrapped.grid.set(x, y, None)
+#         self.env.unwrapped.carrying = key
         
-        self.env.unwrapped.agent_pos = (3,5)
+#         self.env.unwrapped.agent_pos = (3,5)
         
-        obs, _, _, info = self.env.step(actions.LEFT)
-        obs, _, _, info = self.env.step(actions.RIGHT)
+#         obs, _, _, info = self.env.step(actions.LEFT)
+#         obs, _, _, info = self.env.step(actions.RIGHT)
         
-        self.env.unwrapped.time_step = 0
-        self._timestep = 0
+#         self.env.unwrapped.time_step = 0
+#         self._timestep = 0
         
-        info = self._modify_info_dict(info)
+#         info = self._modify_info_dict(info)
         
-        return obs, info
+#         return obs, info
     
-    def available_actions(self):
-        mask = [torch.tensor(True, dtype=bool)]*7
+#     def available_actions(self):
+#         mask = [torch.tensor(True, dtype=bool)]*7
         
-        agent_dir = self.env.unwrapped.agent_dir
-        if agent_dir == 0 or agent_dir == 2:
-            mask[2] = torch.tensor(False, dtype=bool)
+#         agent_dir = self.env.unwrapped.agent_dir
+#         if agent_dir == 0 or agent_dir == 2:
+#             mask[2] = torch.tensor(False, dtype=bool)
         
-        mask[3] = torch.tensor(False, dtype=bool)
-        mask[4] = torch.tensor(False, dtype=bool)
-        mask[5] = torch.tensor(False, dtype=bool)
-        mask[6] = torch.tensor(False, dtype=bool)
+#         mask[3] = torch.tensor(False, dtype=bool)
+#         mask[4] = torch.tensor(False, dtype=bool)
+#         mask[5] = torch.tensor(False, dtype=bool)
+#         mask[6] = torch.tensor(False, dtype=bool)
         
-        return mask
+#         return mask
     
-    def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+#     def step(self, action):
+#         obs, reward, done, info = self.env.step(action)
         
-        _, agent_y = self.env.unwrapped.agent_pos
+#         _, agent_y = self.env.unwrapped.agent_pos
         
-        if agent_y == 1:
-            reward = 1
-            done = True
-        else:
-            reward = 0
+#         if agent_y == 1:
+#             reward = 1
+#             done = True
+#         else:
+#             reward = 0
         
-        info = self._modify_info_dict(info)
+#         info = self._modify_info_dict(info)
         
-        return obs, reward, done, info
+#         return obs, reward, done, info
 

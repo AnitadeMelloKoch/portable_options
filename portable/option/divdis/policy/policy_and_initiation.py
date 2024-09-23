@@ -12,6 +12,7 @@ from pfrl.replay_buffer import ReplayUpdater, batch_experiences
 from pfrl.utils.batch_states import batch_states
 import torch.nn as nn
 from collections import deque
+logger = logging.getLogger(__name__)
 
 from portable.option.policy.agents import Agent
 from portable.option.policy.models import LinearQFunction, compute_q_learning_loss
@@ -41,7 +42,7 @@ class PolicyWithInitiation(Agent):
                  steps_to_bootstrap_init_classifier=1000,
                  q_hidden_size=64,
                  image_input=True,
-                 discount_rate=0.9,
+                 discount_rate=0.99,
                  initiation_maxlen=100):
         super().__init__()
 
@@ -135,6 +136,22 @@ class PolicyWithInitiation(Agent):
         )
         
         self.store_buffer_to_disk = False
+        
+        logger.info("Policy hps")
+        logger.info("======================================")
+        logger.info("======================================")
+        logger.info("warmup steps: {}".format(warmup_steps))
+        logger.info("learning rate: {}".format(learning_rate))
+        logger.info("prioritized replay anneal: {}".format(prioritized_replay_anneal_steps))
+        logger.info("buffer length: {}".format(buffer_length))
+        logger.info("final epsilon: {}".format(final_epsilon))
+        logger.info("final epsilon frame num: {}".format(final_exploration_frames))
+        logger.info("batch size: {}".format(batch_size))
+        logger.info("policy in features: {}".format(policy_infeature_size))
+        logger.info("gru hidden size: {}".format(gru_hidden_size))
+        logger.info("q hidden size: {}".format(q_hidden_size))
+        logger.info("======================================")
+        logger.info("======================================")
     
     def can_initiate(self, obs):
         in_context = self.context.predict(obs)
@@ -199,8 +216,8 @@ class PolicyWithInitiation(Agent):
     def end_skill(self, summed_reward):
         self.train_rewards.append(summed_reward)
         self.option_runs += 1
-        if self.option_runs%50 == 0:
-            logging.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
+        if self.option_runs%5 == 0:
+            logger.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
                                                                                            self.option_runs,
                                                                                            self.step_number))
     

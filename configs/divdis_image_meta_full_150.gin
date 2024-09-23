@@ -11,7 +11,7 @@ DivDisMetaMaskedPPOExperiment.num_options                           = 5
 DivDisMetaMaskedPPOExperiment.option_head_num                       = 4
 DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
 DivDisMetaMaskedPPOExperiment.use_gpu                               = True
-DivDisMetaMaskedPPOExperiment.gpu_list                              = [0]
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
 DivDisMetaMaskedPPOExperiment.make_videos                           = False
 DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 30
 DivDisMetaMaskedPPOExperiment.option_timeout                        = 300
@@ -41,13 +41,13 @@ PolicyWithInitiation.image_input                                    = True
 DivDisClassifier.learning_rate                                      = 0.001
 DivDisClassifier.num_classes                                        = 2
 DivDisClassifier.diversity_weight                                   = 0.001
-DivDisClassifier.l2_reg_weight                                      = 0.0002
+DivDisClassifier.l2_reg_weight                                      = 0.0003
 DivDisClassifier.model_name                                         = "minigrid_cnn"
 
 DivDisOption.exp_type                                               = "minigrid"
-DivDisOption.tabular_beta                                           = 0
+DivDisOption.tabular_beta                                           = 0.0001
 
-UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
+#UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
 UnbalancedSetDataset.class_weights                                  = [0.7,0.3]
 
 

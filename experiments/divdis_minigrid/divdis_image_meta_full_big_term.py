@@ -38,7 +38,8 @@ if __name__ == "__main__":
         return x
 
     def termination_phi(x):
-        return x/255
+        img = Image.fromarray(x.numpy())
+        return np.asarray(img.resize((128,128), Image.BICUBIC))/255
     
     experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                                seed=args.seed,
@@ -47,31 +48,29 @@ if __name__ == "__main__":
                                                termination_phi=termination_phi,
                                                action_policy=create_cnn_policy(3,20),
                                                action_vf=create_cnn_vf(3),
-                                               option_type="divdis",
-                                               )
+                                               option_type="divdis")
     
-    experiment.add_datafiles(minigrid_positive_files,
-                             minigrid_negative_files,
-                             minigrid_unlabelled_files)
+    experiment.add_datafiles(minigrid_big_positive_files,
+                             minigrid_big_negative_files,
+                             minigrid_big_unlabelled_files)
     
     experiment.train_option_classifiers()
     
-    for i in range(5):
-        experiment.test_classifiers(minigrid_test_files_positive,
-                                    minigrid_test_files_negative,
-                                    i)
-        
+    experiment.test_classifiers(minigrid_big_test_files_positive,
+                                minigrid_big_test_files_negative)
+    
+    
     meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
                                                                      seed=args.seed,
                                                                      max_steps=int(15000),
                                                                      grayscale=False,
+                                                                     scale_obs=True,
+                                                                     final_image_size=(84,84),
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,
-                                                 force_door_closed=True,
-                                                 state_size=(84,84),
-                                                 term_size=(84,84))
-        
+                                                 force_door_closed=True)
+    
     experiment.train_meta_agent(meta_env,
                                 args.seed,
                                 4e6,

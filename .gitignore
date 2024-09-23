@@ -4,7 +4,10 @@
 
 # results
 results/
+room_backgrounds/
 *.tar.gz
+*.err
+*.out
 
 # DS Store
 **/.DS_Store

@@ -354,11 +354,11 @@ def environment_builder(
         env = NormalizeObsWrapper(env)
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    if scale_obs is True:
-        env = ScaleObsWrapper(env, final_image_size)
+    # if scale_obs is True:
+    #     env = ScaleObsWrapper(env, final_image_size)
     if pad_obs is True:
         env = PadObsWrapper(env, final_image_size)
-    env = TransposeObsWrapper(env)
+    # env = TransposeObsWrapper(env)
     if grayscale is True:
         env = GrayscaleWrapper(env)
     env = MinigridInfoWrapper(env, seed)
