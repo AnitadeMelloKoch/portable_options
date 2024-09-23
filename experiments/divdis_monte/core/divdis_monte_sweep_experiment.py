@@ -1,5 +1,6 @@
 import copy
 import datetime
+import itertools
 import logging
 import os
 import pickle
@@ -801,7 +802,7 @@ class MonteDivDisSweepExperiment():
     
     
 
-    def grid_search(self,
+    def grid_search_old(self,
                     lr_range,
                     div_weight_range,
                     l2_reg_range,
@@ -814,7 +815,7 @@ class MonteDivDisSweepExperiment():
         results_lr = []
         results_div_weight = []
         results_l2_reg_weight = []
-        results_epochs = epochs_range
+        results_epochs = []
         
         # 2D array for multiple seeds
         results_acc = []
@@ -840,20 +841,20 @@ class MonteDivDisSweepExperiment():
         
         
         # Create grid of hyperparameter combinations
-        for head_num in tqdm(head_num_range, desc="head_nums", position=0, leave=False):
-            print("Head Num: ", head_num)
+        for head_num in tqdm(head_num_range, desc="head_nums", position=0, leave=False, disable=True):
+            print("\nHead Num: ", head_num)
             logging.info("Head Num: %d", head_num)
-            for lr in tqdm(lr_range, desc="learning_rates", position=1, leave=False):
-                print("Learning Rate: ", lr)
+            for lr in tqdm(lr_range, desc="learning_rates", position=1, leave=False, disable=True):
+                print("\nLearning Rate: ", lr)
                 logging.info("Learning Rate: %f", lr)
-                for div_weight in tqdm(div_weight_range, desc="div_weights", position=2):
-                    print("Diversity Weight: ", div_weight)
+                for div_weight in tqdm(div_weight_range, desc="div_weights", position=2, leave=False, disable=True):
+                    print("\nDiversity Weight: ", div_weight)
                     logging.info("Diversity Weight: %f", div_weight)
-                    for l2_reg_weight in tqdm(l2_reg_range, desc="l2_reg_weights", position=3, leave=False):
-                        print("L2 Regularization Weight: ", l2_reg_weight)
+                    for l2_reg_weight in tqdm(l2_reg_range, desc="l2_reg_weights", position=3, leave=False, disable=True):
+                        print("\nL2 Regularization Weight: ", l2_reg_weight)
                         logging.info("L2 Regularization Weight: %f", l2_reg_weight)
-                        for epochs in tqdm(epochs_range, desc="epochs", position=4, leave=False):
-                            print("Epochs: ", epochs)
+                        for epochs in tqdm(epochs_range, desc="epochs", position=4, leave=False, disable=True):
+                            print("\nEpochs: ", epochs)
                             logging.info("Epochs: %d", epochs)
                             
                         
@@ -872,8 +873,8 @@ class MonteDivDisSweepExperiment():
                             grid_negative_acc = []
 
                             # Train with multiple seeds for robustness
-                            for seed in tqdm(range(num_seeds), desc="seeds", position=5, leave=False):
-                                print("Seed: ", seed)
+                            for seed in tqdm(range(num_seeds), desc="seeds", position=5, leave=False, disable=True):
+                                print("\nSeed: ", seed)
                                 logging.info("Seed: %d", seed)
                                 set_seed(self.seed+seed)
                                 classifier = DivDisClassifier(use_gpu=self.use_gpu,
@@ -894,9 +895,9 @@ class MonteDivDisSweepExperiment():
                                 accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_terminations(self.dataset_positive,
                                                                     self.dataset_negative,
                                                                     classifier)
-                                best_idx = np.argmax(weighted_acc)
-                                grid_acc.append(max(weighted_acc))
+                                grid_acc.append(np.max(weighted_acc))
                                 grid_avg_acc.append(np.mean(weighted_acc))
+                                best_idx = np.argmax(weighted_acc)
                                 grid_raw_acc.append(accuracy[best_idx])
                                 grid_positive_acc.append(accuracy_pos[best_idx])
                                 grid_negative_acc.append(accuracy_neg[best_idx])
@@ -941,3 +942,100 @@ class MonteDivDisSweepExperiment():
         #        results_loss,
         #        "Grid Search Results",
         #        "Diversity Weight")
+
+
+
+    def grid_search(self,
+                    lr_range,
+                    div_weight_range,
+                    l2_reg_range,
+                    head_num_range,
+                    epochs_range,
+                    num_seeds):
+        
+        # List to store all results, where each result is a dictionary -- a run, with multiple seeds
+        all_results = []
+
+        print("Starting Grid Search")
+        logging.info("Starting Grid Search")
+        
+        # Log ranges
+        logging.info("Head Num Range: %s", head_num_range)
+        logging.info("Learning Rate Range: %s", lr_range)
+        logging.info("Diversity Weight Range: %s", div_weight_range)
+        logging.info("L2 Regularization Weight Range: %s", l2_reg_range)
+        logging.info("Epochs Range: %s", epochs_range)
+        
+        # Create grid of hyperparameter combinations 
+        grid = list(itertools.product(head_num_range, lr_range, div_weight_range, l2_reg_range, epochs_range))
+        
+        # Progress bar for the whole grid search
+        for head_num, lr, div_weight, l2_reg_weight, epochs in tqdm(grid, desc="Grid Search Progress"):
+            
+            logging.info("Head Num: %d, Learning Rate: %f, Diversity Weight: %f, L2 Regularization Weight: %f, Epochs: %d",
+                        head_num, lr, div_weight, l2_reg_weight, epochs)
+
+            # Initialize result dictionary for this run
+            run_results = {
+                "head_num": head_num,
+                "learning_rate": lr,
+                "div_weight": div_weight,
+                "l2_reg_weight": l2_reg_weight,
+                "epochs": epochs,
+                "seeds": [],
+
+                "loss": [],
+                
+                "weighted_acc": [], #2D, each element is one ensemble of heads, the elements are seeds of ensembles
+                "raw_acc": [],
+                "positive_acc": [],
+                "negative_acc": [],
+
+                "best_weighted_acc": [],
+                "best_raw_acc": [],
+                "best_positive_acc": [],
+                "best_negative_acc": [],
+            }
+
+            # Train with multiple seeds for replication
+            for seed in range(num_seeds):
+                logging.info("Seed: %d", self.seed + seed)
+                set_seed(self.seed + seed)
+                run_results["seeds"].append(self.seed + seed)
+                
+                classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                            log_dir=self.log_dir,
+                                            num_classes=2,
+                                            diversity_weight=div_weight,
+                                            head_num=head_num,
+                                            learning_rate=lr,
+                                            l2_reg_weight=l2_reg_weight,
+                                            model_name="monte_cnn")
+                classifier.add_data(positive_files=self.train_positive_files,
+                                    negative_files=self.train_negative_files,
+                                    unlabelled_files=self.unlabelled_files)
+                
+                train_loss = classifier.train(epochs)
+                run_results["loss"].append(train_loss)
+                
+                accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_terminations(self.dataset_positive,
+                                                                                            self.dataset_negative,
+                                                                                            classifier)
+                
+                run_results["weighted_acc"].append(weighted_acc)
+                run_results["raw_acc"].append(accuracy)
+                run_results["positive_acc"].append(accuracy_pos)
+                run_results["negative_acc"].append(accuracy_neg)
+                
+                best_idx = np.argmax(weighted_acc)
+                run_results["best_weighted_acc"].append(weighted_acc[best_idx])
+                run_results["best_raw_acc"].append(accuracy[best_idx])
+                run_results["best_positive_acc"].append(accuracy_pos[best_idx])
+                run_results["best_negative_acc"].append(accuracy_neg[best_idx])
+
+            # Store the results of this run
+            all_results.append(run_results)
+
+        self.save_results_dict(all_results, "grid_search_results.pkl") # list of dicts, each dict is a run (3 seeds)
+
+        

@@ -1,5 +1,6 @@
 import argparse 
 from datetime import datetime
+import warnings
 
 import numpy as np
 
@@ -260,6 +261,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     load_gin_configs(args.config_file, args.gin_bindings)
 
+    warnings.filterwarnings("ignore", category=UserWarning, module='torch.nn.modules.lazy')
+
+
     experiment = MonteDivDisSweepExperiment(base_dir=args.base_dir,
                                             train_positive_files=positive_train_files,
                                             train_negative_files=negative_train_files,
@@ -272,7 +276,7 @@ if __name__ == "__main__":
 
     print(f"[{formatted_time()}] Now running grid search...")
     experiment.grid_search(lr_range=np.logspace(-4, -3, 3),
-                            div_weight_range=np.logspace(-4, -3, 3),
+                            div_weight_range=np.logspace(-4, -2, 4),
                             l2_reg_range=np.logspace(-4, -2, 3),
                             head_num_range=[4,6,8],
                             epochs_range=[30], #[30,70,150,300]
