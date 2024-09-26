@@ -1,5 +1,7 @@
 import argparse 
 from datetime import datetime
+import os
+import random
 import warnings
 
 import numpy as np
@@ -9,6 +11,18 @@ from experiments.divdis_monte.core.divdis_monte_sweep_experiment import MonteDiv
 
 
 img_dir = "resources/monte_images/"
+
+
+def get_sorted_filenames(directory):
+    filenames = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            filenames.append(file)
+    filenames.sort()
+    
+    return filenames
+
+data_filenames = get_sorted_filenames(img_dir)
 
 
 positive_train_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
@@ -24,7 +38,7 @@ negative_train_files = [img_dir+"climb_down_ladder_room1_termination_negative.np
                         #img_dir+"climb_down_ladder_room10_termination_negative.npy",
                         #img_dir+"climb_down_ladder_room10_uncertain.npy"
                         ]
-unlabelled_train_files = [
+'''unlabelled_train_files = [
     # 0
     img_dir + "climb_up_ladder_room0_termination_positive.npy",
      img_dir + "climb_up_ladder_room0_termination_negative.npy",
@@ -162,7 +176,11 @@ unlabelled_train_files = [
     img_dir + "room18_walk_around.npy",
      img_dir + "move_left_enemy_room18_termination_positive.npy",
      img_dir + "move_left_enemy_room18_termination_negative.npy"
-]
+]'''
+unlabelled_train_files = []
+unlabelled_train_files = unlabelled_train_files = [img_dir+file for file in data_filenames if (file not in positive_train_files) and (file not in negative_train_files)]
+sample_rate = .6
+unlabelled_train_files = random.sample(unlabelled_train_files, int(sample_rate*len(unlabelled_train_files)))
 
 
 positive_test_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
@@ -274,41 +292,39 @@ if __name__ == "__main__":
     
     NUM_SEEDS = 5
 
-    print(f"[{formatted_time()}] Now running grid search...")
+
+    
+
+    '''print(f"[{formatted_time()}] Now running grid search...")
     experiment.grid_search(lr_range=np.logspace(-4, -3, 3),
                             div_weight_range=np.logspace(-4, -2, 4),
                             l2_reg_range=np.logspace(-4, -2, 3),
                             head_num_range=[4,6,8],
                             epochs_range=[30], #[30,70,150,300]
-                            num_seeds=NUM_SEEDS)
+                            num_seeds=NUM_SEEDS)'''
 
     
-    """print(f"[{formatted_time()}] Sweeping learning rate...")
-    experiment.sweep_lr(-5, # 0.00001
-                        -3,
-                        8,
-                        NUM_SEEDS)
 
 
-    print(f"[{formatted_time()}] Sweeping class div weight...")
-    experiment.sweep_class_div_weight(-5, # 0.00001
-                                      -3,
-                                      8,
-                                      NUM_SEEDS)
-
-    print(f"[{formatted_time()}] Sweeping L2 reg weight...")
-    experiment.sweep_l2_reg_weight(-4, # 0.0001
-                                   -2,
-                                   8,
-                                   NUM_SEEDS)
-
-
-    print(f"[{formatted_time()}] Sweeping ensemble size...")
-    experiment.sweep_ensemble_size(1, 
-                                   8,
-                                   1,
-                                   NUM_SEEDS,
-                                   )
+    #print(f"[{formatted_time()}] Sweeping class div weight...")
+    #experiment.sweep_class_div_weight(-6, # 0.00001
+    #                                  -2,
+    #                                  12,
+    #                                  NUM_SEEDS)
+#
+    #print(f"[{formatted_time()}] Sweeping L2 reg weight...")
+    #experiment.sweep_l2_reg_weight(-5, # 0.0001
+    #                               -2,
+    #                               8,
+    #                               NUM_SEEDS)
+#
+#
+    #print(f"[{formatted_time()}] Sweeping ensemble size...")
+    #experiment.sweep_ensemble_size(1, 
+    #                               12,
+    #                               1,
+    #                               NUM_SEEDS,
+    #                               )
 
     
     print(f"[{formatted_time()}] Sweeping epochs...")
@@ -316,16 +332,22 @@ if __name__ == "__main__":
                             100, 
                             10,
                             NUM_SEEDS,
-                            [30,60,100,130,160,200,250,350,500]) # when a list is provided, use this
+                            [30,70,120,180,250,350,500]) # when a list is provided, use this
 
 
     print(f"[{formatted_time()}] Sweeping div batch size...")
     experiment.sweep_div_batch_size(16,
                                     400,
                                     16,
-                                    NUM_SEEDS)"""
+                                    NUM_SEEDS,
+                                    [16,32,64,128,256,512,1024])
 
     
+    print(f"[{formatted_time()}] Sweeping learning rate...")
+    experiment.sweep_lr(-5, # 0.00001
+                        -3,
+                        8,
+                        NUM_SEEDS)
     
     
     

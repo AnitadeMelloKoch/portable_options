@@ -207,11 +207,11 @@ class MonteDivDisSweepExperiment():
                                 accuracies.mean(axis=1)-accuracies.std(axis=1),
                                 accuracies.mean(axis=1)+accuracies.std(axis=1),
                                 alpha=0.2)
-            axes[1].plot(x_values, avg_accuracies.mean(axis=1))
-            axes[1].fill_between(x_values,
-                                avg_accuracies.mean(axis=1)-avg_accuracies.std(axis=1),
-                                avg_accuracies.mean(axis=1)+avg_accuracies.std(axis=1),
-                                alpha=0.2)
+            #axes[1].plot(x_values, avg_accuracies.mean(axis=1))
+            #axes[1].fill_between(x_values,
+            #                    avg_accuracies.mean(axis=1)-avg_accuracies.std(axis=1),
+            #                    avg_accuracies.mean(axis=1)+avg_accuracies.std(axis=1),
+            #                    alpha=0.2)
             axes[1].set_xlabel(x_label)
             axes[1].set_ylabel(y_labels[1])
             axes[1].title.set_text(ax_titles[1])
@@ -240,7 +240,7 @@ class MonteDivDisSweepExperiment():
                 label.set_position((label.get_position()[0] + 0.05, label.get_position()[1]))
             
             axes[1].bar(x_axis_data-bar_width/2, accuracies.mean(1), yerr=accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
-            axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
+            #axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
             axes[1].set_xlabel(x_label)
             axes[1].set_ylabel(y_labels[1])
             axes[1].title.set_text(ax_titles[1])
@@ -468,7 +468,8 @@ class MonteDivDisSweepExperiment():
                              start_batchsize,
                              end_batchsize,
                              batch_stepsize,
-                             num_seeds):
+                             num_seeds,
+                             batch_sizes=None):
         # 1D array
         results_batchsize = []
         # 2D array for multiple seeds
@@ -476,8 +477,11 @@ class MonteDivDisSweepExperiment():
         results_avg_acc = []
         results_loss = []
 
+        if batch_sizes is None:
+            batch_sizes = range(start_batchsize, end_batchsize+1, batch_stepsize)
+
         
-        for batch_size in tqdm(range(start_batchsize, end_batchsize+1, batch_stepsize), desc="batch_sizes", position=0):
+        for batch_size in tqdm(batch_sizes, desc="batch_sizes", position=0):
             results_batchsize.append(batch_size)
             batch_acc = []
             batch_avg_acc = []
@@ -1010,10 +1014,12 @@ class MonteDivDisSweepExperiment():
                                             head_num=head_num,
                                             learning_rate=lr,
                                             l2_reg_weight=l2_reg_weight,
-                                            model_name="monte_cnn")
+                                            model_name="monte_cnn",
+                                            dataset_batchsize=64)
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(epochs)
                 run_results["loss"].append(train_loss)
@@ -1032,6 +1038,20 @@ class MonteDivDisSweepExperiment():
                 run_results["best_raw_acc"].append(accuracy[best_idx])
                 run_results["best_positive_acc"].append(accuracy_pos[best_idx])
                 run_results["best_negative_acc"].append(accuracy_neg[best_idx])
+
+                logging.info("==============RUN RESULTS==============")
+                logging.info("Best Weighted Acc: %f", weighted_acc[best_idx])
+                logging.info("Best Raw Acc: %f", accuracy[best_idx])
+                logging.info("Best Positive Acc: %f", accuracy_pos[best_idx])
+                logging.info("Best Negative Acc: %f", accuracy_neg[best_idx])
+
+                logging.info(f"Weighted Acc: {weighted_acc}")
+                logging.info(f"Raw Acc: {accuracy}")
+                logging.info(f"Positive Acc: {accuracy_pos}")
+                logging.info(f"Negative Acc: {accuracy_neg}")
+
+                logging.info("=======================================")
+                
 
             # Store the results of this run
             all_results.append(run_results)
