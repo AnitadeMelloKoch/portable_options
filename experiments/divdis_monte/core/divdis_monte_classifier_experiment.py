@@ -888,9 +888,18 @@ class MonteDivDisClassifierExperiment():
         x_values = np.array(x_values)
         
         # Extract each y-value array
-        divdis_ensemble_acc = np.array(y_values[0]) # (num_classifiers, num_seeds)
-        regular_ensemble_acc = np.array(y_values[1])
-        cnn_acc = np.array(y_values[2])
+        divdis_ensemble_acc = np.array(y_values[:,0,:]) # (num_classifiers, num_seeds)
+        regular_ensemble_acc = np.array(y_values[:,1,:])
+        cnn_acc = np.array(y_values[:,2,:])
+
+        print(f"x_values: {x_values}")
+        print(f"divdis_ensemble_acc: {divdis_ensemble_acc}")
+        print(f"regular_ensemble_acc: {regular_ensemble_acc}")
+        print(f"cnn_acc: {cnn_acc}")
+        logging.info(f"x_values: {x_values}")
+        logging.info(f"divdis_ensemble_acc: {divdis_ensemble_acc}")
+        logging.info(f"regular_ensemble_acc: {regular_ensemble_acc}")
+        logging.info(f"cnn_acc: {cnn_acc}")
         
         # Set up the figure and axis
         fig, ax = plt.subplots(figsize=(12, 7))  
