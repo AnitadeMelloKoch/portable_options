@@ -32,6 +32,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         self.reward = reward_on_success
         self.true_termination = []
         self._check_termination = check_true_termination
+        
+        self.obs = None
 
     def reset(self,
               agent_reposition_attempts=0,
@@ -65,6 +67,8 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
         if return_rand_state_idx is True:
             return s0, info, rand_idx
         
+        self.obs = s0
+        
         return s0, info
 
     def step(self, action):
@@ -77,5 +81,10 @@ class MonteBootstrapWrapper(MonteAgentWrapper):
             done = True
             reward += self.reward
         
+        self.obs = obs
+        
         return obs, reward, done, info
+    
+    def get_term_state(self):
+        return self.obs
     

@@ -10,6 +10,65 @@ from experiments.divdis_minigrid.experiment_files import *
 import numpy as np
 from PIL import Image
 
+def get_train_envs(env_seed):
+    return [
+        [[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+            door_colour="red",
+            keep_colour="blue",
+            state_size=(128,128),
+            term_size=(128,128)
+            )] for _ in range(4)],
+        [[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+            door_colour="red",
+            keep_colour="green",
+            state_size=(128,128),
+            term_size=(128,128)
+            )]for _ in range(4)],
+        [[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+            door_colour="red",
+            keep_colour="red",
+            state_size=(128,128),
+            term_size=(128,128)
+            )]for _ in range(4)],
+        [[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+            door_colour="red",
+            pickup_colour="red",
+            state_size=(128,128),
+            term_size=(128,128)
+            )]for _ in range(4)],
+        [[AdvancedDoorKeyPolicyTrainWrapper(
+            environment_builder('SmallAdvancedDoorKey-16x16-v0',
+                                                                     seed=args.seed,
+                                                                     max_steps=int(500),
+                                                                     grayscale=False,
+                                                                     normalize_obs=False),
+            door_colour="red",
+            force_door_open=True,
+            state_size=(128,128),
+            term_size=(128,128)
+            )]for _ in range(4)],
+    ]
+
 
 
 if __name__ == "__main__":
@@ -38,8 +97,7 @@ if __name__ == "__main__":
         return x
 
     def termination_phi(x):
-        img = Image.fromarray(x.numpy())
-        return np.asarray(img.resize((128,128), Image.BICUBIC))/255
+        return x/255
     
     experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                                seed=args.seed,
@@ -56,24 +114,29 @@ if __name__ == "__main__":
     
     experiment.train_option_classifiers()
     
-    experiment.test_classifiers(minigrid_big_test_files_positive,
-                                minigrid_big_test_files_negative)
+    for i in range(5):
+        experiment.test_classifiers(minigrid_big_test_files_positive,
+                                    minigrid_big_test_files_negative,
+                                    i)
     
+    experiment.train_option_policies(get_train_envs(args.seed),
+                                     args.seed,
+                                     12e5)
     
     meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(15000),
+                                                                     max_steps=int(50000),
                                                                      grayscale=False,
-                                                                     scale_obs=True,
-                                                                     final_image_size=(84,84),
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,
-                                                 force_door_closed=True)
+                                                 force_door_closed=True,
+                                                 state_size=(128,128),
+                                                 term_size=(128,128))
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                4e6,
+                                10e6,
                                 0.98)
     
     

@@ -8,26 +8,6 @@ from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import \
     AdvancedDoorKeyPolicyTrainWrapper
 from experiments.minigrid.utils import environment_builder, factored_environment_builder
 
-
-def collect_seed(seed, task, initiation=None, termination=None):
-    colours = ["red", "green", "blue", "purple", "yellow", "grey"]        
-    for colour in colours:
-        states = []
-        for _ in tqdm(range(5000)):
-            repos_attempts = np.random.randint(low=0, high=1000)
-            env = environment_builder('AdvancedDoorKey-16x16-v0', seed=seed, grayscale=False,
-                                      scale_obs=True, final_image_size=(84,84), normalize_obs=False)
-            #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
-from functools import partial
-import matplotlib.pyplot as plt
-import numpy as np
-from tqdm import tqdm
-
-from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import \
-    AdvancedDoorKeyPolicyTrainWrapper
-from experiments.minigrid.utils import environment_builder, factored_environment_builder
-
-
 def collect_seed(seed, task, initiation=None, termination=None):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]        
     for colour in colours:
@@ -39,7 +19,8 @@ def collect_seed(seed, task, initiation=None, termination=None):
             #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
             env = AdvancedDoorKeyPolicyTrainWrapper(env,
                                                     door_colour=colour,
-                                                    image_input=True)
+                                                    image_input=True,
+                                                    state_size=(128,128))
             
             if task == "get_key":
                 if (initiation is True) or (termination is False): # key presnet; can get key: init pos, term neg
@@ -68,26 +49,64 @@ def collect_seed(seed, task, initiation=None, termination=None):
             states.append(obs.numpy())
 
         states = np.array(states)
-        base_dir = "resources/minigrid_images/" 
+        base_dir = "resources/large_minigrid/" 
         task_name = f"get{colour}key" if task == "get_key" else f"open{colour}door"
         if (initiation is True) or (termination is False): # init pos, term neg
-            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_initiation_positive.npy", states)
-            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_termination_negative.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_2_initiation_positive.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_2_termination_negative.npy", states)
         elif (initiation is False) or (termination is True): # init neg, term pos
-            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_initiation_negative.npy", states)
-            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_1_termination_positive.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_2_initiation_negative.npy", states)
+            np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_door{colour}_{seed}_2_termination_positive.npy", states)
         else:
             raise ValueError("initiation and termination cannot be the same")
 
         print(f"Saved seed {seed}, colour {colour}, initiation {initiation}, termination {termination}")
         print(f"states shape: {states.shape}")
 
+# def collect_seed(seed, task, initiation=None, termination=None):
+#     colours = ["red", "green", "blue", "purple", "yellow", "grey"]        
+#     states = []
+#     for colour in colours:
+#         for _ in tqdm(range(1000)):
+#             repos_attempts = np.random.randint(low=0, high=1000)
+#             env = environment_builder('AdvancedDoorKey-16x16-v0', seed=seed, grayscale=False,
+#                                       scale_obs=True, final_image_size=(128,128), normalize_obs=False)
+#             #env = factored_environment_builder('AdvancedDoorKey-8x8-v0', seed=seed)
+#             env = AdvancedDoorKeyPolicyTrainWrapper(env,
+#                                                     door_colour=colour,
+#                                                     image_input=True,
+#                                                     state_size=(128,128))
+            
+#             if (initiation is True) or (termination is False): # key presnet; can get key: init pos, term neg
+#                 obs, _ = env.reset(random_start=True, 
+#                                     agent_reposition_attempts=repos_attempts)
+#             elif (initiation is False) or (termination is True): # key not presnet; cant get key:init neg, term pos
+#                 obs, _ = env.reset(random_start=True, 
+#                                     agent_position=(14,14))
+
+#             states.append(obs.numpy())
+
+#     states = np.array(states)
+#     base_dir = "resources/large_minigrid/" 
+#     task_name = "togoal"
+#     if (initiation is True) or (termination is False): # init pos, term neg
+#         np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_{seed}_2_initiation_positive.npy", states)
+#         np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_{seed}_2_termination_negative.npy", states)
+#     elif (initiation is False) or (termination is True): # init neg, term pos
+#         np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_{seed}_2_initiation_negative.npy", states)
+#         np.save(base_dir+f"adv_doorkey_16x16_v2_{task_name}_{seed}_2_termination_positive.npy", states)
+#     else:
+#         raise ValueError("initiation and termination cannot be the same")
+
+#     print(f"Saved seed {seed}, initiation {initiation}, termination {termination}")
+#     print(f"states shape: {states.shape}")
+
 
 
 if __name__ == '__main__':
 
     # multiprocessing
-    task = 'open_door'
+    task = 'get_key'
     seeds = [0,1,2,3,4,5,6,7,8,9,10,11]
     USE_MP = True
     

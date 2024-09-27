@@ -42,6 +42,7 @@ class DivDisMetaMaskedPPOExperiment():
                  use_termination_masks=True,
                  log_q_values=False,
                  add_unlabelled_data=False,
+                 initial_option_bootstrap_steps=0,
                  gpu_list=[0],
                  start_epsilon=0.0,
                  end_epsilon=0.0,
@@ -86,6 +87,7 @@ class DivDisMetaMaskedPPOExperiment():
         self.end_epsilon = end_epsilon
         self.decay_steps = decay_steps
         self.epsilon = start_epsilon
+        self.bootstrap_steps = initial_option_bootstrap_steps
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -107,6 +109,17 @@ class DivDisMetaMaskedPPOExperiment():
                             format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.INFO)
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.name, self.seed))
+        logging.info("Experiment hps")
+        logging.info("===========================================")
+        logging.info("===========================================")
+        logging.info("option timeout: {}".format(option_timeout))
+        logging.info("num options: {}".format(num_options))
+        logging.info("num primitive actions: {}".format(num_primitive_actions))
+        logging.info("initial option bootstrap steps: {}".format(initial_option_bootstrap_steps))
+        logging.info("use global option: {}".format(use_global_option))
+        logging.info("fix options when training meta agent: {}".format(fix_options_during_meta))
+        logging.info("===========================================")
+        logging.info("===========================================")
         
         if self.rank == 0:
         
@@ -405,6 +418,7 @@ class DivDisMetaMaskedPPOExperiment():
             episode_rewards = deque(maxlen=200)
             undiscounted_rewards = []
         
+        
         while total_steps < max_steps:
             done = False
             if self.rank == 0:
@@ -427,7 +441,14 @@ class DivDisMetaMaskedPPOExperiment():
                 action_mask = self.get_termination_masks(env)
                 step_taken = False
                 if self.rank == 0:
-                    action = self.act(obs, action_mask)
+                    if total_steps < self.bootstrap_steps:
+                        action_selected = False
+                        while not action_selected:
+                            action = np.random.randint(self.num_primitive_actions, self.total_actions)
+                            action_selected = action_mask[action]
+                                
+                    else:
+                        action = self.act(obs, action_mask)
                 
                     self._video_log("action: {}".format(action))
                     # self._video_log("action q vals: {}".format(q_vals))
@@ -526,6 +547,11 @@ class DivDisMetaMaskedPPOExperiment():
                 if self.rank == 0:     
                     undiscounted_reward += np.sum(rewards)
                     self.decisions += 1
+                    if total_steps > self.bootstrap_steps:
+                        self.observe(obs,
+                                    action_mask,
+                                    rewards,
+                                    done)
                     total_steps += steps
                     
                     if self.add_unlabelled_data is True:
@@ -541,13 +567,11 @@ class DivDisMetaMaskedPPOExperiment():
                         "head": chosen_head
                     })
                     
-                    self.observe(obs,
-                                action_mask,
-                                rewards,
-                                done)
                     obs = next_obs
                 
                 total_steps = self.comm.bcast(total_steps, root = 0)
+                done = self.comm.bcast(done, root=0)
+                
                     
                 
             """END OF EPISODE"""
@@ -580,11 +604,10 @@ class DivDisMetaMaskedPPOExperiment():
                 self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
             
             # self.plot_learning_curve(episode_rewards)
-            
-                if episode % 50 == 0:
-                    if self.rank == 0:
-                        self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
-                    self.save()
+            if episode % 50 == 0:
+                if self.rank == 0:
+                    self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+                self.save()
             
             if self.rank == 0:
                 if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:

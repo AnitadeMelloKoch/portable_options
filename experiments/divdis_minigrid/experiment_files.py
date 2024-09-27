@@ -150,7 +150,7 @@ minigrid_big_positive_files = [
     ["resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_0_2_termination_positive.npy"],
     ["resources/large_minigrid/adv_doorkey_16x16_v2_getredkey_doorred_0_2_termination_positive.npy"],
     ["resources/large_minigrid/adv_doorkey_16x16_v2_openreddoor_doorred_0_2_termination_positive.npy"],
-    ["resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_0_2_termination_positive.npy"],
+    ["resources/large_minigrid/adv_doorkey_16x16_v2_togoal_0_2_termination_positive.npy"],
     
 ]
 minigrid_big_negative_files = [
@@ -158,7 +158,7 @@ minigrid_big_negative_files = [
     ["resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_0_2_termination_negative.npy"],
     ["resources/large_minigrid/adv_doorkey_16x16_v2_getredkey_doorred_0_2_termination_negative.npy"],
     ["resources/large_minigrid/adv_doorkey_16x16_v2_openreddoor_doorred_0_2_termination_negative.npy"],
-    ["resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_0_2_termination_negative.npy"],
+    ["resources/large_minigrid/adv_doorkey_16x16_v2_togoal_0_2_termination_negative.npy"],
 ]
 minigrid_big_unlabelled_files = [
     ["resources/large_minigrid/adv_doorkey_16x16_v2_getbluekey_doorblue_1_2_termination_positive.npy",
@@ -177,8 +177,8 @@ minigrid_big_unlabelled_files = [
     "resources/large_minigrid/adv_doorkey_16x16_v2_openreddoor_doorred_1_2_termination_negative.npy",
     "resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_2_2_termination_positive.npy",
     "resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_2_2_termination_negative.npy",],
-    ["resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_1_2_termination_positive.npy",
-    "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_1_2_termination_negative.npy",
+    ["resources/large_minigrid/adv_doorkey_16x16_v2_togoal_1_2_termination_positive.npy",
+    "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_1_2_termination_negative.npy",
     "resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_2_2_termination_positive.npy",
     "resources/large_minigrid/adv_doorkey_16x16_v2_getgreenkey_doorgreen_2_2_termination_negative.npy",]
 ]
@@ -220,13 +220,13 @@ minigrid_big_test_files_positive = [
         "resources/large_minigrid/adv_doorkey_16x16_v2_openreddoor_doorred_9_2_termination_positive.npy",
     ],
     [
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_3_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_4_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_5_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_6_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_7_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_8_2_termination_positive.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_9_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_3_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_4_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_5_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_6_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_7_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_8_2_termination_positive.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_9_2_termination_positive.npy",
     ],
 ]
 minigrid_big_test_files_negative = [
@@ -267,12 +267,12 @@ minigrid_big_test_files_negative = [
         "resources/large_minigrid/adv_doorkey_16x16_v2_openreddoor_doorred_9_2_termination_negative.npy",
     ],
     [
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_3_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_4_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_5_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_6_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_7_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_8_2_termination_negative.npy",
-        "resources/large_minigrid/adv_doorkey_16x16_v2_gotogoal_9_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_3_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_4_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_5_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_6_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_7_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_8_2_termination_negative.npy",
+        "resources/large_minigrid/adv_doorkey_16x16_v2_togoal_9_2_termination_negative.npy",
     ],
 ]

@@ -9,6 +9,7 @@ import pfrl
 import logging
 import gin
 from collections import deque
+logger = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
 
@@ -67,27 +68,35 @@ class VisLayer(torch.nn.Module):
 
 def create_minigrid_model(n_channels=3, action_space=7):
     return nn.Sequential(
-        nn.Conv2d(n_channels, 32, 8, stride=2),
-        # PrintLayer(),
-        # VisLayer(),
-        nn.ReLU(),
-        nn.Conv2d(32,64,3,stride=2),
-        # PrintLayer(),
-        # VisLayer(),
-        nn.ReLU(),
-        nn.Conv2d(64, 64, 3, stride=1),
-        # PrintLayer(),
-        # VisLayer(),
+        nn.LazyConv2d(out_channels=32, kernel_size=5, stride=2, padding=0, bias=False),
+        nn.BatchNorm2d(32),
+        nn.GELU(),
+        nn.MaxPool2d(kernel_size=4, stride=2),
+        
+        nn.LazyConv2d(out_channels=64, kernel_size=4, stride=2, padding=0, bias=False),
+        nn.BatchNorm2d(64),
+        nn.GELU(),
+        nn.MaxPool2d(kernel_size=3, stride=1), # maybe try global avg pool in future
+
+        nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1, padding=0, bias=False),
+        nn.BatchNorm2d(64),
+        nn.GELU(),
         nn.Flatten(),
-        nn.LazyLinear(512),
-        nn.ReLU(),
+        nn.LazyLinear(750),
+        nn.GELU(),
+        nn.LazyLinear(128),
+        
         pfrl.nn.Branched(
             nn.Sequential(
-                nn.Linear(512, action_space),
+                nn.Linear(128, 64),
+                nn.Tanh(),
+                nn.Linear(64, action_space),
                 pfrl.policies.SoftmaxCategoricalHead(),
             ),
             nn.Sequential(
-                nn.Linear(512, 1),
+                nn.Linear(128, 64),
+                nn.Tanh(),
+                nn.Linear(64,1)
             )
         )
     )
@@ -106,9 +115,9 @@ class SkillPPO():
                  clip_eps_vf=None,
                  entropy_coef=0,
                  standardize_advantages=True,
-                 gamma=0.9,
+                 gamma=0.99,
                  lambd=0.97,
-                 minibatch_size=64,
+                 minibatch_size=256,
                  update_interval=2048):
         
         if model_type == "minigrid":
@@ -131,7 +140,7 @@ class SkillPPO():
                          minibatch_size=minibatch_size,
                          epochs=epochs_per_update,
                          clip_eps_vf=clip_eps_vf,
-                         max_grad_norm=1,
+                         max_grad_norm=0.5,
                          standardize_advantages=standardize_advantages,
                          gamma=gamma,
                          lambd=lambd)
@@ -185,8 +194,8 @@ class SkillPPO():
     def end_skill(self, summed_reward):
         self.train_rewards.append(summed_reward)
         self.option_runs += 1
-        if self.option_runs%50 == 0:
-            logging.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
+        if self.option_runs%1 == 0:
+            logger.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
                                                                                            self.option_runs,
                                                                                            self.step_number))
     

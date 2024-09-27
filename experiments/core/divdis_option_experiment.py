@@ -32,6 +32,14 @@ def policy_phi(x):
     x = (x/255.0).float()
     return x
 
+def term_phi(x):
+    if type(x) == np.ndarray:
+        x = torch.from_numpy(x)
+    x = (x/255.0).float()
+    if len(x.shape) == 3:
+        x = x.unsqueeze(0)
+    return x
+
 def mock_check_true(x,y,z):
     return False
 
@@ -127,7 +135,8 @@ class DivDisOptionExperiment():
                                         policy_phi=policy_phi,
                                         video_generator=self.video_generator,
                                         plot_dir=os.path.join(self.plot_dir, "option"),
-                                        use_seed_for_initiation=True)
+                                        use_seed_for_initiation=True,
+                                        termination_phi=term_phi)
         
         set_start_method('spawn')
         self.experiment_data = []

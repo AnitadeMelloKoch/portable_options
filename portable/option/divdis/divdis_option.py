@@ -6,8 +6,11 @@ import random
 import torch 
 import pickle
 
+from collections import deque
+
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
+from portable.option.divdis.policy.skill_ppo import SkillPPO
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
@@ -15,6 +18,8 @@ from experiments.experiment_logger import VideoGenerator
 
 from portable.option.sets.utils import BayesianWeighting
 from torch.utils.tensorboard import SummaryWriter
+
+MODEL_TYPE = ["dqn", "ppo"]
 
 @gin.configurable 
 class DivDisOption():
@@ -29,6 +34,7 @@ class DivDisOption():
                  use_seed_for_initiation,
                  exp_type,
                  plot_dir,
+                 model_type="dqn",
                  save_term_states=True,
                  tabular_beta=0.0,
                  beta_distribution_alpha=100,
@@ -48,6 +54,9 @@ class DivDisOption():
         self.log_dir = log_dir
         self.plot_dir = plot_dir
         self.exp_type = exp_type
+        self.model_type = model_type
+        
+        assert model_type in MODEL_TYPE
         
         self.use_seed_for_initiation = use_seed_for_initiation
         
@@ -107,7 +116,7 @@ class DivDisOption():
             VideoGenerator.save_env_image(os.path.join(self.plot_dir, str(int(head_idx))),
                                           img,
                                           "prediction: {}".format(prediction),
-                                          200)
+                                          20)
     
     
     def _get_termination_save_path(self):
@@ -140,8 +149,12 @@ class DivDisOption():
                 with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                     keys = pickle.load(f)
                 for key in keys:
-                    policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
-                                                         policy_phi=self.policy_phi)
+                    if self.model_type == "dqn":
+                        policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
+                                                            policy_phi=self.policy_phi)
+                    if self.model_type == "ppo":
+                        policies[key] = SkillPPO(use_gpu=self.gpu_list[idx],
+                                                 phi=self.policy_phi)
                     policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
 
@@ -171,9 +184,12 @@ class DivDisOption():
     
     def add_policy(self, 
                    term_idx):
-        self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
-                                                            policy_phi=self.policy_phi))
-    
+        if self.model_type == "dqn":
+            self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
+                                                                policy_phi=self.policy_phi))
+        if self.model_type == "ppo":
+            self.policies[term_idx].append(SkillPPO(use_gpu=self.gpu_list[term_idx],
+                                                    phi=self.policy_phi))    
     def find_possible_policy(self, *kwargs):
         if self.use_seed_for_initiation:
             return self._seed_possible_policies(*kwargs)
@@ -228,16 +244,21 @@ class DivDisOption():
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self, head_idx):
-        return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
-                                    policy_phi=self.policy_phi)
-    
+        if self.model_type == "dqn":
+            return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
+                                        policy_phi=self.policy_phi)
+        if self.model_type == "ppo":
+            return SkillPPO(use_gpu=self.gpu_list[head_idx],
+                            phi=self.policy_phi)
+
+        
     def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
         policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
         policy.store_buffer_to_disk = store_buffer_bool
     
     def check_termination(self, idx, state, env):
         term_state = state
-        
+                
         pred_y = self.terminations.predict_idx(term_state, idx, use_phi=True)
         should_terminate = torch.argmax(pred_y) == 1
                 
@@ -247,6 +268,48 @@ class DivDisOption():
                                  pred_y)
                 
         return should_terminate
+    
+    def bootstrap_policy(self,
+                         idx,
+                         envs,
+                         max_steps,
+                         min_performance,
+                         seed):
+        total_steps = 0
+        train_rewards = deque(maxlen=100)
+        episode = 0
+        
+        while total_steps < max_steps:
+            env = random.choice(envs)
+            rand_num = np.random.randint(low=0, high=50)
+            obs, info = env.reset(agent_reposition_attempts=rand_num,
+                                  random_start=True)
+            
+            if type(obs) is np.ndarray:
+                obs = torch.from_numpy(obs)
+            
+            _, _, _, steps, _, rewards, _, _, _ = self.train_policy(idx,
+                                                                    env,
+                                                                    obs,
+                                                                    info,
+                                                                    seed)
+            
+            total_steps += steps
+            train_rewards.append(sum(rewards))
+            
+            if episode % 1 == 0:
+                logging.info("idx {} steps: {} average train reward: {}".format(idx,
+                                                                          total_steps,
+                                                                          np.mean(train_rewards)))
+            episode += 1
+            
+            if total_steps > 200000 and np.mean(train_rewards) > min_performance:
+                logging.info("idx {} reached required performance with average reward: {} at step {}".format(idx,
+                                                                                                             np.mean(rewards),
+                                                                                                             total_steps))
+                break
+        
+        self.save()
     
     def train_policy(self, 
                      idx,
@@ -313,6 +376,7 @@ class DivDisOption():
                 extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
+            state = state.to(torch.int)
             policy.observe(state,
                            action,
                            reward,
@@ -404,9 +468,13 @@ class DivDisOption():
         done = False
         
         if seed not in self.policies[idx].keys():
-            self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
-                                                            policy_phi=self.policy_phi)
-        
+            if self.model_type == "dqn":
+                self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
+                                                                policy_phi=self.policy_phi)
+            if self.model_type == "ppo":
+                self.policies[idx][seed] = SkillPPO(use_gpu=self.use_gpu,
+                                                    phi=self.policy_phi)
+            
         policy = self.policies[idx][seed]
         policy.move_to_gpu()
         
@@ -479,8 +547,8 @@ class DivDisOption():
                 next_state, reward, done, info = env.step(action)
                 if type(next_state) is np.ndarray:
                     next_state = torch.from_numpy(next_state)
-                term_state = self.policy_phi(next_state).unsqueeze(0)
-                should_terminate = (torch.argmax(self.terminations.predict_idx(term_state, idx)) == 1).item()
+                term_state = env.get_term_state()
+                should_terminate = (torch.argmax(self.terminations.predict_idx(term_state, idx, use_phi=True)) == 1).item()
                 steps += 1
                 
                 rewards.append(reward)

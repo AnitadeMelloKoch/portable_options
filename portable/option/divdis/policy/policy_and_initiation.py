@@ -37,6 +37,7 @@ class PolicyWithInitiation(Agent):
                  policy_phi,
                  gru_hidden_size,
                  learn_initiation=False,
+                 save_replay_buffer=False,
                  max_len_init_classifier=500,
                  max_len_context_classifier=500,
                  steps_to_bootstrap_init_classifier=1000,
@@ -66,6 +67,7 @@ class PolicyWithInitiation(Agent):
         self.step_number = 0
         self.train_rewards = deque(maxlen=200)
         self.option_runs = 0
+        self.save_buffer = save_replay_buffer
         
         self.image_input = image_input
         if image_input:
@@ -216,7 +218,7 @@ class PolicyWithInitiation(Agent):
     def end_skill(self, summed_reward):
         self.train_rewards.append(summed_reward)
         self.option_runs += 1
-        if self.option_runs%5 == 0:
+        if self.option_runs%1 == 0:
             logger.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
                                                                                            self.option_runs,
                                                                                            self.step_number))
@@ -386,8 +388,9 @@ class PolicyWithInitiation(Agent):
         if self.image_input:
             torch.save(self.cnn.state_dict(), os.path.join(dir, 'cnn.pt'))
         torch.save(self.recurrent_memory.state_dict(), os.path.join(dir, 'recurrent_mem.pt'))
-        if self.store_buffer_to_disk is False:
-            self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
+        if self.save_buffer is True:
+            if self.store_buffer_to_disk is False:
+                self.replay_buffer.save(os.path.join(dir, 'buffer.pkl'))
         np.save(os.path.join(dir, "step_number.npy"), self.step_number)
         np.save(os.path.join(dir, "option_runs.npy"), self.option_runs)
         with open(os.path.join(dir, "run_rewards.pkl"), "wb") as f:
@@ -401,8 +404,9 @@ class PolicyWithInitiation(Agent):
                 self.cnn.load_state_dict(torch.load(os.path.join(dir, 'cnn.pt')))
             self.target_q_network.load_state_dict(torch.load(os.path.join(dir, 'policy.pt')))
             self.recurrent_memory.load_state_dict(torch.load(os.path.join(dir, 'recurrent_mem.pt')))
-            if self.store_buffer_to_disk is False:
-                self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
+            if self.save_buffer is True:
+                if self.store_buffer_to_disk is False:
+                    self.replay_buffer.load(os.path.join(dir, 'buffer.pkl'))
             self.step_number = np.load(os.path.join(dir, "step_number.npy"))
             self.option_runs = np.load(os.path.join(dir, "option_runs.npy"))
             with open(os.path.join(dir, "run_rewards.pkl"), "rb") as f:

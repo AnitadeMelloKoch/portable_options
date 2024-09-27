@@ -5,7 +5,7 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.option.divdis.divdis_classifier
 import portable.option.memory.unbalanced_set_dataset
 
-DivDisOptionExperiment.experiment_name                              = "meta_monte_ladders"
+DivDisOptionExperiment.experiment_name                              = "meta_monte_ladders_one_head"
 DivDisOptionExperiment.make_videos                                  = False
 DivDisOptionExperiment.classifier_epochs                            = 150
 DivDisOptionExperiment.gpu_id                                       = 0
@@ -30,7 +30,7 @@ PolicyWithInitiation.image_input                                    = True
 
 DivDisOption.tabular_beta                                           = 0.0
 DivDisOption.exp_type                                               = "monte"
-DivDisOption.num_heads                                              = 6
+DivDisOption.num_heads                                              = 1
 DivDisOption.write_summary                                          = False
 
 DivDisClassifier.learning_rate                                      = 5e-4
