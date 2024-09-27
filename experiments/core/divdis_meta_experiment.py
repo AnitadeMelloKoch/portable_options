@@ -20,6 +20,9 @@ from portable.agent.model.maskable_ppo import MaskablePPOAgent
 import math
 from portable.option.memory import SetDataset
 
+from collections import defaultdict
+from functools import partial
+
 OPTION_TYPES = ["mock", "divdis"]
 
 @gin.configurable
@@ -332,6 +335,8 @@ class DivDisMetaExperiment():
         episode = 0
         undiscounted_rewards = []
         
+        term_states = defaultdict(partial(deque, maxlen=50))
+        
         while total_steps < max_steps:
             undiscounted_reward = 0         # episode reward
             done = False
@@ -394,6 +399,7 @@ class DivDisMetaExperiment():
                                                                                                                     seed,
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
+                        term_states[action_offset].append(next_obs)
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -405,7 +411,8 @@ class DivDisMetaExperiment():
                     "meta_step": self.decisions,
                     "option_length": steps,
                     "option_rewards": rewards,
-                    "frames": total_steps
+                    "frames": total_steps,
+                    "action": action
                 })
                 
                 self.observe(obs,
@@ -435,6 +442,9 @@ class DivDisMetaExperiment():
             })
             
             self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
+            
+            with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
+                pickle.dump(term_states)
             
             # self.plot_learning_curve(episode_rewards)
             
