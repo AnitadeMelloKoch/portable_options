@@ -3,11 +3,11 @@ import portable.option.divdis.divdis_classifier
 
 MonteDivDisSweepExperiment.experiment_name         = "ladder_down_sweep"
 MonteDivDisSweepExperiment.use_gpu                 = 0
-MonteDivDisSweepExperiment.default_num_heads       = 5
+MonteDivDisSweepExperiment.default_num_heads       = 6
 MonteDivDisSweepExperiment.default_lr              = 5e-4 #5e-4
 MonteDivDisSweepExperiment.default_div_weight      = 5e-4 #3e-5
 MonteDivDisSweepExperiment.default_l2_reg_weight   = 1e-3 #5e-4
-MonteDivDisSweepExperiment.default_epochs          = 120  
+MonteDivDisSweepExperiment.default_epochs          = 130  
 
 MonteDivDisSweepExperiment.evaluation_sample_size  = 0.0001  
 

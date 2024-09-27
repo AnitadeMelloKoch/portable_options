@@ -183,6 +183,20 @@ class MonteDivDisSweepExperiment():
              categorical=False,
              log_scale=False):
 
+        font_params = { # larger fonts for better readability
+            'font.size': 14,
+            'axes.titlesize': 16,
+            'axes.labelsize': 14,
+            'xtick.labelsize': 12,
+            'ytick.labelsize': 12,
+            'axes.titleweight': 'bold',
+            'legend.frameon': True,      
+            'legend.loc': 'bottom right',
+            'grid.alpha': 0.6,           
+            'grid.linestyle': '--'      
+        }
+        plt.rcParams.update(font_params)
+
         losses = np.array(losses)
         accuracies = np.array(accuracies)
         avg_accuracies = np.array(avg_accuracies)

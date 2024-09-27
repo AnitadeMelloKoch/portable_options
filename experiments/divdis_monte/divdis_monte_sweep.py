@@ -330,7 +330,7 @@ if __name__ == "__main__":
                             100, 
                             10,
                             NUM_SEEDS,
-                            [30,70,120,180,250,350,500]) # when a list is provided, use this
+                            [30,70,120,180,250,350,500,750]) # when a list is provided, use this
 
 
     print(f"[{formatted_time()}] Sweeping div batch size...")
