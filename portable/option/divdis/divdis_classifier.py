@@ -5,6 +5,7 @@ import torch.nn as nn
 import gin
 import os
 import numpy as np 
+from tqdm import tqdm 
 
 from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
@@ -140,12 +141,13 @@ class DivDisClassifier():
     
     def train(self,
               epochs,
-              start_offset=0):
+              start_offset=0,
+              progress_bar=False):
 
         # self.move_to_gpu()
         self.classifier.train()
         
-        for epoch in range(start_offset, start_offset+epochs):
+        for epoch in tqdm(range(start_offset, start_offset+epochs), desc="Training Epochs", leave=False, disable=(not progress_bar)):
             self.dataset.shuffle()
             counter = 0
             
