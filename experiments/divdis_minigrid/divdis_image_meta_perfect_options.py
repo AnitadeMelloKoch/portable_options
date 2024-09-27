@@ -58,7 +58,7 @@ train_envs = [
         door_colour="red",
         time_limit=10,
         image_input=True,
-        keep_colour="yellow"
+        keep_colour="green"
         )],
     ],
     [
@@ -71,7 +71,7 @@ train_envs = [
         door_colour="red",
         time_limit=10,
         image_input=True,
-        keep_colour="grey"
+        keep_colour="blue"
         )],
     ],
     [
@@ -158,8 +158,8 @@ if __name__ == "__main__":
     
     terminations = [
         [PerfectGetKey("red")],
-        [PerfectGetKey("yellow")],
-        [PerfectGetKey("grey")],
+        [PerfectGetKey("green")],
+        [PerfectGetKey("blue")],
         [PerfectDoorOpen()],
         [PerfectAtLocation(4,1)],
         [PerfectAtLocation(5,3)],

@@ -5,7 +5,7 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo
 import portable.option.divdis.divdis_classifier
 
-DivDisMetaExperiment.experiment_name                                = "baseline_minigrid_dqn"
+DivDisMetaExperiment.experiment_name                                = "short_baseline_minigrid_dqn"
 DivDisMetaExperiment.num_options                                    = 0
 DivDisMetaExperiment.option_head_num                                = 1
 DivDisMetaExperiment.num_primitive_actions                          = 0
