@@ -12,9 +12,9 @@ import random
 img_dir = "resources/monte_images/"
 
 positive_files = [
+    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room6_1_termination_positive.npy"],
-    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
      "resources/monte_images/climb_down_ladder_room10_1_termination_positive.npy"],
     ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
@@ -27,16 +27,16 @@ positive_files = [
      "resources/monte_images/climb_down_ladder_room22_1_termination_positive.npy"]
 ]
 negative_files = [
-    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room2_1_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
-     "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room1_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room1_1_termination_negative.npy",
      "resources/monte_images/screen_death_1.npy",
      "resources/monte_images/screen_death_2.npy",
      "resources/monte_images/screen_death_3.npy",
      "resources/monte_images/screen_death_4.npy"],
+    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room2_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy"],
     ["resources/monte_images/climb_down_ladder_room0_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room0_1_termination_negative.npy",
      "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",

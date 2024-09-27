@@ -877,7 +877,7 @@ class MonteDivDisClassifierExperiment():
             'ytick.labelsize': 12,
             'axes.titleweight': 'bold',
             'legend.frameon': True,      
-            'legend.loc': 'bottom right',
+            'legend.loc': 'lower right',
             'grid.alpha': 0.6,           
             'grid.linestyle': '--'      
         }
