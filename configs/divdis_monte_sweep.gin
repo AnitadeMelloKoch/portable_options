@@ -12,3 +12,5 @@ MonteDivDisSweepExperiment.default_epochs          = 120
 MonteDivDisSweepExperiment.evaluation_sample_size  = 0.0001  
 
 DivDisClassifier.num_classes                       = 2
+
+UnbalancedSetDataset.class_weights   = [0.8, 0.2]

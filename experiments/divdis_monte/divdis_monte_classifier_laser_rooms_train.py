@@ -1,6 +1,8 @@
 import argparse 
 import logging 
-import random 
+import multiprocessing
+import random
+import warnings 
 
 import numpy as np 
 
@@ -57,40 +59,33 @@ negative_test_files = [
 ]
 
 
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser()
 
-    parser.add_argument("--base_dir", type=str, required=True)
-    parser.add_argument("--seed", type=int, required=True)
-    parser.add_argument("--config_file", nargs='+', type=str, required=True)
-    parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
-            ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
-            ' "create_atari_environment.game_name="Pong"").')
+        parser.add_argument("--base_dir", type=str, required=True)
+        parser.add_argument("--seed", type=int, required=True)
+        parser.add_argument("--config_file", nargs='+', type=str, required=True)
+        parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
+                ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
+                ' "create_atari_environment.game_name="Pong"").')
 
-    args = parser.parse_args()
+        args = parser.parse_args()
 
-    load_gin_configs(args.config_file, args.gin_bindings)
-    
-    experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir,
-                                                 seed=args.seed)
-    
-    for file_idx in range(1):
-        experiment.classifier.add_data(positive_train_files[file_idx],
-                                    negative_train_files[file_idx],
-                                    unlabelled_train_files[file_idx])
-    
-    experiment.add_test_files(positive_test_files,
-                            negative_test_files)
-    
-    experiment.train_classifier(150)
-    
-    accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier()
-    
-    print("=========================================================")
-    print("positive accuracy", accuracy_pos)
-    print("negative accuracy", accuracy_neg)
-    print("raw accuracy", accuracy)
-    print("weighted accuracy", weighted_acc)
-    print("=========================================================")
-    
-    
+        load_gin_configs(args.config_file, args.gin_bindings)
+
+        multiprocessing.set_start_method('spawn')
+        #ignore warnings: UserWarning: Lazy modules are a new feature under heavy development
+        warnings.filterwarnings("ignore", category=UserWarning, message="Lazy modules are a new feature under heavy development")
+
+        experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir, seed=args.seed)
+
+
+        experiment.add_test_files(positive_test_files,
+                                  negative_test_files)
+
+        experiment.room_by_room_train_labelled('laser', 'termination', 
+                                               files_list=(positive_train_files, negative_train_files,
+                                                           unlabelled_train_files),)
+        

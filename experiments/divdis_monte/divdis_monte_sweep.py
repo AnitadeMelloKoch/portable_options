@@ -303,28 +303,26 @@ if __name__ == "__main__":
                             epochs_range=[30], #[30,70,150,300]
                             num_seeds=NUM_SEEDS)'''
 
-    
+
+    print(f"[{formatted_time()}] Sweeping class div weight...")
+    experiment.sweep_class_div_weight(-6, # 0.00001
+                                      -2,
+                                      12,
+                                      NUM_SEEDS)
+
+    print(f"[{formatted_time()}] Sweeping L2 reg weight...")
+    experiment.sweep_l2_reg_weight(-5, # 0.0001
+                                   -2,
+                                   8,
+                                   NUM_SEEDS)
 
 
-    #print(f"[{formatted_time()}] Sweeping class div weight...")
-    #experiment.sweep_class_div_weight(-6, # 0.00001
-    #                                  -2,
-    #                                  12,
-    #                                  NUM_SEEDS)
-#
-    #print(f"[{formatted_time()}] Sweeping L2 reg weight...")
-    #experiment.sweep_l2_reg_weight(-5, # 0.0001
-    #                               -2,
-    #                               8,
-    #                               NUM_SEEDS)
-#
-#
-    #print(f"[{formatted_time()}] Sweeping ensemble size...")
-    #experiment.sweep_ensemble_size(1, 
-    #                               12,
-    #                               1,
-    #                               NUM_SEEDS,
-    #                               )
+    print(f"[{formatted_time()}] Sweeping ensemble size...")
+    experiment.sweep_ensemble_size(1, 
+                                   12,
+                                   1,
+                                   NUM_SEEDS,
+                                   )
 
     
     print(f"[{formatted_time()}] Sweeping epochs...")

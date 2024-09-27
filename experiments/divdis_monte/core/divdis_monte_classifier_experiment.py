@@ -33,11 +33,11 @@ def save_image(img, save_dir, batch_number, img_number_within_batch):
 def worker_initializer():
     plt.switch_backend('Agg')
 
-def transform(x):
-    # only keep the last channel of imgs
-    x = x[:, -1]
-    x = x.unsqueeze(1)
-    return x
+#def transform(x):
+#    # only keep the last channel of imgs
+#    x = x[:, -1]
+#    x = x.unsqueeze(1)
+#    return x
 
 def get_sorted_filenames(directory):
     filenames = []
@@ -675,46 +675,131 @@ class MonteDivDisClassifierExperiment():
         return history, heads_history
 
 
-    def room_by_room_train_labelled(self, task, init_term, combinations_list):
+    def room_by_room_train_labelled(self, task, init_term, combinations_list=None, files_list=None):
         # combinations_list: 2D array, (num_rooms, num_combinations)
 
-        num_ladders = range(1,len(combinations_list)+1)
-        weighted_acc_list = [] # nested list of best heads
-        raw_acc_list = []
+        if combinations_list is not None:
         
-        for room_combinations in combinations_list:
-            # each combination include all rooms (with n rooms). e.g. [[1]] for 1 room, [[1,2],[0,1]] for 2 rooms, etc.
-            comb_weighted_acc = []
-            comb_raw_acc = []
-            num_rooms = len(room_combinations[0])
+            num_instances = range(1,len(combinations_list)+1)
+            weighted_acc_list = [] # nested list of best heads
+            raw_acc_list = []
             
-            print(f"==============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
-            logging.info(f"=============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
-            
-            for comb in room_combinations:
-                # each combination has n rooms, want to add all these to labelled and measure test performance.
-                positive_train_files = []
-                negative_train_files = []
-
-                print(f"***\nTraining on ladders {comb}")
-                logging.info(f"***\nTraining on ladders {comb}")
+            for room_combinations in combinations_list:
+                # each combination include all rooms (with n rooms). e.g. [[1]] for 1 room, [[1,2],[0,1]] for 2 rooms, etc.
+                comb_weighted_acc = []
+                comb_raw_acc = []
+                num_rooms = len(room_combinations[0])
                 
-                for room in comb:
-                    positive_train_files += self.get_monte_filenames(task, room, init_term, 'positive')
-                    negative_train_files += self.get_monte_filenames(task, room, init_term, 'negative')
-                unlabelled_train_files = unlabelled_train_files = [self.directory+file for file in self.data_filenames if (file not in positive_train_files) and (file not in negative_train_files)]
-                unlabelled_train_files = random.sample(unlabelled_train_files, int(1*len(unlabelled_train_files)))
+                print(f"==============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
+                logging.info(f"=============\nTraining on combinations of {num_rooms} instances of labeled ladder data")
+                
+                for comb in room_combinations:
+                    # each combination has n rooms, want to add all these to labelled and measure test performance.
+                    positive_train_files = []
+                    negative_train_files = []
 
+                    print(f"***\nTraining on ladders {comb}")
+                    logging.info(f"***\nTraining on ladders {comb}")
+                    
+                    for room in comb:
+                        positive_train_files += self.get_monte_filenames(task, room, init_term, 'positive')
+                        negative_train_files += self.get_monte_filenames(task, room, init_term, 'negative')
+                        if room == 1:
+                            img_dir = self.directory
+                            negative_train_files += [img_dir+"screen_death_1.npy",
+                                                    img_dir+"screen_death_2.npy",
+                                                    img_dir+"screen_death_3.npy",
+                                                    img_dir+"screen_death_4.npy",]
+                    unlabelled_train_files = unlabelled_train_files = [self.directory+file for file in self.data_filenames if (file not in positive_train_files) and (file not in negative_train_files)]
+                    unlabelled_train_files = random.sample(unlabelled_train_files, int(1*len(unlabelled_train_files)))
+
+                    print(f"Positive files: {positive_train_files}")
+                    print(f"Negative files: {negative_train_files}")
+                    
+                    
+                    for s in range(3):
+                        set_seed(self.seed+s)
+                        print(f"Seed {self.seed+s}")
+                        logging.info(f"Seed {self.seed+s}")
+                        
+                        #classifier = copy.deepcopy(self.classifier)
+                        classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                                    log_dir=self.log_dir,
+                                                    num_classes=self.classifier.num_classes,
+                                                    head_num=self.classifier.head_num,
+                                                    learning_rate=self.classifier_learning_rate,
+                                                    diversity_weight=self.classifier_diversity_weight,
+                                                    l2_reg_weight=self.classifier_l2_reg_weight,
+                                                    model_name=self.classifier_model_name
+                                                    )
+                        self.classifier = classifier
+                        classifier.add_data(positive_train_files, negative_train_files, unlabelled_train_files)
+                        classifier.set_class_weights()
+                        classifier.train(self.per_room_epochs)
+
+                        accuracy_pos, accuracy_neg, raw_acc, weighted_acc = self.test_classifier()
+                        
+
+                        best_head_idx = np.argmax(weighted_acc)
+                        best_weighted_acc = np.max(weighted_acc)
+                        best_accuracy = raw_acc[best_head_idx]
+                        best_true_acc = accuracy_pos[best_head_idx]
+                        best_false_acc = accuracy_neg[best_head_idx]
+                        
+                        comb_weighted_acc.append(best_weighted_acc)
+                        comb_raw_acc.append(best_accuracy)
+
+                        print(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                        print(f"Accuracy:          {np.round(raw_acc, 2)}")
+                        print(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                        print(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+
+                        logging.info(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                        logging.info(f"Accuracy:          {np.round(raw_acc, 2)}")
+                        logging.info(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                        logging.info(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+
+                        if self.uncertain_test_files is not None:
+                            uncertainty = self.test_uncertainty()
+                            print(f"Uncertainty:       {np.round(uncertainty, 2)}")
+                            logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
+
+                weighted_acc_list.append(comb_weighted_acc)
+                raw_acc_list.append(comb_raw_acc)
+
+
+        else:
+            assert files_list is not None
+            positive_list, negative_list, unlabelled_list = files_list
+        
+            num_instances = range(1,len(positive_list)+1)
+            weighted_acc_list = [] # nested list of best heads
+            raw_acc_list = []
+
+            positive_train_files = []
+            negative_train_files = []
+            unlabelled_train_files = []
+            
+            for idx in range(len(positive_list)):
+                comb_weighted_acc = []
+                comb_raw_acc = []
+
+                positive_train_files += positive_list[idx]
+                negative_train_files += negative_list[idx]
+                unlabelled_train_files += unlabelled_list[idx]
+                
+                
                 print(f"Positive files: {positive_train_files}")
                 print(f"Negative files: {negative_train_files}")
                 
                 
-                for s in range(3):
+                for s in range(5):
                     set_seed(self.seed+s)
                     print(f"Seed {self.seed+s}")
                     logging.info(f"Seed {self.seed+s}")
+
+                    print(f"D")
                     
-                    #classifier = copy.deepcopy(self.classifier)
                     classifier = DivDisClassifier(use_gpu=self.use_gpu,
                                                 log_dir=self.log_dir,
                                                 num_classes=self.classifier.num_classes,
@@ -727,10 +812,9 @@ class MonteDivDisClassifierExperiment():
                     self.classifier = classifier
                     classifier.add_data(positive_train_files, negative_train_files, unlabelled_train_files)
                     classifier.set_class_weights()
-                    classifier.train(self.per_room_epochs)
+                    classifier.train(self.per_room_epochs, progress_bar=True)
 
                     accuracy_pos, accuracy_neg, raw_acc, weighted_acc = self.test_classifier()
-                    uncertainty = self.test_uncertainty()
 
                     best_head_idx = np.argmax(weighted_acc)
                     best_weighted_acc = np.max(weighted_acc)
@@ -745,23 +829,28 @@ class MonteDivDisClassifierExperiment():
                     print(f"Accuracy:          {np.round(raw_acc, 2)}")
                     print(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
                     print(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
-                    print(f"Uncertainty:       {np.round(uncertainty, 2)}")
 
                     logging.info(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
                     logging.info(f"Accuracy:          {np.round(raw_acc, 2)}")
                     logging.info(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
                     logging.info(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
-                    logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
 
-            weighted_acc_list.append(comb_weighted_acc)
-            raw_acc_list.append(comb_raw_acc)
+                    if self.uncertain_test_files is not None:
+                        uncertainty = self.test_uncertainty()
+                        print(f"Uncertainty:       {np.round(uncertainty, 2)}")
+                        logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
 
-        results = {'ladders': num_ladders, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
+                weighted_acc_list.append(comb_weighted_acc)
+                raw_acc_list.append(comb_raw_acc)
 
-        with open(os.path.join(self.log_dir, 'room_combinations.dict'), 'wb') as f:
+
+
+        results = {'instances': num_instances, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
+
+        with open(os.path.join(self.log_dir, f'{task}_room_combinations.dict'), 'wb') as f:
             pickle.dump(results, f)
 
-        self.plot("ladders_labeled_vs_acc", num_ladders, weighted_acc_list, "Weighted Accuracy vs #Labeled Ladder Data", "#Label Ladder Data")
+        self.plot(f"{task}_labeled_vs_acc", num_instances, weighted_acc_list, "Weighted Accuracy vs Instances of Labeled Data (Laser)", "Instances of Labeled Data")
         
 
 
@@ -807,9 +896,9 @@ class MonteDivDisClassifierExperiment():
         ax.tick_params(axis='both', which='major', labelsize=12)
 
         # Adding legend
-        ax.legend(loc='upper left', fontsize=12)
+        #ax.legend(loc='upper left', fontsize=12)
         
-        fig.suptitle(plot_title)
+        #fig.suptitle(plot_title)
         fig.tight_layout()
 
         # Save the figure

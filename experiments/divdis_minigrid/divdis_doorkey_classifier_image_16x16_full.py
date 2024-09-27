@@ -56,11 +56,11 @@ if __name__ == "__main__":
 
 
             base_img_dir = 'resources/minigrid_images/'
-            positive_train_files   = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_0_1_{init_term}_positive.npy"]
-            negative_train_files   = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_0_1_{init_term}_negative.npy"]
-            unlabelled_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_1_{init_term}_{pos_neg}.npy" for s in [1,2,3,4] for pos_neg in ['positive','negative']]
-            positive_test_files    = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_1_{init_term}_positive.npy" for s in [5,6,7,8,9,10]]
-            negative_test_files    = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_1_{init_term}_negative.npy" for s in [5,6,7,8,9,10]]
+            positive_train_files   = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_0_2_{init_term}_positive.npy"]
+            negative_train_files   = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_0_2_{init_term}_negative.npy"]
+            unlabelled_train_files = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_2_{init_term}_{pos_neg}.npy" for s in [1,2,3,4] for pos_neg in ['positive','negative']]
+            positive_test_files    = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_2_{init_term}_positive.npy" for s in [5,6,7,8,9,10]]
+            negative_test_files    = [f"{base_img_dir}adv_doorkey_16x16_v2_{task}_{s}_2_{init_term}_negative.npy" for s in [5,6,7,8,9,10]]
         
 
             best_total_acc = []

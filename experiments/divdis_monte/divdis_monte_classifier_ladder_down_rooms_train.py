@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import os
 
 import numpy as np
 from experiments.divdis_monte.core.divdis_monte_classifier_experiment import MonteDivDisClassifierExperiment
@@ -17,12 +18,19 @@ positive_test_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy
                        img_dir+"climb_down_ladder_room19_termination_positive.npy",
                        img_dir+"climb_down_ladder_room21_termination_positive.npy",
                        img_dir+"climb_down_ladder_room22_termination_positive.npy",
+                       
+                       img_dir+"climb_down_ladder_room6_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room9_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room10_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room19_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room21_1_termination_positive.npy",
+                       img_dir+"climb_down_ladder_room22_1_termination_positive.npy",
                        ]
-negative_test_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy",
-                       img_dir+"screen_death_1.npy",
+negative_test_files = [img_dir+"screen_death_1.npy",
                        img_dir+"screen_death_2.npy",
                        img_dir+"screen_death_3.npy",
                        img_dir+"screen_death_4.npy",
+                       img_dir+"climb_down_ladder_room1_termination_negative.npy",
                        img_dir+"climb_down_ladder_room2_termination_negative.npy",
                        img_dir+"climb_down_ladder_room3_termination_negative.npy",
                        img_dir+"climb_down_ladder_room4_termination_negative.npy",
@@ -36,7 +44,23 @@ negative_test_files = [img_dir+"climb_down_ladder_room1_termination_negative.npy
                        img_dir+"climb_down_ladder_room14_termination_negative.npy",
                        img_dir+"climb_down_ladder_room19_termination_negative.npy",
                        img_dir+"climb_down_ladder_room21_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room22_termination_negative.npy",                       
+                       img_dir+"climb_down_ladder_room22_termination_negative.npy",
+                       
+                       img_dir+"climb_down_ladder_room1_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room2_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room3_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room4_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room5_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room6_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room7_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room9_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room10_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room11_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room13_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room14_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room19_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room21_1_termination_negative.npy",
+                       img_dir+"climb_down_ladder_room22_1_termination_negative.npy",        
                        ]
 uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room2_uncertain.npy",
@@ -53,6 +77,17 @@ uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room19_uncertain.npy",
                         img_dir+"climb_down_ladder_room21_uncertain.npy",
                         img_dir+"climb_down_ladder_room22_uncertain.npy",
+
+                        img_dir+"climb_down_ladder_room3_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room4_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room6_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room9_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room10_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room11_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room13_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room19_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room21_1_uncertain.npy",
+                        img_dir+"climb_down_ladder_room22_1_uncertain.npy",
                         ]
 
 rooms_combinations = [[[1]], # 1 instance of ladder, [1] [0,4,10] [3,9] [5,11,19] [7,13,21] [14,22] [2,6]

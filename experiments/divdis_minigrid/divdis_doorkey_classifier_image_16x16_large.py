@@ -10,10 +10,10 @@ from portable.utils.utils import load_gin_configs
 from experiments.divdis_minigrid.core.advanced_minigrid_divdis_classifier_experiment import \
     AdvancedMinigridDivDisClassifierExperiment
 
-color = 'red' # 'blue', 'green', 'yellow', 'red'
+color = 'blue' # 'blue', 'green', 'yellow', 'red'
 
-task = f'open{color}door'
-#task = f'get{color}key'
+#task = f'open{color}door'
+task = f'get{color}key'
 
 init_term = 'termination'
 

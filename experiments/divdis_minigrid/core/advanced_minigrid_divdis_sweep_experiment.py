@@ -310,7 +310,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                      start_epochs,
                      end_epochs,
                      step_size,
-                     num_seeds):
+                     num_seeds,
+                     epochs_list=None):
         
         # 1D array
         results_epoch = []
@@ -319,9 +320,11 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_avg_acc = []
         results_loss = []
 
+        if epochs_list is None:
+            epochs_list = range(start_epochs, end_epochs+1, step_size)
         
         
-        for epochs in tqdm(range(start_epochs, end_epochs+1, step_size), desc="epochs", position=0):
+        for epochs in tqdm(epochs_list, desc="epochs", position=0):
             results_epoch.append(epochs)
             epoch_acc = []
             epoch_avg_acc = []
@@ -351,8 +354,6 @@ class AdvancedMinigridDivDisSweepExperiment():
                 
                 epoch_acc.append(max(acc))
                 epoch_avg_acc.append(np.mean(acc))
-
-
             
             results_acc.append(epoch_acc)
             results_avg_acc.append(epoch_avg_acc)
@@ -380,7 +381,8 @@ class AdvancedMinigridDivDisSweepExperiment():
                             start_size,
                             end_size,
                             step_size,
-                            num_seeds):
+                            num_seeds,
+                            size_list=None):
         # 1D array
         results_size = []
         # 2D array for multiple seeds
@@ -388,8 +390,11 @@ class AdvancedMinigridDivDisSweepExperiment():
         results_avg_acc = []
         results_loss = []
 
+        if size_list is None:
+            size_list = range(start_size, end_size+1, step_size)
+
         
-        for num_heads in tqdm(range(start_size, end_size+1, step_size), desc="size", position=0):
+        for num_heads in tqdm(size_list, desc="size", position=0):
             results_size.append(num_heads)
             size_acc = []
             size_avg_acc = []

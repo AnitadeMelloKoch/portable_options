@@ -14,5 +14,4 @@ MonteDivDisClassifierExperiment.classifier_initial_epochs      = 130
 MonteDivDisClassifierExperiment.classifier_per_room_epochs     = 130
 MonteDivDisClassifierExperiment.classifier_model_name          = 'monte_cnn'
 
-DivDisClassifier.dataset_batchsize = 64
-
+UnbalancedSetDataset.class_weights   = [0.8, 0.2]

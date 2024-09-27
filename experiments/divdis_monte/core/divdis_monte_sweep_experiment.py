@@ -7,6 +7,7 @@ import pickle
 import random
 from collections import deque
 import re
+from tkinter import font
 
 import gin
 import matplotlib.pyplot as plt
@@ -188,9 +189,10 @@ class MonteDivDisSweepExperiment():
         
         ax_titles = ['Loss', 'Accuracy']
         y_labels = ['Final Training Loss', 'Test Accuracy']
+        font_size = 14
     
         if not categorical: # most cases, line plot
-            fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+            fig, axes = plt.subplots(1, 2, figsize=(8, 4))
             print(accuracies.shape)
             print(accuracies)
             axes[0].plot(x_values, losses.mean(axis=1))
@@ -198,8 +200,8 @@ class MonteDivDisSweepExperiment():
                                 losses.mean(axis=1)-losses.std(axis=1),
                                 losses.mean(axis=1)+losses.std(axis=1),
                                 alpha=0.2)
-            axes[0].set_xlabel(x_label)
-            axes[0].set_ylabel(y_labels[0])
+            axes[0].set_xlabel(x_label, fontsize=font_size)
+            axes[0].set_ylabel(y_labels[0], fontsize=font_size)
             axes[0].title.set_text(ax_titles[0])
 
             axes[1].plot(x_values, accuracies.mean(axis=1))
@@ -212,8 +214,8 @@ class MonteDivDisSweepExperiment():
             #                    avg_accuracies.mean(axis=1)-avg_accuracies.std(axis=1),
             #                    avg_accuracies.mean(axis=1)+avg_accuracies.std(axis=1),
             #                    alpha=0.2)
-            axes[1].set_xlabel(x_label)
-            axes[1].set_ylabel(y_labels[1])
+            axes[1].set_xlabel(x_label, fontsize=font_size)
+            axes[1].set_ylabel(y_labels[1], fontsize=font_size)
             axes[1].title.set_text(ax_titles[1])
 
             if log_scale:
@@ -231,8 +233,8 @@ class MonteDivDisSweepExperiment():
             print(avg_accuracies)
             
             axes[0].bar(x_axis_data, losses.mean(1), yerr=losses.std(1), align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
-            axes[0].set_xlabel(x_label)
-            axes[0].set_ylabel(y_labels[0])
+            axes[0].set_xlabel(x_label, fontsize=font_size)
+            axes[0].set_ylabel(y_labels[0], fontsize=font_size)
             axes[0].title.set_text(ax_titles[0])
             axes[0].set_xticks(x_axis_data)
             axes[0].set_xticklabels(x_ticks, rotation=35, ha='right')
@@ -241,8 +243,8 @@ class MonteDivDisSweepExperiment():
             
             axes[1].bar(x_axis_data-bar_width/2, accuracies.mean(1), yerr=accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#3388EE', capsize=10)
             #axes[1].bar(x_axis_data+bar_width/2, avg_accuracies.mean(1), yerr=avg_accuracies.std(1), width=bar_width, align='center', alpha=0.8, ecolor='#33DD99', capsize=10)
-            axes[1].set_xlabel(x_label)
-            axes[1].set_ylabel(y_labels[1])
+            axes[1].set_xlabel(x_label, fontsize=font_size)
+            axes[1].set_ylabel(y_labels[1], fontsize=font_size)
             axes[1].title.set_text(ax_titles[1])
             axes[1].set_xticks(x_axis_data)
             axes[1].set_xticklabels(x_ticks, rotation=35, ha='right')
@@ -294,6 +296,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 weight_loss.append(train_loss)
@@ -322,7 +325,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Diversity Weight",
+                  "Diversity Weight",
                   "Diversity Weight",
                   log_scale=True)
         
@@ -366,6 +369,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(epochs)
                 epoch_loss.append(train_loss)
@@ -394,7 +398,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Train Epochs",
+                  "Train Epochs",
                   "Train Epochs")
         
 
@@ -431,6 +435,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 size_loss.append(train_loss)
@@ -459,7 +464,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Ensemble Size",
+                  "Ensemble Size",
                   "No. Ensemble Members")
 
         
@@ -502,6 +507,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 batch_loss.append(train_loss)
@@ -530,7 +536,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Unlabelled Dataset Batchsize",
+                  "Unlabelled Dataset Batchsize",
                   "Batchsize")
         
 
@@ -569,6 +575,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 lr_loss.append(train_loss)
@@ -598,7 +605,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Learning Rate",
+                  "Learning Rate",
                   "Learning Rate",
                   log_scale=True)
     
@@ -638,6 +645,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=self.unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 lr_loss.append(train_loss)
@@ -667,7 +675,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over L2 Regularization Weight",
+                  "L2 Regularization Weight",
                   "L2 Regularization Weight",
                   log_scale=True)
         
@@ -708,6 +716,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=unlabelled_files)
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 overlap_loss.append(train_loss)
@@ -736,7 +745,7 @@ class MonteDivDisSweepExperiment():
                   results_avg_acc,
                   results_loss,
                   
-                  "Sweep over Unlabelled Overlap Ratio",
+                  "Unlabelled Overlap Ratio",
                   "Unlabelled Overlap Ratio")
 
     
@@ -770,6 +779,7 @@ class MonteDivDisSweepExperiment():
                 classifier.add_data(positive_files=self.train_positive_files,
                                     negative_files=self.train_negative_files,
                                     unlabelled_files=all_combination_files[variety])
+                classifier.set_class_weights()
                 
                 train_loss = classifier.train(self.default_epochs)
                 variety_loss.append(train_loss)
@@ -799,7 +809,7 @@ class MonteDivDisSweepExperiment():
                   results_acc,
                   results_avg_acc,
                   results_loss,
-                  "Sweep over Unlabelled Variety",
+                  "Unlabelled Variety",
                   "Unlabelled Variety (seed, color, random state)",
                   categorical=True)
 
@@ -892,6 +902,7 @@ class MonteDivDisSweepExperiment():
                                 classifier.add_data(positive_files=self.train_positive_files,
                                                     negative_files=self.train_negative_files,
                                                     unlabelled_files=self.unlabelled_files)
+                                classifier.set_class_weights()
                                 
                                 train_loss = classifier.train(epochs)
                                 grid_loss.append(train_loss)
