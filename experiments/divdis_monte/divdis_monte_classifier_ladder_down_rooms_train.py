@@ -11,57 +11,147 @@ import random
 
 img_dir = "resources/monte_images/"
 
-positive_test_files = [img_dir+"climb_down_ladder_room1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room6_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room9_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room10_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room19_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room21_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room22_termination_positive.npy",
-                       
-                       img_dir+"climb_down_ladder_room6_1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room9_1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room10_1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room19_1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room21_1_termination_positive.npy",
-                       img_dir+"climb_down_ladder_room22_1_termination_positive.npy",
-                       ]
-negative_test_files = [img_dir+"screen_death_1.npy",
-                       img_dir+"screen_death_2.npy",
-                       img_dir+"screen_death_3.npy",
-                       img_dir+"screen_death_4.npy",
-                       img_dir+"climb_down_ladder_room1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room2_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room3_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room4_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room5_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room6_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room7_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room9_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room10_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room11_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room13_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room14_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room19_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room21_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room22_termination_negative.npy",
-                       
-                       img_dir+"climb_down_ladder_room1_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room2_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room3_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room4_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room5_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room6_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room7_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room9_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room10_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room11_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room13_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room14_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room19_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room21_1_termination_negative.npy",
-                       img_dir+"climb_down_ladder_room22_1_termination_negative.npy",        
-                       ]
+positive_files = [
+    ["resources/monte_images/climb_down_ladder_room6_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room6_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room10_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room9_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room21_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room19_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room19_1_termination_positive.npy"],
+    ["resources/monte_images/climb_down_ladder_room22_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room22_1_termination_positive.npy"]
+]
+negative_files = [
+    ["resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room2_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room1_1_termination_negative.npy",
+     "resources/monte_images/screen_death_1.npy",
+     "resources/monte_images/screen_death_2.npy",
+     "resources/monte_images/screen_death_3.npy",
+     "resources/monte_images/screen_death_4.npy"],
+    ["resources/monte_images/climb_down_ladder_room0_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room0_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room4_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_1_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room3_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room9_1_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room7_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_1_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room5_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room5_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room11_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room11_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room19_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room19_1_termination_negative.npy"],
+    ["resources/monte_images/climb_down_ladder_room14_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room14_1_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room22_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room22_1_termination_negative.npy"],
+]
+unlabelled_files = [
+    ["resources/monte_images/lasers_toleft_room12_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room11_1_uncertain.npy",],
+    ["resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
+     "resources/monte_images/climb_down_ladder_room10_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room0_uncertain.npy",
+     "resources/monte_images/room18_walk_around.npy",
+     "resources/monte_images/lasers_left_toleft_room7_termination_negative.npy",
+     "resources/monte_images/lasers_right_toleft_room7_termination_negative.npy",],
+    ["resources/monte_images/climb_down_ladder_room21_termination_positive.npy",
+     "resources/monte_images/climb_down_ladder_room5_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room13_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room13_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room4_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room4_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room7_uncertain.npy"],
+    ["resources/monte_images/climb_down_ladder_room3_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room3_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room22_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room22_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room11_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room9_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room9_1_uncertain.npy",],
+    ["resources/monte_images/climb_down_ladder_room2_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room6_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room6_1_uncertain.npy",],
+    ["resources/monte_images/climb_down_ladder_room21_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room21_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room10_1_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room10_uncertain.npy",],
+    ["resources/monte_images/climb_down_ladder_room19_uncertain.npy",
+     "resources/monte_images/climb_down_ladder_room19_1_uncertain.npy",]
+]
+
+positive_test_files = [
+    "resources/monte_images/screen_climb_down_ladder_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room6_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room6_1_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room10_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room10_1_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room9_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room9_1_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room21_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room21_1_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room19_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room19_1_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room22_termination_positive.npy",
+    "resources/monte_images/climb_down_ladder_room22_1_termination_positive.npy",
+]
+
+negative_test_files = [
+    "resources/monte_images/screen_climb_down_ladder_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room2_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room6_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room6_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room1_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room0_initiation_negative.npy",
+    "resources/monte_images/climb_down_ladder_room2_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room4_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room4_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room10_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room10_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room3_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room3_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room9_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room9_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room0_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room7_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room13_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room13_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room21_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room21_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room5_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room5_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room11_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room11_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room19_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room19_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room14_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room14_1_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room22_termination_negative.npy",
+    "resources/monte_images/climb_down_ladder_room22_1_termination_negative.npy"
+]
+
 uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room2_uncertain.npy",
                         img_dir+"climb_down_ladder_room3_uncertain.npy",
@@ -90,14 +180,6 @@ uncertain_test_files = [img_dir+"climb_down_ladder_room0_uncertain.npy",
                         img_dir+"climb_down_ladder_room22_1_uncertain.npy",
                         ]
 
-rooms_combinations = [[[1]], # 1 instance of ladder, [1] [0,4,10] [3,9] [5,11,19] [7,13,21] [14,22] [2,6]
-                      [[1, 0,4,10],[1, 2,6]], # 2 ladders
-                      [[1, 0,4,10, 3,9],[1, 0,4,10, 5,11,19],[1, 2,6, 7,13,21]], # 3
-                      [[1, 0,4,10, 3,9, 5,11,19],[1, 2,6, 7,13,21, 14,22],[1, 2,6, 7,13,21, 5,11,19]], #4
-                      [[1, 0,4,10, 3,9, 5,11,19, 7,13,21],[1, 2,6, 7,13,21, 14,22, 5,11,19],[1, 2,6, 7,13,21, 5,11,19, 0,4,10],[1, 0,4,10, 5,11,19, 7,13,21, 14,22],[1, 0,4,10, 5,11,19, 7,13,21, 2,6]], # 5
-                      [[1, 0,4,10, 5,11,19, 7,13,21, 2,6, 3,9]], # 6
-                      ]
-
 
 if __name__ == "__main__":
         parser = argparse.ArgumentParser()
@@ -113,7 +195,7 @@ if __name__ == "__main__":
 
         load_gin_configs(args.config_file, args.gin_bindings)
 
-        multiprocessing.set_start_method('spawn')
+        #multiprocessing.set_start_method('spawn')
 
         experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir, seed=args.seed)
 
@@ -123,14 +205,8 @@ if __name__ == "__main__":
                                   uncertain_test_files)
         experiment.read_directory(img_dir)
 
-        experiment.room_by_room_train_labelled('climb_down_ladder', 'termination', rooms_combinations)
+        experiment.room_by_room_train_labelled('climb_down_ladder', 'termination', 
+                                               files_list=(positive_files, negative_files,
+                                                           unlabelled_files))
         
-
-        #input('Experiment done, press any key to exit.')
-        
-        #num_batch = 1
-        #view_acc = experiment.view_false_predictions(positive_test_files, negative_test_files, num_batch)
-        #print(f"Viewing {num_batch} of Predictions:")
-        #print(f"Accuracy: {view_acc[0]}")
-        #print(f"Weighted Accuracy: {view_acc[1]}")
  

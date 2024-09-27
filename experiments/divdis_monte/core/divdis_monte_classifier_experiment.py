@@ -675,7 +675,8 @@ class MonteDivDisClassifierExperiment():
         return history, heads_history
 
 
-    def room_by_room_train_labelled(self, task, init_term, combinations_list=None, files_list=None):
+    def room_by_room_train_labelled(self, task, init_term, combinations_list=None, files_list=None, num_seeds=5):
+        
         # combinations_list: 2D array, (num_rooms, num_combinations)
 
         if combinations_list is not None:
@@ -717,7 +718,7 @@ class MonteDivDisClassifierExperiment():
                     print(f"Negative files: {negative_train_files}")
                     
                     
-                    for s in range(3):
+                    for s in range(num_seeds):
                         set_seed(self.seed+s)
                         print(f"Seed {self.seed+s}")
                         logging.info(f"Seed {self.seed+s}")
@@ -773,142 +774,170 @@ class MonteDivDisClassifierExperiment():
             positive_list, negative_list, unlabelled_list = files_list
         
             num_instances = range(1,len(positive_list)+1)
-            weighted_acc_list = [] # nested list of best heads
-            raw_acc_list = []
+            results_weighted_acc = np.zeros((len(positive_list), 3, num_seeds)) # (num_instances, 3 classifiers, 5 seeds)
+            results_raw_acc = np.zeros((len(positive_list), 3, num_seeds)) 
 
             positive_train_files = []
             negative_train_files = []
             unlabelled_train_files = []
             
-            for idx in range(len(positive_list)):
-                comb_weighted_acc = []
-                comb_raw_acc = []
+            for i in range(len(positive_list)):
+                print("=====================================")
+                logging.info("=====================================")
+                print(f"Training on {num_instances[i]} instances of labeled data")
+                logging.info(f"Training on {num_instances[i]} instances of labeled data")
+                
+                comb_weighted_acc = [[] for _ in range(3)] # (classifier, seed)
+                comb_raw_acc = [[] for _ in range(3)]
 
-                positive_train_files += positive_list[idx]
-                negative_train_files += negative_list[idx]
-                unlabelled_train_files += unlabelled_list[idx]
+                positive_train_files += positive_list[i]
+                negative_train_files += negative_list[i]
+                unlabelled_train_files += unlabelled_list[i]
                 
                 
                 print(f"Positive files: {positive_train_files}")
                 print(f"Negative files: {negative_train_files}")
                 
                 
-                for s in range(5):
-                    set_seed(self.seed+s)
-                    print(f"Seed {self.seed+s}")
-                    logging.info(f"Seed {self.seed+s}")
-
-                    print(f"D")
+                for c in range(3):
+                    classifier_names = ['D-BAT Ensemble','D-BAT Ensemble - no diversity','CNN']
+                    print(f"Training {classifier_names[c]}")
+                    logging.info(f"Training {classifier_names[c]}")
                     
-                    classifier = DivDisClassifier(use_gpu=self.use_gpu,
-                                                log_dir=self.log_dir,
-                                                num_classes=self.classifier.num_classes,
-                                                head_num=self.classifier.head_num,
-                                                learning_rate=self.classifier_learning_rate,
-                                                diversity_weight=self.classifier_diversity_weight,
-                                                l2_reg_weight=self.classifier_l2_reg_weight,
-                                                model_name=self.classifier_model_name
-                                                )
-                    self.classifier = classifier
-                    classifier.add_data(positive_train_files, negative_train_files, unlabelled_train_files)
-                    classifier.set_class_weights()
-                    classifier.train(self.per_room_epochs, progress_bar=True)
+                    for s in range(num_seeds):
+                        set_seed(self.seed+s)
+                        print(f"Seed {self.seed+s}")
+                        logging.info(f"Seed {self.seed+s}")
 
-                    accuracy_pos, accuracy_neg, raw_acc, weighted_acc = self.test_classifier()
-
-                    best_head_idx = np.argmax(weighted_acc)
-                    best_weighted_acc = np.max(weighted_acc)
-                    best_accuracy = raw_acc[best_head_idx]
-                    best_true_acc = accuracy_pos[best_head_idx]
-                    best_false_acc = accuracy_neg[best_head_idx]
+                        classifier_div_weight = 0 if c == 1 else self.classifier_diversity_weight
+                        classifier_head_num = 1 if c == 2 else self.classifier_head_num
                     
-                    comb_weighted_acc.append(best_weighted_acc)
-                    comb_raw_acc.append(best_accuracy)
+                        classifier = DivDisClassifier(use_gpu=self.use_gpu,
+                                                    log_dir=self.log_dir,
+                                                    num_classes=self.classifier.num_classes,
+                                                    head_num=classifier_head_num,
+                                                    learning_rate=self.classifier_learning_rate,
+                                                    diversity_weight=classifier_div_weight,
+                                                    l2_reg_weight=self.classifier_l2_reg_weight,
+                                                    model_name=self.classifier_model_name
+                                                    )
+                        self.classifier = classifier
+                        classifier.add_data(positive_train_files, negative_train_files, unlabelled_train_files)
+                        classifier.set_class_weights()
+                        classifier.train(self.per_room_epochs, progress_bar=True)
 
-                    print(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
-                    print(f"Accuracy:          {np.round(raw_acc, 2)}")
-                    print(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
-                    print(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+                        accuracy_pos, accuracy_neg, raw_acc, weighted_acc = self.test_classifier()
 
-                    logging.info(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
-                    logging.info(f"Accuracy:          {np.round(raw_acc, 2)}")
-                    logging.info(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
-                    logging.info(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+                        best_head_idx = np.argmax(weighted_acc)
+                        best_weighted_acc = np.max(weighted_acc)
+                        best_accuracy = raw_acc[best_head_idx]
+                        best_true_acc = accuracy_pos[best_head_idx]
+                        best_false_acc = accuracy_neg[best_head_idx]
+                        
+                        results_weighted_acc[i,c,s] = best_weighted_acc
+                        results_raw_acc[i,c,s] = best_accuracy
 
-                    if self.uncertain_test_files is not None:
-                        uncertainty = self.test_uncertainty()
-                        print(f"Uncertainty:       {np.round(uncertainty, 2)}")
-                        logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
+                        print(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                        print(f"Accuracy:          {np.round(raw_acc, 2)}")
+                        print(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                        print(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
 
-                weighted_acc_list.append(comb_weighted_acc)
-                raw_acc_list.append(comb_raw_acc)
+                        logging.info(f"Weighted Accuracy: {np.round(weighted_acc, 2)}")
+                        logging.info(f"Accuracy:          {np.round(raw_acc, 2)}")
+                        logging.info(f"True Accuracy:     {np.round(accuracy_pos, 2)}")
+                        logging.info(f"False Accuracy:    {np.round(accuracy_neg, 2)}")
+
+                        if self.uncertain_test_files is not None:
+                            uncertainty = self.test_uncertainty()
+                            print(f"Uncertainty:       {np.round(uncertainty, 2)}")
+                            logging.info(f"Uncertainty:       {np.round(uncertainty, 2)}")
 
 
 
-        results = {'instances': num_instances, 'weighted_accuracy': weighted_acc_list, 'raw_accuracy': raw_acc_list}
+        results = {'instances': num_instances, 'weighted_acc': results_weighted_acc, 'raw_acc': results_raw_acc}
 
-        with open(os.path.join(self.log_dir, f'{task}_room_combinations.dict'), 'wb') as f:
+        with open(os.path.join(self.log_dir, f'{task}_room_train.dict'), 'wb') as f:
             pickle.dump(results, f)
 
-        self.plot(f"{task}_labeled_vs_acc", num_instances, weighted_acc_list, "Weighted Accuracy vs Instances of Labeled Data (Laser)", "Instances of Labeled Data")
+        self.plot(f"{task}_labeled_vs_acc", num_instances, results_weighted_acc, f"Weighted Accuracy vs Instances of Labeled Data ({task.capitalize()})", "Instances of Labeled Data")
         
-
-
-
-
 
     def plot(self,
-             plot_file,
-             x_values,
-             y_values,
-             
-             plot_title,
-             x_label):
+            plot_file,
+            x_values,
+            y_values,         
+            plot_title,
+            x_label):
 
+        font_params = { # larger fonts for better readability
+            'font.size': 14,
+            'axes.titlesize': 16,
+            'axes.labelsize': 14,
+            'xtick.labelsize': 12,
+            'ytick.labelsize': 12,
+            'axes.titleweight': 'bold',
+            'legend.frameon': True,      
+            'legend.loc': 'bottom right',
+            'grid.alpha': 0.6,           
+            'grid.linestyle': '--'      
+        }
+        plt.rcParams.update(font_params)
+
+        
+        # Convert x_values to a NumPy array for consistency
         x_values = np.array(x_values)
-        means = [np.mean(y) for y in y_values]
-        stds = [np.std(y) for y in y_values]
         
-        ax_titles = ["#Labeled Ladder Data"]
-        y_labels = ['Weighted Accuracy']
-    
+        # Extract each y-value array
+        divdis_ensemble_acc = np.array(y_values[0]) # (num_classifiers, num_seeds)
+        regular_ensemble_acc = np.array(y_values[1])
+        cnn_acc = np.array(y_values[2])
+        
+        # Set up the figure and axis
+        fig, ax = plt.subplots(figsize=(12, 7))  
+        
+        # Calculate means and standard deviations across seeds
+        divdis_mean = np.mean(divdis_ensemble_acc, axis=1)
+        divdis_std = np.std(divdis_ensemble_acc, axis=1)
+        
+        regular_mean = np.mean(regular_ensemble_acc, axis=1)
+        regular_std = np.std(regular_ensemble_acc, axis=1)
+        
+        cnn_mean = np.mean(cnn_acc, axis=1)
+        cnn_std = np.std(cnn_acc, axis=1)
+
+        # Set up the figure and axis
         fig, ax = plt.subplots(figsize=(12, 7))  # Bigger figure size
+
+        # Plot mean values with shaded standard deviation
+        ax.plot(x_values, divdis_mean, label='D-BAT Ensemble', color='b', marker='o', linestyle='-', linewidth=2)
+        ax.fill_between(x_values, divdis_mean - divdis_std, divdis_mean + divdis_std, color='b', alpha=0.2)
         
-        # Plot mean values
-        ax.plot(x_values, means, label='Mean Weighted Accuracy', color='b', marker='o', linestyle='-', linewidth=2)
+        ax.plot(x_values, regular_mean, label='D-BAT Ensemble - no diversity', color='g', marker='x', linestyle='--', linewidth=2)
+        ax.fill_between(x_values, regular_mean - regular_std, regular_mean + regular_std, color='g', alpha=0.2)
         
-        # Fill between mean - std and mean + std to visualize variability
-        ax.fill_between(x_values,
-                        np.array(means) - np.array(stds),
-                        np.array(means) + np.array(stds),
-                        color='b', alpha=0.2, label='Standard Deviation')
+        ax.plot(x_values, cnn_mean, label='CNN', color='r', marker='s', linestyle='-.', linewidth=2)
+        ax.fill_between(x_values, cnn_mean - cnn_std, cnn_mean + cnn_std, color='r', alpha=0.2)
+        
         
         # Improve the overall aesthetics
-        ax.set_xlabel(x_label, fontsize=14)
-        ax.set_ylabel(y_labels[0], fontsize=14)
-        ax.set_title(plot_title, fontsize=16, fontweight='bold')
+        ax.set_xlabel(x_label)
+        ax.set_ylabel('Accuracy')
+        ax.set_title(plot_title)
 
-        # Cap the y-axis between 0.65 and 1
+        # Adjust y-axis limits if needed 
         ax.set_ylim(0.65, 1)
 
         # Adding grid and improving the axis labels
-        ax.grid(True, linestyle='--', alpha=0.6)
-        ax.tick_params(axis='both', which='major', labelsize=12)
+        ax.grid(True)
+        ax.tick_params(axis='both', which='major')
 
         # Adding legend
-        #ax.legend(loc='upper left', fontsize=12)
+        ax.legend()
         
-        #fig.suptitle(plot_title)
+        # Save and show the figure
         fig.tight_layout()
-
-        # Save the figure
         fig.savefig(plot_file, dpi=300)
         print(f"Figure saved at: {os.path.abspath(plot_file)}")  # Print the path of the saved figure
-
-        fig.suptitle(plot_title)
-        fig.tight_layout()
         
-        fig.savefig(plot_file)
         plt.show()
-        
         plt.close(fig)

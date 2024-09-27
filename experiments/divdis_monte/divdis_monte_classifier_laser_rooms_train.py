@@ -75,8 +75,8 @@ if __name__ == "__main__":
 
         load_gin_configs(args.config_file, args.gin_bindings)
 
-        multiprocessing.set_start_method('spawn')
-        #ignore warnings: UserWarning: Lazy modules are a new feature under heavy development
+        #multiprocessing.set_start_method('spawn')
+
         warnings.filterwarnings("ignore", category=UserWarning, message="Lazy modules are a new feature under heavy development")
 
         experiment = MonteDivDisClassifierExperiment(base_dir=args.base_dir, seed=args.seed)
