@@ -15,7 +15,8 @@ init_states = [
     ["resources/monte_env_states/room0/ladder/top_0.pkl"],
     ["resources/monte_env_states/room0/lasers/left_with_laser.pkl"],
     ["resources/monte_env_states/room7/ladder/top_0.pkl"],
-    ["resources/monte_env_states/room7/lasers/between_right_lasers.pkl"]
+    ["resources/monte_env_states/room7/lasers/between_right_lasers.pkl"],
+    ["resources/monte_env_states/room12/platforms/right.pkl"]
 ]
 
 term_points = [
@@ -132,7 +133,7 @@ if __name__ == "__main__":
         experiment.train_option(init_state,
                                 term_points[state_idx],
                                 args.seed,
-                                5e5,
+                                2e6,
                                 state_idx)
         experiment.save()
 

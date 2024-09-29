@@ -5,6 +5,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from collections import defaultdict
+import seaborn as sns
 
 TERMS = [(76, 192, 1), (20, 148, 1), (133, 148, 1),
          (77,235,4),(77,235,10),
@@ -15,6 +16,7 @@ TERMS = [(76, 192, 1), (20, 148, 1), (133, 148, 1),
          (77, 235, 9)]
 
 def get_dist_point(current_room, dest_room):
+    
     ROOM_TOP = 253
     ROOM_BOT = 135
     ROOM_LEFT = 0
@@ -83,19 +85,71 @@ def get_dist_point(current_room, dest_room):
             return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 13)
         elif current_room == 13:
             return (77, ROOM_TOP), (77, ROOM_BOT, 7)
+        elif current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        elif current_room == 5:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 6)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 22:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 14)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
         
     
     if dest_room == 4:
         if current_room == 0:
             return (77, ROOM_BOT), (77, ROOM_TOP, 4)
         elif current_room == 3:
-            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235)
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
         elif current_room == 5:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 4)
         elif current_room == 10:
             return (77, ROOM_TOP), (77, ROOM_BOT, 4)
         elif current_room == 1:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 0)
+        elif current_room == 2:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 1)
+        elif current_room == 6:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 2)
+        elif current_room == 11:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 10)
+        elif current_room == 7:
+            return(ROOM_LEFT, 235), (ROOM_RIGHT, 235, 6)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 13:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 12)
+        elif current_room == 12:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 11)
+        elif current_room == 22:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 14)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 10:
         if current_room == 4:
@@ -110,6 +164,34 @@ def get_dist_point(current_room, dest_room):
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 1)
         elif current_room == 1:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 0)
+        elif current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        elif current_room == 5:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 11)
+        elif current_room == 7:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 13)
+        elif current_room == 13:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 12)
+        elif current_room == 12:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 11)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 22:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 14)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 9:
         if current_room == 3:
@@ -134,6 +216,28 @@ def get_dist_point(current_room, dest_room):
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 11)
         elif current_room == 11:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 10)
+        elif current_room == 1:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 0)
+        elif current_room == 2:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 1)
+        elif current_room == 6:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 2)
+        elif current_room == 7:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 13)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 11:
         if current_room == 5:
@@ -154,6 +258,32 @@ def get_dist_point(current_room, dest_room):
             return (77, ROOM_BOT), (77, ROOM_TOP, 13)
         elif current_room == 13:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 12)
+        elif current_room == 1:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 0)
+        elif current_room == 0:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 4)
+        elif current_room == 4:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 10)
+        elif current_room == 2:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 6)
+        elif current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 22:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 14)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 19:
         if current_room == 5:
@@ -168,6 +298,36 @@ def get_dist_point(current_room, dest_room):
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
         elif current_room == 18:
             return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 1:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 0)
+        elif current_room == 0:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 4)
+        elif current_room == 4:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 10)
+        elif current_room == 2:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 6)
+        elif current_room == 6:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 7)
+        elif current_room == 7:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 13)
+        elif current_room == 13:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 12)
+        elif current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        elif current_room == 14:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 13)
+        elif current_room == 22:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 14)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 21:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 13)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 13:
         if current_room == 7:
@@ -186,6 +346,30 @@ def get_dist_point(current_room, dest_room):
             return (77, ROOM_TOP), (77, ROOM_BOT, 11)
         if current_room == 11:
             return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 12)
+        if current_room == 1:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 2)
+        if current_room == 2:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 6)
+        if current_room == 0:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 1)
+        if current_room == 4:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 10)
+        if current_room == 10:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 11)
+        if current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        if current_room == 5:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 11)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
     
     if dest_room == 21:
         if current_room == 7:
@@ -198,6 +382,37 @@ def get_dist_point(current_room, dest_room):
             return (77, ROOM_BOT), (ROOM_TOP, 235, 21)
         if current_room == 22:
             return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 21)
+        if current_room == 1:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 2)
+        if current_room == 2:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 6)
+        if current_room == 6:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 7)
+        if current_room == 0:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 1)
+        if current_room == 4:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 10)
+        if current_room == 10:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 11)
+        if current_room == 11:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 12)
+        if current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        if current_room == 5:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 11)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
+                
     
     if dest_room == 22:
         if current_room == 14:
@@ -216,6 +431,35 @@ def get_dist_point(current_room, dest_room):
             return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 13)
         if current_room == 13:
             return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 14)
+        if current_room == 1:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 2)
+        if current_room == 2:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 6)
+        if current_room == 6:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 7)
+        if current_room == 7:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 13)
+        if current_room == 0:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 1)
+        if current_room == 4:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 10)
+        if current_room == 3:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 4)
+        if current_room == 5:
+            return (77, ROOM_BOT), (77, ROOM_TOP, 11)
+        elif current_room == 9:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 3)
+        elif current_room == 19:
+            return (77, ROOM_TOP), (77, ROOM_BOT, 11)
+        elif current_room == 20:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 19)
+        elif current_room == 18:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 19)
+        elif current_room == 23:
+            return (ROOM_LEFT, 235), (ROOM_RIGHT, 235, 22)
+        elif current_room == 8:
+            return (ROOM_RIGHT, 235), (ROOM_LEFT, 235, 9)
+        
     
     print("Current room: {} dest room: {} not configured".format(current_room, dest_room))
 
@@ -227,8 +471,10 @@ def get_dist_from_term(term, true_terms):
         distance = abs(point1[0]-point2[0]) + abs(point1[1]-point2[1])
         return distance
     
+    original_term = term
     for true_term in true_terms:
         dist = 0
+        term = original_term
         
         while term[2] != true_term[2]:
             dest, new_term = get_dist_point(term[2], true_term[2])
@@ -262,7 +508,7 @@ def get_dists(df,
                         (df['head_idx'] == head_idx)
                     ]
                     if len(mini_df) == 0:
-                        head_results.append(10000)
+                        head_results.append(300)
                     else:
                         terms = mini_df.iloc[-100:]['final_location']
                         dists = []
@@ -275,8 +521,51 @@ def get_dists(df,
         plot_points_var[num_rooms-1] = np.std(seed_results) 
     
     return plot_points_avg, plot_points_var
+
+def get_dists_df(df,
+                 type_name):
+    columns = ['Distance from Termination',
+               'seed',
+               'Number of Seen Instances',
+               'type']
+    dist_df = pd.DataFrame(columns=columns)
+    
+    head_idxs = df['head_idx'].unique()
+    env_idxs = df['env_idx'].unique()
+    seen_rooms = df['num_rooms'].unique()
+    seeds = df['seed'].unique()
+    
+    for num_rooms in seen_rooms:
+        seed_results = []
+        for seed in seeds:
+            env_results = []
+            for env_idx in env_idxs:
+                head_results = []
+                for head_idx in head_idxs:
+                    mini_df = df.loc[
+                        (df['num_rooms'] == num_rooms)&
+                        (df['seed'] == seed)&
+                        (df['env_idx'] == env_idx)&
+                        (df['head_idx'] == head_idx)
+                    ]
+                    if len(mini_df) == 0:
+                        head_results.append(300)
+                    else:
+                        terms = mini_df.iloc[-100:]['final_location']
+                        dists = []
+                        for term in terms:
+                           dists.append(get_dist_from_term(term, TERMS))
+                        head_results.append(np.mean(dists))
+                env_results.append(min(head_results))
+            dist_df.append({'Distance from Termination': np.mean(env_results),
+                            'seed': seed,
+                            'Number of Seen Instances': num_rooms,
+                            'type': type_name}, ignore_index=True)
+    
+    return dist_df
+
         
-def term_dist_by_seen_plot(df, env_idx_to_room_idx, ax, line_label):
+def term_dist_by_seen_plot(df, env_idx_to_room_idx, axs, line_label):
     head_idxs = df['head_idx'].unique()
     env_idxs = df['env_idx'].unique()
     rooms = df['num_rooms'].unique()
@@ -293,16 +582,20 @@ def term_dist_by_seen_plot(df, env_idx_to_room_idx, ax, line_label):
     print(std)
     print("=========================")
     
-    ax.plot(avg, rooms, label=line_label)
+    for ax in axs:
+        ax.plot([1,2,3,4,5,6,7],avg, label=line_label)
 
 def extract_room_seed(file, folder_idx):
     folders = file.split("/")
     folder_name = folders[folder_idx]
     split_folder_name = folder_name.split("_")
     
-    room = split_folder_name[6]
-    seed = split_folder_name[9]
+    # room = split_folder_name[6]
+    # seed = split_folder_name[9]
     
+    seed = split_folder_name[6]
+    room = split_folder_name[9]
+
     return room, seed
 
 def get_rooms_seeds(files, folder_idx):
@@ -315,7 +608,8 @@ def get_rooms_seeds(files, folder_idx):
     return rooms, seeds
 
 def get_data_files(base_dir, exp_str):
-    files = glob.glob(base_dir + '/*' + exp_str + '*/*/*/checkpoints/experiment_data.pkl')
+    
+    files = glob.glob(base_dir + '*/*' + exp_str + '/*/checkpoints/experiment_data.pkl')
     
     return files
 
@@ -484,18 +778,46 @@ def joined_room_scatter(df,
             
 
 
-file_dir = "/mnt/nfs/home/ademello/storage/portable_options/new_runs/"
+file_dir = "runs/"
 
-files = get_data_files(file_dir, "ladder")
-rooms, seeds = get_rooms_seeds(files, 8)
-df = get_combined_df(files, rooms, seeds)
-print(df)
-# room_success_by_seen_plot(df, "runs/ladder.png")
-# room_scatter_plots(df, "runs/scatter_ladder")
-fig = plt.figure(num=1, clear=True)
-ax = fig.add_subplot()
-term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], ax, "D-BAT Ensemble")
-fig.savefig("runs/ladder_dist.png")
+files1 = get_data_files(file_dir, "ladders_one_head")
+files2 = get_data_files(file_dir, "ladders_no_div")
+files3 = get_data_files(file_dir, "ladders")
+rooms, seeds = get_rooms_seeds(files1, 1)
+key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
+fig, ax = plt.subplots(1,1)
+
+
+# columns = ['Distance from Termination',
+#                'seed',
+#                'Number of Seen Instances',
+#                'type']
+# dist_df = pd.DataFrame(columns=columns)
+
+dist_df = None
+
+for idx, files in enumerate([files1, files2, files3]):
+    df = get_combined_df(files, rooms, seeds)
+    print(df)
+    # room_success_by_seen_plot(df, "runs/ladder.png")
+    # room_scatter_plots(df, "runs/scatter_ladder")
+    # term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], [ax], key[idx])
+    new_df = get_dists_df(df, key[idx])
+    if dist_df is not None:
+        pd.concat([dist_df, new_df])
+    else:
+        dist_df = new_df
+
+
+sns_plot = sns.barplot(x='Number of Seen Instances',
+            y='Distance from Termination',
+            hue='type',
+            data=dist_df,
+            ax=ax)
+
+
+
+sns_plot.figure.savefig("runs/full_ladder.png")
 
 
 

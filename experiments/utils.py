@@ -211,9 +211,10 @@ def train_head(head_idx,
                 log_dir,
                 init_states,
                 term_states,
+                episode_life,
                 config_file,
                 gin_bindings):
-    env = make_env(seed, init_states)
+    env = make_env(seed, init_states, episode_life)
     total_steps = 0
     rolling_success = deque(maxlen=200)
     rolling_rewards = deque(maxlen=200)

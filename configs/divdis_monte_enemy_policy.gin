@@ -5,7 +5,7 @@ import portable.option.divdis.policy.policy_and_initiation
 import portable.option.divdis.divdis_classifier
 import portable.option.memory.unbalanced_set_dataset
 
-DivDisOptionExperiment.experiment_name                              = "meta_monte_ladders_no_div"
+DivDisOptionExperiment.experiment_name                              = "meta_monte_enemy"
 DivDisOptionExperiment.make_videos                                  = False
 DivDisOptionExperiment.classifier_epochs                            = 150
 DivDisOptionExperiment.gpu_id                                       = 0
@@ -35,8 +35,8 @@ DivDisOption.write_summary                                          = False
 
 DivDisClassifier.learning_rate                                      = 5e-4
 DivDisClassifier.num_classes                                        = 2
-DivDisClassifier.diversity_weight                                   = 0
-#DivDisClassifier.diversity_weight                                   = 3e-5
+#DivDisClassifier.diversity_weight                                   = 0
+DivDisClassifier.diversity_weight                                   = 3e-5
 DivDisClassifier.l2_reg_weight                                      = 5e-4
 DivDisClassifier.model_name                                         = "monte_cnn"
 

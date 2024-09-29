@@ -43,10 +43,10 @@ def term_phi(x):
 def mock_check_true(x,y,z):
     return False
 
-def make_monte_env(seed, init_state):
+def make_monte_env(seed, init_state, episode_life):
     env = atari_wrappers.wrap_deepmind(
         atari_wrappers.make_atari('MontezumaRevengeNoFrameskip-v4'),
-        episode_life=False,
+        episode_life=episode_life,
         clip_rewards=True,
         frame_stack=False
     )
@@ -78,7 +78,8 @@ class DivDisOptionExperiment():
                  classifier_epochs=100,
                  train_new_policy_for_each_room=True,
                  make_videos=False,
-                 env_ram_dir="."):
+                 env_ram_dir=".",
+                 episode_life=False):
         assert option_type in OPTION_TYPES
         
         self.name = experiment_name
@@ -90,6 +91,7 @@ class DivDisOptionExperiment():
         self.config_file =config_file
         self.gin_bindings = gin_bindings
         self.env_ram_dir = env_ram_dir
+        self.episode_life = episode_life
         
         self.base_dir = os.path.join(base_dir, experiment_name, str(seed))
         self.log_dir = os.path.join(self.base_dir, 'logs')
@@ -211,6 +213,7 @@ class DivDisOptionExperiment():
                                                  self.log_dir,
                                                  init_states,
                                                  term_points,
+                                                 self.episode_life,
                                                  self.config_file,
                                                  self.gin_bindings))
             
