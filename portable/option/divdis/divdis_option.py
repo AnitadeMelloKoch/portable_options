@@ -298,6 +298,11 @@ class DivDisOption():
                 extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
+            if type(state) is np.ndarray:
+                state = torch.from_numpy(state)
+            
+            state = state.to(torch.int)
+            
             policy.observe(state,
                            action,
                            reward,

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
-                                   max_steps=int(1500),
+                                   max_steps=int(500),
                                    grayscale=False,
                                    normalize_obs=False)
     

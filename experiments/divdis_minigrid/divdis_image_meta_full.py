@@ -55,12 +55,12 @@ if __name__ == "__main__":
     
     meta_env = environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                    seed=args.seed,
-                                   max_steps=int(50),
+                                   max_steps=int(500),
                                    grayscale=False,
                                    normalize_obs=False)
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                3e6,
+                                5e6,
                                 0.98)
     
