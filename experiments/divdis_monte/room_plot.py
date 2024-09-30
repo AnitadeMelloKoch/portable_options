@@ -522,14 +522,10 @@ def get_dists(df,
     
     return plot_points_avg, plot_points_var
 
-def get_dists_df(df,
+def get_dists_dict(df,
+                 data_dict,
                  type_name):
-    columns = ['Distance from Termination',
-               'seed',
-               'Number of Seen Instances',
-               'type']
-    dist_df = pd.DataFrame(columns=columns)
-    
+
     head_idxs = df['head_idx'].unique()
     env_idxs = df['env_idx'].unique()
     seen_rooms = df['num_rooms'].unique()
@@ -557,12 +553,12 @@ def get_dists_df(df,
                            dists.append(get_dist_from_term(term, TERMS))
                         head_results.append(np.mean(dists))
                 env_results.append(min(head_results))
-            dist_df.append({'Distance from Termination': np.mean(env_results),
+            data_dict.append({'Distance from Termination': np.mean(env_results),
                             'seed': seed,
-                            'Number of Seen Instances': num_rooms,
-                            'type': type_name}, ignore_index=True)
+                            'Number of Seen Ladders': num_rooms,
+                            'type': type_name})
     
-    return dist_df
+    return data_dict
 
         
 def term_dist_by_seen_plot(df, env_idx_to_room_idx, axs, line_label):
@@ -785,39 +781,33 @@ files2 = get_data_files(file_dir, "ladders_no_div")
 files3 = get_data_files(file_dir, "ladders")
 rooms, seeds = get_rooms_seeds(files1, 1)
 key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
-fig, ax = plt.subplots(1,1)
 
+df = get_combined_df(files3, rooms, seeds)
 
-# columns = ['Distance from Termination',
-#                'seed',
-#                'Number of Seen Instances',
-#                'type']
-# dist_df = pd.DataFrame(columns=columns)
+room_scatter_plots(df, "runs/scatter_ladder")
 
-dist_df = None
+# dist_df = []
 
-for idx, files in enumerate([files1, files2, files3]):
-    df = get_combined_df(files, rooms, seeds)
-    print(df)
-    # room_success_by_seen_plot(df, "runs/ladder.png")
-    # room_scatter_plots(df, "runs/scatter_ladder")
-    # term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], [ax], key[idx])
-    new_df = get_dists_df(df, key[idx])
-    if dist_df is not None:
-        pd.concat([dist_df, new_df])
-    else:
-        dist_df = new_df
+# for idx, files in enumerate([files1, files2, files3]):
+#     df = get_combined_df(files, rooms, seeds)
+#     print(df)
+#     # room_success_by_seen_plot(df, "runs/ladder.png")
+#     # term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], [ax], key[idx])
+#     dist_df = get_dists_dict(df, dist_df, key[idx])
+    
+# dist_df = pd.DataFrame.from_dict(dist_df)
 
+# print(dist_df)
 
-sns_plot = sns.barplot(x='Number of Seen Instances',
-            y='Distance from Termination',
-            hue='type',
-            data=dist_df,
-            ax=ax)
+# sns_plot = sns.barplot(x='Number of Seen Ladders',
+#             y='Distance from Termination',
+#             hue='type',
+#             data=dist_df,)
 
+# handles, labels = sns_plot.figure.axes[0].get_legend_handles_labels()
+# sns_plot.figure.axes[0].legend(handles=handles[0:], labels=labels[0:])
 
-
-sns_plot.figure.savefig("runs/full_ladder.png")
+# sns_plot.figure.savefig("runs/full_ladder.png")
 
 
 

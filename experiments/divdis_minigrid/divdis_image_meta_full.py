@@ -1,14 +1,12 @@
-from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
+from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
 from experiments.minigrid.utils import environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
-import random
 from portable.agent.model.ppo import create_cnn_policy, create_cnn_vf
 from experiments.divdis_minigrid.experiment_files import *
 import numpy as np
-from PIL import Image
 
 
 
@@ -40,12 +38,12 @@ if __name__ == "__main__":
     def termination_phi(x):
         return x/255
     
-    experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
+    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
                                                seed=args.seed,
                                                option_policy_phi=policy_phi,
                                                agent_phi=option_agent_phi,
-                                               termination_phi=termination_phi,
-                                               action_policy=create_cnn_policy(3,20),
+                                            #    termination_phi=termination_phi,
+                                               action_policy=create_cnn_policy(3,15),
                                                action_vf=create_cnn_vf(3),
                                                option_type="divdis",
                                                )
@@ -56,21 +54,24 @@ if __name__ == "__main__":
     
     experiment.train_option_classifiers()
     
-    for i in range(5):
-        experiment.test_classifiers(minigrid_test_files_positive,
-                                    minigrid_test_files_negative,
-                                    i)
+    # for i in range(5):
+    #     experiment.test_classifiers(minigrid_test_files_positive,
+    #                                 minigrid_test_files_negative,
+    #                                 i)
+    
+    experiment.test_classifiers(minigrid_test_files_positive,
+                                minigrid_test_files_negative,)
         
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(15000),
+                                                                     max_steps=int(1500),
                                                                      grayscale=False,
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,
                                                  force_door_closed=True,
-                                                 state_size=(84,84),
-                                                 term_size=(84,84))
+                                                 state_size=None,
+                                                 term_size=None)
         
     experiment.train_meta_agent(meta_env,
                                 args.seed,

@@ -21,6 +21,9 @@ import math
 from portable.option.memory import UnbalancedSetDataset
 from experiments.core.plotter import MontePlotter
 
+from collections import defaultdict
+from functools import partial
+
 OPTION_TYPES = ["mock", "divdis"]
 
 @gin.configurable
@@ -347,6 +350,8 @@ class DivDisMetaMaskedPPOExperiment():
         episode = 0
         undiscounted_rewards = []
         
+        term_states = defaultdict(partial(deque, maxlen=50))
+        
         while total_steps < max_steps:
             undiscounted_reward = 0         # episode reward
             done = False
@@ -419,6 +424,7 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                     seed,
                                                                                                                     max_steps=self.option_timeout,
                                                                                                                     make_video=save_image)
+                        term_states[action_offset].append(next_obs)
                 
                 if self.plotter is not None:
                     self.plotter.record_term_location(chosen_action, info["player_pos"])
@@ -478,10 +484,13 @@ class DivDisMetaMaskedPPOExperiment():
                 self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
                 self.save()
             
-            if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
-                logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
-                                                                                        total_steps))
-                return
+            with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
+                pickle.dump(term_states, f)
+            
+            # if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
+            #     logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
+            #                                                                             total_steps))
+            #     return
     
     def plot_learning_curve(self,
                             rewards):

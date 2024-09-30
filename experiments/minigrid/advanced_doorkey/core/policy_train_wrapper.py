@@ -54,8 +54,8 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self.image_input = image_input
         self.keep_colour = keep_colour
         self.pickup_colour = pickup_colour
-        self.state_size = state_size
-        self.term_size = term_size
+        # self.state_size = state_size
+        # self.term_size = term_size
         
         self.door = None
         
@@ -87,6 +87,16 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
     
     def get_current_position(self):
         return self.env.unwrapped.agent_pos
+    
+    def print_env_objects(self):
+        self._find_objs()
+        for key in self.objects.keys():
+            print(key)
+            if key == "keys":
+                for obj in self.objects[key]:
+                    print(obj.position, obj.colour)
+            elif key =="door":
+                print(self.objects[key].position, self.objects[key].colour)
     
     def get_door_obj(self):
         door = self.env.unwrapped.grid.get(
@@ -190,8 +200,9 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         obs = self.obs
         if type(obs) is not np.ndarray:
             obs = obs.numpy()
-        img = Image.fromarray(obs)
-        obs = np.asarray(img.resize(self.term_size, Image.BICUBIC))
+        if self.term_size is not None:
+            img = Image.fromarray(obs)
+            obs = np.asarray(img.resize(self.term_size, Image.BICUBIC))
         obs = torch.from_numpy(obs)
         obs = obs.permute((2,0,1))
         return obs.unsqueeze(0).float()
@@ -354,13 +365,15 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
         self._timestep += 1
         info = self._modify_info_dict(info)
         
-        if type(obs) is not np.ndarray:
-            obs = obs.numpy()
-        img = Image.fromarray(obs)
-        obs = np.asarray(img.resize(self.state_size, Image.BICUBIC))
+        # if type(obs) is not np.ndarray:
+        #     obs = obs.numpy()
         
-        obs = torch.from_numpy(obs)
-        obs = obs.permute((2,0,1)).float()
+        # if self.state_size is not None:
+        #     img = Image.fromarray(obs)
+        #     obs = np.asarray(img.resize(self.state_size, Image.BICUBIC))
+        
+        # obs = torch.from_numpy(obs)
+        # obs = obs.permute((2,0,1)).float()
         
         if self.check_option_complete(self):
             return obs, 1, True, info

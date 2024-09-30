@@ -35,6 +35,9 @@ if __name__ == "__main__":
         x = (x/255.0).float()
         return x
     
+    def termination_phi(x):
+        return x/255
+    
     experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
@@ -43,17 +46,19 @@ if __name__ == "__main__":
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
     
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(1500),
+                                                                     max_steps=int(100),
                                                                      grayscale=False,
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,
-                                                 force_door_closed=True)
+                                                 force_door_closed=True,
+                                                 state_size=None,
+                                                 term_size=None)
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                3e6,
+                                10e6,
                                 0.98)
     

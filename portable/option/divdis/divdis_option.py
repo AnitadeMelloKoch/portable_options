@@ -30,7 +30,7 @@ class DivDisOption():
                  num_heads,
                  
                  policy_phi,
-                 termination_phi,
+                #  termination_phi,
                  use_seed_for_initiation,
                  exp_type,
                  plot_dir,
@@ -62,8 +62,7 @@ class DivDisOption():
         
         self.terminations = DivDisClassifier(use_gpu=use_gpu[0],
                                              head_num=num_heads,
-                                             log_dir=os.path.join(log_dir, 'termination'),
-                                             phi=termination_phi)
+                                             log_dir=os.path.join(log_dir, 'termination'))
         
         self.num_heads = num_heads
         self.option_steps = [0]*self.num_heads
@@ -297,7 +296,7 @@ class DivDisOption():
             total_steps += steps
             train_rewards.append(sum(rewards))
             
-            if episode % 1 == 0:
+            if episode % 50 == 0:
                 logging.info("idx {} steps: {} average train reward: {}".format(idx,
                                                                           total_steps,
                                                                           np.mean(train_rewards)))
@@ -351,8 +350,8 @@ class DivDisOption():
                     self.video_generator.make_image(env.render("rgb_array"))
             
             next_state, reward, done, info = env.step(action)
-            term_state = env.get_term_state()
-            pred_y = self.terminations.predict_idx(term_state, idx, use_phi=True)
+            term_state = self.policy_phi(next_state).unsqueeze(0)
+            pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = (torch.argmax(pred_y) == 1).item()
             in_term_accuracy.append(perfect_term(env.get_current_position()))
             steps += 1
@@ -375,6 +374,9 @@ class DivDisOption():
             else:
                 extrinsic_rewards.append(0)
                 reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
+            
+            if type(state) is np.ndarray:
+                state = torch.from_numpy(state)
             
             state = state.to(torch.int)
             policy.observe(state,
@@ -414,7 +416,7 @@ class DivDisOption():
             self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
             self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
             self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
-        
+                
         return state, info, done, steps, rewards, option_rewards, states, infos, in_term_accuracy
     
     def plot_term_state(self, 

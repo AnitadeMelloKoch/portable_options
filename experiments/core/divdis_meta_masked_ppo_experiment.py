@@ -134,7 +134,7 @@ class DivDisMetaMaskedPPOExperiment():
         
         
         
-            self.meta_agent = MaskablePPOAgent(use_gpu=gpu_list[-1],
+            self.meta_agent = ActionPPO(use_gpu=gpu_list[-1],
                                             policy=action_policy,
                                             value_function=action_vf,
                                             model=action_model,
@@ -176,8 +176,8 @@ class DivDisMetaMaskedPPOExperiment():
                                                video_generator=self.video_generator,
                                                plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
                                                use_seed_for_initiation=True)
-            if len(self.options) > 0:
-                self.num_heads = self.options[0].num_heads
+            if self.option is not None:
+                self.num_heads = self.option.num_heads
             else:
                 self.num_heads = 0
         
@@ -231,6 +231,7 @@ class DivDisMetaMaskedPPOExperiment():
             
             if self.use_global_option:
                 self.global_option.save()
+                
             
             np.save(os.path.join(self.save_dir, "decisions.npy"),self.decisions)
         self.comm.Barrier()
@@ -240,6 +241,8 @@ class DivDisMetaMaskedPPOExperiment():
             self.option.save()
         
         if self.rank == 0:
+            self.meta_agent.load(os.path.join(self.save_dir, "action_agent"))
+            
             if os.path.exists(os.path.join(self.save_dir, "experiment_results.pkl")):
                 with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
                     self.experiment_data = pickle.load(f)
@@ -338,18 +341,24 @@ class DivDisMetaMaskedPPOExperiment():
             self.comm.send(option_mask, dest=0)
             self.comm.Barrier()
     
-    def act(self, obs, mask):
+    # def act(self, obs, mask):
+    def act(self, obs):
         assert self.rank == 0
-        action = self.meta_agent.act(obs, mask)
+        # action = self.meta_agent.act(obs, mask)
+        action, _ = self.meta_agent.act(obs)
         
         if self.pick_actions_randomly is True:
             action = np.random.randint(0, self.num_actions)
         
         return action
     
+    # def observe(self, 
+    #             obs,
+    #             mask, 
+    #             rewards, 
+    #             done):
     def observe(self, 
                 obs,
-                mask, 
                 rewards, 
                 done):
         assert self.rank == 0
@@ -360,8 +369,13 @@ class DivDisMetaMaskedPPOExperiment():
         
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
         
+        # self.meta_agent.observe(obs,
+        #                         mask,
+        #                         reward,
+        #                         done,
+        #                         done)
+        
         self.meta_agent.observe(obs,
-                                mask,
                                 reward,
                                 done,
                                 done)
@@ -428,6 +442,8 @@ class DivDisMetaMaskedPPOExperiment():
                     self.video_generator.episode_start()
                 
                 obs, info = env.reset()
+                print("rank 0 reset env")
+                env.print_env_objects()
             
             while not done:
                 if episode%200 == 0:
@@ -438,17 +454,18 @@ class DivDisMetaMaskedPPOExperiment():
                     self.save_image(env, save_image)
                     if type(obs) == np.ndarray:
                         obs = torch.from_numpy(obs).float()
-                action_mask = self.get_termination_masks(env)
+                # action_mask = self.get_termination_masks(env)
                 step_taken = False
                 if self.rank == 0:
                     if total_steps < self.bootstrap_steps:
                         action_selected = False
                         while not action_selected:
                             action = np.random.randint(self.num_primitive_actions, self.total_actions)
-                            action_selected = action_mask[action]
+                            # action_selected = action_mask[action]
                                 
                     else:
-                        action = self.act(obs, action_mask)
+                        # action = self.act(obs, action_mask)
+                        action = self.act(obs)
                 
                     self._video_log("action: {}".format(action))
                     # self._video_log("action q vals: {}".format(q_vals))
@@ -494,7 +511,7 @@ class DivDisMetaMaskedPPOExperiment():
                             option_num = int(action_offset/self.num_heads)
                             chosen_option = option_num
                             option_head = action_offset%self.num_heads
-                            chosen_head = option_head
+                            chosen_head = option_head                           
                         exec_data = self.comm.bcast({
                             'option_idx': option_num,
                             'option_head': option_head,
@@ -511,6 +528,7 @@ class DivDisMetaMaskedPPOExperiment():
                             rewards = run_data['rewards']
                             states = run_data['states']
                             env = run_data["env"]
+                            
                         else:
                             if self.rank == (exec_data['option_idx']+1):
                                 if self.fix_options is True:
@@ -529,6 +547,8 @@ class DivDisMetaMaskedPPOExperiment():
                                                                                                                      seed,
                                                                                                                      max_steps=self.option_timeout,
                                                                                                                      make_video=save_image)
+                                print("rank", self.rank,"finished run")
+                                
                                 self.comm.send({
                                     "next_obs": next_obs,
                                     "info": info,
@@ -548,8 +568,11 @@ class DivDisMetaMaskedPPOExperiment():
                     undiscounted_reward += np.sum(rewards)
                     self.decisions += 1
                     if total_steps > self.bootstrap_steps:
+                        # self.observe(obs,
+                        #             action_mask,
+                        #             rewards,
+                        #             done)
                         self.observe(obs,
-                                    action_mask,
                                     rewards,
                                     done)
                     total_steps += steps
@@ -597,7 +620,7 @@ class DivDisMetaMaskedPPOExperiment():
                 
                 self.episode_data.append({
                     "episode": episode,
-                    "episode_rewards": undiscounted_reward,
+                    "episode_rewards": undiscounted_rewards,
                     "frames": total_steps
                 })
             

@@ -1,4 +1,4 @@
-from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
+from experiments.core.divdis_meta_masked_ppo_experiment_baseline import DivDisMetaMaskedPPOExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -35,6 +35,9 @@ if __name__ == "__main__":
         x = (x/255.0).float()
         return x
     
+    def termination_phi(x):
+        return x/255
+    
     experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
                                       seed=args.seed,
                                       option_policy_phi=policy_phi,
@@ -42,19 +45,23 @@ if __name__ == "__main__":
                                       use_global_option=True,
                                       action_policy=create_cnn_policy(3,1),
                                       action_vf=create_cnn_vf(3),
-                                      option_type="mock")
+                                      option_type="mock",
+                                    #   termination_phi=termination_phi
+                                      )
     
-    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-16x16-v0',
+    meta_env = AdvancedDoorKeyPolicyTrainWrapper(environment_builder('SmallAdvancedDoorKey-8x8-v0',
                                                                      seed=args.seed,
-                                                                     max_steps=int(1500),
+                                                                     max_steps=int(100),
                                                                      grayscale=False,
                                                                      normalize_obs=False),
                                                  key_collected=False,
                                                  door_unlocked=False,
-                                                 force_door_closed=True)
+                                                 force_door_closed=True,
+                                                 state_size=None,
+                                                 term_size=None)
     
     experiment.train_meta_agent(meta_env,
                                 args.seed,
-                                3e6,
+                                10e6,
                                 0.98)
     

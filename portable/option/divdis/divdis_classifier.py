@@ -9,6 +9,7 @@ import numpy as np
 from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16, MinigridCNNLarge
+from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 
@@ -33,7 +34,7 @@ class DivDisClassifier():
                  learning_rate,
                  num_classes,
                  diversity_weight,
-                 phi,
+                 phi=None,
                  
                  l2_reg_weight=0.001,
                  class_weight=None,
@@ -117,8 +118,8 @@ class DivDisClassifier():
     
     def reset_classifier(self):
         if self.model_name == "minigrid_cnn":
-            self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
-                                               num_heads=self.head_num)
+            self.classifier = MinigridCNN(num_classes=self.num_classes,
+                                          num_heads=self.head_num)
         elif self.model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
@@ -230,11 +231,11 @@ class DivDisClassifier():
     def predict(self, x, use_phi=False):
         self.classifier.eval()
         
-        if use_phi is True:
-            x = self.phi(x)
+        # if use_phi is True:
+        #     x = self.phi(x)
         
-        # while len(x.shape) != self.state_dim:
-        #     x = x.unsqueeze(0)
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
         
         x = x.to(self.device)
         
@@ -251,11 +252,11 @@ class DivDisClassifier():
     def predict_idx(self, x, idx, use_phi=False):
         self.classifier.eval()
         
-        if use_phi is True:
-            x = self.phi(x)
+        # if use_phi is True:
+        #     x = self.phi(x)
         
-        # while len(x.shape) != self.state_dim:
-        #     x = x.unsqueeze(0)
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
         
         x = x.to(self.device)
         
