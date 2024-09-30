@@ -263,7 +263,7 @@ class DivDisOption():
 
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
-        policy.load_buffer(buffer_dir)
+        # policy.load_buffer(buffer_dir)
         
         while not (done or should_terminate or (steps >= max_steps)):
             states.append(state)
@@ -318,7 +318,7 @@ class DivDisOption():
 
         # policy.move_to_cpu()
         # self.terminations.move_to_cpu()
-        policy.store_buffer(buffer_dir)
+        # policy.store_buffer(buffer_dir)
         policy.end_skill(sum(extrinsic_rewards))
         
         self.train_data[int(idx)].append({

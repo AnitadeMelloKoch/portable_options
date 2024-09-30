@@ -444,7 +444,7 @@ class DivDisMetaExperiment():
             self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
             
             with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
-                pickle.dump(term_states)
+                pickle.dump(term_states, f)
             
             # self.plot_learning_curve(episode_rewards)
             
