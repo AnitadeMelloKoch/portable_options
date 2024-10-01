@@ -4,7 +4,7 @@
 #SBATCH --mem=230G
 #SBATCH --time=23:00:00
 #SBATCH --partition=pancake
-#SBATCH --job-name=medium
+#SBATCH --job-name=fast
 #SBATCH --error=meta_full_10.%J.err
 #SBATCH --output=meta_full_10.%J.out
 #SBATCH --gres gpu:2

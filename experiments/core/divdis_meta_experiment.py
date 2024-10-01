@@ -443,19 +443,27 @@ class DivDisMetaExperiment():
             
             self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
             
-            with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
-                pickle.dump(term_states, f)
+            if episode%1000 == 0:
+                with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
+                    pickle.dump(term_states, f)
+                self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+                self.save()
             
             # self.plot_learning_curve(episode_rewards)
             
             # if episode % 50 == 0:
-            #     self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
-            #     self.save()
             
             # if total_steps > 1e6 and np.mean(episode_rewards) > min_performance:
             #     logging.info("Meta agent reached min performance {} in {} steps".format(np.mean(episode_rewards),
             #                                                                             total_steps))
             #     return
+        self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
+            
+        if episode%1000 == 0:
+            with open(os.path.join(self.save_dir, "term_images.pkl"), 'wb') as f:
+                pickle.dump(term_states, f)
+            self.meta_agent.save(os.path.join(self.save_dir, "action_agent"))
+            self.save()
     
     def plot_learning_curve(self,
                             rewards):
