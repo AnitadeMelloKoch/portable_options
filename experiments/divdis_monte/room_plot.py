@@ -751,8 +751,8 @@ def get_scatter_dict(df,
             data[room] = []
         
         data[room].append({
-            "x": point[0],
-            "y": point[1],
+            "x": point[0]+2,
+            "y": -1.01144891*point[1]+309.86119429 + 20,
             "type": type
         })
     
@@ -773,14 +773,18 @@ df3 = get_combined_df(files3, rooms, seeds)
 
 data = {}
 
-df1 = get_scatter_dict(df1, data, 0, 5, 2, 1, "CNN")
-df2 = get_scatter_dict(df2, data, 2, 5, 2, 1, "D-BAT Ensemble - No Diversity")
-df3 = get_scatter_dict(df3, data, 5, 5, 2, 1, "D-BAT Ensemble")
+data = get_scatter_dict(df1, data, 0, 5, 2, 1, "CNN")
+data = get_scatter_dict(df2, data, 2, 5, 2, 1, "D-BAT - no diversity")
+data = get_scatter_dict(df3, data, 5, 5, 2, 1, "D-BAT")
 
-styles = [['r','.'],['g','x'],['b','+']]
+print(data)
+
+styles = [['r','.'],['c','x'],['w','+']]
 
 for key in data.keys():
+    print(key)
     scatter_df = pd.DataFrame.from_dict(data[key])
+    print(scatter_df)
     file_name = "scatter_room{}.png".format(key)
     fig = plt.figure()
     ax = fig.add_subplot()
@@ -789,19 +793,23 @@ for key in data.keys():
     ax.invert_yaxis()
     ax.axis('off')
     
-    for idx, type_name in enumerate(["CNN", "D-BAT Ensemble - No Diversity", "D-BAT Ensemble"]):
+    for idx, type_name in enumerate(["CNN", "D-BAT - no diversity", "D-BAT"]):
         
         minidf = scatter_df.loc[scatter_df['type'] == type_name]
+        print(type_name)
+        print(minidf)
     
         # ax.set_ylim([0,300])
         # ax.set_xlim([0,160])
-        ax.scatter(scatter_df['x'].to_list(), scatter_df['y'].to_list(), c=styles[idx][0], marker=styles[idx][1])
-        
-        
-    fig.savefig(file_name)
+        if len(minidf) > 0:
+            ax.scatter(minidf['x'].to_list(), minidf['y'].to_list(), c=styles[idx][0], marker=styles[idx][1], alpha=0.5, label=type_name)
+    
+    ax.legend()
+    
+    fig.savefig(file_name, bbox_inches="tight")
     plt.close(fig)
         
-
+print("all done")
 
 # key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
 
