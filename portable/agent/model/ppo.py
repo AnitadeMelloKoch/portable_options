@@ -384,8 +384,11 @@ class ActionPPO():
         done = [done]
         reset = [reset]
         
-        self.agent.batch_observe(obs,
-                                 reward,
-                                 done,
-                                 reset)
+        try:
+            self.agent.batch_observe(obs,
+                                    reward,
+                                    done,
+                                    reset)
+        except:
+            print("error occured in policy update")
     
