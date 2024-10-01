@@ -795,8 +795,7 @@ for key in data.keys():
     
         # ax.set_ylim([0,300])
         # ax.set_xlim([0,160])
-        print(scatter_df['x'])
-        ax.scatter(list(scatter_df['x']), list(scatter_df['y']), c=styles[idx, 0], marker=styles[idx,1])
+        ax.scatter(scatter_df['x'].to_list(), scatter_df['y'].to_list(), c=styles[idx][0], marker=styles[idx][1])
         
         
     fig.savefig(file_name)
