@@ -729,48 +729,34 @@ def room_scatter_plots(df, plot_folder):
                                                                                                              seed))
                         scatter_from_terms(term_points, scatter_folder)
 
-def joined_room_scatter(df, 
-                        plot_folder, 
-                        seed,
-                        env_idx,
-                        head_idxs,
-                        room_num):
-    room_plots = {}
-    markers = [".","X"]
+def get_scatter_dict(df,
+                     data,
+                     head_idx,
+                     env_idx,
+                     room_seen,
+                     seed,
+                     type):
     
-    for head_idx in head_idxs:
-        mini_df = df.loc[
-            (df['num_rooms']==room_num)&
-            (df['seed']==seed)&
-            (df['env_idx']==env_idx)&
-            (df['head_idx']==head_idx)
-        ]
-        if len(mini_df) > 0:
-            term_points = mini_df.iloc[-100:]['final_location']
-            
-            room_x = defaultdict(list)
-            room_y = defaultdict(list)
-            
-            for loc in term_points:
-                room_x[loc[2]].append(loc[0])
-                room_y[loc[2]].append(loc[1])
-            
-            for room in room_x.keys():
-                if room not in room_plots:
-                    fig = plt.figure()
-                    ax = fig.add_subplot()
-                    ax.set_ylim([0,300])
-                    ax.set_xlim([0,160])
-                    room_plots[room] = (fig, ax)
-                
-                room_plots[room][1].scatter(room_x[room], room_y[room])
+    mini_df = df.loc[
+        (df['num_rooms'] == room_seen)&
+        (df['seed'] == seed)&
+        (df['env_idx'] == env_idx)&
+        (df['head_idx'] == head_idx)
+    ]
     
-    scatter_folder = os.path.join(plot_folder, "envidx{}_numrooms{}_seed{}".format(env_idx,
-                                                                                   room_num,
-                                                                                   seed))
-    for room in room_plots.keys():
-        file_name = os.path.join(scatter_folder, "heads_{}_{}".format(head_idxs[0], head_idxs[1]))
-        room_plots[room][1].savefig(file_name)
+    term_points = mini_df.iloc[-100:]['final_location']
+    for point in term_points:
+        room = point[2]
+        if room not in data:
+            data[room] = []
+        
+        data[room].append({
+            "x": point[0],
+            "y": point[1],
+            "type": type
+        })
+    
+    return data
             
 
 
@@ -780,11 +766,50 @@ files1 = get_data_files(file_dir, "ladders_one_head")
 files2 = get_data_files(file_dir, "ladders_no_div")
 files3 = get_data_files(file_dir, "ladders")
 rooms, seeds = get_rooms_seeds(files1, 1)
-key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
 
-df = get_combined_df(files3, rooms, seeds)
+df1 = get_combined_df(files1, rooms, seeds)
+df2 = get_combined_df(files2, rooms, seeds)
+df3 = get_combined_df(files3, rooms, seeds)
 
-room_scatter_plots(df, "runs/scatter_ladder")
+data = {}
+
+df1 = get_scatter_dict(df1, data, 0, 5, 2, 1, "CNN")
+df2 = get_scatter_dict(df2, data, 2, 5, 2, 1, "D-BAT Ensemble - No Diversity")
+df3 = get_scatter_dict(df3, data, 5, 5, 2, 1, "D-BAT Ensemble")
+
+styles = [['r','.'],['g','x'],['b','+']]
+
+for key in data.keys():
+    scatter_df = pd.DataFrame.from_dict(data[key])
+    file_name = "scatter_room{}.png".format(key)
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    back = np.load("room_backgrounds/room{}.npy".format(key))
+    ax.imshow(back)
+    ax.invert_yaxis()
+    ax.axis('off')
+    
+    for idx, type_name in enumerate(["CNN", "D-BAT Ensemble - No Diversity", "D-BAT Ensemble"]):
+        
+        minidf = scatter_df.loc[scatter_df['type'] == type_name]
+    
+        # ax.set_ylim([0,300])
+        # ax.set_xlim([0,160])
+        print(scatter_df['x'])
+        ax.scatter(list(scatter_df['x']), list(scatter_df['y']), c=styles[idx, 0], marker=styles[idx,1])
+        
+        
+    fig.savefig(file_name)
+    plt.close(fig)
+        
+
+
+# key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
+
+# df = get_combined_df(files3, rooms, seeds)
+
+# room_scatter_plots(df, "runs/scatter_ladder")
+
 
 # dist_df = []
 
