@@ -21,7 +21,7 @@ from experiments.divdis_monte.core.divdis_monte_hyperparam_search_experiment imp
 
 
 
-img_dir = "/home/nick/portable_options/resources/monte_images/"
+img_dir = ""
 # train using room 1 only
 positive_train_files = [img_dir+"screen_climb_down_ladder_termination_positive.npy"]
 negative_train_files = [img_dir+"screen_climb_down_ladder_termination_negative.npy",
