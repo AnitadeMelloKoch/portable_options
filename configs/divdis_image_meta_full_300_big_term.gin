@@ -55,7 +55,7 @@ DivDisOption.exp_type                                               = "minigrid"
 DivDisOption.tabular_beta                                           = 0.0
 DivDisOption.model_type                                             = "ppo"
 
-#UnbalancedSetDataset.data_dir                                       = "/users/ademello/data/ademello"
+#UnbalancedSetDataset.data_dir                                       = ""
 UnbalancedSetDataset.class_weights                                  = [0.7,0.3]
 
 
