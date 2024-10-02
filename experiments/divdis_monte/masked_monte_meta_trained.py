@@ -34,7 +34,7 @@ def make_bootstrap_env(init_states, termination_func, term_points):
     return env
 
 # env_state_dir = "./"
-env_state_dir = "/users/ademello/data/ademello/"
+env_state_dir = ""
 
 bootstrap_envs = [
     [[make_bootstrap_env(
