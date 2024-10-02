@@ -1,6 +1,7 @@
 # portable_options
 
-## training 
+## Relevant experiments
 ```bash
-python -m portable.train 
+ divdis_monte_policy_ladder_down.py
+ divdis_image_meta_full.py
 ```
