@@ -14,15 +14,17 @@ class PrintLayer(nn.Module):
         print(x.shape)
         return x
 
-def generate_random_boxes(batch_size, num_boxes_per_image, image_height, image_width):
+def generate_fixed_size_boxes(batch_size, num_boxes_per_image, image_height, image_width, box_width, box_height):
     """
-    Generates random bounding boxes for each image in a batch.
+    Generates fixed-size bounding boxes for each image in a batch with deterministic positions.
 
     Args:
     - batch_size (int): Number of images in the batch.
     - num_boxes_per_image (int): Number of boxes to generate per image.
     - image_height (int): Height of the input images.
     - image_width (int): Width of the input images.
+    - box_width (int): The fixed width of the bounding boxes.
+    - box_height (int): The fixed height of the bounding boxes.
 
     Returns:
     - boxes (Tensor): A tensor where each row represents a box in the form
@@ -30,16 +32,26 @@ def generate_random_boxes(batch_size, num_boxes_per_image, image_height, image_w
     """
     boxes = []
 
+    # Create a grid for deterministic placement
+    step_x = (image_width - box_width) // num_boxes_per_image
+    step_y = (image_height - box_height) // num_boxes_per_image
+
     for i in range(batch_size):
         image_boxes = []
-        for _ in range(num_boxes_per_image):
-            # Generate random top-left corner (x1, y1)
-            x1 = torch.randint(0, image_width - 5, (1,)).item()
-            y1 = torch.randint(0, image_height - 5, (1,)).item()
+        for j in range(num_boxes_per_image):
+            # Systematically place boxes in a grid-like pattern based on index
+            x1 = j * step_x
+            y1 = j * step_y
             
-            # Generate random bottom-right corner (x2, y2)
-            x2 = torch.randint(x1 + 1, image_width, (1,)).item()
-            y2 = torch.randint(y1 + 1, image_height, (1,)).item()
+            # Calculate bottom-right corner (x2, y2) based on fixed box size
+            x2 = x1 + box_width
+            y2 = y1 + box_height
+
+            # Ensure x2 and y2 stay within image bounds
+            if x2 > image_width:
+                x2 = image_width
+            if y2 > image_height:
+                y2 = image_height
             
             # Append the box coordinates as a list
             image_boxes.append([i, float(x1), float(y1), float(x2), float(y2)])  # Convert to float
@@ -49,6 +61,7 @@ def generate_random_boxes(batch_size, num_boxes_per_image, image_height, image_w
 
     # Concatenate all image boxes into a single tensor
     return torch.cat(boxes, dim=0)
+
 
 class RoI(nn.Module):
     """
@@ -73,9 +86,10 @@ class RoI(nn.Module):
         - Pooled features of shape (num_rois, C, output_size[0], output_size[1])
         """
         # Generate random RoIs for the sake of demonstration
-        rois = generate_random_boxes(64, 1, 8, 8)
+        batch_size = x.shape[0]  # Get the actual batch size of input
+        rois = generate_fixed_size_boxes(batch_size, 1, 400, 400, 200, 200)
         rois = rois.to(x.device).to(x.dtype)
-        output = torchvision.ops.roi_align(x, rois, output_size=(self.output_size, self.output_size), spatial_scale=self.spatial_scale)
+        output = torchvision.ops.roi_pool(x, rois, output_size=(self.output_size, self.output_size), spatial_scale=self.spatial_scale)
         return output
 
 class RoI_CNN(nn.Module):
@@ -95,7 +109,7 @@ class RoI_CNN(nn.Module):
             nn.ReLU(),
             
             # Apply RoI pooling
-            RoI(output_size=100, spatial_scale=1.0/16),
+            RoI(output_size=10, spatial_scale=1.0/10),
             
             nn.LazyConv2d(out_channels=64, kernel_size=4, stride=2, padding=0, bias=False),
             nn.BatchNorm2d(64),
@@ -115,22 +129,13 @@ class RoI_CNN(nn.Module):
         self.num_classes = num_classes 
 
     def forward(self, x, logits=False):
-        """
-        Forward pass through the RoI_CNN model.
-
-        Args:
-        - x: Input tensor of shape (N, C, H, W).
-        - logits (bool): If True, return raw logits, else return softmax probabilities.
-
-        Returns:
-        - pred: Tensor of shape (N, num_heads, num_classes) representing the predictions.
-        """
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
-        
         for idx in range(self.num_heads):
-            y = self.model[idx](x)
-            if not logits:
-                y = F.softmax(y, dim=-1)
-            pred[:, idx, :] = y
-
+            if logits:
+                y = self.model[idx](x)
+            else:
+                y = F.softmax(self.model[idx](x), dim=-1)
+            
+            pred[:,idx,:] = y
+                
         return pred
