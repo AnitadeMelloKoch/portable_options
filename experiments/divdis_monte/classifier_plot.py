@@ -60,10 +60,14 @@ for seed_idx, seed in enumerate(divdis):
 
 df = pd.DataFrame.from_dict(data_dict)
 
+df = df[df["Number of Seen Ladders"] < 5]
+
 plot = sns.lineplot(data=df, x="Number of Seen Ladders", y="Accuracy", hue="method", legend="full")
 
 handles, labels = plot.figure.axes[0].get_legend_handles_labels()
 plot.figure.axes[0].legend(handles=handles[0:], labels=labels[0:])
+plot.figure.axes[0].set_xticks([1,2,3,4])
+
 
 plot.figure.savefig('classifier_acc.png')
 
