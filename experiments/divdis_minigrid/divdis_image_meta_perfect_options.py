@@ -29,7 +29,6 @@ def make_random_getkey_env(train_colour, seed, collect_key=False):
         ),
         door_colour=door_colour,
         key_colours=key_cols,
-        time_limit=500,
         image_input=True,
         key_collected=collect_key,
         keep_colour=train_colour
@@ -49,7 +48,6 @@ train_envs = [
             normalize_obs=False
         ),
         door_colour="red",
-        time_limit=500,
         image_input=True,
         keep_colour="red"
         )],
@@ -65,7 +63,6 @@ train_envs = [
             normalize_obs=False
         ),
         door_colour="red",
-        time_limit=500,
         image_input=True,
         keep_colour="green"
         )],
@@ -81,7 +78,6 @@ train_envs = [
             normalize_obs=False
         ),
         door_colour="red",
-        time_limit=500,
         image_input=True,
         keep_colour="blue"
         )],
@@ -97,7 +93,6 @@ train_envs = [
             normalize_obs=False
         ),
         door_colour="red",
-        time_limit=500,
         image_input=True,
         pickup_colour="red",
         force_door_closed=True
@@ -114,7 +109,7 @@ train_envs = [
             normalize_obs=False
             ),
             door_colour="red",
-            time_limit=500,
+
             image_input=True,
             force_door_open=True
         )]
@@ -130,7 +125,7 @@ train_envs = [
             normalize_obs=False
             ),
             door_colour="red",
-            time_limit=500,
+
             image_input=True,
             force_door_open=True
         )]
@@ -146,7 +141,7 @@ train_envs = [
             normalize_obs=False
             ),
             door_colour="red",
-            time_limit=500,
+
             image_input=True,
             force_door_open=True
         )]

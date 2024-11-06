@@ -227,12 +227,6 @@ class DivDisMockOption():
                     self.video_generator.make_image(env.render("rgb_array"))
                     
             
-            # print("action", action)
-            # print(state)
-            # plt.imshow(np.transpose(state.cpu().numpy(), (1,2,0)))
-            # plt.show(block=False)
-            # input("continue")
-            
             next_state, reward, done, info = env.step(action)
             
             if type(next_state) is np.ndarray:
