@@ -185,6 +185,8 @@ class SetDataset():
                 data = data*255
             data = data.int()
             data = data.squeeze()
+            data = data.unsqueeze(0)
+            # print(data.shape)
             self.true_data = self.concatenate(self.true_data, data)
         self.true_length = len(self.true_data)
         self._set_batch_num()
@@ -220,6 +222,7 @@ class SetDataset():
                 data = data*255
             data = data.int()
             data = data.squeeze()
+            data = data.unsqueeze(0)
             self.false_data = self.concatenate(self.false_data, data)
         self.false_length = len(self.false_data)
         self._set_batch_num()
@@ -275,6 +278,7 @@ class SetDataset():
                 data = data*255
             data = data.int()
             data = data.squeeze()
+            data = data.unsqueeze(0)
             self.unlabelled_data = self.concatenate(self.unlabelled_data, data)
         self.unlabelled_data_length = len(self.unlabelled_data)
         self._set_batch_num()
