@@ -1,6 +1,6 @@
 gym
 atari-py
-numpy
+numpy<2
 opencv-python
 pfrl
 scikit-learn
