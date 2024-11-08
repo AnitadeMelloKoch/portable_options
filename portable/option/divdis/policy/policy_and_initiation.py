@@ -331,7 +331,6 @@ class PolicyWithInitiation(Agent):
     def act(self, obs, return_q=False):
                 
         obs = batch_states([obs], self.device, self.phi)
-        print(obs)
         obs = obs.float()
         if self.image_input:
             obs = self.cnn(obs)

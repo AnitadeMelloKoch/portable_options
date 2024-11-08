@@ -137,8 +137,8 @@ class DivDisOptionExperiment():
                                         policy_phi=policy_phi,
                                         video_generator=self.video_generator,
                                         plot_dir=os.path.join(self.plot_dir, "option"),
-                                        use_seed_for_initiation=True,
-                                        termination_phi=term_phi)
+                                        use_seed_for_initiation=True,)
+                                        # termination_phi=term_phi)
         
         set_start_method('spawn')
         self.experiment_data = []

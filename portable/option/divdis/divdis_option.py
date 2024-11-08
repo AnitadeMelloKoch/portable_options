@@ -256,7 +256,7 @@ class DivDisOption():
         policy.store_buffer_to_disk = store_buffer_bool
     
     def check_termination(self, idx, state, env):
-        term_state = state
+        term_state = self.policy_phi(state).unsqueeze(0)
                 
         pred_y = self.terminations.predict_idx(term_state, idx, use_phi=True)
         should_terminate = torch.argmax(pred_y) == 1

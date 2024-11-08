@@ -3,7 +3,6 @@ import random
 import numpy as np
 import torch
 
-from portable.option.sets.models.portable_set_decaying_div import EnsembleClassifierDecayingDiv
 from evaluation.model_wrappers import EnsembleClassifierWrapper
 from .utils import concatenate
 from captum.attr import IntegratedGradients, NoiseTunnel
