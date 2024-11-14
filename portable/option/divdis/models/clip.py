@@ -17,8 +17,8 @@ class Clip(nn.Module):
 
         # Custom convolutional and fully connected layers
         self.model = nn.ModuleList([nn.Sequential(
-                nn.LazyLinear(4),
-                nn.LazyLinear(8),
+                nn.LazyLinear(700),
+                nn.LazyLinear(500),
                 nn.LazyLinear(num_classes)
         ) for _ in range(num_heads)])
         

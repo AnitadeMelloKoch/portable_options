@@ -399,6 +399,7 @@ class DogExperiment():
             
 
             
+
     def room_by_room_train(self, room_list, unlabelled_train_files, history):
         for room_idx in tqdm(range(len(room_list)), desc='Room Progression'):
             room = room_list[room_idx]
@@ -406,19 +407,30 @@ class DogExperiment():
             print('===============================')
             print(f"Training on room {room}")
             logging.info(f"Training on room {room}")
-            
+
             cur_room_unlab = unlabelled_train_files[room_idx]
-            # Filter out directories
+            
+            # Filter out directories and ensure only files are loaded
             cur_room_unlab = [file for file in cur_room_unlab if os.path.isfile(file)]
-            cur_room_unlab = [np.load(file) for file in cur_room_unlab]
-            cur_room_unlab = [img for list in cur_room_unlab for img in list]
-            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab]
+            
+            # Attempt to load files
+            cur_room_unlab = [np.load(file) for file in cur_room_unlab if os.path.isfile(file)]
+            
+            # Flatten the list and convert to tensor
+            cur_room_unlab = [torch.from_numpy(img).float().squeeze() for img in cur_room_unlab for img in cur_room_unlab]
+
+            # Check if `cur_room_unlab` is empty and skip if it is
+            if not cur_room_unlab:
+                print(f"No data found for room {room}, skipping.")
+                logging.warning(f"No data found for room {room}, skipping.")
+                continue
+
             self.classifier.dataset.add_unlabelled_data(cur_room_unlab)
             
             self.train_classifier(self.per_room_epochs)
                 
             accuracy_pos, accuracy_neg, accuracy, weighted_acc = self.test_classifier()
-                                                        
+
             print(f"Weighted Accuracy: \n{np.round(weighted_acc, 2)}")
             print(f"Accuracy: \n{np.round(accuracy, 2)}")
 
@@ -427,19 +439,19 @@ class DogExperiment():
             best_accuracy = accuracy[best_head_idx]
             best_true_acc = accuracy_pos[best_head_idx]
             best_false_acc = accuracy_neg[best_head_idx]
-            
+
             history['weighted_accuracy'].append(best_weighted_acc)
             history['raw_accuracy'].append(best_accuracy)
             history['true_accuracy'].append(best_true_acc)
             history['false_accuracy'].append(best_false_acc)
-            
-            if self.uncertain_test_files is not None:
-                uncertainty = self.test_uncertainty()
-                print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
-                best_head_uncertainty = uncertainty[best_head_idx]
-                history['uncertainty'].append(best_head_uncertainty)
 
-        # save history to pickle
+            # if self.uncertain_test_files is not None:
+            #     uncertainty = self.test_uncertainty()
+            #     print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
+            #     best_head_uncertainty = uncertainty[best_head_idx]
+            #     history['uncertainty'].append(best_head_uncertainty)
+
+        # Save history to pickle
         with open(os.path.join(self.log_dir, 'room_progression_metrics'), 'wb') as f:
             pickle.dump(history, f)
         self.plot_metrics(history, 'room', 'room_progression_metrics')
@@ -448,7 +460,7 @@ class DogExperiment():
         logging.info("All unlabelled rooms added, now running additional training loops")
 
         return history
-        
+
 
     def additional_train(self, num_loops=20): 
         history = {
@@ -457,8 +469,8 @@ class DogExperiment():
             'true_accuracy': [],
             'false_accuracy': [],
         }
-        if self.uncertain_test_files is not None:
-            history['uncertainty'] = []
+        # if self.uncertain_test_files is not None:
+        #     history['uncertainty'] = []
 
             
         for i in tqdm(range(num_loops), desc='Additional Training Loops'):
@@ -484,11 +496,11 @@ class DogExperiment():
             history['true_accuracy'].append(best_true_acc)
             history['false_accuracy'].append(best_false_acc)
 
-            if self.uncertain_test_files is not None:
-                uncertainty = self.test_uncertainty()
-                print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
-                best_head_uncertainty = uncertainty[best_head_idx]
-                history['uncertainty'].append(best_head_uncertainty)
+            # if self.uncertain_test_files is not None:
+            #     uncertainty = self.test_uncertainty()
+            #     print(f"Uncertainty: \n{np.round(uncertainty, 2)}")
+            #     best_head_uncertainty = uncertainty[best_head_idx]
+            #     history['uncertainty'].append(best_head_uncertainty)
 
 
         # save history to pickle

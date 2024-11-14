@@ -23,8 +23,8 @@ import os
 import random
 
 # Define the directory containing the images
-img_dir = "/home/yyang239/divdis/portable_options/resources/dog_images"
-
+img_dir = "/oscar/data/gdk/yyang239/portable_options/resources/dog_images"
+print(img_dir)
 # List all the files in the directory
 files = os.listdir(img_dir)
 
