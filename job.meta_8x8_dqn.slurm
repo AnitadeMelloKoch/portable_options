@@ -14,4 +14,4 @@ conda activate port-options
 
 export OMPI_MCA_btl_tcp_if_include=10.42.0.0/24
 
-python -um experiments.divdis_minigrid.baseline_dqn --config_file configs/baseline_minigrid_dqn.gin --base_dir runs --seed 12
+python -um experiments.divdis_minigrid.baseline_dqn --config_file configs/baseline_minigrid_dqn.gin --base_dir runs --seed 19
