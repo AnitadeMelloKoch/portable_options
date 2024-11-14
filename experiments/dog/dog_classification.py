@@ -76,76 +76,76 @@ room_list = [0, 4, 3, 9, 8, 10, 11, 5, #12 here, has nothing
              21, 19, 18]
 
 
-# if __name__ == "__main__":
-#         parser = argparse.ArgumentParser()
+if __name__ == "__main__":
+        parser = argparse.ArgumentParser()
 
-#         parser.add_argument("--base_dir", type=str, required=True)
-#         parser.add_argument("--seed", type=int, required=True)
-#         parser.add_argument("--config_file", nargs='+', type=str, required=True)
-#         parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
-#                 ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
-#                 ' "create_atari_environment.game_name="Pong"").')
+        parser.add_argument("--base_dir", type=str, required=True)
+        parser.add_argument("--seed", type=int, required=True)
+        parser.add_argument("--config_file", nargs='+', type=str, required=True)
+        parser.add_argument("--gin_bindings", default=[], help='Gin bindings to override the values' + 
+                ' set in the config files (e.g. "DQNAgent.epsilon_train=0.1",' +
+                ' "create_atari_environment.game_name="Pong"").')
 
-#         args = parser.parse_args()
-#         print("args:", args)
-#         load_gin_configs(args.config_file, args.gin_bindings)
+        args = parser.parse_args()
+        print("args:", args)
+        load_gin_configs(args.config_file, args.gin_bindings)
 
-#         multiprocessing.set_start_method('spawn')
+        multiprocessing.set_start_method('spawn')
 
-#         seeds = [args.seed * i for i in range(1, 6)]
-#         room_histories = []
-#         additional_histories = []
+        seeds = [args.seed * i for i in range(1, 6)]
+        room_histories = []
+        additional_histories = []
 
-#         for seed in seeds:
-#             print(f"Running experiment for seed {seed}")
+        for seed in seeds:
+            print(f"Running experiment for seed {seed}")
         
-#             experiment = DogExperiment(base_dir=args.base_dir,
-#                                         seed=seed,
-#                                         use_gpu=False)
+            experiment = DogExperiment(base_dir=args.base_dir,
+                                        seed=seed,
+                                        use_gpu=False)
 
-#             experiment.add_train_files(chihuahua_train_labeled,
-#                                        spaniel_train_labeled,
-#                                        unlabeled_data)
-#             experiment.add_test_files(chihuahua_test,
-#                                       spaniel_test)
+            experiment.add_train_files(chihuahua_train_labeled,
+                                       spaniel_train_labeled,
+                                       unlabeled_data)
+            experiment.add_test_files(chihuahua_test,
+                                      spaniel_test)
             
-#             experiment.train_classifier(experiment.initial_epochs)
+            experiment.train_classifier(experiment.initial_epochs)
 
-#             print("Training on room 1 only")
-#             logging.info("Training on room 1 only")
-#             accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier()
-#             uncertainty = experiment.test_uncertainty()
+            print("Training on room 1 only")
+            logging.info("Training on room 1 only")
+            accuracy_pos, accuracy_neg, accuracy, weighted_acc = experiment.test_classifier()
+            uncertainty = experiment.test_uncertainty()
                                                         
-#             print(f"Weighted Accuracy: {weighted_acc}")
-#             print(f"Accuracy: {accuracy}")
-#             print(f"Uncertainty: {uncertainty}")
+            print(f"Weighted Accuracy: {weighted_acc}")
+            print(f"Accuracy: {accuracy}")
+            print(f"Uncertainty: {uncertainty}")
 
-#             best_weighted_acc = np.max(weighted_acc)
-#             best_head_idx = np.argmax(weighted_acc)
-#             best_accuracy = accuracy[best_head_idx]
-#             best_true_acc = accuracy_pos[best_head_idx]
-#             best_false_acc = accuracy_neg[best_head_idx]
-#             best_head_uncertainty = uncertainty[best_head_idx]
+            best_weighted_acc = np.max(weighted_acc)
+            best_head_idx = np.argmax(weighted_acc)
+            best_accuracy = accuracy[best_head_idx]
+            best_true_acc = accuracy_pos[best_head_idx]
+            best_false_acc = accuracy_neg[best_head_idx]
+            best_head_uncertainty = uncertainty[best_head_idx]
 
-#             history = {
-#             'weighted_accuracy': [best_weighted_acc],
-#             'raw_accuracy': [best_accuracy],
-#             'true_accuracy': [best_true_acc], 
-#             'false_accuracy': [best_false_acc],
-#             'uncertainty': [best_head_uncertainty]
-#         }
+            history = {
+            'weighted_accuracy': [best_weighted_acc],
+            'raw_accuracy': [best_accuracy],
+            'true_accuracy': [best_true_acc], 
+            'false_accuracy': [best_false_acc],
+            'uncertainty': [best_head_uncertainty]
+        }
 
-#             history = experiment.room_by_room_train(room_list, unlabeled_data, history)
-#             room_histories.append(history)
+            history = experiment.room_by_room_train(room_list, unlabeled_data, history)
+            room_histories.append(history)
 
-#             print("All unlabelled rooms added, now running additional training loops")
-#             logging.info("All unlabelled rooms added, now running additional training loops")
+            print("All unlabelled rooms added, now running additional training loops")
+            logging.info("All unlabelled rooms added, now running additional training loops")
 
-#             history = experiment.additional_train()
-#             additional_histories.append(history)
+            history = experiment.additional_train()
+            additional_histories.append(history)
     
-#         experiment.plot_metrics(room_histories, 'room', 'avg_room_train_metrics')
-#         experiment.plot_metrics(additional_histories, 'additional train loops', 'avg_additional_train_metrics')
+        experiment.plot_metrics(room_histories, 'room', 'avg_room_train_metrics')
+        experiment.plot_metrics(additional_histories, 'additional train loops', 'avg_additional_train_metrics')
         
         #num_batch = 1
         #view_acc = experiment.view_false_predictions(positive_test_files, negative_test_files, num_batch)
