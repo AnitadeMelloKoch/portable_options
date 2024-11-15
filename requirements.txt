@@ -1,13 +1,13 @@
 gym
 atari-py
-numpy
+numpy<2
 opencv-python
 pfrl
 scikit-learn
 scipy>=1.13.0
 seeding
 threadpoolctl
-torch
+torch=2.2.2
 typing-extensions
 matplotlib
 dill
