@@ -5,6 +5,8 @@
 #SBATCH --time=1-00:00:00
 #SBATCH --error=<clip>.%J.err
 #SBATCH --output=<clip>.%J.out
+#SBATCH --mail-type=END
+#SBATCH --mail-user=yuechuan_yang@brown.edu
 
 module load miniconda3/23.11.0s
 
