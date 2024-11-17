@@ -75,7 +75,7 @@ if __name__ == "__main__":
         
             experiment = DogExperiment(base_dir=args.base_dir,
                                                             seed=seed,
-                                                            use_gpu = False)
+                                                            use_gpu = True)
 
             experiment.add_train_files(train_chihuahua,
                                        train_spaniel,
