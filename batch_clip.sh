@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p gpu
-#SBATCH --gres gpu:5
+#SBATCH --gres gpu:2
 #SBATCH --mem=64G
 #SBATCH --time=1-00:00:00
 #SBATCH --error=<clip_epoch1>.%J.err
