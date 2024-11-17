@@ -10,8 +10,8 @@ DogExperiment.classifier_head_num            = 8
 DogExperiment.classifier_learning_rate       = 5e-4 #1e-3
 DogExperiment.classifier_diversity_weight    = 3e-5 #1e-3
 DogExperiment.classifier_l2_reg_weight       = 5e-4 #1e-2
-DogExperiment.classifier_initial_epochs      = 40
-DogExperiment.classifier_per_room_epochs     = 40
+DogExperiment.classifier_initial_epochs      = 1
+DogExperiment.classifier_per_room_epochs     = 1
 
 
 DivDisClassifier.dataset_batchsize = 64
