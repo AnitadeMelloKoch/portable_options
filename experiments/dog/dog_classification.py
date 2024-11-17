@@ -1,80 +1,54 @@
-import os
 import logging
 import multiprocessing
-import random
-import argparse
-import numpy as np
-import torch
-import torch.nn as nn
-import gin
-
-from pyexpat import model
-from experiments.dog.core.dog_experiment import DogExperiment
-from portable.utils.utils import load_gin_configs
-from portable.option.memory import SetDataset, UnbalancedSetDataset
-from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
-from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16, MinigridCNNLarge
-from portable.option.divdis.models.minigrid_cnn import MinigridCNN
-from portable.option.divdis.models.monte_cnn import MonteCNN
-from portable.option.divdis.models.clip import Clip
-from portable.option.divdis.divdis import DivDisLoss
-
+from itertools import chain
 import os
+from experiments.dog.core.dog_experiment import DogExperiment
+import argparse 
+from portable.utils.utils import load_gin_configs
 import random
+import numpy as np
 
-# Define the directory containing the images
 img_dir = "/oscar/data/gdk/yyang239/portable_options/resources/dog_images"
-print(img_dir)
-# List all the files in the directory
-files = os.listdir(img_dir)
+# img_dir = "/home/yyang239/divdis/portable_options/resources/dog_images"
+# Loop through all files in the directory
+chihuahua = []
+spaniel = []
+for filename in os.listdir(img_dir):
+    # Check if the file starts with 'chihuahua_'
+    if filename.startswith('chihuahua_'):
+        # positive
+        chihuahua.append(img_dir+'/'+filename)
+    else:
+        # negative
+        spaniel.append(img_dir+'/'+filename)
 
-# Initialize empty lists to store filtered file paths
-chihuahua_files = []
-spaniel_files = []
-
-# Filter the files based on breed
-for file in files:
-    file_path = os.path.join(img_dir, file)
+# Function to split data into 20%, 60%, and 20%
+def split_data(data_list):
+    # Shuffle the data
+    random.shuffle(data_list)
     
-    if 'chihuahua' in file.lower() and file.endswith('.npy'):
-        chihuahua_files.append(file_path)
-        
-    elif 'spaniel' in file.lower() and file.endswith('.npy'):
-        spaniel_files.append(file_path)
-
-# Shuffle the files for random partitioning
-random.shuffle(chihuahua_files)
-random.shuffle(spaniel_files)
-
-# Define partition percentages
-def partition_data(files, label_percent, unlabel_percent, test_percent):
-    total = len(files)
+    # Split into 20%, 60%, and 20%
+    n = len(data_list)
+    split_20 = int(0.2 * n)
+    split_60 = int(0.6 * n)
     
-    # Compute the split indices
-    label_count = int(total * label_percent)
-    unlabel_count = int(total * unlabel_percent)
+    # Create splits
+    unlabeled_data = data_list[:split_20]
+    train_data = data_list[split_20:split_20 + split_60]
+    test_data = data_list[split_20 + split_60:]
     
-    # Partition the data
-    labeled = files[:label_count]
-    unlabeled = files[label_count:label_count + unlabel_count]
-    test = files[label_count + unlabel_count:]
-    
-    return labeled, unlabeled, test
+    return unlabeled_data, train_data, test_data
 
-# Partition chihuahua files
-chihuahua_train_labeled, chihuahua_train_unlabeled, chihuahua_test = partition_data(chihuahua_files, 0.2, 0.3, 0.5)
+# Split the data for chihuahua and spaniel
+unlabeled_chihuahua, train_chihuahua, test_chihuahua = split_data(chihuahua)
+unlabeled_spaniel, train_spaniel, test_spaniel = split_data(spaniel)
 
-# Partition spaniel files
-spaniel_train_labeled, spaniel_train_unlabeled, spaniel_test = partition_data(spaniel_files, 0.2, 0.3, 0.5)
-unlabeled_data = chihuahua_train_unlabeled + spaniel_train_unlabeled
+# Combine the unlabeled data from both categories
+unlabeled_data = unlabeled_chihuahua + unlabeled_spaniel
 
-# Output the counts for each category
-print(f"Chihuahua - Labeled: {len(chihuahua_train_labeled)}, Unlabeled: {len(chihuahua_train_unlabeled)}, Test: {len(chihuahua_test)}")
-print(f"Spaniel - Labeled: {len(spaniel_train_labeled)}, Unlabeled: {len(spaniel_train_unlabeled)}, Test: {len(spaniel_test)}")
 room_list = [0, 4, 3, 9, 8, 10, 11, 5, #12 here, has nothing
              13, 7, 6, 2, 14, 22, # 23 
              21, 19, 18]
-
 
 if __name__ == "__main__":
         parser = argparse.ArgumentParser()
@@ -87,7 +61,7 @@ if __name__ == "__main__":
                 ' "create_atari_environment.game_name="Pong"").')
 
         args = parser.parse_args()
-        print("args:", args)
+
         load_gin_configs(args.config_file, args.gin_bindings)
 
         multiprocessing.set_start_method('spawn')
@@ -100,14 +74,14 @@ if __name__ == "__main__":
             print(f"Running experiment for seed {seed}")
         
             experiment = DogExperiment(base_dir=args.base_dir,
-                                        seed=seed,
-                                        use_gpu=False)
+                                                            seed=seed,
+                                                            use_gpu = False)
 
-            experiment.add_train_files(chihuahua_train_labeled,
-                                       spaniel_train_labeled,
+            experiment.add_train_files(train_chihuahua,
+                                       train_spaniel,
                                        unlabeled_data)
-            experiment.add_test_files(chihuahua_test,
-                                      spaniel_test)
+            experiment.add_test_files(test_chihuahua,
+                                      test_spaniel)
             
             experiment.train_classifier(experiment.initial_epochs)
 
@@ -152,4 +126,3 @@ if __name__ == "__main__":
         #print(f"Viewing {num_batch} of Predictions:")
         #print(f"Accuracy: {view_acc[0]}")
         #print(f"Weighted Accuracy: {view_acc[1]}")
-
