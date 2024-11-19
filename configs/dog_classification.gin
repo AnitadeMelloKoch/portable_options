@@ -2,7 +2,7 @@ import experiments.dog.core.dog_experiment
 import portable.option.divdis.divdis_classifier
 
 DogExperiment.experiment_name                = "dog_classification"
-DogExperiment.use_gpu                        = False
+DogExperiment.use_gpu                        = True
 
 DogExperiment.classifier_num_classes         = 2
 

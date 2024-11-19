@@ -8,8 +8,8 @@ from portable.utils.utils import load_gin_configs
 import random
 import numpy as np
 
-# img_dir = "/oscar/data/gdk/klee175/portable_options/resources/dog_images"
-img_dir = "/Users/kylelee/Desktop/PortableOptionsClassifier/portable_options/resources/dog_images"
+img_dir = "/oscar/data/gdk/klee175/portable_options/resources/dog_images"
+# img_dir = "/Users/kylelee/Desktop/PortableOptionsClassifier/portable_options/resources/dog_images"
 # Loop through all files in the directory
 chihuahua = []
 spaniel = []
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         
             experiment = DogExperiment(base_dir=args.base_dir,
                                                             seed=seed,
-                                                            use_gpu = False)
+                                                            use_gpu = True)
 
             experiment.add_train_files(train_chihuahua,
                                        train_spaniel,
