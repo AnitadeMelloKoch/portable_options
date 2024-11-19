@@ -14,5 +14,5 @@ DogExperiment.classifier_initial_epochs      = 130
 DogExperiment.classifier_per_room_epochs     = 130
 
 
-DivDisClassifier.dataset_batchsize = 64
+DivDisClassifier.dataset_batchsize = 16
 
