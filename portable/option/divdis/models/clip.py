@@ -14,6 +14,7 @@ class Clip(nn.Module):
 
         # Load CLIP model and processor
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
+        print(self.clip_model.device)
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
@@ -28,9 +29,12 @@ class Clip(nn.Module):
                 nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ])
-
+        self.model.to(device)
+        print(self.model.to(device))
+        
         self.num_heads = num_heads
         self.num_classes = num_classes
+        
 
     def forward(self, images):
         # Preprocess the images
@@ -38,7 +42,7 @@ class Clip(nn.Module):
         
         # Extract image features using CLIP
         with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(**inputs)
+            embeddings = self.clip_model.get_image_features(**inputs).to(device)
 
         # Apply custom layers on the embeddings
         predictions = torch.zeros(images.size(0), self.num_heads, self.num_classes).to(device)

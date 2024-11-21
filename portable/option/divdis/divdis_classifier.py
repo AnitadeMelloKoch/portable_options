@@ -38,11 +38,11 @@ class DivDisClassifier():
                  unlabelled_dataset_batchsize=None,
                  summary_writer=None,
                  model_name='minigrid_cnn') -> None:
-        if use_gpu == 0:
+        if use_gpu == -1:
             self.device = torch.device('cpu')
         else:
-            self.device = torch.device('cuda')
-            # self.device = torch.device('cuda:{}'.format(use_gpu))
+            # self.device = torch.device('cuda')
+            self.device = torch.device('cuda:{}'.format(use_gpu))
         self.dataset = SetDataset(max_size=dataset_max_size,
                                             batchsize=dataset_batchsize,
                                             unlabelled_batchsize=unlabelled_dataset_batchsize)
