@@ -19,8 +19,10 @@ class Clip(nn.Module):
         # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(embedding_dim, 128),
+                nn.Linear(embedding_dim, 256),
                 nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),                
                 nn.Linear(128, 64),
                 nn.ReLU(),
                 nn.Linear(64, num_classes)
