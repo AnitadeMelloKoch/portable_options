@@ -31,7 +31,7 @@ class Clip(nn.Module):
         ])
         self.model.to(device)
         for i, module in enumerate(self.model):
-            print("2:", module.device)
+            print("2:", next(module[0].parameters()).device)
         
         self.num_heads = num_heads
         self.num_classes = num_classes
