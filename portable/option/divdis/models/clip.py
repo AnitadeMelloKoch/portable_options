@@ -14,8 +14,8 @@ class Clip(nn.Module):
 
         # Load CLIP model and processor
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        print(self.clip_model.device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name).to(device)
+        print("1:", self.clip_model.device)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
         self.model = nn.ModuleList([
@@ -30,7 +30,7 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ])
         self.model.to(device)
-        print(self.model.to(device))
+        print("2:", self.model.to(device))
         
         self.num_heads = num_heads
         self.num_classes = num_classes
