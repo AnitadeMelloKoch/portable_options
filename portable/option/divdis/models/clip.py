@@ -30,7 +30,8 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ])
         self.model.to(device)
-        print("2:", self.model.device)
+        for i, module in enumerate(self.model):
+            print("2:", module.device)
         
         self.num_heads = num_heads
         self.num_classes = num_classes
