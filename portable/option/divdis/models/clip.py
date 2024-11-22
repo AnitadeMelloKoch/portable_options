@@ -21,13 +21,13 @@ class Clip(nn.Module):
         self.model = nn.ModuleList([
             nn.Sequential(
                 
-                nn.LazyLinear(embedding_dim, 256),
-                # nn.ReLU(),
-                nn.LazyLinear(256, 128),
-                # nn.ReLU(),
-                nn.LazyLinear(128, 64),
-                # nn.ReLU(),
-                nn.LazyLinear(64, num_classes)
+                nn.Linear(embedding_dim, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ]).to(device)
 
