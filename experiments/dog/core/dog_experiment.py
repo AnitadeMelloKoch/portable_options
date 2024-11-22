@@ -83,7 +83,8 @@ class DogExperiment():
         
         logging.basicConfig(filename=log_file, 
                             format='%(asctime)s %(levelname)s: %(message)s',
-                            level=logging.INFO)
+                            level=logging.INFO,
+                            force=True)
         
         logging.info("[experiment] Beginning experiment {} seed {}".format(self.experiment_name, self.seed))
         logging.info("======== HYPERPARAMETERS ========")
