@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
         multiprocessing.set_start_method('spawn')
 
-        seeds = [args.seed * i for i in range(1, 6)]
+        seeds = [args.seed * i for i in range(1, 2)]
         room_histories = []
         additional_histories = []
 

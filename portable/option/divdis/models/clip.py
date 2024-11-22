@@ -13,25 +13,25 @@ class Clip(nn.Module):
         super().__init__()
 
         # Load CLIP model and processor
-        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        print("1:", self.clip_model.device)
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name)
+        # print("1:", self.clip_model.device)
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(embedding_dim, 256),
-                nn.ReLU(),
-                nn.Linear(256, 128),
-                nn.ReLU(),                
-                nn.Linear(128, 64),
-                nn.ReLU(),
-                nn.Linear(64, num_classes)
+                nn.LazyLinear(embedding_dim, 256),
+                # nn.ReLU(),
+                nn.LazyLinear(256, 128),
+                # nn.ReLU(),                
+                nn.LazyLinear(128, 64),
+                # nn.ReLU(),
+                nn.LazyLinear(64, num_classes)
             ) for _ in range(num_heads)
         ])
-        self.model.to(device)
-        for i, module in enumerate(self.model):
-            print("2:", next(module[0].parameters()).device)
+        # self.model.to(device)
+        # for i, module in enumerate(self.model):
+        #     print("2:", next(module[0].parameters()).device)
         
         self.num_heads = num_heads
         self.num_classes = num_classes
@@ -39,10 +39,11 @@ class Clip(nn.Module):
 
     def forward(self, images):
         # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt").to(device)
-        
+        inputs = self.processor(images=images, return_tensors="pt")
+        # inputs = self.processor(images=images, return_tensors="pt").to(device)
         # Extract image features using CLIP
         with torch.no_grad():
+            # embeddings = self.clip_model.get_image_features(**inputs).to(device)
             embeddings = self.clip_model.get_image_features(**inputs).to(device)
 
         # Apply custom layers on the embeddings
