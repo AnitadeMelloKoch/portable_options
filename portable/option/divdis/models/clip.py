@@ -10,7 +10,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 clip_model_name = "openai/clip-vit-base-patch32"
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=800):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
         # Load CLIP model and processor
@@ -20,10 +20,7 @@ class Clip(nn.Module):
         # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                
-                nn.Linear(embedding_dim, 256),
-                nn.ReLU(),
-                nn.Linear(256, 128),
+                nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
                 nn.Linear(128, 64),
                 nn.ReLU(),
