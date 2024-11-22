@@ -44,7 +44,7 @@ class Clip(nn.Module):
         # Extract image features using CLIP
         with torch.no_grad():
             # embeddings = self.clip_model.get_image_features(**inputs).to(device)
-            embeddings = self.clip_model.get_image_features(**inputs).to(device)
+            embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
         predictions = torch.zeros(images.size(0), self.num_heads, self.num_classes).to(device)
