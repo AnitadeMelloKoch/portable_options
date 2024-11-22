@@ -20,13 +20,13 @@ class Clip(nn.Module):
         # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(embedding_dim, 256),
-                # nn.ReLU(),
+                nn.Linear(embedding_dim, 256),
+                nn.ReLU(),
                 nn.LazyLinear(256, 128),
-                # nn.ReLU(),                
-                nn.LazyLinear(128, 64),
-                # nn.ReLU(),
-                nn.LazyLinear(64, num_classes)
+                nn.ReLU(),                
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ])
         # self.model.to(device)
