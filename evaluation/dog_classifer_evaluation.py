@@ -4,7 +4,6 @@ import random
 import re
 import warnings
 import torch
-import progressbar
 #from evaluators import DivDisEvaluatorClassifier
 from evaluation.evaluators.divdis_evaluator_classifier import DivDisEvaluatorClassifier
 
