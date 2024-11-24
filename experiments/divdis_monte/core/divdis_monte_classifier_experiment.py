@@ -43,7 +43,6 @@ class MonteDivDisClassifierExperiment():
                  experiment_name,
                  seed,
                  use_gpu,
-                 F
                  classifier_num_classes,
                  
                  classifier_head_num,

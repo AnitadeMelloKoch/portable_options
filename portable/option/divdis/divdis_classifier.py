@@ -43,7 +43,7 @@ class DivDisClassifier():
         else:
             self.device = torch.device('cuda')
             # self.device = torch.device('cuda:{}'.format(use_gpu))
-        self.dataset = SetDataset(max_size=dataset_max_size,
+        self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
                                             batchsize=dataset_batchsize,
                                             unlabelled_batchsize=unlabelled_dataset_batchsize)
         # self.dataset = ImageNetDataset(max_size=dataset_max_size,

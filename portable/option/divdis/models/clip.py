@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
+from torchvision.transforms import ToPILImage
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,8 +33,22 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
+        # Debugging: Check the type and shape of images
+        # print(f"Type of images: {type(images)}")
+        # if isinstance(images, torch.Tensor):
+        #     print(f"Shape of images: {images.shape}")
+        # elif isinstance(images, list) and isinstance(images[0], torch.Tensor):
+        #     print(f"Shape of first image in list: {images[0].shape}")
+
+        # Convert tensor images to PIL if necessary
+        if isinstance(images, torch.Tensor):
+            # Ensure pixel values are in [0, 255]
+            if images.dtype != torch.uint8:  
+                images = (images * 255).byte()
+            images = [ToPILImage()(img) for img in images]
+
         # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt")
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
@@ -43,7 +58,7 @@ class Clip(nn.Module):
             embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
-        batch_size = images.size(0)
+        batch_size = len(images) if isinstance(images, list) else images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
@@ -52,7 +67,8 @@ class Clip(nn.Module):
         predictions = F.softmax(predictions, dim=-1)
         return predictions
 
-# # Example usage:
+
+# # Example usage
 # if __name__ == "__main__":
 #     # Number of classes and heads
 #     num_classes = 10
