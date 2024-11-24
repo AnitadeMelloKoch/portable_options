@@ -26,6 +26,12 @@ class YOLOEnsemble(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
+        # Ensure input is [batch_size, 3, height, width]
+        if x.ndim == 3:  # If missing channel dimension
+            x = x.unsqueeze(1)  # Add channel dimension
+        if x.shape[1] == 1:  # If grayscale, repeat to make RGB
+            x = x.repeat(1, 3, 1, 1)
+
         # Access backbone and neck layers (not including the final detection head)
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
