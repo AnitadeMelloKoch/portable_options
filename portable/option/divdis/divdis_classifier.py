@@ -216,7 +216,7 @@ class DivDisClassifier():
         
     def predict(self, x):
         self.classifier.eval()
-        
+
         # Ensure input has batch dimension
         if len(x.shape) == self.state_dim:  # Likely [height, width]
             x = x.unsqueeze(0)  # Add batch dimension -> [1, height, width]
@@ -225,10 +225,11 @@ class DivDisClassifier():
         if len(x.shape) == 3:  # If shape is [batch_size, height, width]
             x = x.unsqueeze(1)  # Add channel dimension -> [batch_size, 1, height, width]
 
-        # Convert single channel (grayscale) to RGB
-        if x.shape[1] == 1:  # Single channel
-            x = x.repeat(1, 3, 1, 1)  # Repeat along the channel dimension -> [batch_size, 3, height, width]
-        
+        # If input has 64 channels, reduce to 3 channels
+        if x.shape[1] != 3:
+            x = x.mean(dim=1, keepdim=True)  # [batch_size, 1, height, width]
+            x = x.repeat(1, 3, 1, 1)  # Convert to RGB -> [batch_size, 3, height, width]
+
         # Move to device
         x = x.to(self.device)
         
@@ -242,6 +243,7 @@ class DivDisClassifier():
         self.votes = votes
         
         return pred_y, votes
+
 
         
     def predict_idx(self, x, idx):
