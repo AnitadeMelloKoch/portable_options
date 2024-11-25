@@ -105,12 +105,12 @@ class DivDisClassifier():
         )
     
     def reset_classifier(self):
-        if self.model_name == "minigrid_cnn":
-            #self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
-            #                                   num_heads=self.head_num)
-            self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
-                                                  num_heads=self.head_num)
-        elif self.model_name == "monte_cnn":
+        # if self.model_name == "minigrid_cnn":
+        #     #self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
+        #     #                                   num_heads=self.head_num)
+        #     self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
+        #                                           num_heads=self.head_num)
+        if self.model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
         elif self.model_name == "clip":
