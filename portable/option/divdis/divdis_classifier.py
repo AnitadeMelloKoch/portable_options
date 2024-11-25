@@ -219,28 +219,28 @@ class DivDisClassifier():
         
     def predict(self, x):
         self.classifier.eval()
-        
+
+        # Ensure x has a batch dimension
         if len(x.shape) == self.state_dim:
             x = x.unsqueeze(0)
-        
-        # Ensure input has channel dimension
-        if len(x.shape) == 3:  # If shape is [batch_size, height, width]
-            x = x.unsqueeze(1)  # Add channel dimension -> [batch_size, 1, height, width]
-        # Convert single channel (grayscale) to RGB
-        if x.shape[1] == 1:  # Single channel
-            x = x.repeat(1, 3, 1, 1)  # Repeat along the channel dimension -> [batch_size, 3, height, width]
+
         x = x.to(self.device)
-        
+
         with torch.no_grad():
-            print("x:", x.shape)
+            print("Input x shape:", x.shape)
+            
+            # Handle case where x has > 3 channels
+            if x.shape[1] > 3:
+                x = x[:, :3, :, :]  # Take only the first 3 channels (assuming RGB)
+
             pred_y = self.classifier(x)
-        
+
         votes = torch.argmax(pred_y, axis=-1)
-        
         votes = votes.cpu().numpy()
         self.votes = votes
-        
+
         return pred_y, votes
+
         
     def predict_idx(self, x, idx):
         self.classifier.eval()
