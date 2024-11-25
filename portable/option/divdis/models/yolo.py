@@ -26,6 +26,7 @@ class YOLOEnsemble(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
+        print("Forward x:", x)
         # Ensure input is [batch_size, 3, height, width]
         if x.ndim == 3:  # If missing channel dimension
             x = x.unsqueeze(1)  # Add channel dimension
