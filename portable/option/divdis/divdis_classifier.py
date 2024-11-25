@@ -186,7 +186,9 @@ class DivDisClassifier():
         x = x.to(self.device)
         # Predict with classifier
         with torch.no_grad():
+            print("x:",x.shape)
             pred_y = self.classifier(x)
+            print("y:",pred_y.shape)
         # Get predicted class votes
         votes = torch.argmax(pred_y, axis=-1)
         votes = votes.cpu().numpy()
