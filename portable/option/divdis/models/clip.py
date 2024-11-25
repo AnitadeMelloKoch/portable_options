@@ -24,6 +24,8 @@ class Clip(nn.Module):
             self.embedding_dim = self.clip_model.get_image_features(
                 pixel_values=dummy_input
             ).shape[-1]
+        
+        print("Determined embedding_dim:", self.embedding_dim)  # Debugging print
 
         # Custom layers for predictions
         self.model = nn.ModuleList([
@@ -42,14 +44,14 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        print("Input images shape:", images.shape)
+        print("Input images shape:", images.shape)  # Debugging print
 
         # Ensure input is [batch_size, 3, height, width]
         if images.ndim == 3:  # If missing channel dimension
             images = images.unsqueeze(1)  # Add channel dimension
         if images.shape[1] == 1:  # If grayscale, repeat to make RGB
             images = images.repeat(1, 3, 1, 1)
-        print("Images after channel adjustment:", images.shape)
+        print("Images after channel adjustment:", images.shape)  # Debugging print
 
         # Convert tensor images to PIL format if needed
         if isinstance(images, torch.Tensor):
@@ -58,11 +60,11 @@ class Clip(nn.Module):
                 images = (images * 255).byte()
             images = [ToPILImage()(img) for img in images]
 
-        print(f"Converted {len(images)} images to PIL format.")
+        print(f"Converted {len(images)} images to PIL format.")  # Debugging print
 
         # Preprocess the images using CLIPProcessor
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        print("Processor inputs:", {key: value.shape for key, value in inputs.items()})
+        print("Processor inputs:", {key: value.shape for key, value in inputs.items()})  # Debugging print
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
@@ -71,7 +73,11 @@ class Clip(nn.Module):
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
 
-        print("Embeddings shape:", embeddings.shape)
+        print("Embeddings shape:", embeddings.shape)  # Debugging print
+
+        # Ensure the embeddings are of shape [batch_size, embedding_dim]
+        embeddings = embeddings.view(embeddings.size(0), -1)
+        print("Reshaped embeddings:", embeddings.shape)  # Debugging print
 
         # Initialize predictions tensor
         batch_size = embeddings.size(0)
@@ -80,9 +86,10 @@ class Clip(nn.Module):
         # Process embeddings through each head
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-            print(f"Head {idx} predictions shape:", predictions[:, idx, :].shape)
+            print(f"Head {idx} predictions shape:", predictions[:, idx, :].shape)  # Debugging print
 
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
-        print("Final predictions shape:", predictions.shape)
+        print("Final predictions shape:", predictions.shape)  # Debugging print
+
         return predictions
