@@ -223,6 +223,12 @@ class DivDisClassifier():
         if len(x.shape) == self.state_dim:
             x = x.unsqueeze(0)
         
+        # Ensure input has channel dimension
+        if len(x.shape) == 3:  # If shape is [batch_size, height, width]
+            x = x.unsqueeze(1)  # Add channel dimension -> [batch_size, 1, height, width]
+        # Convert single channel (grayscale) to RGB
+        if x.shape[1] == 1:  # Single channel
+            x = x.repeat(1, 3, 1, 1)  # Repeat along the channel dimension -> [batch_size, 3, height, width]
         x = x.to(self.device)
         
         with torch.no_grad():
