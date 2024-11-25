@@ -12,7 +12,7 @@ from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16
 # from portable.option.divdis.models.minigrid_cnn_large import MinigridCNNLarge
 from portable.option.divdis.models.monte_cnn import MonteCNN
-from portable.option.divdis.models import clip
+from portable.option.divdis.models.clip import Clip
 from portable.option.divdis.divdis import DivDisLoss
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class DivDisClassifier():
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
         elif self.model_name == "clip":
-            self.classifier = clip(num_classes=self.num_classes,
+            self.classifier = Clip(num_classes=self.num_classes,
                             num_heads=self.head_num)
             
         else:
