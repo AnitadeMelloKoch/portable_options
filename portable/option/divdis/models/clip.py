@@ -33,13 +33,15 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Debugging: Check input shape and type
-        if isinstance(images, torch.Tensor):
-            print(f"Input Tensor Shape: {images.shape}")
-            # Ensure correct format
-            if images.size(1) > 4:  # More than 4 channels
-                images = images[:, :3, :, :]  # Use the first 3 channels (assuming RGB)
+        # Debugging: Check the type and shape of images
+        # print(f"Type of images: {type(images)}")
+        # if isinstance(images, torch.Tensor):
+        #     print(f"Shape of images: {images.shape}")
+        # elif isinstance(images, list) and isinstance(images[0], torch.Tensor):
+        #     print(f"Shape of first image in list: {images[0].shape}")
 
+        # Convert tensor images to PIL if necessary
+        if isinstance(images, torch.Tensor):
             # Ensure pixel values are in [0, 255]
             if images.dtype != torch.uint8:  
                 images = (images * 255).byte()
