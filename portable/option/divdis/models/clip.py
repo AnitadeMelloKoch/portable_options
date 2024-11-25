@@ -28,7 +28,7 @@ class Clip(nn.Module):
         print("Determined embedding_dim:", self.embedding_dim)  # Debugging print
 
         # Custom layers for predictions
-        self.model = nn.ModuleList([
+        self.model = nn.ModuleList([  # Model is to be moved to device here
             nn.Sequential(
                 nn.Linear(self.embedding_dim, 1024),
                 nn.ReLU(),
@@ -53,16 +53,7 @@ class Clip(nn.Module):
             images = images.repeat(1, 3, 1, 1)
         print("Images after channel adjustment:", images.shape)  # Debugging print
 
-        # Convert tensor images to PIL format if needed
-        if isinstance(images, torch.Tensor):
-            # Ensure pixel values are in [0, 255]
-            if images.dtype != torch.uint8:
-                images = (images * 255).byte()
-            images = [ToPILImage()(img) for img in images]
-
-        print(f"Converted {len(images)} images to PIL format.")  # Debugging print
-
-        # Preprocess the images using CLIPProcessor
+        # Preprocess the images using CLIPProcessor (no need to convert to PIL)
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         print("Processor inputs:", {key: value.shape for key, value in inputs.items()})  # Debugging print
 
