@@ -47,10 +47,10 @@ class DivDisClassifier():
                  model_name='minigrid_cnn') -> None:
         
 
-        if use_gpu == -1:
+        if use_gpu == 0:
             self.device = torch.device('cpu')
         else:
-            self.device = torch.device('cuda:{}'.format(use_gpu)) 
+            self.device = torch.device('cuda')
         
         self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
                                             batchsize=dataset_batchsize,
