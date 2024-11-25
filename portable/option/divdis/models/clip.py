@@ -42,13 +42,14 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        print("Forward images:", images.shape)
-        
+        print("Input images shape:", images.shape)
+
         # Ensure input is [batch_size, 3, height, width]
         if images.ndim == 3:  # If missing channel dimension
             images = images.unsqueeze(1)  # Add channel dimension
         if images.shape[1] == 1:  # If grayscale, repeat to make RGB
             images = images.repeat(1, 3, 1, 1)
+        print("Images after channel adjustment:", images.shape)
 
         # Convert tensor images to PIL format if needed
         if isinstance(images, torch.Tensor):
@@ -57,8 +58,11 @@ class Clip(nn.Module):
                 images = (images * 255).byte()
             images = [ToPILImage()(img) for img in images]
 
+        print(f"Converted {len(images)} images to PIL format.")
+
         # Preprocess the images using CLIPProcessor
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
+        print("Processor inputs:", {key: value.shape for key, value in inputs.items()})
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
@@ -67,6 +71,8 @@ class Clip(nn.Module):
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
 
+        print("Embeddings shape:", embeddings.shape)
+
         # Initialize predictions tensor
         batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
@@ -74,7 +80,9 @@ class Clip(nn.Module):
         # Process embeddings through each head
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
+            print(f"Head {idx} predictions shape:", predictions[:, idx, :].shape)
 
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
+        print("Final predictions shape:", predictions.shape)
         return predictions
