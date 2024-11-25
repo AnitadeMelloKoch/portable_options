@@ -232,6 +232,7 @@ class DivDisClassifier():
         x = x.to(self.device)
         
         with torch.no_grad():
+            print("x:", x.shape)
             pred_y = self.classifier(x)
         
         votes = torch.argmax(pred_y, axis=-1)
