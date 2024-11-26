@@ -14,9 +14,7 @@ class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
         super().__init__()
 
-        # Load CLIP model and processor
-        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
+        self.embedding_class = torch.hub.load('openai/CLIP', 'clip_vit_b32', pretrained=True)
 
         # Dynamically determine the embedding size from CLIP
         dummy_input = torch.zeros(1, 3, 224, 224, device=device)
