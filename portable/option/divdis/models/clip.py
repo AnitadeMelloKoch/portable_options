@@ -11,30 +11,21 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 clip_model_name = "openai/clip-vit-base-patch32"
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
-        self.embedding_class = torch.hub.load('openai/CLIP', 'clip_vit_b32', pretrained=True)
-
-        # Dynamically determine the embedding size from CLIP
-        dummy_input = torch.zeros(1, 3, 224, 224, device=device)
-        with torch.no_grad():
-            self.embedding_dim = self.clip_model.get_image_features(
-                pixel_values=dummy_input
-            ).shape[-1]
-        
-        print("Determined embedding_dim:", self.embedding_dim)  # Debugging print
+        # Load CLIP model and processor
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
-        self.model = nn.ModuleList([  # Model is to be moved to device here
+        self.model = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(self.embedding_dim, 1024),
+                nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
-                nn.Linear(1024, 512),
+                nn.Linear(128, 64),
                 nn.ReLU(),
-                nn.Linear(512, 128),
-                nn.ReLU(),
-                nn.Linear(128, num_classes)
+                nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ]).to(device)
 
@@ -42,43 +33,54 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        print("Input images shape:", images.shape)  # Debugging print
+        # Debugging: Check the type and shape of images
+        # print(f"Type of images: {type(images)}")
+        # if isinstance(images, torch.Tensor):
+        #     print(f"Shape of images: {images.shape}")
+        # elif isinstance(images, list) and isinstance(images[0], torch.Tensor):
+        #     print(f"Shape of first image in list: {images[0].shape}")
 
-        # Ensure input is [batch_size, 3, height, width]
-        if images.ndim == 3:  # If missing channel dimension
-            images = images.unsqueeze(1)  # Add channel dimension
-        if images.shape[1] == 1:  # If grayscale, repeat to make RGB
-            images = images.repeat(1, 3, 1, 1)
-        print("Images after channel adjustment:", images.shape)  # Debugging print
+        # Convert tensor images to PIL if necessary
+        if isinstance(images, torch.Tensor):
+            # Ensure pixel values are in [0, 255]
+            if images.dtype != torch.uint8:  
+                images = (images * 255).byte()
+            images = [ToPILImage()(img) for img in images]
 
-        # Preprocess the images using CLIPProcessor (no need to convert to PIL)
+        # Preprocess the images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        print("Processor inputs:", {key: value.shape for key, value in inputs.items()})  # Debugging print
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Extract image embeddings from the CLIP model
+        # Extract image features using CLIP
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
 
-        print("Embeddings shape:", embeddings.shape)  # Debugging print
-
-        # Ensure the embeddings are of shape [batch_size, embedding_dim]
-        embeddings = embeddings.view(embeddings.size(0), -1)
-        print("Reshaped embeddings:", embeddings.shape)  # Debugging print
-
-        # Initialize predictions tensor
-        batch_size = embeddings.size(0)
+        # Apply custom layers on the embeddings
+        batch_size = len(images) if isinstance(images, list) else images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
-
-        # Process embeddings through each head
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-            print(f"Head {idx} predictions shape:", predictions[:, idx, :].shape)  # Debugging print
 
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
-        print("Final predictions shape:", predictions.shape)  # Debugging print
-
         return predictions
+
+
+# # Example usage
+# if __name__ == "__main__":
+#     # Number of classes and heads
+#     num_classes = 10
+#     num_heads = 3
+
+#     # Create the model
+#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
+
+#     # Dummy image batch (e.g., PIL images or similar)
+#     from PIL import Image
+#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
+
+#     # Forward pass
+#     outputs = clip_model(dummy_images)
+#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
