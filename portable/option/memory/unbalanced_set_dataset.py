@@ -177,7 +177,7 @@ class UnbalancedSetDataset():
         labels = labels.long()
         
         self.counter += 1
-        print(f"Data shape: {data.shape}")
+        # print(f"Data shape: {data.shape}")
         return data, labels
     
     def get_unlabelled_batch(self):
