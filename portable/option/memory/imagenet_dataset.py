@@ -65,7 +65,7 @@ def load_annotations_from_folder(folder):
     return annotations, filenames
 # Define any image transformations you want (e.g., resizing)
 image_transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize to 224x224
+    transforms.Resize((256, 256)),  # Resize to 224x224
     transforms.ToTensor(),  # Convert to tensor
 ])
 # Load the images and annotations for Chihuahuas and Spaniels
