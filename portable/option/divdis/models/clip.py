@@ -11,7 +11,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 clip_model_name = "openai/clip-vit-base-patch32"
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads, embedding_dim=256):
         super().__init__()
 
         # Load CLIP model and processor

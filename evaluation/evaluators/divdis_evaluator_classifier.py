@@ -121,12 +121,16 @@ class DivDisEvaluatorClassifier():
                 #    n_steps=10,
                 #    target=label
                 #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
+                print("attr:", self.integrated_gradients[head_idx].attribute(
+                    image,
+                    target=label
+                ).squeeze().cpu().detach().numpy().shape)
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
                 ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
-                print("attr:", attr.shape)
+                
                 display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
 
                 for channel_idx in range(self.stack_size):
