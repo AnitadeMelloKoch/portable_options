@@ -6,10 +6,10 @@ DogExperiment.use_gpu                        = True
 
 DogExperiment.classifier_num_classes         = 2
 
-DogExperiment.classifier_head_num            = 16
+DogExperiment.classifier_head_num            = 8
 DogExperiment.classifier_learning_rate       = 5e-5
-DogExperiment.classifier_diversity_weight    = 0
-DogExperiment.classifier_l2_reg_weight       = 5e-3
+DogExperiment.classifier_diversity_weight    = 1e-3
+DogExperiment.classifier_l2_reg_weight       = 1e-4
 DogExperiment.classifier_initial_epochs      = 300
 DogExperiment.classifier_per_room_epochs     = 300
 
