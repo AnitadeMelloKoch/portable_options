@@ -20,8 +20,8 @@ class Clip(nn.Module):
         # Custom layers for predictions (one set of layers per head)
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(512),  # First layer
-                nn.LazyLinear(128),   # Second layer
+                nn.LazyLinear(1000),  # First layer
+                nn.LazyLinear(700),   # Second layer
                 nn.LazyLinear(num_classes)  # Final output layer
             )
             for _ in range(num_heads)  # One head for each prediction task
