@@ -39,7 +39,11 @@ class Clip(nn.Module):
         print("proproces:",images.shape)
         if images.ndim == 3:  # If missing channel dimension
             images = images.unsqueeze(1)  # Add channel dimension
+            pad_size = 4 - images.shape[1]
+            images = torch.cat([images, images[:, :pad_size, :, :]], dim=1)
         print("after:", images.shape)
+        
+        
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
