@@ -7,7 +7,7 @@ from PIL import Image
 
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads):
         super().__init__()
 
         # Load the pretrained CLIP model
@@ -16,8 +16,8 @@ class Clip(nn.Module):
         # Define custom model layers for each head
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(1000),  # You can adjust the dimensions here as needed
-                nn.LazyLinear(700),
+                nn.LazyLinear(256),  # You can adjust the dimensions here as needed
+                nn.LazyLinear(128),
                 nn.LazyLinear(num_classes)  # Final output layer for classification
             ) for _ in range(num_heads)
         ])
