@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPModel
-from torchvision import transforms
-from PIL import Image
 
 
 class Clip(nn.Module):
@@ -17,33 +15,32 @@ class Clip(nn.Module):
         self.model = nn.ModuleList([
             nn.Sequential(
                 nn.LazyLinear(512),
-                nn.LazyLinear(256),  # You can adjust the dimensions here as needed
-                nn.LazyLinear(128),
+                nn.LazyLinear(256),  # Adjust dimensions as needed
                 nn.LazyLinear(num_classes)  # Final output layer for classification
             ) for _ in range(num_heads)
         ])
-        
+
         self.num_heads = num_heads
         self.num_classes = num_classes
 
     def forward(self, images):
         # Ensure images have the correct shape [batch_size, 3, height, width]
         if images.dim() == 3:  # If missing batch dimension
-            images = images.unsqueeze(1)  # Add batch dimension
-            # if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
-            images = images.repeat(1, 3, 1, 1)
-        if images.dim() == 4:
-            images = images[:, -3:, :, :] # Ensure only 3 channels are used
+            images = images.unsqueeze(0)  # Add batch dimension
+            images = images.repeat(1, 3, 1, 1)  # Ensure RGB channels
 
-        # Move the images to the same device as the model
+        if images.dim() == 4:  # Ensure only 3 channels are used
+            images = images[:, -3:, :, :]
+
+        # Move images to the device
         device = "cuda" if torch.cuda.is_available() else "cpu"
         images = images.to(device)
 
-        # # Extract image features using CLIP (image embeddings)
-        # with torch.no_grad():
-        #     embeddings = self.clip_model.get_image_features(pixel_values=images)
+        # Extract image features using CLIP (mocked here)
+        # Replace this with `get_image_features` when using the CLIP model
         embeddings = images.mean(dim=(2, 3))
-        # Apply custom model layers on the extracted embeddings
+
+        # Apply custom model layers for each head
         batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes).to(device)
 
@@ -51,6 +48,8 @@ class Clip(nn.Module):
             y = self.model[idx](embeddings)
             predictions[:, idx, :] = y
 
-        # Apply softmax to get probabilities for each class
-        predictions = F.softmax(predictions, dim=-1)
+        # Apply softmax with temperature scaling to adjust prediction confidence
+        temperature = 0.5  # Temperature < 1 sharpens predictions
+        predictions = F.softmax(predictions / temperature, dim=-1)
+
         return predictions
