@@ -5,8 +5,8 @@ from transformers import CLIPModel
 from torchvision import transforms
 from PIL import Image
 
-class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads):
+class CLIPEnsemble(nn.Module):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
         # Load the pretrained CLIP model
@@ -26,7 +26,7 @@ class Clip(nn.Module):
 
         # Image preprocessing pipeline (resize, crop, normalize)
         self.preprocess = transforms.Compose([
-            transforms.Resize(256),          # Resize to 256x256
+            transforms.Resize(224),          # Resize to 224x224 (instead of 256x256)
             transforms.CenterCrop(224),      # Crop to 224x224
             transforms.ToTensor(),           # Convert to tensor
             transforms.Normalize(            # Normalize using the CLIP standard mean and std
@@ -63,5 +63,3 @@ class Clip(nn.Module):
         # Apply softmax to get probabilities for each class
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-
-
