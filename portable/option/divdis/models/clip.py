@@ -39,8 +39,14 @@ class Clip(nn.Module):
         print("proproces:",images.shape)
         if images.ndim == 3:  # If missing channel dimension
             images = images.unsqueeze(1)  # Add channel dimension
-            pad_size = 4 - images.shape[1]
-            images = torch.cat([images, images[:, :pad_size, :, :]], dim=1)
+
+        # Ensure the number of channels is 3 (RGB format)
+        if images.shape[1] == 4:  # If image has 4 channels (RGBA)
+            images = images[:, :3, :, :]  # Remove the alpha channel (4th channel)
+        elif images.shape[1] < 3:  # If the image has less than 3 channels
+            # Assuming it's grayscale, expand to 3 channels by duplicating the single channel
+            images = images.repeat(1, 3, 1, 1)
+
         print("after:", images.shape)
         
         
