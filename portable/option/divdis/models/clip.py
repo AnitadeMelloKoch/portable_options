@@ -35,15 +35,11 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Verify and preprocess images
-        print("proproces:",images.shape)
-        # Ensure the image input is in the correct format
-        if images.ndim == 3:  # Single image, needs to be wrapped in a list
-            images = [images]  # Convert to list
-        elif images.ndim == 4:  # Already a batch of images
-            images = images.squeeze(0)  # Remove batch dimension if any (optional)
+        # Ensure images are in tensor format
+        if isinstance(images, list):
+            images = torch.stack([torch.tensor(img) if not isinstance(img, torch.Tensor) else img for img in images])
 
-        # Check and enforce exactly 4 channels for each image
+        # Check and enforce exactly 3 channels for each image
         for i in range(len(images)):
             if images[i].shape[0] == 1:  # If grayscale (1 channel), repeat to form 4 channels
                 images[i] = images[i].repeat(3, 1, 1)
@@ -51,15 +47,11 @@ class Clip(nn.Module):
                 images[i] = images[i].repeat(3, 1, 1)
             elif images[i].shape[0] == 3:  # Already 4 channels, do nothing
                 pass
-            else:  # If more than 3 channels, slice to keep the first 3 channels
-                images[i] = images[i][:3, :, :]
+            else:  # If more than 4 channels, slice to keep the first 4 channels
+                images[i] = images[i][:4, :, :]
 
-        # Ensure images are in tensor format
-        if isinstance(images, list):
-            images = torch.stack([torch.tensor(img) for img in images])
-
-        # Print shape after conversion to tensor
-        print("After:", images.shape)
+        # Ensure the tensor is on the correct device
+        images = images.to(device)
         
         
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
