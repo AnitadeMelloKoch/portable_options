@@ -19,7 +19,7 @@ MODEL_TYPE = [
     "minigrid_cnn",
     "minigrid_large_cnn",
     "monte_cnn",
-    "yolo"
+    "clip"
 ]
 @gin.configurable
 class DivDisClassifier():
@@ -80,12 +80,12 @@ class DivDisClassifier():
         logger.info("======================================")
         logger.info("======================================")
     def save(self, path):
-        if self.model_name == "yolo":
+        if self.model_name == "clip":
             return
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
     def load(self, path):
-        if self.model_name == "yolo":
+        if self.model_name == "clip":
             return
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
