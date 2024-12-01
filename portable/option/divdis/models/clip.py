@@ -29,7 +29,7 @@ class Clip(nn.Module):
         # Ensure images have the correct shape [batch_size, 3, height, width]
         if images.dim() == 3:  # If missing batch dimension
             images = images.unsqueeze(1)  # Add batch dimension
-        if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
+            # if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
             images = images.repeat(1, 3, 1, 1)
         if images.dim() == 4:
             images = images[:, :3, :, :]  # Ensure only 3 channels are used
