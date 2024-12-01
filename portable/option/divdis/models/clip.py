@@ -10,22 +10,23 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 clip_model_name = "openai/clip-vit-base-patch32"
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
-        # Load CLIP model from Hugging Face
-        self.clip_model = CLIPModel.from_pretrained(clip_model_name)
+        # Load CLIP model and processor
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
-        # Custom layers for predictions (one set of layers per head)
+        # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(1000),  # First layer
-                nn.LazyLinear(700),   # Second layer
-                nn.LazyLinear(num_classes)  # Final output layer
-            )
-            for _ in range(num_heads)  # One head for each prediction task
-        ])
+                nn.Linear(embedding_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, num_classes)
+            ) for _ in range(num_heads)
+        ]).to(device)
 
         self.num_heads = num_heads
         self.num_classes = num_classes
