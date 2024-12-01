@@ -45,7 +45,7 @@ class Clip(nn.Module):
             images = images[:, :3, :, :]  # Remove the alpha channel (4th channel)
         elif images.shape[1] < 3:  # If the image has less than 3 channels
             # Assuming it's grayscale, expand to 3 channels by duplicating the single channel
-            images = images.repeat(1, 3, 1, 1)
+            images = images.repeat(1, 4, 1, 1)
 
         print("after:", images.shape)
         
