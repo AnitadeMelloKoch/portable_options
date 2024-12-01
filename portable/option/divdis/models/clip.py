@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
-from PIL import Image
-import numpy as np  # For handling image arrays if necessary
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -20,7 +18,7 @@ class Clip(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
-        self.model = nn.ModuleList([ 
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -34,30 +32,10 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # If images are a tensor, ensure they have the correct format (batch_size, 3, height, width)
-        if isinstance(images, torch.Tensor):
-            # Check if the tensor has 3 channels (RGB)
-            if images.ndimension() == 3:
-                # If grayscale (1 channel) or RGBA (4 channels), fix the format
-                if images.size(0) == 1:  # Grayscale (1 channel)
-                    images = images.repeat(3, 1, 1)  # Convert to 3 channels
-                elif images.size(0) == 4:  # RGBA (4 channels)
-                    images = images[:3, :, :]  # Keep only the first 3 channels (RGB)
-            elif images.ndimension() == 4:
-                # If the tensor has batch dimension, ensure the format is [batch_size, 3, height, width]
-                if images.size(1) == 1:
-                    images = images.repeat(1, 3, 1, 1)  # Convert to RGB
-                elif images.size(1) == 4:
-                    images = images[:, :3, :, :]  # Keep only the first 3 channels (RGB)
+        # Preprocess the images
+        inputs = self.processor(images=images, return_tensors="pt")
 
-        # If images are a list of PIL images, ensure they are in RGB format
-        elif isinstance(images, list):
-            images = [img.convert("RGB") if isinstance(img, Image.Image) and img.mode != "RGB" else img for img in images]
-
-        # Preprocess the images with `do_rescale=False` to avoid double rescaling
-        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-
-        # Ensure the tensor is on the correct device
+        # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
         # Extract image features using CLIP
@@ -65,7 +43,7 @@ class Clip(nn.Module):
             embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
-        batch_size = embeddings.size(0)  # Get the batch size from embeddings
+        batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
@@ -73,3 +51,20 @@ class Clip(nn.Module):
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
+
+# # Example usage:
+# if __name__ == "__main__":
+#     # Number of classes and heads
+#     num_classes = 10
+#     num_heads = 3
+
+#     # Create the model
+#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
+
+#     # Dummy image batch (e.g., PIL images or similar)
+#     from PIL import Image
+#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
+
+#     # Forward pass
+#     outputs = clip_model(dummy_images)
+#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
