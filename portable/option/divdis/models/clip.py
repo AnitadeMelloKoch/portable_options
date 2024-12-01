@@ -26,7 +26,7 @@ class Clip(nn.Module):
     def forward(self, images):
         # Ensure images have the correct shape [batch_size, 3, height, width]
         if images.dim() == 3:  # If missing batch dimension
-            images = images.unsqueeze(0)  # Add batch dimension
+            images = images.unsqueeze(1)  # Add batch dimension
             images = images.repeat(1, 3, 1, 1)  # Ensure RGB channels
 
         if images.dim() == 4:  # Ensure only 3 channels are used
