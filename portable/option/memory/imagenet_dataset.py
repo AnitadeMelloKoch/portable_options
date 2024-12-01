@@ -64,13 +64,13 @@ def load_annotations_from_folder(folder):
         print(f"No annotations found in folder: {folder}")
     return annotations, filenames
 # Define any image transformations you want (e.g., resizing)
-image_transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize to 224x224
-    transforms.ToTensor(),  # Convert to tensor
-])
+# image_transform = transforms.Compose([
+#     transforms.Resize((224, 224)),  # Resize to 224x224
+#     transforms.ToTensor(),  # Convert to tensor
+# ])
 # Load the images and annotations for Chihuahuas and Spaniels
-chihuahua_images, chihuahua_filenames = load_images_from_folder(chihuahua_image_dir, transform=image_transform)
-spaniel_images, spaniel_filenames = load_images_from_folder(spaniel_image_dir, transform=image_transform)
+chihuahua_images, chihuahua_filenames = load_images_from_folder(chihuahua_image_dir)
+spaniel_images, spaniel_filenames = load_images_from_folder(spaniel_image_dir)
 # Specify where to save the images and annotations
 save_dir = '/home/yyang239/divdis/portable_options/resources/dog_images'
 os.makedirs(save_dir, exist_ok=True)
