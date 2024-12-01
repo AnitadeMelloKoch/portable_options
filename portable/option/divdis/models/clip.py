@@ -32,8 +32,8 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt")
+        # # Preprocess the images
+        # inputs = self.processor(images=images, return_tensors="pt")
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
