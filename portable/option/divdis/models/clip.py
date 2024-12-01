@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPModel
+from PIL import Image
+from torchvision import transforms
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -13,9 +15,8 @@ class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
-        # Load CLIP model and processor
+        # Load CLIP model
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
         self.model = nn.ModuleList([
@@ -31,16 +32,29 @@ class Clip(nn.Module):
         self.num_heads = num_heads
         self.num_classes = num_classes
 
+        # Define the image preprocessing pipeline (resize, center crop, normalize)
+        self.preprocess = transforms.Compose([
+            transforms.Resize(256),          # Resize to 256x256
+            transforms.CenterCrop(224),      # Crop to 224x224
+            transforms.ToTensor(),           # Convert to tensor
+            transforms.Normalize(            # Normalize using the same mean and std as CLIP
+                mean=[0.48145466, 0.4578275, 0.40821073],
+                std=[0.26862954, 0.26130258, 0.27577711]
+            ),
+        ])
+
     def forward(self, images):
-        # # Preprocess the images
-        # inputs = self.processor(images=images, return_tensors="pt")
+        # If images are a list of PIL images, apply preprocessing
+        if isinstance(images, list):
+            images = [self.preprocess(img).unsqueeze(0) for img in images]  # Preprocess each image
+            images = torch.cat(images, dim=0)  # Stack the images into a batch
 
-        # Move inputs to the same device as the model
-        inputs = {key: value.to(device) for key, value in inputs.items()}
+        # Move the images to the same device as the model
+        images = images.to(device)
 
-        # Extract image features using CLIP
+        # Extract image features using CLIP (image embeddings)
         with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(**inputs)
+            embeddings = self.clip_model.get_image_features(pixel_values=images)
 
         # Apply custom layers on the embeddings
         batch_size = images.size(0)
@@ -52,19 +66,4 @@ class Clip(nn.Module):
         predictions = F.softmax(predictions, dim=-1)
         return predictions
 
-# # Example usage:
-# if __name__ == "__main__":
-#     # Number of classes and heads
-#     num_classes = 10
-#     num_heads = 3
 
-#     # Create the model
-#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
-
-#     # Dummy image batch (e.g., PIL images or similar)
-#     from PIL import Image
-#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
-
-#     # Forward pass
-#     outputs = clip_model(dummy_images)
-#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
