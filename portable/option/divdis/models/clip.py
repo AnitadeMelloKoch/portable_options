@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
+import numpy as np  # Import numpy to handle image arrays if necessary
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,11 +36,11 @@ class Clip(nn.Module):
     def forward(self, images):
         # Ensure images are in the format expected by the processor
         if isinstance(images, list):
-            # Convert the list of PIL images into a batch of images
-            images = [image.convert("RGB") if isinstance(image, Image.Image) else Image.fromarray(image) for image in images]
+            # Convert all images to PIL RGB format
+            images = [Image.fromarray(image).convert("RGB") if isinstance(image, np.ndarray) else image.convert("RGB") for image in images]
 
         # Preprocess the images (resize and normalize) and convert to tensor
-        inputs = self.processor(images=images, return_tensors="pt", padding=True)
+        inputs = self.processor(images=images, return_tensors="pt", padding=True, do_rescale=False)
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
@@ -57,21 +58,3 @@ class Clip(nn.Module):
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-
-
-# Example usage:
-# if __name__ == "__main__":
-#     num_classes = 10  # Number of classes to predict
-#     num_heads = 3     # Number of prediction heads
-
-#     # Instantiate the model
-#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
-
-#     # Example dummy image batch (create dummy white images with size 224x224)
-#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
-
-#     # Forward pass through the model
-#     outputs = clip_model(dummy_images)
-
-#     # Print the output shape
-#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
