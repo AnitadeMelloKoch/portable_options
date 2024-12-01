@@ -43,8 +43,9 @@ class Clip(nn.Module):
 
         # Ensure images have the correct shape [batch_size, 3, height, width]
         if images.dim() == 3:  # If missing batch dimension
-            images = images.unsqueeze(0)  # Add batch dimension
-
+            images = images.unsqueeze(1)  # Add batch dimension
+        if images.shape[1] == 1:
+            images = images.repeat(1, 3, 1, 1)
         # Move the images to the same device as the model
         device = "cuda" if torch.cuda.is_available() else "cpu"
         images = images.to(device)
