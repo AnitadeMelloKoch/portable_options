@@ -27,12 +27,12 @@ class Clip(nn.Module):
 
     def forward(self, images):
         # Ensure images have the correct shape [batch_size, 3, height, width]
-        if images.dim() == 3:  # If missing batch dimension
-            images = images.unsqueeze(1)  # Add batch dimension
-            # if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
-            images = images.repeat(1, 3, 1, 1)
-        if images.dim() == 4:
-            images = images[:, -3:, :, :] # Ensure only 3 channels are used
+        # if images.dim() == 3:  # If missing batch dimension
+        #     images = images.unsqueeze(1)  # Add batch dimension
+        #     # if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
+        #     images = images.repeat(1, 3, 1, 1)
+        # if images.dim() == 4:
+        #     images = images[:, -3:, :, :] # Ensure only 3 channels are used
 
         # Move the images to the same device as the model
         device = "cuda" if torch.cuda.is_available() else "cpu"
