@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
-from torchvision import transforms  # For handling image transformations
 import numpy as np  # For handling image arrays if necessary
 
 # Define the device
@@ -35,13 +34,17 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Check if images are in the correct format (list of PIL images or tensor)
-        if isinstance(images, list):
-            # Convert list of images to PIL if necessary (only if not already in PIL format)
-            images = [Image.fromarray(img) if isinstance(img, np.ndarray) else img for img in images]
+        # If images are a tensor, ensure they have the correct format (batch_size, 3, height, width)
+        if isinstance(images, torch.Tensor):
+            if images.ndimension() == 3 and images.size(0) == 1:  # Grayscale (1 channel)
+                images = images.repeat(3, 1, 1)  # Convert to 3 channels
+            elif images.ndimension() == 3 and images.size(0) == 4:  # RGBA (4 channels)
+                images = images[:3, :, :]  # Keep the first 3 channels (RGB)
+            # If already 3 channels, do nothing
 
-        # Ensure all images are in RGB format (3 channels)
-        images = [img.convert("RGB") if img.mode != "RGB" else img for img in images]
+        # If images are a list of PIL images, ensure they are in RGB format
+        elif isinstance(images, list):
+            images = [img.convert("RGB") if isinstance(img, Image.Image) and img.mode != "RGB" else img for img in images]
 
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
