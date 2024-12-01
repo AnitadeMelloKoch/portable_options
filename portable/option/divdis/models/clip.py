@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
+from PIL import Image
+import numpy as np  # Import numpy to handle image arrays if necessary
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -44,7 +46,7 @@ class Clip(nn.Module):
             embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
-        batch_size = images.size(0)
+        batch_size = images[0].size[0]  # Get the batch size from the first image
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
@@ -52,20 +54,3 @@ class Clip(nn.Module):
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-
-# # Example usage:
-# if __name__ == "__main__":
-#     # Number of classes and heads
-#     num_classes = 10
-#     num_heads = 3
-
-#     # Create the model
-#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
-
-#     # Dummy image batch (e.g., PIL images or similar)
-#     from PIL import Image
-#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
-
-#     # Forward pass
-#     outputs = clip_model(dummy_images)
-#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)

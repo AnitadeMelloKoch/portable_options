@@ -3,8 +3,8 @@
 #SBATCH --gres gpu:2
 #SBATCH --mem=64G
 #SBATCH --time=1-00:00:00
-#SBATCH --error=<clip_epoch200_batch16>.%J.err
-#SBATCH --output=<clip_epoch200_batch16>.%J.out
+#SBATCH --error=<clip_epoch300_batch64>.%J.err
+#SBATCH --output=<clip_epoch300_batch64>.%J.out
 #SBATCH --mail-type=END
 #SBATCH --mail-user=yuechuan_yang@brown.edu
 
