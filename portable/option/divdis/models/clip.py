@@ -39,8 +39,10 @@ class Clip(nn.Module):
             # Convert all images to PIL RGB format
             images = [Image.fromarray(image).convert("RGB") if isinstance(image, np.ndarray) else image.convert("RGB") for image in images]
 
+        
         # Preprocess the images (resize and normalize) and convert to tensor
-        inputs = self.processor(images=images, return_tensors="pt", padding=True, do_rescale=False)
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
+        print("inputs",inputs.shape)
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
