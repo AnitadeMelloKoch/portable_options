@@ -31,11 +31,10 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
-        # if x.ndim == 3:  # If the batch is missing the channel dimension
-        #     x = x.unsqueeze(1)  # Add the channel dimension (for single channel images)
-        # if x.shape[1] == 1:  # If grayscale, repeat to make it RGB
-        #     x = x.repeat(1, 3, 1, 1)
-
+        if x.ndim == 3:  # If the batch is missing the channel dimension
+            x = x.unsqueeze(1)  # Add the channel dimension (for single channel images)
+        if x.shape[1] == 1:  # If grayscale, repeat to make it RGB
+            x = x.repeat(1, 3, 1, 1)
         # Process the images with the CLIP processor (for CLIP-specific preprocessing)
         inputs = self.processor(images=x, return_tensors="pt").to(device)
 
