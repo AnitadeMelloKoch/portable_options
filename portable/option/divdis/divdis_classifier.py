@@ -5,7 +5,6 @@ import torch.nn as nn
 import gin
 import os
 import numpy as np
-from tqdm import tqdm
 from portable.option.memory import SetDataset, UnbalancedSetDataset
 from portable.option.divdis.models.mlp import MultiHeadMLP, OneHeadMLP
 from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16, MinigridCNNLarge
@@ -13,7 +12,6 @@ from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 from portable.option.divdis.models.clip import Clip
-from portable.option.divdis.models.yolo import YOLOEnsemble
 logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
@@ -21,7 +19,7 @@ MODEL_TYPE = [
     "minigrid_cnn",
     "minigrid_large_cnn",
     "monte_cnn",
-    "clip"
+    "yolo"
 ]
 @gin.configurable
 class DivDisClassifier():
@@ -32,9 +30,10 @@ class DivDisClassifier():
                  learning_rate,
                  num_classes,
                  diversity_weight,
+                 phi=None,
                  l2_reg_weight=0.001,
                  class_weight=None,
-                 dataset_max_size=int(1e6),
+                 dataset_max_size=1e6,
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  summary_writer=None,
@@ -43,14 +42,18 @@ class DivDisClassifier():
             self.device = torch.device('cpu')
         else:
             self.device = torch.device('cuda')
-        self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
+            # self.device = torch.device('cuda:{}'.format(use_gpu))
+        self.dataset = SetDataset(max_size=dataset_max_size,
                                             batchsize=dataset_batchsize,
                                             unlabelled_batchsize=unlabelled_dataset_batchsize)
+        # self.dataset = ImageNetDataset(max_size=dataset_max_size,
+        #                                 batchsize=dataset_batchsize)
         self.learning_rate = learning_rate
         self.l2_reg_weight = l2_reg_weight
         self.head_num = head_num
         self.num_classes = num_classes
         self.log_dir = log_dir
+        self.phi = phi
         self.model_name = model_name
         self.reset_classifier()
         self.optimizer = torch.optim.Adam(self.classifier.parameters(),
@@ -66,10 +69,24 @@ class DivDisClassifier():
         self.ce_criterion = torch.nn.CrossEntropyLoss(weight=class_weight_tensor)
         self.diversity_weight = diversity_weight
         self.state_dim = 3
+        logger.info("Classifier hps")
+        logger.info("======================================")
+        logger.info("======================================")
+        logger.info("model name: {}".format(model_name))
+        logger.info("learning rate: {}".format(learning_rate))
+        logger.info("l2: {}".format(l2_reg_weight))
+        logger.info("div weight: {}".format(diversity_weight))
+        logger.info("class weight: {}".format(class_weight))
+        logger.info("======================================")
+        logger.info("======================================")
     def save(self, path):
+        if self.model_name == "yolo":
+            return
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
     def load(self, path):
+        if self.model_name == "yolo":
+            return
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
@@ -82,23 +99,21 @@ class DivDisClassifier():
         )
     def reset_classifier(self):
         if self.model_name == "minigrid_cnn":
-            #self.classifier = MinigridCNN16x16(num_classes=self.num_classes,
-            #                                   num_heads=self.head_num)
-            self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
-                                                  num_heads=self.head_num)
+            self.classifier = MinigridCNN(num_classes=self.num_classes,
+                                          num_heads=self.head_num)
         elif self.model_name == "monte_cnn":
             self.classifier = MonteCNN(num_classes=self.num_classes,
                                        num_heads=self.head_num)
+        elif self.model_name == "minigrid_large_cnn":
+            self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
+                                               num_heads= self.head_num)
         elif self.model_name == "clip":
             self.classifier = Clip(num_classes=self.num_classes,
-                                               num_heads= self.head_num)
-        elif self.model_name == "yolo":
-            self.classifier = YOLOEnsemble(num_classes=self.num_classes,
                                                num_heads= self.head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
         self.classifier.to(self.device)
-        self.optimizer = torch.optim.Adam(self.classifier.parameters(),
+        self.optimizer = torch.optim.Adam(self.classifier.model.parameters(),
                                           lr=self.learning_rate,
                                           weight_decay=self.l2_reg_weight # weight decay also works as L2 regularization
                                           )
@@ -116,13 +131,15 @@ class DivDisClassifier():
         self.dataset.add_true_files(positive_files)
         self.dataset.add_false_files(negative_files)
         self.dataset.add_unlabelled_files(unlabelled_files)
+    def add_unlabelled_data(self,
+                            states):
+        self.dataset.add_unlabelled_files
     def train(self,
               epochs,
-              start_offset=0,
-              progress_bar=False):
+              start_offset=0):
         # self.move_to_gpu()
         self.classifier.train()
-        for epoch in tqdm(range(start_offset, start_offset+epochs), desc="Training Epochs", leave=False, disable=(not progress_bar)):
+        for epoch in range(start_offset, start_offset+epochs):
             self.dataset.shuffle()
             counter = 0
             class_loss_tracker = np.zeros(self.head_num)
@@ -145,7 +162,6 @@ class DivDisClassifier():
                 y = y.to(self.device)
                 if use_unlabelled_data:
                     unlabelled_x = unlabelled_x.to(self.device)
-                    # print("unlabelled_x", unlabelled_x.shape)
                     unlabelled_pred = self.classifier(unlabelled_x)
                 pred_y = self.classifier(x)
                 labelled_loss = 0
@@ -174,37 +190,29 @@ class DivDisClassifier():
             logger.info("div loss = {}".format(div_loss_tracker/counter))
             logger.info("ensemble loss = {}".format(total_loss_tracker/counter))
         return total_loss_tracker/counter
-    def predict(self, x):
+    def predict(self, x, use_phi=False):
         self.classifier.eval()
-        # Ensure input has batch dimension
-        if len(x.shape) == self.state_dim:  # Likely [height, width]
-            x = x.unsqueeze(0)  # Add batch dimension -> [1, height, width]
-        # Ensure input has channel dimension
-        if len(x.shape) == 3:  # If shape is [batch_size, height, width]
-            x = x.unsqueeze(1)  # Add channel dimension -> [batch_size, 1, height, width]
-        # If input has 64 channels, reduce to 3 channels
-        if x.shape[1] != 3:
-            x = x.mean(dim=1, keepdim=True)  # [batch_size, 1, height, width]
-            x = x.repeat(1, 3, 1, 1)  # Convert to RGB -> [batch_size, 3, height, width]
-        # Move to device
+        # if use_phi is True:
+        #     x = self.phi(x)
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
         x = x.to(self.device)
-        # Predict with classifier
         with torch.no_grad():
-            print("x:",x.shape)
             pred_y = self.classifier(x)
-            print("y:",pred_y.shape)
-        # Get predicted class votes
         votes = torch.argmax(pred_y, axis=-1)
         votes = votes.cpu().numpy()
         self.votes = votes
         return pred_y, votes
-    def predict_idx(self, x, idx):
+    def predict_idx(self, x, idx, use_phi=False):
         self.classifier.eval()
+        # if use_phi is True:
+        #     x = self.phi(x)
+        if len(x.shape) == self.state_dim:
+            x = x.unsqueeze(0)
         x = x.to(self.device)
         with torch.no_grad():
             pred_y = self.classifier(x)
         return pred_y[:,idx,:]
-
 
 
 
