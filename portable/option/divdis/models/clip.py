@@ -35,9 +35,15 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Ensure images are in the correct format (list of PIL Images)
+        # Verify and preprocess images
         if isinstance(images[0], torch.Tensor):
-            images = [transforms.ToPILImage()(img) for img in images]
+            # Check if the tensor represents raw images or features
+            if images[0].dim() == 3 and images[0].size(0) in [1, 3, 4]:
+                # Assume (C, H, W) format; convert to PIL Image
+                images = [transforms.ToPILImage()(img) for img in images]
+            else:
+                # Log an error if the input is not valid raw image data
+                raise ValueError(f"Unexpected tensor shape for images: {images[0].shape}. Expected (C, H, W) format.")
 
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
