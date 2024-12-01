@@ -5,6 +5,7 @@ from transformers import CLIPModel
 from torchvision import transforms
 from PIL import Image
 
+
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
@@ -24,30 +25,15 @@ class Clip(nn.Module):
         self.num_heads = num_heads
         self.num_classes = num_classes
 
-        # Image preprocessing pipeline (resize, crop, normalize)
-        self.preprocess = transforms.Compose([
-            transforms.Resize(224),          # Resize to 224x224 (instead of 256x256)
-            transforms.CenterCrop(224),      # Crop to 224x224
-            transforms.ToTensor(),           # Convert to tensor
-            transforms.Normalize(            # Normalize using the CLIP standard mean and std
-                mean=[0.48145466, 0.4578275, 0.40821073],
-                std=[0.26862954, 0.26130258, 0.27577711]
-            ),
-        ])
-
     def forward(self, images):
-        # If images are a list of PIL images, preprocess them
-        if isinstance(images, list):
-            images = [self.preprocess(img).unsqueeze(0) for img in images]  # Preprocess each image
-            images = torch.cat(images, dim=0)  # Stack the images into a batch
-
         # Ensure images have the correct shape [batch_size, 3, height, width]
         if images.dim() == 3:  # If missing batch dimension
             images = images.unsqueeze(1)  # Add batch dimension
-        if images.shape[1] == 1:
+        if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
             images = images.repeat(1, 3, 1, 1)
         if images.dim() == 4:
-            images = images[:, :3, :, :]
+            images = images[:, :3, :, :]  # Ensure only 3 channels are used
+
         # Move the images to the same device as the model
         device = "cuda" if torch.cuda.is_available() else "cpu"
         images = images.to(device)
