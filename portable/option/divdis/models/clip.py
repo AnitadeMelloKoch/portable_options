@@ -35,7 +35,7 @@ class Clip(nn.Module):
 
     def forward(self, images):
         # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt")
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
