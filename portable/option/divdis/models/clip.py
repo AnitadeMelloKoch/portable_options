@@ -36,11 +36,19 @@ class Clip(nn.Module):
     def forward(self, images):
         # If images are a tensor, ensure they have the correct format (batch_size, 3, height, width)
         if isinstance(images, torch.Tensor):
-            if images.ndimension() == 3 and images.size(0) == 1:  # Grayscale (1 channel)
-                images = images.repeat(3, 1, 1)  # Convert to 3 channels
-            elif images.ndimension() == 3 and images.size(0) == 4:  # RGBA (4 channels)
-                images = images[:3, :, :]  # Keep the first 3 channels (RGB)
-            # If already 3 channels, do nothing
+            # Check if the tensor has 3 channels (RGB)
+            if images.ndimension() == 3:
+                # If grayscale (1 channel) or RGBA (4 channels), fix the format
+                if images.size(0) == 1:  # Grayscale (1 channel)
+                    images = images.repeat(3, 1, 1)  # Convert to 3 channels
+                elif images.size(0) == 4:  # RGBA (4 channels)
+                    images = images[:3, :, :]  # Keep only the first 3 channels (RGB)
+            elif images.ndimension() == 4:
+                # If the tensor has batch dimension, ensure the format is [batch_size, 3, height, width]
+                if images.size(1) == 1:
+                    images = images.repeat(1, 3, 1, 1)  # Convert to RGB
+                elif images.size(1) == 4:
+                    images = images[:, :3, :, :]  # Keep only the first 3 channels (RGB)
 
         # If images are a list of PIL images, ensure they are in RGB format
         elif isinstance(images, list):
