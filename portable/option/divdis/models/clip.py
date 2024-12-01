@@ -13,46 +13,34 @@ class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
-        # Load CLIP model and processor
-        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
+        self.embedding_class = torch.hub.load('openai/CLIP', 'clip_vit_b32', pretrained=True)
 
         # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(embedding_dim, 256),
-                nn.ReLU(),
-                nn.Linear(256, 128),
-                nn.ReLU(),
-                nn.Linear(128, 64),
-                nn.ReLU(),
-                nn.Linear(64, num_classes)
-            ) for _ in range(num_heads)
-        ]).to(device)
+                nn.LazyLinear(128),
+                nn.LazyLinear(64),
+                nn.LazyLinear(num_classes)
+            ) 
+            for _ in range(num_heads)])
 
         self.num_heads = num_heads
         self.num_classes = num_classes
 
-    def forward(self, images):
-        # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-
-        # Move inputs to the same device as the model
-        inputs = {key: value.to(device) for key, value in inputs.items()}
-
-        # Extract image features using CLIP
-        with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(**inputs)
-
-        # Apply custom layers on the embeddings
-        batch_size = images.size(0)
-        predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
+    def forward(self, x):
+        if x.ndim == 3:  # If missing channel dimension
+            x = x.unsqueeze(1)  # Add channel dimension
+        if x.shape[1] == 1:  # If grayscale, repeat to make RGB
+            x = x.repeat(1, 3, 1, 1)
+            
+        embedding = x.mean(dim=(2, 3))
+        pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
-            predictions[:, idx, :] = self.model[idx](embeddings)
-
-        # Apply softmax over the class dimension
-        predictions = F.softmax(predictions, dim=-1)
-        return predictions
+            y = self.model[idx](embedding)
+            pred[:, idx, :] = y
+            # Apply softmax to get probabilities for each class
+        pred = F.softmax(pred, dim=-1)
+        return pred
 
 # # Example usage:
 # if __name__ == "__main__":
