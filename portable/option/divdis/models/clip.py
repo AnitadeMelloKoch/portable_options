@@ -14,11 +14,16 @@ class Clip(nn.Module):
         # Define custom model layers for each head
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(512),
-                nn.LazyLinear(256),  # Adjust dimensions as needed
-                nn.LazyLinear(num_classes)  # Final output layer for classification
-            ) for _ in range(num_heads)
+                nn.Linear(512, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, num_classes),
+                nn.ReLU()  # Activation for final layer
+            )
+            for _ in range(num_heads)
         ])
+
 
         self.num_heads = num_heads
         self.num_classes = num_classes
