@@ -13,48 +13,43 @@ class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
         super().__init__()
 
-        self.embedding_class = torch.hub.load('openai/CLIP', 'clip_vit_b32', pretrained=True)
+        # Load CLIP model from Hugging Face
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
-        # Custom layers for predictions
+        # Custom layers for predictions (one set of layers per head)
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(128),
-                nn.LazyLinear(64),
-                nn.LazyLinear(num_classes)
-            ) 
-            for _ in range(num_heads)])
+                nn.LazyLinear(128),  # First layer
+                nn.LazyLinear(64),   # Second layer
+                nn.LazyLinear(num_classes)  # Final output layer
+            )
+            for _ in range(num_heads)  # One head for each prediction task
+        ])
 
         self.num_heads = num_heads
         self.num_classes = num_classes
 
     def forward(self, x):
-        if x.ndim == 3:  # If missing channel dimension
-            x = x.unsqueeze(1)  # Add channel dimension
-        if x.shape[1] == 1:  # If grayscale, repeat to make RGB
+        if x.ndim == 3:  # If the batch is missing the channel dimension
+            x = x.unsqueeze(1)  # Add the channel dimension (for single channel images)
+        if x.shape[1] == 1:  # If grayscale, repeat to make it RGB
             x = x.repeat(1, 3, 1, 1)
-            
-        embedding = x.mean(dim=(2, 3))
+
+        # Process the images with the CLIP processor (for CLIP-specific preprocessing)
+        inputs = self.processor(images=x, return_tensors="pt").to(device)
+
+        # Extract image features using the CLIP model
+        embeddings = self.clip_model.get_image_features(**inputs)
+
+        # Initialize a tensor to store the predictions
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
+
+        # Process each head and store the predictions
         for idx in range(self.num_heads):
-            y = self.model[idx](embedding)
+            y = self.model[idx](embeddings)  # Pass through the model head
             pred[:, idx, :] = y
-            # Apply softmax to get probabilities for each class
+
+        # Apply softmax to get probabilities for each class
         pred = F.softmax(pred, dim=-1)
         return pred
-
-# # Example usage:
-# if __name__ == "__main__":
-#     # Number of classes and heads
-#     num_classes = 10
-#     num_heads = 3
-
-#     # Create the model
-#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
-
-#     # Dummy image batch (e.g., PIL images or similar)
-#     from PIL import Image
-#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
-
-#     # Forward pass
-#     outputs = clip_model(dummy_images)
-#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
