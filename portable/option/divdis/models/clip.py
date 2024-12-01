@@ -32,6 +32,7 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
+        ## handle the channel issue? 
         # Preprocess the images
         inputs = self.processor(images=images, return_tensors="pt")
 
