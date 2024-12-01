@@ -37,7 +37,8 @@ class Clip(nn.Module):
     def forward(self, images):
         # Verify and preprocess images
         print("proproces:",images.shape)
-
+        if x.ndim == 3:  # If missing channel dimension
+            x = x.unsqueeze(1)  # Add channel dimension
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
