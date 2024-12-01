@@ -38,7 +38,7 @@ class Clip(nn.Module):
             # Convert the list of PIL images into a batch of images
             images = [image.convert("RGB") if isinstance(image, Image.Image) else Image.fromarray(image) for image in images]
 
-        # Preprocess the images
+        # Preprocess the images (resize and normalize) and convert to tensor
         inputs = self.processor(images=images, return_tensors="pt", padding=True)
 
         # Move inputs to the same device as the model
@@ -58,3 +58,20 @@ class Clip(nn.Module):
         predictions = F.softmax(predictions, dim=-1)
         return predictions
 
+
+# Example usage:
+# if __name__ == "__main__":
+#     num_classes = 10  # Number of classes to predict
+#     num_heads = 3     # Number of prediction heads
+
+#     # Instantiate the model
+#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
+
+#     # Example dummy image batch (create dummy white images with size 224x224)
+#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
+
+#     # Forward pass through the model
+#     outputs = clip_model(dummy_images)
+
+#     # Print the output shape
+#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
