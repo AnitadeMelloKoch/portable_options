@@ -5,7 +5,7 @@ from transformers import CLIPModel
 from torchvision import transforms
 from PIL import Image
 
-class CLIPEnsemble(nn.Module):
+class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
 
