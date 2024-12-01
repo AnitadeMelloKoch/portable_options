@@ -31,25 +31,23 @@ class Clip(nn.Module):
         self.num_heads = num_heads
         self.num_classes = num_classes
 
-    def forward(self, x):
-        if x.ndim == 3:  # If the batch is missing the channel dimension
-            x = x.unsqueeze(1)  # Add the channel dimension (for single channel images)
-        if x.shape[1] == 1:  # If grayscale, repeat to make it RGB
-            x = x.repeat(1, 3, 1, 1)
-        # Process the images with the CLIP processor (for CLIP-specific preprocessing)
-        inputs = self.processor(images=x, return_tensors="pt").to(device)
+    def forward(self, images):
+        # Preprocess the images
+        inputs = self.processor(images=images, return_tensors="pt")
 
-        # Extract image features using the CLIP model
-        embeddings = self.clip_model.get_image_features(**inputs)
+        # Move inputs to the same device as the model
+        inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Initialize a tensor to store the predictions
-        pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
+        # Extract image features using CLIP
+        with torch.no_grad():
+            embeddings = self.clip_model.get_image_features(**inputs)
 
-        # Process each head and store the predictions
+        # Apply custom layers on the embeddings
+        batch_size = images.size(0)
+        predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
-            y = self.model[idx](embeddings)  # Pass through the model head
-            pred[:, idx, :] = y
+            predictions[:, idx, :] = self.model[idx](embeddings)
 
-        # Apply softmax to get probabilities for each class
-        pred = F.softmax(pred, dim=-1)
-        return pred
+        # Apply softmax over the class dimension
+        predictions = F.softmax(predictions, dim=-1)
+        return predictions
