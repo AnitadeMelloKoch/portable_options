@@ -21,7 +21,7 @@ class Clip(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Custom layers for predictions
-        self.model = nn.ModuleList([
+        self.model = nn.ModuleList([ 
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -35,26 +35,18 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Ensure images are in tensor format
+        # Check if images are in the correct format (list of PIL images or tensor)
         if isinstance(images, list):
-            images = torch.stack([torch.tensor(img) if not isinstance(img, torch.Tensor) else img for img in images])
+            # Convert list of images to PIL if necessary (only if not already in PIL format)
+            images = [Image.fromarray(img) if isinstance(img, np.ndarray) else img for img in images]
 
-        # Check and enforce exactly 3 channels for each image
-        for i in range(len(images)):
-            if images[i].shape[0] == 1:  # If grayscale (1 channel), repeat to form 4 channels
-                images[i] = images[i].repeat(3, 1, 1)
-            elif images[i].shape[0] == 4:  # If RGB (3 channels), repeat to form 4 channels
-                images[i] = images[i].repeat(3, 1, 1)
-            elif images[i].shape[0] == 3:  # Already 4 channels, do nothing
-                pass
-        # Ensure the tensor is on the correct device
-        images = images.to(device)
-        
-        
+        # Ensure all images are in RGB format (3 channels)
+        images = [img.convert("RGB") if img.mode != "RGB" else img for img in images]
+
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
-        # Move inputs to the same device as the model
+        # Ensure the tensor is on the correct device
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
         # Extract image features using CLIP
@@ -70,4 +62,3 @@ class Clip(nn.Module):
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-
