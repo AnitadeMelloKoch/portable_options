@@ -32,22 +32,23 @@ class Clip(nn.Module):
             # if images.shape[1] == 1:  # If grayscale, repeat channels to make RGB
             images = images.repeat(1, 3, 1, 1)
         if images.dim() == 4:
-            images = images[:, :3, :, :]  # Ensure only 3 channels are used
+            images = images[:, -3:, :, :] # Ensure only 3 channels are used
 
         # Move the images to the same device as the model
         device = "cuda" if torch.cuda.is_available() else "cpu"
         images = images.to(device)
 
-        # Extract image features using CLIP (image embeddings)
-        with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(pixel_values=images)
-
+        # # Extract image features using CLIP (image embeddings)
+        # with torch.no_grad():
+        #     embeddings = self.clip_model.get_image_features(pixel_values=images)
+        embeddings = images.mean(dim=(2, 3))
         # Apply custom model layers on the extracted embeddings
         batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes).to(device)
 
         for idx in range(self.num_heads):
-            predictions[:, idx, :] = self.model[idx](embeddings)
+            y = self.model[idx](embeddings)
+            predictions[:, idx, :] = y
 
         # Apply softmax to get probabilities for each class
         predictions = F.softmax(predictions, dim=-1)
