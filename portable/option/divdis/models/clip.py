@@ -47,9 +47,6 @@ class Clip(nn.Module):
                 images[i] = images[i].repeat(3, 1, 1)
             elif images[i].shape[0] == 3:  # Already 4 channels, do nothing
                 pass
-            else:  # If more than 4 channels, slice to keep the first 4 channels
-                images[i] = images[i][:4, :, :]
-
         # Ensure the tensor is on the correct device
         images = images.to(device)
         
