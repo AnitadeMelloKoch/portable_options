@@ -17,9 +17,7 @@ class Clip(nn.Module):
         self.model = nn.ModuleList([
             nn.Sequential(
                 nn.LazyLinear(512),
-                nn.LazyLinear(256),  # You can adjust the dimensions here as needed
                 nn.LazyLinear(128),
-                nn.LazyLinear(64),
                 nn.LazyLinear(num_classes)  # Final output layer for classification
             ) for _ in range(num_heads)
         ])
