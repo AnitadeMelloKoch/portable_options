@@ -37,15 +37,23 @@ class Clip(nn.Module):
     def forward(self, images):
         # Verify and preprocess images
         print("proproces:",images.shape)
-        if images.ndim == 3:  # If missing channel dimension
-            images = images.unsqueeze(1)  # Add channel dimension
+        # Ensure the image input is in the correct format
+        if images.ndim == 3:  # Single image, needs to be wrapped in a list
+            images = [images]  # Convert to list
+        elif images.ndim == 4:  # Already a batch of images
+            images = images.squeeze(0)  # Remove batch dimension if any (optional)
 
-        # Ensure the number of channels is 3 (RGB format)
-        if images.shape[1] == 4:  # If image has 4 channels (RGBA)
-            images = images[:, :3, :, :]  # Remove the alpha channel (4th channel)
-        elif images.shape[1] < 3:  # If the image has less than 3 channels
-            # Assuming it's grayscale, expand to 3 channels by duplicating the single channel
-            images = images.repeat(1, 4, 1, 1)
+        # Check and enforce exactly 4 channels for each image
+        for i in range(len(images)):
+            if images[i].shape[0] == 1:  # If grayscale (1 channel), repeat to form 4 channels
+                images[i] = images[i].repeat(3, 1, 1)
+            elif images[i].shape[0] == 4:  # If RGB (3 channels), repeat to form 4 channels
+                images[i] = images[i].repeat(3, 1, 1)
+            elif images[i].shape[0] == 3:  # Already 4 channels, do nothing
+                pass
+            else:  # If more than 3 channels, slice to keep the first 3 channels
+                images[i] = images[i][:3, :, :]
+
 
         print("after:", images.shape)
         
