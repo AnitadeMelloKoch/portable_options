@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
-import numpy as np  # Import numpy to handle image arrays if necessary
+from torchvision import transforms  # For handling image transformations
+import numpy as np  # For handling image arrays if necessary
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,9 +35,12 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
-        ## handle the channel issue? 
-        # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt")
+        # Ensure images are in the correct format (list of PIL Images)
+        if isinstance(images[0], torch.Tensor):
+            images = [transforms.ToPILImage()(img) for img in images]
+
+        # Preprocess the images with `do_rescale=False` to avoid double rescaling
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
 
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
@@ -46,7 +50,7 @@ class Clip(nn.Module):
             embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
-        batch_size = images[0].size[0]  # Get the batch size from the first image
+        batch_size = embeddings.size(0)  # Get the batch size from embeddings
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
@@ -54,3 +58,4 @@ class Clip(nn.Module):
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
+
