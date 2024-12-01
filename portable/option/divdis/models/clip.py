@@ -54,8 +54,12 @@ class Clip(nn.Module):
             else:  # If more than 3 channels, slice to keep the first 3 channels
                 images[i] = images[i][:3, :, :]
 
+        # Ensure images are in tensor format
+        if isinstance(images, list):
+            images = torch.stack([torch.tensor(img) for img in images])
 
-        print("after:", images.shape)
+        # Print shape after conversion to tensor
+        print("After:", images.shape)
         
         
         # Preprocess the images with `do_rescale=False` to avoid double rescaling
