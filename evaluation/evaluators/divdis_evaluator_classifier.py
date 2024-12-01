@@ -1,9 +1,5 @@
-import datetime
-import logging
 import os
-import pickle
 import random
-from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -11,9 +7,6 @@ import torch
 from sklearn.metrics import confusion_matrix, classification_report, ConfusionMatrixDisplay
 import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
-
 
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.memory.set_dataset import SetDataset
@@ -34,156 +27,98 @@ class DivDisEvaluatorClassifier():
             self,
             classifier,
             image_input=True,
-            test_batch_size=64,
+            batch_size=64,
             base_dir=None,
-            stack_size=3):
+            stack_size=4):
         
         self.classifier = classifier
 
         self.base_dir = base_dir
-        self.plot_dir = os.path.join(self.base_dir,'plots')
-        self.log_dir = os.path.join(self.base_dir,'logs')
-        os.makedirs(self.plot_dir, exist_ok=True)
-        os.makedirs(self.log_dir, exist_ok=True)
+        self.plot_dir = os.path.join(self.base_dir, 'plots')
+        if self.plot_dir:
+            os.makedirs(self.plot_dir, exist_ok=True)
         
         self.head_num = self.classifier.head_num
         self.image_input = image_input
 
-        self.positive_test_files = []
-        self.negative_test_files = []
-
-        self.test_batch_size = test_batch_size
+        self.test_batch_size = batch_size
         self.test_dataset = SetDataset(max_size=1e6, batchsize=self.test_batch_size)
         
         self.stack_size = stack_size
         
-        #self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.model[i])) for i in range(self.head_num)]
-        self.integrated_gradients = [(DeepLift(self.classifier.classifier.model[i])) for i in range(self.head_num)]
+        self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.model[i])) for i in range(self.head_num)]
         self.ig_attr_test = [dict() for _ in range(self.head_num)]
         self.confusion_matrices = [None for _ in range(self.head_num)]
         self.classification_reports = [None for _ in range(self.head_num)]
 
-        self.writer = SummaryWriter(log_dir=self.log_dir)
-        log_file = os.path.join(self.log_dir,
-                                "{}.log".format(datetime.datetime.now()))
-        
-        logging.basicConfig(filename=log_file, 
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            level=logging.INFO)
-        
-
-
 
     def evaluate_images(self, num_images=5):
         images, labels = self.test_dataset.get_batch()
-        
-        images = images.to(self.classifier.device)
-        labels = labels.to(self.classifier.device)
-
-
-        #colors = ['#FF0000', '#FF4500', '#808080', '#90EE90', '#00FF00']
-        #colors = ['#FF00FF', '#FF1493', '#303030', '#00FF00', '#39FF14']
-        colors = ['#FF0044', '#FF3030', '#303030', '#00FF00', '#39FF14']
-        n_bins = 100
-        custom_cmap = LinearSegmentedColormap.from_list('custom_saliency', colors, N=n_bins)
-
+        if self.classifier.use_gpu:
+            images = images.cuda()
+            labels = labels.cuda()
             
-        for image_idx in tqdm(range(num_images), desc='Evaluating Images'):
+        for image_idx in range(num_images):
             image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
 
-            image.requires_grad_()
-            
             # Create a figure with subplots
-            #fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
-            fig, axes = plt.subplots(nrows=self.head_num+0, ncols=self.stack_size, figsize=(3.7*self.stack_size, 4.3*(self.head_num+0)))
-            fig.suptitle(f'True Label: {"Positive" if label else "Negative"}', 
-                         ha='center', fontsize=20, fontweight='bold')
+            fig, axes = plt.subplots(nrows=self.head_num+1, ncols=self.stack_size, figsize=(5*self.stack_size, 5*self.head_num))
+            fig.suptitle(f'Attributions for Image {image_idx} (Label: {label})')
 
-            predictions, votes = self.classifier.predict(image)  # Get predictions for the current head
-            predicted_labels = predictions.squeeze().argmax(dim=-1)  # Assuming single label prediction
+            predictions = self.classifier.predict(image)[0]  # Get predictions for the current head
+            predicted_labels = predictions.argmax(dim=-1)  # Assuming single label prediction
 
-            #for i in range(self.stack_size):
-            #    ax = axes[0, i]
-            #    ax.imshow(image[0, i].detach().cpu().numpy(), cmap='gray')
-            #    ax.set_xticks([])
-            #    ax.set_yticks([])
-            #axes[0, 0].text(-0.1, 0.5, "Original Image", transform=axes[0, 0].transAxes, 
-            #    va='center', ha='center', fontsize=12, rotation='vertical')
+            for i in range(self.stack_size):
+                ax = axes[0, i]
+                ax.imshow(image[0, i].cpu().numpy(), cmap='gray')
+                ax.set_xticks([])
+                ax.set_yticks([])
+            axes[0, 0].text(-0.2, 0.5, "Original Image", transform=axes[0, 0].transAxes, 
+                va='center', ha='right', fontsize=12, fontweight='bold')
                 
             # Loop through each classifier head
-            nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
 
-                #attr = self.integrated_gradients[head_idx].attribute(
-                #    image,
-                #    nt_samples=10,
-                #    n_steps=10,
-                #    target=label
-                #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
-                print("attr:", self.integrated_gradients[head_idx].attribute(
-                    image,
-                    target=label
-                ).squeeze().cpu().detach().numpy().shape)
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
+                    nt_samples=10,
+                    n_steps=10,
                     target=label
                 ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
+                display_image = image.squeeze().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
                 
-                display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
-
+                # Loop through each channel in the input image
                 for channel_idx in range(self.stack_size):
-                    ax = axes[head_idx+0, channel_idx]
+                    ax = axes[head_idx+1, channel_idx]
                     ax.imshow(display_image[:,:,channel_idx], cmap='gray')
+                    #ax.imshow(attr[:,:,channel_idx], cmap='seismic', alpha=0.5)
                     
-                    # Visualize attributions with heatmap
-                    fig, ax = viz.visualize_image_attr(
-                        attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
-                        original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
-                        method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
-                        show_colorbar=False, plt_fig_axis=(fig, ax),
-                        use_pyplot=False
-                    )
+                    fig, ax = viz.visualize_image_attr(attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                                                       original_image=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                                                       method='blended_heat_map', sign='positive', 
+                                                       show_colorbar=False, plt_fig_axis=(fig, ax),
+                                                       use_pyplot=False)
                     ax.set_axis_off()
-                
+                    
 
                 if(label == 1) & (pred_label_head == 1):
-                    row_name = ('True Positive')
+                    row_name = (f'Head {head_idx}: True Positive')
                 elif(label == 0) & (pred_label_head == 0):
-                    row_name = ('True Negative')
+                    row_name = (f'Head {head_idx}: True Negative')
                 elif(label == 0) & (pred_label_head == 1):
-                    row_name = ('False Positive')
+                    row_name = (f'Head {head_idx}: False Positive')
                 elif(label == 1) & (pred_label_head == 0):
-                    row_name = ('False Negative')
-
-                if row_name == 'False Positive' or row_name == 'False Negative':
-                    nonagreement = True
+                    row_name = (f'Head {head_idx}: False Negative')
             
-                #axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
-                #    va='center', ha='right', fontsize=12, fontweight='bold')
-                axes[head_idx+0,0].text(-0.1, 0.5, row_name, transform=axes[head_idx+0,0].transAxes, 
-                    va='center', ha='center', fontsize=16, rotation='vertical')
-
+                axes[head_idx,0].text(-0.2, 0.5, row_name, transform=axes[head_idx,0].transAxes, 
+                    va='center', ha='right', fontsize=12, fontweight='bold')
                     
             plt.tight_layout()
             #plt.show()
-
-            for row in range(1, self.head_num + 0):
-                pos_prev = axes[row-1, 0].get_position()
-                pos_next = axes[row, 0].get_position()
-                y = (pos_prev.y0 + pos_next.y1) / 2
-                
-                line = plt.Line2D([0, 1], [y, y], transform=fig.transFigure, color='black', linewidth=2)
-                fig.add_artist(line)
-
-            pickle_filename = os.path.join(self.plot_dir, f"image_{image_idx}.pkl")
-            with open(pickle_filename, 'wb') as f:
-                pickle.dump(fig, f)
-                    
             # Optionally save the figure
-            img_name =  f'{"nonagreeing_" if nonagreement else ""}image_{image_idx}.png'
-            fig.savefig(os.path.join(self.plot_dir, img_name))
+            fig.savefig(os.path.join(self.plot_dir, f'attributions_image_{image_idx}.png'))
             plt.close(fig)
     
 
@@ -226,16 +161,11 @@ class DivDisEvaluatorClassifier():
                 states_fp = states[(labels == 0) & (labels_pred_head == 1)]
                 states_fn = states[(labels == 1) & (labels_pred_head == 0)]
 
-                self.ig_attr_test[head_idx]['all'           ].append(self.integrated_gradients[head_idx].attribute(
-                    states,    nt_samples=10, n_steps=10, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true positive' ].append(self.integrated_gradients[head_idx].attribute(
-                    states_tp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['true negative' ].append(self.integrated_gradients[head_idx].attribute(
-                    states_tn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(
-                    states_fp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
-                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(
-                    states_fn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['all'           ].append(self.integrated_gradients[head_idx].attribute(states,    nt_samples=10, n_steps=10, target=labels_pred_head).detach().to('cpu').numpy()) if len(states) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true positive' ].append(self.integrated_gradients[head_idx].attribute(states_tp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_tp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['true negative' ].append(self.integrated_gradients[head_idx].attribute(states_tn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_tn) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false positive'].append(self.integrated_gradients[head_idx].attribute(states_fp, nt_samples=10, n_steps=10, target=1).detach().to('cpu').numpy()) if len(states_fp) > 0 else np.array([])
+                self.ig_attr_test[head_idx]['false negative'].append(self.integrated_gradients[head_idx].attribute(states_fn, nt_samples=10, n_steps=10, target=0).detach().to('cpu').numpy()) if len(states_fn) > 0 else np.array([])
 
         # concatenate all attributions from all batches, independently for each head and each attribution type
         self.ig_attr_test = [{k: np.concatenate(v) if len(v)>0 else np.array([]) for k, v in ig_attr_head.items()} for ig_attr_head in self.ig_attr_test]
@@ -257,6 +187,7 @@ class DivDisEvaluatorClassifier():
             if not self.image_input:
                 self._plot_attributions_factored(26)
         
+
     
 
     def _plot_attributions_factored(self, num_features=26):
@@ -372,74 +303,6 @@ class DivDisEvaluatorClassifier():
         self.evaluate_factored(sample_size)
         return self.get_head_complexity()
 
-
     def add_test_files(self, true_files, false_files):
-        self.positive_test_files = true_files
-        self.negative_test_files = false_files
-        
         self.test_dataset.add_true_files(true_files)
         self.test_dataset.add_false_files(false_files)
-
-    def test_classifier(self):
-        dataset_positive = SetDataset(max_size=1e6,
-                                      batchsize=64)
-        
-        dataset_negative = SetDataset(max_size=1e6,
-                                      batchsize=64)
-        
-        #dataset_positive.set_transform_function(transform)
-        #dataset_negative.set_transform_function(transform)
-        
-        dataset_positive.add_true_files(self.positive_test_files)
-        dataset_negative.add_false_files(self.negative_test_files)
-    
-        counter = 0
-        accuracy = np.zeros(self.classifier.head_num)
-        accuracy_pos = np.zeros(self.classifier.head_num)
-        accuracy_neg = np.zeros(self.classifier.head_num)
-        
-        for _ in range(dataset_positive.num_batches):
-            counter += 1
-            x, y = dataset_positive.get_batch()
-            pred_y, votes = self.classifier.predict(x)
-            
-            for idx in range(self.classifier.head_num):
-                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
-                accuracy_pos[idx] += (torch.sum(pred_class==y).item())/len(y)
-                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
-
-        accuracy_pos /= counter
-        
-        total_count = counter
-        counter = 0
-        
-        for _ in range(dataset_negative.num_batches):
-            counter += 1
-            x, y = dataset_negative.get_batch()
-            pred_y, votes = self.classifier.predict(x)
-            
-            for idx in range(self.classifier.head_num):
-                pred_class = torch.argmax(pred_y[:,idx,:], dim=1).detach().cpu()
-                accuracy_neg[idx] += (torch.sum(pred_class==y).item())/len(y)
-                accuracy[idx] += (torch.sum(pred_class==y).item())/len(y)
-
-        
-        accuracy_neg /= counter
-        total_count += counter
-        
-        accuracy /= total_count
-        
-        weighted_acc = (accuracy_pos + accuracy_neg)/2
-        
-        '''logging.info("============= Classifiers evaluated =============")
-        for idx in range(self.classifier.head_num):
-            logging.info("Head idx:{:<4}, True accuracy: {:.4f}, False accuracy: {:.4f}, Total accuracy: {:.4f}, Weighted accuracy: {:.4f}".format(
-                idx,
-                accuracy_pos[idx],
-                accuracy_neg[idx],
-                accuracy[idx],
-                weighted_acc[idx])
-            )
-        logging.info("=================================================")
-        '''
-        return accuracy_pos, accuracy_neg, accuracy, weighted_acc
