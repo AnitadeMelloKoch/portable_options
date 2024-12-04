@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
+from torchvision import transforms
+
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
