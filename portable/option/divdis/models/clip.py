@@ -31,18 +31,26 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
+        # Check if images are torch tensors; convert to PIL if necessary
+        if isinstance(images, torch.Tensor):
+            images = [transforms.ToPILImage()(img) for img in images]
+
         # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt").to(device)
-        
+        inputs = self.processor(
+            images=images,
+            return_tensors="pt",
+            do_rescale=False  # Disable rescaling if input images are normalized
+        ).to(device)
+
         # Extract image features using CLIP
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
 
         # Apply custom layers on the embeddings
-        predictions = torch.zeros(images.size(0), self.num_heads, self.num_classes, device=device)
+        predictions = torch.zeros(len(images), self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-        
+
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
