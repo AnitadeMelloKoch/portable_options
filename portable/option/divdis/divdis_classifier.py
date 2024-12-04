@@ -12,6 +12,7 @@ from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 from portable.option.divdis.models.yolo import YOLOEnsemble
+from portable.option.divdis.models.clip import Clip
 logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
@@ -19,7 +20,8 @@ MODEL_TYPE = [
     "minigrid_cnn",
     "minigrid_large_cnn",
     "monte_cnn",
-    "yolo"
+    "yolo",
+    "clip"
 ]
 @gin.configurable
 class DivDisClassifier():
@@ -109,6 +111,9 @@ class DivDisClassifier():
                                                num_heads= self.head_num)
         elif self.model_name == "yolo":
             self.classifier = YOLOEnsemble(num_classes=self.num_classes,
+                                               num_heads= self.head_num)
+        elif self.model_name == "clip":
+            self.classifier = Clip(num_classes=self.num_classes,
                                                num_heads= self.head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))

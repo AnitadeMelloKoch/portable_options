@@ -43,7 +43,6 @@ class MonteDivDisClassifierExperiment():
                  experiment_name,
                  seed,
                  use_gpu,
-                 F
                  classifier_num_classes,
                  
                  classifier_head_num,
@@ -52,7 +51,7 @@ class MonteDivDisClassifierExperiment():
                  classifier_l2_reg_weight,
                  classifier_initial_epochs,
                  classifier_per_room_epochs
-                 ):
+                ):
         
         self.seed = seed 
         self.base_dir = base_dir

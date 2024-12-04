@@ -3,8 +3,8 @@
 #SBATCH --gres gpu:2
 #SBATCH --mem=64G
 #SBATCH --time=1-00:00:00
-#SBATCH --error=<yolo_epoch300_64>.%J.err
-#SBATCH --output=<yolo_epoch300_64>.%J.out
+#SBATCH --error=<clip_check>.%J.err
+#SBATCH --output=<clip_check>.%J.out
 #SBATCH --mail-type=END
 #SBATCH --mail-user=kyle_k_lee@brown.edu
 module load miniconda3/23.11.0s
