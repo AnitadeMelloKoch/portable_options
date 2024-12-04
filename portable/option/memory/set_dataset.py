@@ -181,8 +181,8 @@ class SetDataset():
             data = np.load(file, allow_pickle=True)
             data = self.pad(data)
             data = torch.from_numpy(data)
-            if torch.max(data) <= 1:
-                data = data*255
+            # if torch.max(data) <= 1:
+            #     data = data*255
             data = data.int()
             data = data.squeeze()
             data = data.unsqueeze(0)
