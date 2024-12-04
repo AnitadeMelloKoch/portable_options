@@ -9,7 +9,7 @@ import random
 import numpy as np
 
 img_dir = "/oscar/data/gdk/yyang239/portable_options/resources/dog_images"
-# img_dir = "/Users/kylelee/Desktop/PortableOptionsClassifier/portable_options/resources/dog_images"
+# img_dir = "/home/yyang239/divdis/portable_options/resources/dog_images"
 # Loop through all files in the directory
 chihuahua = []
 spaniel = []
