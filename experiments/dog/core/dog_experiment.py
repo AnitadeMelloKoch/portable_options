@@ -73,7 +73,7 @@ class DogExperiment():
                                            num_classes=classifier_num_classes,
                                            diversity_weight=classifier_diversity_weight,
                                            l2_reg_weight=classifier_l2_reg_weight,
-                                           model_name='clip') # Ensure classifier is moved to the chosen device
+                                           model_name='yolo') # Ensure classifier is moved to the chosen device
         
         self.chihuahua = []
         self.spaniel = []
