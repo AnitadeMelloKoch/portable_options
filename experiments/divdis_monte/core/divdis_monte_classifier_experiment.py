@@ -43,6 +43,7 @@ class MonteDivDisClassifierExperiment():
                  experiment_name,
                  seed,
                  use_gpu,
+                 F
                  classifier_num_classes,
                  
                  classifier_head_num,
@@ -55,7 +56,7 @@ class MonteDivDisClassifierExperiment():
         
         self.seed = seed 
         self.base_dir = base_dir
-        self.experiment_name = experiment_name 
+        self.experiment_name = experiment_name
         self.initial_epochs = classifier_initial_epochs
         self.per_room_epochs = classifier_per_room_epochs
         
@@ -503,4 +504,3 @@ class MonteDivDisClassifierExperiment():
         self.plot_metrics(history, 'additional_loops', 'additional_train_metrics')
 
         return history
-
