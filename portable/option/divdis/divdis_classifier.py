@@ -11,7 +11,7 @@ from portable.option.divdis.models.minigrid_cnn_16x16 import MinigridCNN16x16, M
 from portable.option.divdis.models.minigrid_cnn import MinigridCNN
 from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
-from portable.option.divdis.models.yolo import YOLOEnsemble
+from portable.option.divdis.models.clip import Clip
 logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
@@ -19,7 +19,7 @@ MODEL_TYPE = [
     "minigrid_cnn",
     "minigrid_large_cnn",
     "monte_cnn",
-    "yolo"
+    "clip"
 ]
 @gin.configurable
 class DivDisClassifier():
@@ -80,12 +80,12 @@ class DivDisClassifier():
         logger.info("======================================")
         logger.info("======================================")
     def save(self, path):
-        if self.model_name == "yolo":
+        if self.model_name == "clip":
             return
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
     def load(self, path):
-        if self.model_name == "yolo":
+        if self.model_name == "clip":
             return
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
@@ -107,8 +107,8 @@ class DivDisClassifier():
         elif self.model_name == "minigrid_large_cnn":
             self.classifier = MinigridCNNLarge(num_classes=self.num_classes,
                                                num_heads= self.head_num)
-        elif self.model_name == "yolo":
-            self.classifier = YOLOEnsemble(num_classes=self.num_classes,
+        elif self.model_name == "clip":
+            self.classifier = Clip(num_classes=self.num_classes,
                                                num_heads= self.head_num)
         else:
             raise ValueError("model_name must be one of {}".format(MODEL_TYPE))
