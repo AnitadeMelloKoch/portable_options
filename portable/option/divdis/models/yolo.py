@@ -15,6 +15,7 @@ class YOLOEnsemble(nn.Module):
         
         self.model = nn.ModuleList([
             nn.Sequential(
+                nn.Flatten(),
                 nn.LazyLinear(1000),
                 nn.LazyLinear(700),
                 nn.LazyLinear(num_classes)
@@ -49,6 +50,7 @@ class YOLOEnsemble(nn.Module):
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
             y = self.model[idx](embedding)
+            print("y shape:", y.shape)
             pred[:, idx, :] = y
             # Apply softmax to get probabilities for each class
         pred = F.softmax(pred, dim=-1)
