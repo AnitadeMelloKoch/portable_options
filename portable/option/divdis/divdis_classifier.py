@@ -95,7 +95,7 @@ class DivDisClassifier():
             self.dataset.load(path)
     def set_class_weights(self, weights=None):
         if weights is None:
-            weights = self.dataset.get_equal_class_weight()
+            weights = [0.5,0.5]
         self.ce_criterion = torch.nn.CrossEntropyLoss(
             weight=torch.tensor(weights).to(self.device)
         )
