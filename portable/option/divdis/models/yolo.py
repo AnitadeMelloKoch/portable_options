@@ -12,11 +12,6 @@ class YOLOEnsemble(nn.Module):
 
         #self.embedding_class = torch.hub.load('ultralytics/yolov5', 'custom', path='yolov5s.pt')
         self.embedding_class = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True).model
-        
-        self.embedding_size = self.embedding_class.model.model[1].out_channels  # Adjust this to match the actual output size
-        
-        print("Embedding size (output channels from YOLOv5 neck):", self.embedding_size)
-
 
         self.model = nn.ModuleList([
             nn.Sequential(

@@ -39,7 +39,7 @@ class DivDisClassifier():
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  summary_writer=None,
-                 model_name='minigrid_cnn') -> None:
+                 model_name='yolo') -> None:
         if use_gpu == 0:
             self.device = torch.device('cpu')
         else:
@@ -82,13 +82,13 @@ class DivDisClassifier():
         logger.info("======================================")
         logger.info("======================================")
     def save(self, path):
-        if self.model_name == "yolo":
-            return
+        # if self.model_name == "yolo":
+        #     return
         torch.save(self.classifier.state_dict(), os.path.join(path, 'classifier_ensemble.ckpt'))
         self.dataset.save(path)
     def load(self, path):
-        if self.model_name == "yolo":
-            return
+        # if self.model_name == "yolo":
+        #     return
         if os.path.exists(os.path.join(path, 'classifier_ensemble.ckpt')):
             print("classifier loaded from: {}".format(path))
             self.classifier.load_state_dict(torch.load(os.path.join(path, 'classifier_ensemble.ckpt')))
