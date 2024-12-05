@@ -24,8 +24,7 @@ class Clip(nn.Module):
         ]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
-        self.full_model = nn.ModuleList([nn.Sequential([self.clip_model,classfication_head]) for classfication_head in self.model]).to(device)
-        
+        self.full_model = nn.ModuleList([nn.Sequential(self.clip_model,classfication_head) for classfication_head in self.model]).to(device)
     def forward(self, images):
         print("entered")
         print("images shape:", images.shape)

@@ -101,9 +101,6 @@ class DivDisEvaluatorClassifier():
 
             predictions, votes = self.classifier.predict(image)  # Get predictions for the current head
             predicted_labels = predictions.squeeze().argmax(dim=-1)  # Assuming single label prediction
-            print("predictions:", predictions)
-            print("votes:", votes)
-            print("predicted labels:", predicted_labels)
 
             #for i in range(self.stack_size):
             #    ax = axes[0, i]
@@ -121,6 +118,8 @@ class DivDisEvaluatorClassifier():
                 print("pred label head:", pred_label_head)
                 print("dim:", pred_label_head.shape)
                 print("integrated grad:", self.integrated_gradients[head_idx])
+                print("image_shape:", image.shape)
+                print("label shape:", label.shape)
                 print("attr dimension:", self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
