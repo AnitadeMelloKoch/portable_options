@@ -41,6 +41,8 @@ class YOLOEnsemble(nn.Module):
 
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
+        print("embedding:", embedding)
+        print("embedding shape:", embedding.shape)
 
 
         # Prediction logic: apply custom model layers on the embedding
