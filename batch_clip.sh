@@ -6,7 +6,7 @@
 #SBATCH --error=<clip_check>.%J.err
 #SBATCH --output=<clip_check>.%J.out
 #SBATCH --mail-type=END
-#SBATCH --mail-user=kyle_k_lee@brown.edu
+#SBATCH --mail-user=yuechuan_yang@brown.edu
 module load miniconda3/23.11.0s
 source /oscar/runtime/software/external/miniconda3/23.11.0/etc/profile.d/conda.sh
 conda activate divlis

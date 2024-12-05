@@ -8,7 +8,7 @@ from portable.utils.utils import load_gin_configs
 import random
 import numpy as np
 
-img_dir = "/oscar/data/gdk/klee175/portable_options/resources/dog_images"
+img_dir = "/oscar/data/gdk/yyang239/portable_options/resources/dog_images"
 # img_dir = "/Users/kylelee/Desktop/PortableOptionsClassifier/portable_options/resources/dog_images"
 # Loop through all files in the directory
 chihuahua = []
