@@ -10,4 +10,4 @@ DivDisClassifier.diversity_weight    = 3e-5 #5e-4 #3e-2 #3e-5
 DivDisClassifier.l2_reg_weight       = 5e-4 #1e-3 #2e-4 #5e-4
 DivDisClassifier.model_name          = "yolo"
 
-UnbalancedSetDataset.class_weights   = [0.8, 0.2]
+UnbalancedSetDataset.class_weights   = [0.5, 0.5]

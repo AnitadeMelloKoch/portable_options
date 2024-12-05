@@ -24,8 +24,17 @@ class YOLOEnsemble(nn.Module):
     
         self.num_heads = num_heads
         self.num_classes = num_classes
+        # self.full_model = nn.ModuleList([nn.Sequential([self.embedding_class, self.model]) for _ in range(num_heads))
+        
+        # Full model includes embedding and classification head
+        self.full_model = nn.ModuleList([
+            nn.Sequential(self.embedding_class, classification_head)
+            for classification_head in self.model
+        ])
 
     def forward(self, x):
+        print("x (check scaling):", x)
+        print("x shape:", x.shape)
         # Access backbone and neck layers (not including the final detection head)
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
