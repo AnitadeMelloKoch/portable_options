@@ -120,6 +120,7 @@ class DivDisEvaluatorClassifier():
                 print("head idx:", head_idx)
                 print("pred label head:", pred_label_head)
                 print("dim:", pred_label_head.shape)
+                print("integrated grad:", self.integrated_gradients[head_idx])
                 print("attr dimension:", self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
