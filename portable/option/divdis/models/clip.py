@@ -36,14 +36,10 @@ class Clip(nn.Module):
         # Extract image features using CLIP
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
-            print("embeddings shape:", embeddings.shape)
         # Apply custom layers on the embeddings
         batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
-            
-            print("model of embeddings:", self.model[idx](embeddings))
-            print("model of embeddings shape:", self.model[idx](embeddings).shape)
             predictions[:, idx, :] = self.model[idx](embeddings)
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
