@@ -46,6 +46,9 @@ class Clip(nn.Module):
             HeadedCLIPModel(self.clip_model, head) for head in self.model_heads
         ]).to(device)
 
+        # Add model attribute to reference the full model (or choose another part)
+        self.model = self.full_model  # Add this line
+
         self.num_heads = num_heads
         self.num_classes = num_classes
 
@@ -62,7 +65,7 @@ class Clip(nn.Module):
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
 
         for idx in range(self.num_heads):
-            predictions[:, idx, :] = self.model_heads[idx](embeddings)
+            predictions[:, idx, :] = self.model[idx](embeddings)
 
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
