@@ -23,6 +23,7 @@ class HeadedCLIPModel(nn.Module):
         output = self.classification_head(embeddings)
         return output
     
+
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
@@ -41,10 +42,6 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
 
-        # Create individual models for each head
-        self.full_model = nn.ModuleList([
-            HeadedCLIPModel(self.clip_model, head) for head in self.model
-        ]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
 
@@ -55,12 +52,12 @@ class Clip(nn.Module):
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Ensure we only pass image-related keys to the clip model
-        image_inputs = {key: value for key, value in inputs.items() if key != 'input_ids'}
-
-        # Extract image features using CLIP
+        # Extract image features using CLIP model's forward method
         with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(**image_inputs)
+            outputs = self.clip_model(pixel_values=inputs['pixel_values'])
+
+        # Get the image features (embeddings)
+        embeddings = outputs['image_embeds']
 
         # Apply custom layers on the embeddings
         batch_size = images.size(0)
