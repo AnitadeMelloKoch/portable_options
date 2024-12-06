@@ -15,7 +15,6 @@ class YOLOEnsemble(nn.Module):
 
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(85, 64), 
                 nn.LazyLinear(1000),
                 nn.LazyLinear(700),
                 nn.LazyLinear(num_classes)
@@ -29,7 +28,7 @@ class YOLOEnsemble(nn.Module):
         
         # Full model includes embedding and classification head
         self.full_model = nn.ModuleList([
-            nn.Sequential(self.embedding_class, classification_head)
+            nn.Sequential(classification_head, self.embedding_class)
             for classification_head in self.model
         ])
 
