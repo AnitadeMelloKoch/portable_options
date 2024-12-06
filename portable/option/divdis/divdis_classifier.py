@@ -39,7 +39,7 @@ class DivDisClassifier():
                  dataset_batchsize=32,
                  unlabelled_dataset_batchsize=None,
                  summary_writer=None,
-                 model_name='minigrid_cnn') -> None:
+                 model_name='clip') -> None:
         if use_gpu == 0:
             self.device = torch.device('cpu')
         else:
