@@ -25,13 +25,13 @@ class HeadedCLIPModel(nn.Module):
     
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
-        super(Clip, self).__init__()
-        # Load the CLIP model and processor
-        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
+        super().__init__()
+        # Initialize components
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-        # Define the classification heads (one for each head)
-        self.model_heads = nn.ModuleList([
+        # Define classification heads
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -41,32 +41,30 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
 
-        # Full model: CLIP + Classification heads
+        # Create individual models for each head
         self.full_model = nn.ModuleList([
-            HeadedCLIPModel(self.clip_model, head) for head in self.model_heads
+            HeadedCLIPModel(self.clip_model, head) for head in self.model
         ]).to(device)
-
-        # Add model attribute to reference the full model (or choose another part)
-        self.model = self.full_model  # Add this line
-
         self.num_heads = num_heads
         self.num_classes = num_classes
 
     def forward(self, images):
-        # Preprocess the images using the CLIP processor
-        inputs = self.processor(images=images, return_tensors="pt").to(device)
-
-        # Extract image features using the CLIP model (no gradients needed)
+        # Ensure images are preprocessed to match expected input format
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
+        
+        # Move inputs to the same device as the model
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+        
+        # Extract image features using CLIP
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
 
-        # Apply custom heads to the embeddings and store predictions
-        batch_size = embeddings.size(0)
+        # Apply custom layers on the embeddings
+        batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
-
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-
+        
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
