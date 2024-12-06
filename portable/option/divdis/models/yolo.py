@@ -15,6 +15,7 @@ class YOLOEnsemble(nn.Module):
 
         self.model = nn.ModuleList([
             nn.Sequential(
+                nn.Linear(85, 64), 
                 nn.LazyLinear(1000),
                 nn.LazyLinear(700),
                 nn.LazyLinear(num_classes)
