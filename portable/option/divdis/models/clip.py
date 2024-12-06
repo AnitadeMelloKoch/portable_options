@@ -27,6 +27,11 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
         
+        # Full model wrapping CLIP with classification heads
+        self.full_model = nn.ModuleList([
+            nn.Sequential(self.clip_model, classification_head) for classification_head in self.model
+        ]).to(device)
+        
         self.num_heads = num_heads
         self.num_classes = num_classes
 
@@ -44,12 +49,12 @@ class Clip(nn.Module):
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
         
-        # Apply custom layers on the embeddings
+        # Apply the classification heads
         batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         
         for idx in range(self.num_heads):
-            predictions[:, idx, :] = self.model[idx](embeddings)
+            predictions[:, idx, :] = self.full_model[idx][1](embeddings)  # Access the classification head
         
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
