@@ -28,19 +28,25 @@ class YOLOEnsemble(nn.Module):
         
         # Full model includes embedding and classification head
         self.full_model = nn.ModuleList([
-            nn.Sequential(classification_head, self.embedding_class)
+            nn.Sequential(self.embedding_class, classification_head)
             for classification_head in self.model
         ])
 
     def forward(self, x):
         print("x shape:", x.shape)
         # Access backbone and neck layers (not including the final detection head)
+        
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
 
         print("before embedding shape:", x.shape)
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
+        # Define a linear layer to transform from 64 to 85 dimensions
+        linear_layer = nn.Linear(64, 85)
+
+        # Assuming embedding is of shape [batch_size, 64]
+        embedding = linear_layer(embedding)
         print("embedding shape:", embedding.shape)
 
 
