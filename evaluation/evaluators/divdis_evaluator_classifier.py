@@ -120,10 +120,10 @@ class DivDisEvaluatorClassifier():
                 print("integrated grad:", self.integrated_gradients[head_idx])
                 print("image_shape:", image.shape)
                 # print("label shape:", label.shape)
-                print("attr dimension:", self.integrated_gradients[head_idx].attribute(
-                    image,
-                    target=label
-                ).squeeze().cpu().detach().numpy().shape)
+                # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
+                #     image,
+                #     target=label
+                # ).squeeze().cpu().detach().numpy().shape)
 
                 #attr = self.integrated_gradients[head_idx].attribute(
                 #    image,
