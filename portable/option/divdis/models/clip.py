@@ -6,13 +6,31 @@ from transformers import CLIPProcessor, CLIPModel
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
+
+
+class HeadedCLIPModel(nn.Module):
+    def __init__(self, clip_model, classification_head):
+        super(HeadedCLIPModel, self).__init__()
+        self.clip_model = clip_model
+        self.classification_head = classification_head
+
+    def forward(self, pixel_values, **kwargs):
+        # Forward pass through CLIP model to get embeddings
+        clip_outputs = self.clip_model(pixel_values=pixel_values, **kwargs)
+        embeddings = clip_outputs[1]  # Assuming embeddings are at index 1
+
+        # Forward pass through the classification head
+        output = self.classification_head(embeddings)
+        return output
+    
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
-        # Load CLIP model and processor
+        # Initialize components
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
-        # Custom layers for predictions
+
+        # Define classification heads
         self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
@@ -22,12 +40,11 @@ class Clip(nn.Module):
                 nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ]).to(device)
-        # self.full_model = nn.ModuleList([
-        #     nn.Sequential(self.clip_model, classification_head)
-        #     for classification_head in self.model
-        # ]).to(device)
-        
-        self.full_model = nn.ModuleList([nn.Sequential([self.clip_model,classfication_head]) for classfication_head in self.model]).to(device)
+
+        # Create individual models for each head
+        self.full_model = nn.ModuleList([
+            HeadedCLIPModel(self.clip_model, head) for head in self.model
+        ]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
     def forward(self, images):
