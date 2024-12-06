@@ -127,7 +127,7 @@ class DivDisEvaluatorClassifier():
                 print("label:", label)
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
-                    target=label
+                    target=torch.tensor([label])
                 ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
                 display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
