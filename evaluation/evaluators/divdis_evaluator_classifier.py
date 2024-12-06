@@ -58,7 +58,7 @@ class DivDisEvaluatorClassifier():
         self.stack_size = stack_size
         
         #self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.model[i])) for i in range(self.head_num)]
-        self.integrated_gradients = [(DeepLift(self.classifier.classifier.model[i])) for i in range(self.head_num)]
+        self.integrated_gradients = [(DeepLift(self.classifier.classifier.full_model[i])) for i in range(self.head_num)]
         self.ig_attr_test = [dict() for _ in range(self.head_num)]
         self.confusion_matrices = [None for _ in range(self.head_num)]
         self.classification_reports = [None for _ in range(self.head_num)]
