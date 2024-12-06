@@ -25,13 +25,13 @@ class HeadedCLIPModel(nn.Module):
     
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
-        super().__init__()
-        # Initialize components
+        super(Clip, self).__init__()
+        # Load the CLIP model and processor
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
-        # Define classification heads
-        self.model = nn.ModuleList([
+        # Define the classification heads (one for each head)
+        self.model_heads = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -41,38 +41,29 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
 
-        # Create individual models for each head
+        # Full model: CLIP + Classification heads
         self.full_model = nn.ModuleList([
-            HeadedCLIPModel(self.clip_model, head) for head in self.model
+            HeadedCLIPModel(self.clip_model, head) for head in self.model_heads
         ]).to(device)
+
         self.num_heads = num_heads
         self.num_classes = num_classes
+
     def forward(self, images):
-        # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt")
-        # Move inputs to the same device as the model
-        inputs = {key: value.to(device) for key, value in inputs.items()}
-        # Extract image features using CLIP
+        # Preprocess the images using the CLIP processor
+        inputs = self.processor(images=images, return_tensors="pt").to(device)
+
+        # Extract image features using the CLIP model (no gradients needed)
         with torch.no_grad():
             embeddings = self.clip_model.get_image_features(**inputs)
-        # Apply custom layers on the embeddings
-        batch_size = images.size(0)
+
+        # Apply custom heads to the embeddings and store predictions
+        batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
+
         for idx in range(self.num_heads):
-            predictions[:, idx, :] = self.model[idx](embeddings)
+            predictions[:, idx, :] = self.model_heads[idx](embeddings)
+
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-# # Example usage:
-# if __name__ == "__main__":
-#     # Number of classes and heads
-#     num_classes = 10
-#     num_heads = 3
-#     # Create the model
-#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
-#     # Dummy image batch (e.g., PIL images or similar)
-#     from PIL import Image
-#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
-#     # Forward pass
-#     outputs = clip_model(dummy_images)
-#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
