@@ -33,17 +33,14 @@ class YOLOEnsemble(nn.Module):
         ])
 
     def forward(self, x):
-        print("x (check scaling):", x)
         print("x shape:", x.shape)
         # Access backbone and neck layers (not including the final detection head)
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
 
-        print("before embedding:", x)
         print("before embedding shape:", x.shape)
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
-        print("embedding:", embedding)
         print("embedding shape:", embedding.shape)
 
 
