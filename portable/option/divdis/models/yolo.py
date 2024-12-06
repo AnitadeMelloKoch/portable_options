@@ -44,7 +44,7 @@ class YOLOEnsemble(nn.Module):
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
         embedding = embedding.to(x.device)
         # Define a linear layer to transform from 64 to 85 dimensions
-        linear_layer = nn.Linear(64, 85)
+        linear_layer = nn.Linear(64, 85).to(x.device)
 
         # Assuming embedding is of shape [batch_size, 64]
         embedding = linear_layer(embedding)
