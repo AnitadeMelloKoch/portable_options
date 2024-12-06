@@ -55,12 +55,12 @@ class Clip(nn.Module):
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Make sure input_ids is set to None if you're not using text
-        inputs['input_ids'] = None
+        # Ensure we only pass image-related keys to the clip model
+        image_inputs = {key: value for key, value in inputs.items() if key != 'input_ids'}
 
         # Extract image features using CLIP
         with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(**inputs)
+            embeddings = self.clip_model.get_image_features(**image_inputs)
 
         # Apply custom layers on the embeddings
         batch_size = images.size(0)
