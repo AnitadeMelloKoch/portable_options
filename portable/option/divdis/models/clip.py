@@ -47,6 +47,7 @@ class Clip(nn.Module):
 
     def forward(self, images):
         # Ensure images are preprocessed to match expected input format
+        # Here we don't use input_ids for images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
         # Move inputs to the same device as the model
@@ -56,7 +57,7 @@ class Clip(nn.Module):
         with torch.no_grad():
             outputs = self.clip_model(pixel_values=inputs['pixel_values'])
 
-        # Get the image features (embeddings)
+        # Get the image embeddings (we should be working only with the 'image_embeds' output)
         embeddings = outputs['image_embeds']
 
         # Apply custom layers on the embeddings
