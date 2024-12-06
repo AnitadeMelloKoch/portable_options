@@ -15,8 +15,8 @@ class YOLOEnsemble(nn.Module):
 
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(85),
-                nn.LazyLinear(70),
+                nn.LazyLinear(1000),
+                nn.LazyLinear(700),
                 nn.LazyLinear(num_classes)
                 # add at least 3 more linear layers
             )
@@ -39,6 +39,8 @@ class YOLOEnsemble(nn.Module):
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
 
+        print("before embedding:", x)
+        print("before embedding shape:", x.shape)
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
         print("embedding:", embedding)
