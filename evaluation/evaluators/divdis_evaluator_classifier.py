@@ -57,8 +57,9 @@ class DivDisEvaluatorClassifier():
         
         self.stack_size = stack_size
         
+        #self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.model[i])) for i in range(self.head_num)]
         self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.full_model[i])) for i in range(self.head_num)]
-        # self.integrated_gradients = [(DeepLift(self.classifier.classifier.full_model[i])) for i in range(self.head_num)]
+        #self.integrated_gradients = [(DeepLift(self.classifier.classifier.full_model[i])) for i in range(self.head_num)]
         self.ig_attr_test = [dict() for _ in range(self.head_num)]
         self.confusion_matrices = [None for _ in range(self.head_num)]
         self.classification_reports = [None for _ in range(self.head_num)]
@@ -114,16 +115,6 @@ class DivDisEvaluatorClassifier():
             nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                # print("head idx:", head_idx)
-                # print("pred label head:", pred_label_head)
-                # print("dim:", pred_label_head.shape)
-                # print("integrated grad:", self.integrated_gradients[head_idx])
-                # print("image_shape:", image.shape)
-                # print("label:", label)
-                # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
-                #     image,
-                #     target=label
-                # ).squeeze().cpu().detach().numpy().shape)
 
                 #attr = self.integrated_gradients[head_idx].attribute(
                 #    image,
@@ -131,6 +122,9 @@ class DivDisEvaluatorClassifier():
                 #    n_steps=10,
                 #    target=label
                 #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
+                print("image 2:", image)
+                print("image shape:", image.shape)
+                print("label:", label)
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
