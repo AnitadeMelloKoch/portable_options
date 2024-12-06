@@ -24,41 +24,22 @@ class Clip(nn.Module):
         ]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
-        self.full_model = nn.ModuleList([
-            nn.Sequential(self.clip_model, classification_head)
-            for classification_head in self.model
-        ])
-        
     def forward(self, images):
-        print("entered")
-        print("images shape:", images.shape)
-        print("images:", images)
-        
         # Preprocess the images
-        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        
-        # Ensure pixel_values key exists
-        if 'pixel_values' not in inputs:
-            raise ValueError("The processor did not include 'pixel_values'. Check the image format and processor configuration.")
-        
+        inputs = self.processor(images=images, return_tensors="pt")
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
-        
         # Extract image features using CLIP
         with torch.no_grad():
-            embeddings = self.clip_model.get_image_features(pixel_values=inputs['pixel_values'])
-            print("embeddings shape:", embeddings.shape)
-        
+            embeddings = self.clip_model.get_image_features(**inputs)
         # Apply custom layers on the embeddings
         batch_size = images.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-        
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
-
 # # Example usage:
 # if __name__ == "__main__":
 #     # Number of classes and heads
