@@ -28,7 +28,11 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
 
-        self.full_model = nn.ModuleList([nn.Sequential([self.clip_model,classfication_head]) for classfication_head in self.model]).to(device)
+        self.full_model = nn.ModuleList([
+            nn.Sequential(self.clip_model, classification_head)
+            for classification_head in self.model
+        ])
+        # self.full_model = nn.ModuleList([nn.Sequential([self.clip_model,classfication_head]) for classfication_head in self.model]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
 
