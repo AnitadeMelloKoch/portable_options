@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from transformers import CLIPModel
 
 
-class HeadedCLIPModel(nn.Module):
+class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
         super().__init__()
 
