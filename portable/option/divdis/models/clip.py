@@ -2,34 +2,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
+
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
 
 
-class HeadedCLIPModel(nn.Module):
-    def __init__(self, clip_model, classification_head):
-        super(HeadedCLIPModel, self).__init__()
-        self.clip_model = clip_model
-        self.classification_head = classification_head
-
-    def forward(self, pixel_values, **kwargs):
-        # Forward pass through CLIP model to get embeddings
-        clip_outputs = self.clip_model(pixel_values=pixel_values, **kwargs)
-        embeddings = clip_outputs[1]  # Assuming embeddings are at index 1
-
-        # Forward pass through the classification head
-        output = self.classification_head(embeddings)
-        return output
-    
-
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
-        # Initialize components
-        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        # Load only the vision part of the CLIP model
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name).vision_model.to(device)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Define classification heads
         self.model = nn.ModuleList([
@@ -47,25 +33,24 @@ class Clip(nn.Module):
 
     def forward(self, images):
         # Ensure images are preprocessed to match expected input format
-        # Here we don't use input_ids for images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
         # Move inputs to the same device as the model
         inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Extract image features using CLIP model's forward method
+        # Extract image features using the CLIP vision model
         with torch.no_grad():
-            outputs = self.clip_model(pixel_values=inputs['pixel_values'])
+            vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'])
 
-        # Get the image embeddings (we should be working only with the 'image_embeds' output)
-        embeddings = outputs['image_embeds']
+        # Get the image embeddings
+        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
 
         # Apply custom layers on the embeddings
-        batch_size = images.size(0)
+        batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
             predictions[:, idx, :] = self.model[idx](embeddings)
-        
+
         # Apply softmax over the class dimension
         predictions = F.softmax(predictions, dim=-1)
         return predictions
