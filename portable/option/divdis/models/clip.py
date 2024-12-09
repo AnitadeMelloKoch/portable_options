@@ -1,49 +1,71 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import CLIPModel
+from transformers import CLIPProcessor, CLIPModel
+# Define the device
+device = "cuda" if torch.cuda.is_available() else "cpu"
+# Pretrained CLIP model name
+clip_model_name = "openai/clip-vit-base-patch32"
 
+
+class HeadedCLIPModel(nn.Module):
+    def __init__(self, clip_model, classification_head):
+        super(HeadedCLIPModel, self).__init__()
+        self.clip_model = clip_model
+        self.classification_head = classification_head
+
+    def forward(self, pixel_values, **kwargs):
+        # Forward pass through CLIP model to get embeddings
+        clip_outputs = self.clip_model(pixel_values=pixel_values, **kwargs)
+        embeddings = clip_outputs[1]  # Assuming embeddings are at index 1
+
+        # Forward pass through the classification head
+        output = self.classification_head(embeddings)
+        return output
+    
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
+        # Initialize components
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+        self.processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-        # Load the pretrained CLIP model (image backbone)
-        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").vision_model
-        
-        # Custom classification heads
+        # Define classification heads
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(512),
+                nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
-                nn.LazyLinear(256),
+                nn.Linear(128, 64),
                 nn.ReLU(),
-                nn.LazyLinear(128),
-                nn.ReLU(),
-                nn.LazyLinear(num_classes)
-            )
-            for _ in range(num_heads)
-        ])
+                nn.Linear(64, num_classes)
+            ) for _ in range(num_heads)
+        ]).to(device)
 
         self.num_heads = num_heads
         self.num_classes = num_classes
 
-    def forward(self, x):
-        # Forward pass through the CLIP vision backbone
-        x = self.clip_model.embeddings(x)  # Embedding layer
-        x = self.clip_model.pre_layrnorm(x)  # Pre-layer normalization
+    def forward(self, images):
+        # Ensure images are preprocessed to match expected input format
+        # Here we don't use input_ids for images
+        inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
-        # Apply global average pooling over spatial dimensions (height, width)
-        embedding = x.mean(dim=(1, 2))  # Pool to shape [batch_size, channels]
+        # Move inputs to the same device as the model
+        inputs = {key: value.to(device) for key, value in inputs.items()}
 
-        # Initialize predictions tensor
-        batch_size = embedding.size(0)
-        pred = torch.zeros(batch_size, self.num_heads, self.num_classes, device=embedding.device)
+        # Extract image features using CLIP model's forward method
+        with torch.no_grad():
+            outputs = self.clip_model(pixel_values=inputs['pixel_values'])
 
-        # Apply each classification head
+        # Get the image embeddings (we should be working only with the 'image_embeds' output)
+        embeddings = outputs['image_embeds']
+
+        # Apply custom layers on the embeddings
+        batch_size = images.size(0)
+        predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
-            pred[:, idx, :] = self.model[idx](embedding)
-
+            predictions[:, idx, :] = self.model[idx](embeddings)
+        
         # Apply softmax over the class dimension
-        pred = F.softmax(pred, dim=-1)
-        return pred
+        predictions = F.softmax(predictions, dim=-1)
+        return predictions
