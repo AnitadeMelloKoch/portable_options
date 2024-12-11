@@ -40,7 +40,10 @@ class Clip(nn.Module):
 
         self.num_heads = num_heads
         self.num_classes = num_classes
-
+        self.full_model = nn.ModuleList([
+            nn.Sequential(self.clip_model, classification_head)
+            for classification_head in self.model
+        ])
         # Linear layer to project the embedding dimension
         self.linear_layer = nn.Linear(768, embedding_dim).to(device)
 
