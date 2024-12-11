@@ -36,9 +36,12 @@ class Clip(nn.Module):
         self.num_heads = num_heads
         self.num_classes = num_classes
 
+    
+    
     def forward(self, images):
         print("images type", type(images))
         images = torch.tensor(images)
+
         # Ensure images are preprocessed to match expected input format
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
@@ -50,19 +53,18 @@ class Clip(nn.Module):
             vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'])
         
         print("vision_outputs", type(vision_outputs))
-        # print("vision_outputs pooler_output shape:", vision_outputs.pooler_output.shape)
-        # print("before embedding shape:", images.shape)
-
-        # Get the image embeddings
-        # embeddings = vision_outputs.pooler_output.to(images.device)  # Shape: [batch_size, embedding_dim]
-        embeddings = torch.tensor(vision_outputs.pooler_output, device=images.device)
+        print("pooler_output,", type(vision_outputs.pooler_output))
+        # Extract the tensor from BaseModelOutputWithPooling
+        pooler_output = vision_outputs.pooler_output  # Tensor of shape [batch_size, 768]
+        embeddings = pooler_output.to(images.device)  # Move tensor to the correct device
 
         # Define a linear layer to transform from 768 to 512 dimensions
         linear_layer = nn.Linear(768, 512).to(images.device)
 
-        # Assuming embedding is of shape [batch_size, 64]
+        # Transform embeddings to the desired dimension
         embeddings = linear_layer(embeddings)
         print("embedding shape:", embeddings.shape)
+
         # Apply custom layers on the embeddings
         batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
