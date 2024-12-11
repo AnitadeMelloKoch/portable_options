@@ -80,7 +80,7 @@ class YOLOEnsemble(nn.Module):
         # Prediction logic: apply custom model layers on the embedding
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
-            y = self.model[idx](x)
+            y = self.full_model[idx](x)
             print("y shape:", y.shape)
             pred[:, idx, :] = y
             # Apply softmax to get probabilities for each class
