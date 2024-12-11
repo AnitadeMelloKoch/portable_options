@@ -37,6 +37,8 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, images):
+        print("images type", type(images))
+        images = torch.tensor(images)
         # Ensure images are preprocessed to match expected input format
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
@@ -47,8 +49,9 @@ class Clip(nn.Module):
         with torch.no_grad():
             vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'])
         
-        print("vision_outputs pooler_output shape:", vision_outputs.pooler_output.shape)
-        print("before embedding shape:", images.shape)
+        print("vision_outputs", type(vision_outputs))
+        # print("vision_outputs pooler_output shape:", vision_outputs.pooler_output.shape)
+        # print("before embedding shape:", images.shape)
 
         # Get the image embeddings
         # embeddings = vision_outputs.pooler_output.to(images.device)  # Shape: [batch_size, embedding_dim]
