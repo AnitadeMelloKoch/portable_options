@@ -41,7 +41,7 @@ class Clip(nn.Module):
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         
         # Move inputs to the same device as the model
-        inputs = {key: value.to(device) for key, value in inputs.items()}
+        inputs = {torch.tensor(key): torch.tensor(value.to(device)) for key, value in inputs.items()}
 
         # Extract image features using the CLIP vision model
         with torch.no_grad():
