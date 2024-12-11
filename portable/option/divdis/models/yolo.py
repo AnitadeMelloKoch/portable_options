@@ -3,6 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F 
 import numpy as np
 
+class PrintLayer(torch.nn.Module):
+    # print input. For debugging
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        
+        return x
 
 class YOLOEnsemble(nn.Module):
     def __init__(self,
@@ -28,7 +37,12 @@ class YOLOEnsemble(nn.Module):
         
         # Full model includes embedding and classification head
         self.full_model = nn.ModuleList([
-            nn.Sequential(self.embedding_class, classification_head)
+            nn.Sequential(
+            PrintLayer(),
+            self.embedding_class, 
+            PrintLayer(),
+            classification_head,
+            PrintLayer())
             for classification_head in self.model
         ])
 
