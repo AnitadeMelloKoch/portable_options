@@ -56,8 +56,8 @@ class Clip(nn.Module):
         linear_layer = nn.Linear(64, 768).to(images.device)
 
         # Assuming embedding is of shape [batch_size, 64]
-        embedding = linear_layer(embedding)
-        print("embedding shape:", embedding.shape)
+        embeddings = linear_layer(embeddings)
+        print("embedding shape:", embeddings.shape)
         # Apply custom layers on the embeddings
         batch_size = embeddings.size(0)
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
