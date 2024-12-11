@@ -39,7 +39,7 @@ class YOLOEnsemble(nn.Module):
         x = self.embedding_class.model.model[0](x)  # Backbone
         x = self.embedding_class.model.model[1](x)  # Neck
 
-        print("before embedding shape:", x.shape)
+        print("before embedding shape:", x.shape) 
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
         embedding = embedding.to(x.device)
