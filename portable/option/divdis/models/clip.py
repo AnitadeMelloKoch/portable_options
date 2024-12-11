@@ -19,7 +19,7 @@ class Clip(nn.Module):
         self.projection = nn.Linear(768, embedding_dim).to(device)
 
         # Define classification heads
-        self.heads = nn.ModuleList([
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -30,6 +30,10 @@ class Clip(nn.Module):
             for _ in range(num_heads)
         ]).to(device)
 
+        self.full_model = nn.ModuleList([
+            nn.Sequential(self.clip_model, classification_head)
+            for classification_head in self.model
+        ])
         self.num_heads = num_heads
         self.num_classes = num_classes
 
