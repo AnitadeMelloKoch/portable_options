@@ -13,6 +13,14 @@ class PrintLayer(torch.nn.Module):
         
         return x
 
+class GlobalAveragePooling2D(nn.Module):
+    # Custom global average pooling layer
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x.mean(dim=(2, 3))  # Average over height and width
+
 class YOLOEnsemble(nn.Module):
     def __init__(self,
                  num_classes,
@@ -43,6 +51,8 @@ class YOLOEnsemble(nn.Module):
             PrintLayer(),
             self.embedding_class.model.model[1], 
             PrintLayer(),
+            GlobalAveragePooling2D(),  # Custom GAP layer
+            PrintLayer(),
             classification_head,
             PrintLayer())
             for classification_head in self.model
@@ -57,20 +67,20 @@ class YOLOEnsemble(nn.Module):
 
         # print("before embedding shape:", x.shape) 
         # Global average pooling over spatial dimensions (height, width)
-        embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
-        embedding = embedding.to(x.device)
-        # # Define a linear layer to transform from 64 to 85 dimensions
-        # linear_layer = nn.Linear(64, 85).to(x.device)
+        # embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
+        # embedding = embedding.to(x.device)
+        # # # Define a linear layer to transform from 64 to 85 dimensions
+        # # linear_layer = nn.Linear(64, 85).to(x.device)
 
-        # # Assuming embedding is of shape [batch_size, 64]
-        # embedding = linear_layer(embedding)
-        print("embedding shape:", embedding.shape)
+        # # # Assuming embedding is of shape [batch_size, 64]
+        # # embedding = linear_layer(embedding)
+        # print("embedding shape:", embedding.shape)
 
 
         # Prediction logic: apply custom model layers on the embedding
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
-            y = self.model[idx](embedding)
+            y = self.model[idx](x)
             print("y shape:", y.shape)
             pred[:, idx, :] = y
             # Apply softmax to get probabilities for each class
