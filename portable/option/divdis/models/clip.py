@@ -58,7 +58,7 @@ class Clip(nn.Module):
         
         # Extract image features using the CLIP vision model
         with torch.no_grad():
-            vision_outputs = self.clip_model(pixel_values=pixel_values, return_dict=True)
+            vision_outputs = self.clip_model(pixel_values=pixel_values, return_dict=False)
 
         print("vision_outputs pooler_output shape:", vision_outputs.pooler_output.shape)
 
