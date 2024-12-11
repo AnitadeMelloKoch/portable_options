@@ -45,12 +45,13 @@ class Clip(nn.Module):
 
         # Extract image features using the CLIP vision model
         with torch.no_grad():
-            vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'])
+            vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'], return_dict = False)
         
         print("before embedding shape:", images.shape)
 
         # Get the image embeddings
-        embeddings = vision_outputs.pooler_output.to(images.device)  # Shape: [batch_size, embedding_dim]
+        # embeddings = vision_outputs.pooler_output.to(images.device)  # Shape: [batch_size, embedding_dim]
+        embeddings = torch.tensor(vision_outputs.pooler_output, device=images.device)
 
         # Define a linear layer to transform from 768 to 512 dimensions
         linear_layer = nn.Linear(768, 512).to(images.device)
