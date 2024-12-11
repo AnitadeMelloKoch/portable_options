@@ -141,7 +141,7 @@ class DivDisClassifier():
         self.dataset.add_false_files(negative_files)
         self.dataset.add_unlabelled_files(unlabelled_files)
 
-        self.set_class_weights(self.dataset.get_equal_class_weight())
+        # self.set_class_weights(self.dataset.get_equal_class_weight())
     
     
     def train(self,
