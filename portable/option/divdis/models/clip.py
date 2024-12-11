@@ -52,8 +52,8 @@ class Clip(nn.Module):
         # Get the image embeddings
         embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
 
-        # Define a linear layer to transform from 768 to 64 dimensions
-        linear_layer = nn.Linear(768, 64).to(images.device)
+        # Define a linear layer to transform from 768 to 512 dimensions
+        linear_layer = nn.Linear(768, 512).to(images.device)
 
         # Assuming embedding is of shape [batch_size, 64]
         embeddings = linear_layer(embeddings)
