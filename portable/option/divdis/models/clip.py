@@ -60,7 +60,7 @@ class Clip(nn.Module):
         with torch.no_grad():
             vision_outputs = self.clip_model(pixel_values=pixel_values, return_dict=False)
 
-        print("vision_outputs pooler_output shape:", vision_outputs.pooler_output.shape)
+        print("vision_outputs:", vision_outputs)
 
         # Get the image embeddings and project to desired dimensions
         embeddings = vision_outputs.pooler_output  # Shape: [batch_size, 768]
