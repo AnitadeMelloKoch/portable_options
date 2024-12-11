@@ -1,0 +1,45 @@
+import portable.agent.model.linear_q
+import experiments.core.divdis_option_experiment
+import portable.option.divdis.divdis_option
+import portable.option.divdis.policy.policy_and_initiation
+import portable.option.divdis.divdis_classifier
+import portable.option.memory.unbalanced_set_dataset
+
+DivDisOptionExperiment.experiment_name                              = "meta_monte_enemy"
+DivDisOptionExperiment.make_videos                                  = False
+DivDisOptionExperiment.classifier_epochs                            = 150
+DivDisOptionExperiment.gpu_id                                       = 0
+DivDisOptionExperiment.option_timeout                               = 200
+DivDisOptionExperiment.num_processes                                = 6
+DivDisOptionExperiment.env_ram_dir                                  = "./"
+
+PolicyWithInitiation.warmup_steps                                   = 1024
+PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
+PolicyWithInitiation.buffer_length                                  = 100000
+PolicyWithInitiation.update_interval                                = 4
+PolicyWithInitiation.q_target_update_interval                       = 10
+PolicyWithInitiation.learning_rate                                  = 2.5e-4
+PolicyWithInitiation.final_epsilon                                  = 0.01
+PolicyWithInitiation.final_exploration_frames                       = 4e5
+PolicyWithInitiation.batch_size                                     = 32
+PolicyWithInitiation.num_actions                                    = 18
+PolicyWithInitiation.policy_infeature_size                          = 11552
+PolicyWithInitiation.q_hidden_size                                  = 128
+PolicyWithInitiation.gru_hidden_size                                = 512
+PolicyWithInitiation.image_input                                    = True
+
+DivDisOption.tabular_beta                                           = 0.0
+DivDisOption.exp_type                                               = "monte"
+DivDisOption.num_heads                                              = 6
+DivDisOption.write_summary                                          = False
+
+DivDisClassifier.learning_rate                                      = 5e-4
+DivDisClassifier.num_classes                                        = 2
+#DivDisClassifier.diversity_weight                                   = 0
+DivDisClassifier.diversity_weight                                   = 3e-5
+DivDisClassifier.l2_reg_weight                                      = 5e-4
+DivDisClassifier.model_name                                         = "monte_cnn"
+
+UnbalancedSetDataset.class_weights                                  = [0.8, 0.2]
+UnbalancedSetDataset.data_dir                                       = "./"
+

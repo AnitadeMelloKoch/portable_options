@@ -1,0 +1,66 @@
+import portable.agent.model.linear_q
+import experiments.core.divdis_meta_masked_ppo_experiment
+import portable.option.divdis.divdis_option
+import portable.option.divdis.policy.policy_and_initiation
+import portable.agent.model.maskable_ppo
+import portable.option.divdis.divdis_classifier
+import portable.option.memory.unbalanced_set_dataset
+import portable.option.divdis.policy.skill_ppo
+
+DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_full_300_timeout_big_term"
+DivDisMetaMaskedPPOExperiment.num_options                           = 5
+DivDisMetaMaskedPPOExperiment.option_head_num                       = 4
+DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
+DivDisMetaMaskedPPOExperiment.use_gpu                               = True
+DivDisMetaMaskedPPOExperiment.gpu_list                              = [0,1]
+DivDisMetaMaskedPPOExperiment.make_videos                           = False
+DivDisMetaMaskedPPOExperiment.classifier_epochs                     = 10
+DivDisMetaMaskedPPOExperiment.option_timeout                        = 500
+DivDisMetaMaskedPPOExperiment.log_q_values                          = False
+DivDisMetaMaskedPPOExperiment.initial_option_bootstrap_steps        = 800000
+
+MaskablePPOAgent.learning_rate                                      = 0.001
+MaskablePPOAgent.state_shape                                        = (3, 128, 128)
+MaskablePPOAgent.num_actions                                        = 20
+MaskablePPOAgent.update_interval                                    = 100
+MaskablePPOAgent.entropy_coef                                       = 0.1
+
+SkillPPO.learning_rate                                              = 2.5e-3
+SkillPPO.state_shape                                                = (3,128,128)
+SkillPPO.num_actions                                                = 7
+SkillPPO.entropy_coef                                               = 0.01
+
+PolicyWithInitiation.warmup_steps                                   = 1024
+PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
+PolicyWithInitiation.buffer_length                                  = 150000
+PolicyWithInitiation.update_interval                                = 4
+PolicyWithInitiation.q_target_update_interval                       = 10
+PolicyWithInitiation.learning_rate                                  = 2.5e-4
+PolicyWithInitiation.final_epsilon                                  = 0.01
+PolicyWithInitiation.final_exploration_frames                       = 8e5
+PolicyWithInitiation.batch_size                                     = 32
+PolicyWithInitiation.num_actions                                    = 7
+PolicyWithInitiation.policy_infeature_size                          = 11552
+PolicyWithInitiation.q_hidden_size                                  = 128
+PolicyWithInitiation.gru_hidden_size                                = 512
+PolicyWithInitiation.image_input                                    = True
+
+DivDisClassifier.learning_rate                                      = 0.001
+DivDisClassifier.num_classes                                        = 2
+DivDisClassifier.diversity_weight                                   = 0.004
+DivDisClassifier.l2_reg_weight                                      = 0.0002
+DivDisClassifier.model_name                                         = "minigrid_large_cnn"
+
+DivDisOption.exp_type                                               = "minigrid"
+DivDisOption.tabular_beta                                           = 0.0
+DivDisOption.model_type                                             = "ppo"
+
+#UnbalancedSetDataset.data_dir                                       = ""
+UnbalancedSetDataset.class_weights                                  = [0.7,0.3]
+
+
+
+
+
+
+
