@@ -61,7 +61,7 @@ class Clip(nn.Module):
         predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
 
         # Pass through each classification head
-        for idx, head in enumerate(self.heads):
+        for idx, head in enumerate(self.model):
             predictions[:, idx, :] = head(embeddings)
 
         # Apply softmax over the class dimension
