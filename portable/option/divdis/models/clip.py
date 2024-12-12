@@ -16,6 +16,8 @@ class PrintLayer(torch.nn.Module):
 class Embedding(nn.Module):
     def __init__(self) -> None:
         super().__init__()
+        # Load pre-trained CLIP model
+        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     def forward(self, x):
         with torch.no_grad():
             embeddings = self.clip_model.vision_model(x).last_hidden_state
