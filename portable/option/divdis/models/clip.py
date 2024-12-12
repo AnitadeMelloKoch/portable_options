@@ -56,7 +56,7 @@ class Clip(nn.Module):
         self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
         
         # Define classification heads
-        self.model = nn.ModuleList([
+        self.model = nn.ModuleList([ 
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -66,8 +66,8 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
         
-        # Combine embedding extraction and classification heads into self.full_model
-        self.full_model = nn.ModuleList([
+        # Keep the full model for visualization
+        self.full_model = nn.ModuleList([ 
             nn.Sequential(
                 PrintLayer(),
                 self.clip_embedding,
@@ -82,12 +82,11 @@ class Clip(nn.Module):
 
     def forward(self, x):
         print("x shape:", x.shape)
-        x.requires_grad = True  # Ensure x requires gradients if needed
-        
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         
         for idx in range(self.num_heads):
+            # Ensure gradients are computed in the entire flow
             y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
             print("y shape:", y.shape)
             pred[:, idx, :] = y
