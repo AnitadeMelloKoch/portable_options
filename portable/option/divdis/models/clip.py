@@ -25,14 +25,8 @@ class ClipVisionEmbedding(nn.Module):
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
         self.device = device
 
-        # Global average pooling layer (to avoid manual mean reduction issues)
-        self.global_pooling = nn.AdaptiveAvgPool1d(1)
-
-        # Linear projection to 512 dimensions
-        self.pooling = nn.Sequential(
-            nn.Linear(768, 512),  # Assuming original embedding dimension is 768
-            nn.ReLU()
-        )
+        # Linear projection directly to 512 dimensions
+        self.project_to_512 = nn.Linear(768, 512)
 
     def forward(self, images):
         # Preprocess images
@@ -45,20 +39,16 @@ class ClipVisionEmbedding(nn.Module):
 
         # Extract image features
         vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+        
+        # Use CLS token directly (first token of the sequence)
+        cls_embedding = vision_outputs.last_hidden_state[:, 0, :]  # [batch_size, feature_dim]
+        print(f"cls_embedding requires_grad: {cls_embedding.requires_grad}")
 
-        # Get last hidden states (shape: [batch_size, sequence_length, feature_dim])
-        feature_map = vision_outputs.last_hidden_state
-        print(f"feature_map requires_grad: {feature_map.requires_grad}")
-
-        # Apply global average pooling over the sequence_length dimension
-        feature_map = feature_map.permute(0, 2, 1)  # Change to [batch_size, feature_dim, sequence_length]
-        pooled_output = self.global_pooling(feature_map)  # [batch_size, feature_dim, 1]
-        pooled_output = pooled_output.squeeze(-1)  # [batch_size, feature_dim]
-
-        # Pass through the pooling layer to project to 512 dimensions
-        embeddings = self.pooling(pooled_output)  # Shape: [batch_size, 512]
+        # Project to 512 dimensions
+        embeddings = self.project_to_512(cls_embedding)  # [batch_size, 512]
         print(f"embeddings requires_grad: {embeddings.requires_grad}")
         return embeddings
+
 
 
 class Clip(nn.Module):
