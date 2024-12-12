@@ -23,13 +23,13 @@ class Embedding(nn.Module):
             embeddings = self.clip_model.vision_model(x).last_hidden_state
             embeddings = embeddings.mean(dim=1)  # Mean pooling over tokens
 
-class GlobalAveragePooling2D(nn.Module):
-    # Custom global average pooling layer
-    def __init__(self):
-        super().__init__()
+# class GlobalAveragePooling2D(nn.Module):
+#     # Custom global average pooling layer
+#     def __init__(self):
+#         super().__init__()
 
-    def forward(self, x):
-        return x.mean(dim=(2, 3))  # Average over height and width
+#     def forward(self, x):
+#         return x.mean(dim=(2, 3))  # Average over height and width
 
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
@@ -61,14 +61,8 @@ class Clip(nn.Module):
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
-                # nn.Sequential(
-                #     PrintLayer(),
-                #     nn.LazyLinear(self.clip_model.vision_model.config.hidden_size),
-                #     nn.ReLU(),
-                #     PrintLayer()
-                # ),
                 Embedding(),
-                GlobalAveragePooling2D(),  # Custom GAP layer
+                # GlobalAveragePooling2D(),  # Custom GAP layer
                 PrintLayer(),
                 classification_head,
                 PrintLayer()
