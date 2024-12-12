@@ -13,6 +13,14 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
+class Embedding(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+    def forward(self, x):
+        with torch.no_grad():
+            embeddings = self.clip_model.vision_model(x).last_hidden_state
+            embeddings = embeddings.mean(dim=1)  # Mean pooling over tokens
+
 class GlobalAveragePooling2D(nn.Module):
     # Custom global average pooling layer
     def __init__(self):
@@ -51,12 +59,13 @@ class CLIPEensemble(nn.Module):
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
-                nn.Sequential(
-                    PrintLayer(),
-                    nn.LazyLinear(self.clip_model.vision_model.config.hidden_size),
-                    nn.ReLU(),
-                    PrintLayer()
-                ),
+                # nn.Sequential(
+                #     PrintLayer(),
+                #     nn.LazyLinear(self.clip_model.vision_model.config.hidden_size),
+                #     nn.ReLU(),
+                #     PrintLayer()
+                # ),
+                Embedding(),
                 GlobalAveragePooling2D(),  # Custom GAP layer
                 PrintLayer(),
                 classification_head,
@@ -69,16 +78,16 @@ class CLIPEensemble(nn.Module):
         print("Input shape:", x.shape)
 
         # Process input through CLIP vision encoder to extract image embeddings
-        with torch.no_grad():
-            embeddings = self.clip_model.vision_model(x).last_hidden_state
-            embeddings = embeddings.mean(dim=1)  # Mean pooling over tokens
+        # with torch.no_grad():
+        #     embeddings = self.clip_model.vision_model(x).last_hidden_state
+        #     embeddings = embeddings.mean(dim=1)  # Mean pooling over tokens
 
-        print("Embeddings shape:", embeddings.shape)
+        # print("Embeddings shape:", embeddings.shape)
 
         # Predictions for each head
-        pred = torch.zeros(embeddings.shape[0], self.num_heads, self.num_classes).to(embeddings.device)
+        pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
-            y = self.full_model[idx](embeddings)
+            y = self.full_model[idx](x)
             print(f"Head {idx} output shape:", y.shape)
             pred[:, idx, :] = y
 
