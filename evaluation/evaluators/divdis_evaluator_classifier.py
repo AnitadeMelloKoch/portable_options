@@ -81,7 +81,7 @@ class DivDisEvaluatorClassifier():
         labels = labels.to(self.classifier.device)
 
         ## preprocess the image for the clip processor 
-        self.classifier.classifer.processor(images=images, return_tensors="pt", do_rescale=False)
+        # self.classifier.classifer.processor(images=images, return_tensors="pt", do_rescale=False)
         
 
         #colors = ['#FF0000', '#FF4500', '#808080', '#90EE90', '#00FF00']
