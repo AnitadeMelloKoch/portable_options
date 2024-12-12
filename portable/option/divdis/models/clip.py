@@ -32,8 +32,8 @@ class ClipVisionEmbedding(nn.Module):
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
         # Extract image features
-        with torch.no_grad():
-            vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+        # with torch.no_grad():
+        vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
         print("vision_outputs", type(vision_outputs))
 
         embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
