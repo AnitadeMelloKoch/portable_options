@@ -1,82 +1,63 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import CLIPModel
-
-
-
-class PrintLayer(torch.nn.Module):
-    # print input. For debugging
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        print(x.shape)
-        
-        return x
-    
-class GlobalAveragePooling2D(nn.Module):
-    # Custom global average pooling layer
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return x.mean(dim=(1, 2))  # Average over height and width
-    
+from transformers import CLIPProcessor, CLIPModel
+# Define the device
+device = "cuda" if torch.cuda.is_available() else "cpu"
+# Pretrained CLIP model name
+clip_model_name = "openai/clip-vit-base-patch32"
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
-
-        # Load the pretrained CLIP model (image backbone)
-        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").vision_model
-        
-        # Custom classification heads
+        # Load CLIP model and processor
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
+        # Custom layers for predictions
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(512),
+                nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
-                nn.LazyLinear(256),
+                nn.Linear(128, 64),
                 nn.ReLU(),
-                nn.LazyLinear(128),
-                nn.ReLU(),
-                nn.LazyLinear(num_classes)
-            )
-            for _ in range(num_heads)
-        ])
-        # Full model includes embedding and classification head
-        self.full_model = nn.ModuleList([
-            nn.Sequential(
-            PrintLayer(),
-            self.clip_model.embeddings(), 
-            PrintLayer(),
-            self.clip_model.pre_layrnorm(), 
-            PrintLayer(),
-            GlobalAveragePooling2D(),  # Custom GAP layer
-            PrintLayer(),
-            classification_head,
-            PrintLayer())
-            for classification_head in self.model
-        ])
-
+                nn.Linear(64, num_classes)
+            ) for _ in range(num_heads)
+        ]).to(device)
+        self.full_model = nn.ModuleList([nn.Sequential([self.clip_model,classfication_head]) for classfication_head in self.model]).to(device)
         self.num_heads = num_heads
         self.num_classes = num_classes
-
-    def forward(self, x):
-        # Forward pass through the CLIP vision backbone
-        # x = self.clip_model.embeddings(x)  # Embedding layer
-        # x = self.clip_model.pre_layrnorm(x)  # Pre-layer normalization
         
-        # Apply global average pooling over spatial dimensions (height, width)
-        # embedding = x.mean(dim=(1, 2))  # Pool to shape [batch_size, channels]
-
-        # Initialize predictions tensor
-        # batch_size = embedding.size(0)
-        pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes, device=x.device)
-
-        # Apply each classification head
+    def forward(self, images):
+        print("entered")
+        print("images shape:", images.shape)
+        # Preprocess the images
+        inputs = self.processor(images=images, return_tensors="pt")
+        # Move inputs to the same device as the model
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+        # Extract image features using CLIP
+        with torch.no_grad():
+            embeddings = self.clip_model.get_image_features(**inputs)
+            print("embeddings shape:", embeddings.shape)
+        # Apply custom layers on the embeddings
+        batch_size = images.size(0)
+        predictions = torch.zeros(batch_size, self.num_heads, self.num_classes, device=device)
         for idx in range(self.num_heads):
-            pred[:, idx, :] = self.model[idx](x)
-
+            
+            print("model of embeddings:", self.model[idx](embeddings))
+            print("model of embeddings shape:", self.model[idx](embeddings).shape)
+            predictions[:, idx, :] = self.model[idx](embeddings)
         # Apply softmax over the class dimension
-        pred = F.softmax(pred, dim=-1)
-        return pred
+        predictions = F.softmax(predictions, dim=-1)
+        return predictions
+# # Example usage:
+# if __name__ == "__main__":
+#     # Number of classes and heads
+#     num_classes = 10
+#     num_heads = 3
+#     # Create the model
+#     clip_model = Clip(num_classes=num_classes, num_heads=num_heads)
+#     # Dummy image batch (e.g., PIL images or similar)
+#     from PIL import Image
+#     dummy_images = [Image.new("RGB", (224, 224), color="white") for _ in range(4)]
+#     # Forward pass
+#     outputs = clip_model(dummy_images)
+#     print(outputs.shape)  # Expected shape: (batch_size, num_heads, num_classes)
