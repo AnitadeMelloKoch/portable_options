@@ -38,7 +38,7 @@ class ClipVisionEmbedding(nn.Module):
         return embeddings
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads, embedding_dim=768):
         super().__init__()
         # Define the CLIP vision embedding module
         self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
@@ -68,10 +68,12 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
+        print("x shape:", x.shape)
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         for idx in range(self.num_heads):
             y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
+            print("y shape:", y.shape)
             pred[:, idx, :] = y
         
         # Apply softmax to get probabilities
