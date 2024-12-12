@@ -15,18 +15,9 @@ class PrintLayer(torch.nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print(x.shape)
+        print("x.shape", x.shape)
+        
         return x
-
-class GlobalAveragePooling2D(nn.Module):
-    # Custom global average pooling layer
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        print("before pooling", x.shape)
-        print("pooling:", x.mean(dim=(2, 3)))
-        return x.mean(dim=(2, 3))  # Average over height and width
 
 class ClipVisionEmbedding(nn.Module):
     def __init__(self, clip_model_name, device):
@@ -43,56 +34,53 @@ class ClipVisionEmbedding(nn.Module):
         # Extract image features
         with torch.no_grad():
             vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-        
+        print("vision_outputs", type(vision_outputs))
         # Get the embeddings
-        embeddings = vision_outputs.pooler_output
-        print("embedding shape", embeddings.shape)
+        print("embedding.shape", embeddings.shape)
+        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
         return embeddings
 
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
-
-        # CLIP Vision Embedding Model
-        self.embedding_class = ClipVisionEmbedding(clip_model_name, device)
-
+        # Define the CLIP vision embedding module
+        self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
+        
         # Define classification heads
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(512),
-                nn.LazyLinear(256),
-                nn.LazyLinear(num_classes)
-            )
-            for _ in range(num_heads)
-        ])
-
-        self.num_heads = num_heads
-        self.num_classes = num_classes
-
-        # Full model includes embedding and classification head
+                nn.Linear(embedding_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, 64),
+                nn.ReLU(),
+                nn.Linear(64, num_classes)
+            ) for _ in range(num_heads)
+        ]).to(device)
+        
+        # Combine embedding extraction and classification heads
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
-                self.embedding_class,
-                PrintLayer(),
-                GlobalAveragePooling2D(),
+                self.clip_embedding, 
                 PrintLayer(),
                 classification_head,
-                PrintLayer()
-            )
+                PrintLayer())
             for classification_head in self.model
         ])
+        
+        self.num_heads = num_heads
+        self.num_classes = num_classes
 
     def forward(self, x):
-        print("x shape:", x.shape)
-
-        # Prediction logic: apply embedding and classification layers
-        pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(x.device)
+        # print("Input x shape:", len(x) if isinstance(x, list) else x.shape)
+        
+        # Forward pass through full model (embedding + classification)
+        pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         for idx in range(self.num_heads):
-            y = self.full_model[idx](x)
-            print("y shape:", y.shape)
+            y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
+            # print(f"Head {idx} output shape:", y.shape)
             pred[:, idx, :] = y
-
-        # Apply softmax to get probabilities for each class
+        
+        # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
