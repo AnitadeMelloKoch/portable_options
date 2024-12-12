@@ -24,7 +24,7 @@ class GlobalAveragePooling2D(nn.Module):
         super().__init__()
 
     def forward(self, x):
-        print("before pooling", x)
+        print("before pooling", x.shape)
         print("pooling:", x.mean(dim=(2, 3)))
         return x.mean(dim=(2, 3))  # Average over height and width
 
