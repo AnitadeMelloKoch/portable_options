@@ -76,6 +76,7 @@ class Clip(nn.Module):
 
     def forward(self, x):
         print("x shape:", x.shape)
+        x.requires_grad = True  # Ensure x requires gradients if needed
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         for idx in range(self.num_heads):
