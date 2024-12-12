@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 
 # Define the device
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
