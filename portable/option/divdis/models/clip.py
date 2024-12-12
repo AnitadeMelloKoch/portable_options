@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from transformers import CLIPProcessor, CLIPModel
 
 # Define the device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
@@ -39,13 +39,22 @@ class ClipVisionEmbedding(nn.Module):
         # Ensure gradients are tracked for pixel values
         inputs['pixel_values'].requires_grad_(True)
         
-        # Extract image features
+        # Extract image features from the vision model (using the last hidden states)
         vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
         
-        # Get the embeddings
-        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
-        embeddings = self.pooling(embeddings)  # Convert to 512 dimensions
+        # Typically, vision model output has a last hidden state or a sequence of features
+        # We apply a global average pooling (or other pooling strategies) to reduce to a single vector per image
+        # Assuming the last hidden state is of shape [batch_size, sequence_length, feature_dim]
+        feature_map = vision_outputs.last_hidden_state  # Shape: [batch_size, sequence_length, feature_dim]
+        
+        # Apply global average pooling by averaging over the sequence_length dimension
+        pooled_output = feature_map.mean(dim=1)  # Shape: [batch_size, feature_dim]
+        
+        # Pass through the pooling layer to reduce the dimensionality to 512
+        embeddings = self.pooling(pooled_output)  # Shape: [batch_size, 512]
+        
         return embeddings
+
 
 
 class Clip(nn.Module):
