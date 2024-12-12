@@ -35,9 +35,10 @@ class ClipVisionEmbedding(nn.Module):
         with torch.no_grad():
             vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
         print("vision_outputs", type(vision_outputs))
+
+        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
         # Get the embeddings
         print("embedding.shape", embeddings.shape)
-        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
         return embeddings
 
 class Clip(nn.Module):
