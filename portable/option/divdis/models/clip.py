@@ -63,19 +63,19 @@ class Clip(nn.Module):
 
     def forward(self, x):
         # Forward pass through the CLIP vision backbone
-        x = self.clip_model.embeddings(x)  # Embedding layer
-        x = self.clip_model.pre_layrnorm(x)  # Pre-layer normalization
+        # x = self.clip_model.embeddings(x)  # Embedding layer
+        # x = self.clip_model.pre_layrnorm(x)  # Pre-layer normalization
         
         # Apply global average pooling over spatial dimensions (height, width)
-        embedding = x.mean(dim=(1, 2))  # Pool to shape [batch_size, channels]
+        # embedding = x.mean(dim=(1, 2))  # Pool to shape [batch_size, channels]
 
         # Initialize predictions tensor
-        batch_size = embedding.size(0)
-        pred = torch.zeros(batch_size, self.num_heads, self.num_classes, device=embedding.device)
+        # batch_size = embedding.size(0)
+        pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes, device=x.device)
 
         # Apply each classification head
         for idx in range(self.num_heads):
-            pred[:, idx, :] = self.model[idx](embedding)
+            pred[:, idx, :] = self.model[idx](x)
 
         # Apply softmax over the class dimension
         pred = F.softmax(pred, dim=-1)
