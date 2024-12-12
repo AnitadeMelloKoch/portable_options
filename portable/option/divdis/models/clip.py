@@ -29,15 +29,21 @@ class ClipVisionEmbedding(nn.Module):
     def forward(self, images):
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         inputs['pixel_values'] = inputs['pixel_values'].to(self.device).requires_grad_(True)
-
-        # Forward pass without no_grad
-        vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-        feature_map = vision_outputs.last_hidden_state.mean(dim=1)  # Global Average Pooling
-        embeddings = self.pooling(feature_map)
         
-        print("embeddings requires_grad:", embeddings.requires_grad)
-        return embeddings
+        # Debugging gradients
+        print("pixel_values requires_grad:", inputs['pixel_values'].requires_grad)
 
+        # Pass inputs through the CLIP model
+        vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+        feature_map = vision_outputs.last_hidden_state.mean(dim=1)  # Shape: [batch_size, 768]
+
+        # Ensure the graph is not broken
+        print("feature_map requires_grad:", feature_map.requires_grad)
+
+        embeddings = self.pooling(feature_map)
+        print("embeddings requires_grad:", embeddings.requires_grad)
+        
+        return embeddings
 
 
 class Clip(nn.Module):
