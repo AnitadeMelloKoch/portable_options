@@ -40,7 +40,7 @@ class ClipVisionEmbedding(nn.Module):
         return embeddings
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads, embedding_dim=768):
         super().__init__()
         # Define the CLIP vision embedding module
         self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
