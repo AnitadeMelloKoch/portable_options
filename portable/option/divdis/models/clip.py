@@ -24,35 +24,18 @@ class ClipVisionEmbedding(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
         self.device = device
-        
-        # Pooling layers to convert embeddings to 512 dimensions
-        self.pooling = nn.Sequential(
-            nn.Linear(768, 512),  # Assuming original embedding dimension is 768
-            nn.ReLU()
-        )
+        self.pooling = nn.Linear(768, 512)
 
     def forward(self, images):
-        # Preprocess images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        inputs = {key: value.to(self.device) for key, value in inputs.items()}
-        
-        # Ensure gradients are tracked for pixel values
-        inputs['pixel_values'].requires_grad_(True)
-        
-        # Extract image features from the vision model (using the last hidden states)
+        inputs['pixel_values'] = inputs['pixel_values'].to(self.device).requires_grad_(True)
+
+        # Forward pass without no_grad
         vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+        feature_map = vision_outputs.last_hidden_state.mean(dim=1)  # Global Average Pooling
+        embeddings = self.pooling(feature_map)
         
-        # Typically, vision model output has a last hidden state or a sequence of features
-        # We apply a global average pooling (or other pooling strategies) to reduce to a single vector per image
-        # Assuming the last hidden state is of shape [batch_size, sequence_length, feature_dim]
-        feature_map = vision_outputs.last_hidden_state  # Shape: [batch_size, sequence_length, feature_dim]
-        
-        # Apply global average pooling by averaging over the sequence_length dimension
-        pooled_output = feature_map.mean(dim=1)  # Shape: [batch_size, feature_dim]
-        
-        # Pass through the pooling layer to reduce the dimensionality to 512
-        embeddings = self.pooling(pooled_output)  # Shape: [batch_size, 512]
-        
+        print("embeddings requires_grad:", embeddings.requires_grad)
         return embeddings
 
 
