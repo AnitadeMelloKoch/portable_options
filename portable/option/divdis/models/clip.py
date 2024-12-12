@@ -24,6 +24,11 @@ class ClipVisionEmbedding(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
         self.device = device
+        # Pooling layers to convert embeddings to 512 dimensions
+        self.pooling = nn.Sequential(
+            nn.Linear(768, 512),  # Assuming original embedding dimension is 768
+            nn.ReLU()
+        )
 
     def forward(self, images):
         # Preprocess images
