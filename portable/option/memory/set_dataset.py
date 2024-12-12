@@ -71,17 +71,6 @@ class SetDataset():
         else:
             return x
         
-    # def get_equal_class_weight(self):
-    #     num_positive = torch.sum(self.labels)
-    #     num_negative = self.data_length - num_positive
-        
-    #     weighting = [
-    #         self.class_weight[0]*2/num_negative+1e-5,
-    #         self.class_weight[1]*2/num_positive+1e-5
-    #     ]
-        
-    #     return weighting
-        
     def reset_memory(self):
         self.true_data = torch.from_numpy(np.array([]))
         self.false_data = torch.from_numpy(np.array([]))
