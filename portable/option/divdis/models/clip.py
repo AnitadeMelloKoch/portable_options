@@ -45,7 +45,7 @@ class Clip(nn.Module):
 
         # Extract image features using the CLIP vision model
         with torch.no_grad():
-            vision_outputs = self.clip_model(pixel_values=inputs['pixel_values'])
+            vision_outputs = self.clip_model(pixel_values=inputs['pixel_values']).to(device)
 
         # Get the image embeddings
         embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
