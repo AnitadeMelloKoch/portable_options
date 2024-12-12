@@ -35,10 +35,11 @@ class ClipVisionEmbedding(nn.Module):
         
         # Get the embeddings
         embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
+        embeddings = self.pooling(embeddings)  # Convert to 512 dimensions
         return embeddings
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=768):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
         # Define the CLIP vision embedding module
         self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
@@ -60,7 +61,8 @@ class Clip(nn.Module):
                 PrintLayer(),
                 self.clip_embedding,
                 PrintLayer(),
-                classification_head
+                classification_head,
+                PrintLayer()
             ) for classification_head in self.model
         ])
         
