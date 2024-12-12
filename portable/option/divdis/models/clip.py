@@ -24,25 +24,40 @@ class ClipVisionEmbedding(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
         self.device = device
-        self.pooling = nn.Linear(768, 512)
+
+        # Global average pooling layer (to avoid manual mean reduction issues)
+        self.global_pooling = nn.AdaptiveAvgPool1d(1)
+
+        # Linear projection to 512 dimensions
+        self.pooling = nn.Sequential(
+            nn.Linear(768, 512),  # Assuming original embedding dimension is 768
+            nn.ReLU()
+        )
 
     def forward(self, images):
+        # Preprocess images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        inputs['pixel_values'] = inputs['pixel_values'].to(self.device).requires_grad_(True)
-        
-        # Debugging gradients
-        print("pixel_values requires_grad:", inputs['pixel_values'].requires_grad)
+        inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
-        # Pass inputs through the CLIP model
+        # Ensure gradients are tracked for pixel values
+        inputs['pixel_values'].requires_grad_(True)
+        print(f"pixel_values requires_grad: {inputs['pixel_values'].requires_grad}")
+
+        # Extract image features
         vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-        feature_map = vision_outputs.last_hidden_state.mean(dim=1)  # Shape: [batch_size, 768]
 
-        # Ensure the graph is not broken
-        print("feature_map requires_grad:", feature_map.requires_grad)
+        # Get last hidden states (shape: [batch_size, sequence_length, feature_dim])
+        feature_map = vision_outputs.last_hidden_state
+        print(f"feature_map requires_grad: {feature_map.requires_grad}")
 
-        embeddings = self.pooling(feature_map)
-        print("embeddings requires_grad:", embeddings.requires_grad)
-        
+        # Apply global average pooling over the sequence_length dimension
+        feature_map = feature_map.permute(0, 2, 1)  # Change to [batch_size, feature_dim, sequence_length]
+        pooled_output = self.global_pooling(feature_map)  # [batch_size, feature_dim, 1]
+        pooled_output = pooled_output.squeeze(-1)  # [batch_size, feature_dim]
+
+        # Pass through the pooling layer to project to 512 dimensions
+        embeddings = self.pooling(pooled_output)  # Shape: [batch_size, 512]
+        print(f"embeddings requires_grad: {embeddings.requires_grad}")
         return embeddings
 
 
