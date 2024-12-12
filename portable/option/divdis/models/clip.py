@@ -45,7 +45,8 @@ class ClipVisionEmbedding(nn.Module):
             vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
         
         # Get the embeddings
-        embeddings = vision_outputs.pooler_output  # Shape: [batch_size, embedding_dim]
+        embeddings = vision_outputs.pooler_output
+        print("embedding shape", embeddings.shape)
         return embeddings
 
 class Clip(nn.Module):
