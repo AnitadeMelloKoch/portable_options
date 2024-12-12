@@ -43,9 +43,9 @@ class CLIPEensemble(nn.Module):
         # Classification heads
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(1000),
+                nn.LazyLinear(300),
                 nn.ReLU(),
-                nn.LazyLinear(700),
+                nn.LazyLinear(100),
                 nn.ReLU(),
                 nn.LazyLinear(num_classes)
             )
