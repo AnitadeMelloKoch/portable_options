@@ -9,6 +9,16 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
 
+class PrintLayer(torch.nn.Module):
+    # print input. For debugging
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        
+        return x
+
 class ClipVisionEmbedding(nn.Module):
     def __init__(self, clip_model_name, device):
         super().__init__()
@@ -48,7 +58,12 @@ class Clip(nn.Module):
         
         # Combine embedding extraction and classification heads
         self.full_model = nn.ModuleList([
-            nn.Sequential(self.clip_embedding, classification_head)
+            nn.Sequential(
+                PrintLayer(),
+                self.clip_embedding, 
+                PrintLayer(),
+                classification_head,
+                PrintLayer())
             for classification_head in self.model
         ])
         
@@ -56,13 +71,13 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
-        print("Input x shape:", len(x) if isinstance(x, list) else x.shape)
+        # print("Input x shape:", len(x) if isinstance(x, list) else x.shape)
         
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         for idx in range(self.num_heads):
             y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
-            print(f"Head {idx} output shape:", y.shape)
+            # print(f"Head {idx} output shape:", y.shape)
             pred[:, idx, :] = y
         
         # Apply softmax to get probabilities
