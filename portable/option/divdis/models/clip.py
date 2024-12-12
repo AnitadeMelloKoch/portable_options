@@ -29,7 +29,7 @@ class GlobalAveragePooling2D(nn.Module):
     def forward(self, x):
         return x.mean(dim=(2, 3))  # Average over height and width
 
-class CLIPEensemble(nn.Module):
+class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
         super().__init__()
         
