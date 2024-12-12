@@ -4,6 +4,25 @@ import torch.nn.functional as F
 from transformers import CLIPModel
 
 
+
+class PrintLayer(torch.nn.Module):
+    # print input. For debugging
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        print(x.shape)
+        
+        return x
+    
+class GlobalAveragePooling2D(nn.Module):
+    # Custom global average pooling layer
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x.mean(dim=(1, 2))  # Average over height and width
+    
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads):
         super().__init__()
@@ -23,6 +42,20 @@ class Clip(nn.Module):
                 nn.LazyLinear(num_classes)
             )
             for _ in range(num_heads)
+        ])
+        # Full model includes embedding and classification head
+        self.full_model = nn.ModuleList([
+            nn.Sequential(
+            PrintLayer(),
+            self.clip_model.embeddings(), 
+            PrintLayer(),
+            self.clip_model.pre_layrnorm(), 
+            PrintLayer(),
+            GlobalAveragePooling2D(),  # Custom GAP layer
+            PrintLayer(),
+            classification_head,
+            PrintLayer())
+            for classification_head in self.model
         ])
 
         self.num_heads = num_heads
