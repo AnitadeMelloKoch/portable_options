@@ -15,7 +15,7 @@ class Clip(nn.Module):
         super().__init__()
         # Load only the vision part of the CLIP model
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).vision_model.to(device)
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name).to(device)
+        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
 
         # Define classification heads
         self.model = nn.ModuleList([
