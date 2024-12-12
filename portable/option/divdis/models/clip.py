@@ -24,6 +24,7 @@ class ClipVisionEmbedding(nn.Module):
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
         self.device = device
+        
         # Pooling layers to convert embeddings to 512 dimensions
         self.pooling = nn.Sequential(
             nn.Linear(768, 512),  # Assuming original embedding dimension is 768
@@ -33,8 +34,11 @@ class ClipVisionEmbedding(nn.Module):
     def forward(self, images):
         # Preprocess images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
-        inputs = {key: value.to(self.device).requires_grad_(True) for key, value in inputs.items()}
-
+        inputs = {key: value.to(self.device) for key, value in inputs.items()}
+        
+        # Ensure gradients are tracked for pixel values
+        inputs['pixel_values'].requires_grad_(True)
+        
         # Extract image features
         vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
         
@@ -43,9 +47,11 @@ class ClipVisionEmbedding(nn.Module):
         embeddings = self.pooling(embeddings)  # Convert to 512 dimensions
         return embeddings
 
+
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
+        
         # Define the CLIP vision embedding module
         self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
         
@@ -60,7 +66,7 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
         
-        # Combine embedding extraction and classification heads
+        # Combine embedding extraction and classification heads into self.full_model
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
@@ -77,8 +83,10 @@ class Clip(nn.Module):
     def forward(self, x):
         print("x shape:", x.shape)
         x.requires_grad = True  # Ensure x requires gradients if needed
+        
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
+        
         for idx in range(self.num_heads):
             y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
             print("y shape:", y.shape)
