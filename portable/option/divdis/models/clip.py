@@ -48,6 +48,8 @@ class ClipVisionEmbedding(nn.Module):
         # Enable gradient tracking within the CLIP model
         with torch.enable_grad():  # Overrides any internal torch.no_grad()
             vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+            print(f"vision_outputs.shape: {vision_outputs.last_hidden_state.shape}")
+
 
         # Extract CLS token
         cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
