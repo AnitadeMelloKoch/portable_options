@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPProcessor, CLIPVisionModel
 
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -18,7 +18,6 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
-from transformers import CLIPProcessor, CLIPModel, CLIPVisionModel
 
 class ClipVisionEmbedding(nn.Module):
     def __init__(self, clip_model_name, device):
@@ -29,6 +28,10 @@ class ClipVisionEmbedding(nn.Module):
 
         # Linear projection directly to 512 dimensions
         self.project_to_512 = nn.Linear(768, 512)
+
+        # Ensure all parameters in CLIP allow gradient tracking
+        for param in self.clip_vision_model.parameters():
+            param.requires_grad = True
 
     def forward(self, images):
         # Preprocess images
@@ -45,14 +48,14 @@ class ClipVisionEmbedding(nn.Module):
 
         # Extract CLS token
         cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
-        print(f"cls_embedding requires_grad: {cls_embedding.requires_grad}")
+        print(f"cls_embedding requires_grad (before projection): {cls_embedding.requires_grad}")
 
-        # Project to 512 dimensions
+        # Project to 512 dimensions and enable gradients explicitly
         embeddings = self.project_to_512(cls_embedding)
+        embeddings.requires_grad_(True)  # Explicitly ensure embeddings have gradients
         print(f"embeddings requires_grad: {embeddings.requires_grad}")
+
         return embeddings
-
-
 
 
 class Clip(nn.Module):
