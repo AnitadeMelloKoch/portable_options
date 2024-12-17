@@ -128,10 +128,12 @@ class DivDisEvaluatorClassifier():
                 #    n_steps=10,
                 #    target=label
                 #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
-                attr = self.integrated_gradients[head_idx].attribute(
-                    image,
-                    target=label
-                ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
+                ## check whether the embedding layer requires grad
+                if self.classifier.classifier.full_model[head_idx](image).requires_grad:
+                    attr = self.integrated_gradients[head_idx].attribute(
+                        image,
+                        target=label
+                    ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
                 display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
 
