@@ -93,6 +93,9 @@ class Clip(nn.Module):
 
     def forward(self, x):
         print("x shape:", x.shape)
+        # Ensure that x is on the correct device
+        x = x.to(device)
+        
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
         
@@ -105,4 +108,3 @@ class Clip(nn.Module):
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
-
