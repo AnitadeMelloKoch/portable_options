@@ -133,8 +133,7 @@ class DivDisEvaluatorClassifier():
                 #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
-                    target=label,
-                    allow_unused=True  # Add this argument
+                    target=label
                 ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
                 display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)

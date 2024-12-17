@@ -23,6 +23,9 @@ class ClipVisionEmbedding(nn.Module):
         super().__init__()
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
         self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
+        for param in self.clip_vision_model.parameters():
+            param.requires_grad = True
+
         self.device = device
 
         # Linear projection directly to 512 dimensions
