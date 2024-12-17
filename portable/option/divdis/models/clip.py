@@ -18,14 +18,13 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
+from transformers import CLIPProcessor, CLIPModel, CLIPVisionModel
+
 class ClipVisionEmbedding(nn.Module):
     def __init__(self, clip_model_name, device):
         super().__init__()
         self.processor = CLIPProcessor.from_pretrained(clip_model_name)
-        self.clip_vision_model = CLIPModel.from_pretrained(clip_model_name).vision_model
-        for param in self.clip_vision_model.parameters():
-            param.requires_grad = True
-
+        self.clip_vision_model = CLIPVisionModel.from_pretrained(clip_model_name)
         self.device = device
 
         # Linear projection directly to 512 dimensions
@@ -35,22 +34,24 @@ class ClipVisionEmbedding(nn.Module):
         # Preprocess images
         inputs = self.processor(images=images, return_tensors="pt", do_rescale=False)
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
-
-        # Ensure gradients are tracked for pixel values
+        
+        # Ensure gradients are tracked
         inputs['pixel_values'].requires_grad_(True)
         print(f"pixel_values requires_grad: {inputs['pixel_values'].requires_grad}")
 
-        # Extract image features
-        vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-        
-        # Use CLS token directly (first token of the sequence)
-        cls_embedding = vision_outputs.last_hidden_state[:, 0, :]  # [batch_size, feature_dim]
+        # Enable gradient tracking within the CLIP model
+        with torch.enable_grad():  # Overrides any internal torch.no_grad()
+            vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+
+        # Extract CLS token
+        cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
         print(f"cls_embedding requires_grad: {cls_embedding.requires_grad}")
 
         # Project to 512 dimensions
-        embeddings = self.project_to_512(cls_embedding)  # [batch_size, 512]
+        embeddings = self.project_to_512(cls_embedding)
         print(f"embeddings requires_grad: {embeddings.requires_grad}")
         return embeddings
+
 
 
 

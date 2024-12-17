@@ -117,9 +117,6 @@ class DivDisEvaluatorClassifier():
             nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                print("head idx:", head_idx)
-                print("pred label head:", pred_label_head)
-                print("dim:", pred_label_head.shape)
                 # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
                 #     image,
                 #     target=label
