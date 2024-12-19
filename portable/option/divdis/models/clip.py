@@ -44,12 +44,11 @@ class PrintLayer(torch.nn.Module):
 
 #         return embeddings
 
-
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
         """
         Clip model with classification heads using precomputed embeddings.
-        
+
         Args:
             num_classes (int): Number of output classes.
             num_heads (int): Number of independent classification heads.
@@ -87,6 +86,22 @@ class Clip(nn.Module):
         
         self.num_heads = num_heads
         self.num_classes = num_classes
+
+    def _load_embeddings(self, path):
+        """
+        Load precomputed embeddings from the specified path.
+
+        Args:
+            path (str): Path to the embedding file (.pt or .npy).
+
+        Returns:
+            torch.Tensor: Loaded embeddings tensor.
+        """
+        # Assuming the embeddings are stored in a .pt file.
+        if path.endswith(".pt"):
+            return torch.load(path)
+        else:
+            raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
     def forward(self, x):
         """
