@@ -19,57 +19,63 @@ class PrintLayer(torch.nn.Module):
         return x
 
 
-class ClipVisionEmbedding(nn.Module):
-    def __init__(self, clip_model_name, device):
+class PrecomputedEmbeddings(nn.Module):
+    """
+    Wrapper module to load and retrieve precomputed embeddings.
+    Acts as a replacement for ClipVisionEmbedding.
+    """
+    def __init__(self, embedding_path, device):
+        """
+        Args:
+            embedding_path (str): Path to the precomputed embeddings file (.pt or .npy).
+            device (str): Device to load embeddings on ("cpu" or "cuda").
+        """
         super().__init__()
-        self.processor = CLIPProcessor.from_pretrained(clip_model_name)
-        self.clip_vision_model = CLIPVisionModel.from_pretrained(clip_model_name)
-        self.device = device
-
-        # Linear projection directly to 512 dimensions
-        self.project_to_512 = nn.Linear(768, 512)
-
-    def forward(self, images):
-        # Ensure input is a torch tensor with requires_grad=True
-        if not isinstance(images, torch.Tensor):
-            raise ValueError("Images must be torch.Tensor type.")
-        if not images.requires_grad:
-            images.requires_grad_(True)
+        self.embeddings = self._load_embeddings(embedding_path).to(device)
+        print(f"Precomputed embeddings loaded. Shape: {self.embeddings.shape}")
         
-        print(f"Input shape: {images.shape}, requires_grad: {images.requires_grad}")
-
-        # Preprocess images (already a tensor)
-        inputs = {'pixel_values': images.to(self.device)}
-
-        # Gradient tracking on pixel_values
-        inputs['pixel_values'].requires_grad_(True)
-        print(f"pixel_values.requires_grad: {inputs['pixel_values'].requires_grad}")
-
-        # Enable gradient tracking within the CLIP model
-        with torch.enable_grad():  # Overrides any internal torch.no_grad()
-            vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-            print(f"vision_outputs.shape: {vision_outputs.last_hidden_state.shape}")
-
-
-        # Extract CLS token
-        cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
-        print(f"cls_embedding.requires_grad (pre-projection): {cls_embedding.requires_grad}")
-
-        # Project to 512 dimensions
-        embeddings = self.project_to_512(cls_embedding)
-        print(f"embeddings.requires_grad: {embeddings.requires_grad}")
-        return embeddings
+    @staticmethod
+    def _load_embeddings(path):
+        """Load embeddings from a .pt or .npy file."""
+        if path.endswith(".pt"):
+            return torch.load(path)
+        else:
+            raise ValueError("Unsupported embedding file format. Use .pt or .npy.")
+        
+    def forward(self, indices):
+        """
+        Forward method to retrieve embeddings based on input indices.
+        
+        Args:
+            indices (torch.Tensor): Indices to select embeddings from the saved space.
+        
+        Returns:
+            torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
+        """
+        print(f"Retrieving embeddings for indices: {indices}")
+        return self.embeddings[indices]
 
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
-        super().__init__()
+    def __init__(self, num_classes, num_heads, embedding_dim=512, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
+        """
+        Clip model with classification heads using precomputed embeddings.
         
-        # Define the CLIP vision embedding module
-        self.clip_embedding = ClipVisionEmbedding(clip_model_name, device).to(device)
+        Args:
+            num_classes (int): Number of output classes.
+            num_heads (int): Number of independent classification heads.
+            embedding_dim (int): Dimension of the input embeddings.
+            saved_embedding_path (str): Path to precomputed embeddings (.pt or .npy).
+            device (str): Device for computation ("cpu" or "cuda").
+        """
+        super().__init__()
+        self.device = device
+        
+        # Use PrecomputedEmbeddings in place of ClipVisionEmbedding
+        self.clip_embedding = PrecomputedEmbeddings(saved_embedding_path, device).to(device)
         
         # Define classification heads
-        self.model = nn.ModuleList([ 
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -79,8 +85,8 @@ class Clip(nn.Module):
             ) for _ in range(num_heads)
         ]).to(device)
         
-        # Keep the full model for visualization
-        self.full_model = nn.ModuleList([ 
+        # Full model for visualization (embedding -> classification)
+        self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
                 self.clip_embedding,
@@ -94,19 +100,48 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, x):
-        print("x shape:", x.shape)
-        # Ensure that x is on the correct device
-        x = x.to(device)
+        """
+        Forward pass through the full model (embeddings + classification).
+        
+        Args:
+            x (torch.Tensor): Indices for selecting embeddings.
+        
+        Returns:
+            torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
+        """
+        print("Input shape:", x.shape)
+        # Ensure indices are on the correct device
+        x = x.to(self.device)
         
         # Forward pass through full model (embedding + classification)
-        pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
+        pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Ensure gradients are computed in the entire flow
-            y = self.full_model[idx](x)  # x -> CLIPEmbedding -> Classification head
-            print(f"y shape for head {idx}:", y.shape)
+            y = self.full_model[idx](x)  # x -> PrecomputedEmbeddings -> Classification head
+            print(f"Output shape for head {idx}: {y.shape}")
             pred[:, idx, :] = y
         
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
+
+
+# Example usage
+if __name__ == "__main__":
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    # Example parameters
+    num_classes = 10
+    num_heads = 3
+    embedding_dim = 512
+    saved_embedding_path = "clip_embeddings.pt"  # Path to saved embeddings
+    
+    # Create model
+    model = Clip(num_classes, num_heads, embedding_dim, saved_embedding_path, device).to(device)
+    
+    # Input indices (e.g., batch of indices to retrieve embeddings)
+    batch_indices = torch.tensor([0, 1, 2, 3], dtype=torch.long).to(device)
+    
+    # Forward pass
+    predictions = model(batch_indices)
+    print(f"Predictions shape: {predictions.shape}")  # Expected: [batch_size, num_heads, num_classes]
