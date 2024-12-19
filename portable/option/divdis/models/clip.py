@@ -24,11 +24,6 @@ class PrecomputedEmbeddings(nn.Module):
     Acts as a replacement for ClipVisionEmbedding.
     """
     def __init__(self, embedding_path, device):
-        """
-        Args:
-            embedding_path (str): Path to the precomputed embeddings file (.pt or .npy).
-            device (str): Device to load embeddings on ("cpu" or "cuda").
-        """
         super().__init__()
         self.embeddings = self._load_embeddings(embedding_path).to(device)
         print(f"Precomputed embeddings loaded. Shape: {self.embeddings.shape}")
@@ -51,19 +46,14 @@ class PrecomputedEmbeddings(nn.Module):
         Returns:
             torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
         """
-        # Ensure indices are of type torch.long (int64)
-        if indices.dtype != torch.long:
-            indices = indices.to(dtype=torch.long)
-            print(f"Converted indices to long: {indices.dtype}")
-
-        # Ensure the indices are within the correct range (i.e., not out of bounds)
-        if indices.max() >= self.embeddings.shape[0]:
-            raise IndexError("Some indices are out of bounds.")
-
         print(f"Retrieving embeddings for indices: {indices}")
-        return self.embeddings[indices]
+        embeddings = self.embeddings[indices]
+        
+        # If embeddings are more than 2D, reduce them (e.g., using pooling or flattening)
+        if embeddings.dim() > 2:
+            embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten the embeddings
 
-
+        return embeddings
 
 
 class Clip(nn.Module):
