@@ -18,31 +18,31 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
-# Example for reshaping a tensor before passing it to the linear layer
-class PrecomputedEmbeddings(nn.Module):
-    def __init__(self, embedding_path, device):
-        super().__init__()
-        self.embeddings = self._load_embeddings(embedding_path).to(device)
-        print(f"Precomputed embeddings loaded. Shape: {self.embeddings.shape}")
+# # Example for reshaping a tensor before passing it to the linear layer
+# class PrecomputedEmbeddings(nn.Module):
+#     def __init__(self, embedding_path, device):
+#         super().__init__()
+#         self.embeddings = self._load_embeddings(embedding_path).to(device)
+#         print(f"Precomputed embeddings loaded. Shape: {self.embeddings.shape}")
         
-    @staticmethod
-    def _load_embeddings(path):
-        """Load embeddings from a .pt or .npy file."""
-        if path.endswith(".pt"):
-            return torch.load(path)
-        else:
-            raise ValueError("Unsupported embedding file format. Use .pt or .npy.")
+#     @staticmethod
+#     def _load_embeddings(path):
+#         """Load embeddings from a .pt or .npy file."""
+#         if path.endswith(".pt"):
+#             return torch.load(path)
+#         else:
+#             raise ValueError("Unsupported embedding file format. Use .pt or .npy.")
         
-    def forward(self, indices):
-        """Forward method to retrieve embeddings based on input indices."""
-        indices = indices.long()
-        embeddings = self.embeddings[indices]
-        print("embed shape:", embeddings.shape)
-        # Ensure embeddings are flattened to match the input of the linear layer
-        # if embeddings.dim() > 2:
-        #     embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
+#     def forward(self, indices):
+#         """Forward method to retrieve embeddings based on input indices."""
+#         indices = indices.long()
+#         embeddings = self.embeddings[indices]
+#         print("embed shape:", embeddings.shape)
+#         # Ensure embeddings are flattened to match the input of the linear layer
+#         # if embeddings.dim() > 2:
+#         #     embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
 
-        return embeddings
+#         return embeddings
 
 
 class Clip(nn.Module):
@@ -61,7 +61,7 @@ class Clip(nn.Module):
         self.device = device
         
         # Use PrecomputedEmbeddings in place of ClipVisionEmbedding
-        self.clip_embedding = PrecomputedEmbeddings(saved_embedding_path, device).to(device)
+        self.clip_embedding = self._load_embeddings(saved_embedding_path).to(device)
         
         # Define classification heads
         self.model = nn.ModuleList([ 
