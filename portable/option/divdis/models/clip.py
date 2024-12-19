@@ -52,8 +52,11 @@ class PrecomputedEmbeddings(nn.Module):
         Returns:
             torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
         """
+        # Ensure indices are of type long
+        indices = indices.to(dtype=torch.long)
         print(f"Retrieving embeddings for indices: {indices}")
         return self.embeddings[indices]
+
 
 
 class Clip(nn.Module):
@@ -111,7 +114,7 @@ class Clip(nn.Module):
         """
         print("Input shape:", x.shape)
         # Ensure indices are on the correct device
-        x = x.to(self.device).long()
+        x = x.to(self.device)
         
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
