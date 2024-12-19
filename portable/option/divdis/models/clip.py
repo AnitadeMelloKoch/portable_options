@@ -37,10 +37,10 @@ class PrecomputedEmbeddings(nn.Module):
         """Forward method to retrieve embeddings based on input indices."""
         indices = indices.long()
         embeddings = self.embeddings[indices]
-        
+        print("embed shape:", embeddings.shape)
         # Ensure embeddings are flattened to match the input of the linear layer
-        if embeddings.dim() > 2:
-            embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
+        # if embeddings.dim() > 2:
+        #     embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
 
         return embeddings
 
