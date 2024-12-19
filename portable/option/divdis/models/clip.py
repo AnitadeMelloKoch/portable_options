@@ -47,6 +47,10 @@ class PrecomputedEmbeddings(nn.Module):
             torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
         """
         print(f"Retrieving embeddings for indices: {indices}")
+        
+        # Ensure indices are of type torch.long (required for indexing)
+        indices = indices.long()
+        
         embeddings = self.embeddings[indices]
         
         # If embeddings are more than 2D, reduce them (e.g., using pooling or flattening)
