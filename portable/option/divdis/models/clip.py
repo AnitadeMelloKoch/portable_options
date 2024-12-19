@@ -18,7 +18,6 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
-
 class PrecomputedEmbeddings(nn.Module):
     """
     Wrapper module to load and retrieve precomputed embeddings.
@@ -52,10 +51,18 @@ class PrecomputedEmbeddings(nn.Module):
         Returns:
             torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
         """
-        # Ensure indices are of type long
-        indices = indices.to(dtype=torch.long)
+        # Ensure indices are of type torch.long (int64)
+        if indices.dtype != torch.long:
+            indices = indices.to(dtype=torch.long)
+            print(f"Converted indices to long: {indices.dtype}")
+
+        # Ensure the indices are within the correct range (i.e., not out of bounds)
+        if indices.max() >= self.embeddings.shape[0]:
+            raise IndexError("Some indices are out of bounds.")
+
         print(f"Retrieving embeddings for indices: {indices}")
         return self.embeddings[indices]
+
 
 
 
@@ -78,7 +85,7 @@ class Clip(nn.Module):
         self.clip_embedding = PrecomputedEmbeddings(saved_embedding_path, device).to(device)
         
         # Define classification heads
-        self.model = nn.ModuleList([
+        self.model = nn.ModuleList([ 
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -120,9 +127,17 @@ class Clip(nn.Module):
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
+            # Get predictions for this head
             y = self.full_model[idx](x)  # x -> PrecomputedEmbeddings -> Classification head
-            print(f"Output shape for head {idx}: {y.shape}")
-            pred[:, idx, :] = y
+            
+            # Check the shape of y
+            print(f"Shape of y for head {idx}: {y.shape}")
+            
+            # Ensure y has the correct shape to match pred[:, idx, :]
+            if y.dim() == 2 and y.shape[0] == len(x):
+                pred[:, idx, :] = y
+            else:
+                raise RuntimeError(f"Shape mismatch: expected (batch_size, num_classes), got {y.shape}")
         
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
