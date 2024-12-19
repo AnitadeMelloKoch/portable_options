@@ -18,11 +18,8 @@ class PrintLayer(torch.nn.Module):
         print(x.shape)
         return x
 
+# Example for reshaping a tensor before passing it to the linear layer
 class PrecomputedEmbeddings(nn.Module):
-    """
-    Wrapper module to load and retrieve precomputed embeddings.
-    Acts as a replacement for ClipVisionEmbedding.
-    """
     def __init__(self, embedding_path, device):
         super().__init__()
         self.embeddings = self._load_embeddings(embedding_path).to(device)
@@ -37,25 +34,13 @@ class PrecomputedEmbeddings(nn.Module):
             raise ValueError("Unsupported embedding file format. Use .pt or .npy.")
         
     def forward(self, indices):
-        """
-        Forward method to retrieve embeddings based on input indices.
-        
-        Args:
-            indices (torch.Tensor): Indices to select embeddings from the saved space.
-        
-        Returns:
-            torch.Tensor: Selected embeddings with shape [batch_size, embedding_dim].
-        """
-        print(f"Retrieving embeddings for indices: {indices}")
-        
-        # Ensure indices are of type torch.long (required for indexing)
+        """Forward method to retrieve embeddings based on input indices."""
         indices = indices.long()
-        
         embeddings = self.embeddings[indices]
         
-        # If embeddings are more than 2D, reduce them (e.g., using pooling or flattening)
+        # Ensure embeddings are flattened to match the input of the linear layer
         if embeddings.dim() > 2:
-            embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten the embeddings
+            embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
 
         return embeddings
 
