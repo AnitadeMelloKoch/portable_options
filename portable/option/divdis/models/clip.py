@@ -111,7 +111,7 @@ class Clip(nn.Module):
         """
         print("Input shape:", x.shape)
         # Ensure indices are on the correct device
-        x = x.to(self.device)
+        x = x.to(self.device).long()
         
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
@@ -124,24 +124,3 @@ class Clip(nn.Module):
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
-
-
-# Example usage
-if __name__ == "__main__":
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # Example parameters
-    num_classes = 10
-    num_heads = 3
-    embedding_dim = 512
-    saved_embedding_path = "clip_embeddings.pt"  # Path to saved embeddings
-    
-    # Create model
-    model = Clip(num_classes, num_heads, embedding_dim, saved_embedding_path, device).to(device)
-    
-    # Input indices (e.g., batch of indices to retrieve embeddings)
-    batch_indices = torch.tensor([0, 1, 2, 3], dtype=torch.long).to(device)
-    
-    # Forward pass
-    predictions = model(batch_indices)
-    print(f"Predictions shape: {predictions.shape}")  # Expected: [batch_size, num_heads, num_classes]
