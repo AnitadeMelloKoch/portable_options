@@ -44,6 +44,27 @@ class PrintLayer(torch.nn.Module):
 
 #         return embeddings
 
+class EmbeddingWrapper(nn.Module):
+    """
+    A wrapper class to treat precomputed embeddings as a PyTorch module.
+    """
+    def __init__(self, embeddings):
+        super(EmbeddingWrapper, self).__init__()
+        self.embeddings = embeddings
+
+    def forward(self, indices):
+        """
+        Returns the embeddings corresponding to the input indices.
+        
+        Args:
+            indices (torch.Tensor): Indices to select embeddings.
+        
+        Returns:
+            torch.Tensor: Corresponding embeddings.
+        """
+        return self.embeddings[indices]
+
+
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
         """
@@ -59,8 +80,9 @@ class Clip(nn.Module):
         super().__init__()
         self.device = device
         
-        # Use PrecomputedEmbeddings in place of ClipVisionEmbedding
+        # Load and wrap the embeddings in a Module
         self.clip_embedding = self._load_embeddings(saved_embedding_path).to(device)
+        self.clip_embedding_module = EmbeddingWrapper(self.clip_embedding)  # Wrap the embeddings in a module
         
         # Define classification heads
         self.model = nn.ModuleList([ 
@@ -77,7 +99,7 @@ class Clip(nn.Module):
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
-                self.clip_embedding,
+                self.clip_embedding_module,  # Use the wrapped module
                 PrintLayer(),
                 classification_head,
                 PrintLayer()
