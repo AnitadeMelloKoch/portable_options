@@ -19,7 +19,7 @@ class PrintLayer(nn.Module):
         return x
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
+    def __init__(self, num_classes, num_heads, embedding_dim=768, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
         """
         Clip model with classification heads using preloaded embeddings.
 
@@ -36,7 +36,7 @@ class Clip(nn.Module):
         self.clip_embedding = self._load_embeddings(saved_embedding_path).to(self.device)
         
         # Define classification heads
-        self.model = nn.ModuleList([  # Define each head
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -45,17 +45,6 @@ class Clip(nn.Module):
                 nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ]).to(device)
-
-        # Full model for visualization: embeddings -> classification heads
-        self.full_model = nn.ModuleList([  # Define the full model for each head
-            nn.Sequential(
-                PrintLayer(),
-                nn.Identity(),  # Placeholder to simulate embedding input
-                PrintLayer(),
-                head,
-                PrintLayer()
-            ) for head in self.model
-        ])
         
         self.num_heads = num_heads
         self.num_classes = num_classes
@@ -79,7 +68,6 @@ class Clip(nn.Module):
         else:
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
-
     def forward(self, x):
         """
         Forward pass through the full model (embeddings + classification).
@@ -91,39 +79,25 @@ class Clip(nn.Module):
             torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
         print("Input shape:", x.shape)
-
-        # Ensure indices are on the correct device and cast to long type
-        x = x.to(self.device).long()  # Ensure x is of type long
+        # Ensure indices are on the correct device
+        x = x.to(self.device)
         batch_size = x.shape[0]
-
-        # Select the embeddings corresponding to input indices
-        selected_embeddings = self.clip_embedding[x]  # Shape: [batch_size, embedding_dim]
-        print(f"Selected embeddings shape: {selected_embeddings.shape}")
-
-        # Output tensor to store predictions
+        # Forward pass through full model (embedding + classification)
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
-
-        # Forward pass through each classification head
+        
         for idx in range(self.num_heads):
-            y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
+            # Pass preloaded embeddings to the full model (bypassing indices)
+            y = self.model[idx](self.clip_embedding)[:batch_size]  # Embedding is already preloaded
+            
+            # Check the shape of y
             print(f"Shape of y for head {idx}: {y.shape}")
-
-            # Check if the tensor has more than 2 dimensions, and flatten it if necessary
-            if y.dim() > 2:  # This includes 3D, 4D, or 5D tensors
-                # If it is a 3D tensor like [batch_size, channels, spatial_size]
-                # or a tensor with flattened dimensions like [batch_size, feature_map_size, num_classes]
-                # we will flatten all spatial/feature map dimensions (if any)
-                y = y.view(batch_size, -1, self.num_classes)  # Flatten feature dimensions
-                print(f"Shape of y after flattening for head {idx}: {y.shape}")
-            elif y.dim() == 2:  # If already 2D (e.g., [batch_size, num_classes])
-                pass  # No need to change the shape
-
-            # Ensure y has the correct shape for the classification head
-            if y.dim() == 2 and y.shape[0] == batch_size:
+            
+            # Ensure y has the correct shape to match pred[:, idx, :]
+            if y.dim() == 2 and y.shape[0] == len(x):
                 pred[:, idx, :] = y
             else:
-                raise RuntimeError(f"Unexpected tensor shape: {y.shape}")
-
+                raise RuntimeError(f"Shape mismatch: expected (batch_size, num_classes), got {y.shape}")
+        
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred

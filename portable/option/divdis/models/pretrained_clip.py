@@ -14,17 +14,6 @@ clip_model_name = "openai/clip-vit-base-patch32"
 processor = CLIPProcessor.from_pretrained(clip_model_name)
 vision_model = CLIPVisionModel.from_pretrained(clip_model_name).to(device)
 
-# Optional projection layer
-class EmbeddingProjector(nn.Module):
-    def __init__(self, input_dim=768, output_dim=512):
-        super().__init__()
-        self.project = nn.Linear(input_dim, output_dim)
-
-    def forward(self, x):
-        return self.project(x)
-
-projector = EmbeddingProjector().to(device)
-
 def extract_and_save_embeddings(npy_files, output_file):
     """
     Extract embeddings from .npy files and save to a file.
@@ -55,8 +44,7 @@ def extract_and_save_embeddings(npy_files, output_file):
             inputs = {'pixel_values': image_tensor}
             vision_outputs = vision_model(**inputs)
             cls_embedding = vision_outputs.last_hidden_state[:, 0, :]  # CLS token
-            projected_embedding = projector(cls_embedding)  # Optional projection
-            embeddings_list.append(projected_embedding.cpu())
+            embeddings_list.append(cls_embedding.cpu())
 
     # Combine and save embeddings
     embeddings_tensor = torch.cat(embeddings_list, dim=0)
