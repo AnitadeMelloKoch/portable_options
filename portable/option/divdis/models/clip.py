@@ -91,12 +91,12 @@ class Clip(nn.Module):
         """
         print("Input shape:", x.shape)
 
-        # Ensure indices are on the correct device
-        x = x.to(self.device)
+        # Ensure indices are on the correct device and cast to long type
+        x = x.to(self.device).long()  # Ensure x is of type long
         batch_size = x.shape[0]
 
         # Select the embeddings corresponding to input indices
-        selected_embeddings = self.clip_embedding[x.long()]  # Ensure x is of type long
+        selected_embeddings = self.clip_embedding[x]  # Shape: [batch_size, embedding_dim]
         print(f"Selected embeddings shape: {selected_embeddings.shape}")
 
         # Output tensor to store predictions
@@ -104,11 +104,22 @@ class Clip(nn.Module):
 
         # Forward pass through each classification head
         for idx in range(self.num_heads):
-            # Instead of passing the selected_embeddings separately, we'll do it inside the full model
             y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
             print(f"Shape of y for head {idx}: {y.shape}")
 
-            # Ensure y has the correct shape
+            # Flatten the tensor (if needed) to match the expected shape [batch_size, num_classes]
+            if y.dim() == 5:  # Check if y has spatial dimensions
+                y = y.view(batch_size, -1, self.num_classes)  # Flatten all dimensions except batch size and num_classes
+            elif y.dim() == 4:  # In case of a 4D tensor (batch, channels, height, width)
+                y = y.view(batch_size, -1, self.num_classes)  # Flatten appropriately
+            elif y.dim() == 2 and y.shape[0] == batch_size:  # Already 2D, no need to reshape
+                pass
+            else:
+                raise RuntimeError(f"Unexpected tensor shape: {y.shape}")
+
+            print(f"Shape of y after flattening for head {idx}: {y.shape}")
+
+            # Ensure y has the correct shape for the classification head
             if y.dim() == 2 and y.shape[0] == batch_size:
                 pred[:, idx, :] = y
             else:
