@@ -9,83 +9,34 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # Pretrained CLIP model name
 clip_model_name = "openai/clip-vit-base-patch32"
 
-class PrintLayer(torch.nn.Module):
-    # Print input. For debugging
-    def __init__(self) -> None:
+class PrintLayer(nn.Module):
+    """Print input tensor shape for debugging."""
+    def __init__(self):
         super().__init__()
 
     def forward(self, x):
-        print(x.shape)
+        print(f"Shape: {x.shape}")
         return x
-
-# # Example for reshaping a tensor before passing it to the linear layer
-# class PrecomputedEmbeddings(nn.Module):
-#     def __init__(self, embedding_path, device):
-#         super().__init__()
-#         self.embeddings = self._load_embeddings(embedding_path).to(device)
-#         print(f"Precomputed embeddings loaded. Shape: {self.embeddings.shape}")
-        
-#     @staticmethod
-#     def _load_embeddings(path):
-#         """Load embeddings from a .pt or .npy file."""
-#         if path.endswith(".pt"):
-#             return torch.load(path)
-#         else:
-#             raise ValueError("Unsupported embedding file format. Use .pt or .npy.")
-        
-#     def forward(self, indices):
-#         """Forward method to retrieve embeddings based on input indices."""
-#         indices = indices.long()
-#         embeddings = self.embeddings[indices]
-#         print("embed shape:", embeddings.shape)
-#         # Ensure embeddings are flattened to match the input of the linear layer
-#         # if embeddings.dim() > 2:
-#         #     embeddings = embeddings.view(embeddings.size(0), -1)  # Flatten to [batch_size, num_features]
-
-#         return embeddings
-
-class EmbeddingWrapper(nn.Module):
-    """
-    A wrapper class to treat precomputed embeddings as a PyTorch module.
-    """
-    def __init__(self, embeddings):
-        super(EmbeddingWrapper, self).__init__()
-        self.embeddings = embeddings
-
-    def forward(self, indices):
-        """
-        Returns the embeddings corresponding to the input indices.
-        
-        Args:
-            indices (torch.Tensor): Indices to select embeddings.
-        
-        Returns:
-            torch.Tensor: Corresponding embeddings.
-        """
-        return self.embeddings[indices]
-
 
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=512, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
         """
-        Clip model with classification heads using precomputed embeddings.
+        Clip model with classification heads using preloaded embeddings.
 
         Args:
             num_classes (int): Number of output classes.
             num_heads (int): Number of independent classification heads.
-            embedding_dim (int): Dimension of the input embeddings.
-            saved_embedding_path (str): Path to precomputed embeddings (.pt or .npy).
-            device (str): Device for computation ("cpu" or "cuda").
+            embedding_dim (int): Dimension of the embeddings.
+            saved_embedding_path (str): Path to precomputed embeddings file (.pt).
         """
         super().__init__()
         self.device = device
         
-        # Load and wrap the embeddings in a Module
-        self.clip_embedding = self._load_embeddings(saved_embedding_path).to(device)
-        self.clip_embedding_module = EmbeddingWrapper(self.clip_embedding)  # Wrap the embeddings in a module
+        # Load precomputed embeddings
+        self.clip_embedding = self._load_embeddings(saved_embedding_path).to(self.device)
         
         # Define classification heads
-        self.model = nn.ModuleList([ 
+        self.model = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -94,16 +45,16 @@ class Clip(nn.Module):
                 nn.Linear(64, num_classes)
             ) for _ in range(num_heads)
         ]).to(device)
-        
-        # Full model for visualization (embedding -> classification)
+
+        # Full model for visualization: embeddings -> classification heads
         self.full_model = nn.ModuleList([
             nn.Sequential(
                 PrintLayer(),
-                self.clip_embedding_module,  # Use the wrapped module
+                nn.Identity(),  # Placeholder to simulate embedding input
                 PrintLayer(),
-                classification_head,
+                head,
                 PrintLayer()
-            ) for classification_head in self.model
+            ) for head in self.model
         ])
         
         self.num_heads = num_heads
@@ -111,17 +62,20 @@ class Clip(nn.Module):
 
     def _load_embeddings(self, path):
         """
-        Load precomputed embeddings from the specified path.
+        Load precomputed embeddings directly from a .pt file.
 
         Args:
-            path (str): Path to the embedding file (.pt or .npy).
+            path (str): Path to the precomputed embeddings file.
 
         Returns:
             torch.Tensor: Loaded embeddings tensor.
         """
-        # Assuming the embeddings are stored in a .pt file.
         if path.endswith(".pt"):
-            return torch.load(path)
+            embeddings = torch.load(path)
+            if not isinstance(embeddings, torch.Tensor):
+                raise ValueError("Loaded embeddings are not a torch.Tensor.")
+            print(f"Loaded embeddings with shape: {embeddings.shape}")
+            return embeddings
         else:
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
@@ -143,8 +97,8 @@ class Clip(nn.Module):
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Get predictions for this head
-            y = self.full_model[idx](x)  # x -> PrecomputedEmbeddings -> Classification head
+            # Pass preloaded embeddings to the full model (bypassing indices)
+            y = self.full_model[idx](self.clip_embedding)  # Embedding is already preloaded
             
             # Check the shape of y
             print(f"Shape of y for head {idx}: {y.shape}")
