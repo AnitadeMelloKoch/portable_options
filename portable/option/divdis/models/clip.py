@@ -79,6 +79,7 @@ class Clip(nn.Module):
         else:
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
+
     def forward(self, x):
         """
         Forward pass through the full model (embeddings + classification).
@@ -107,11 +108,11 @@ class Clip(nn.Module):
             y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
             print(f"Shape of y for head {idx}: {y.shape}")
 
-            # Flatten the tensor (if needed) to match the expected shape [batch_size, num_classes]
-            if y.dim() == 5:  # Check if y has spatial dimensions
+            # Flatten the tensor to remove spatial dimensions, resulting in shape [batch_size, num_classes]
+            if y.dim() == 3:  # Check if y has the shape [batch_size, channels, num_classes]
+                y = y.view(batch_size, -1, self.num_classes)  # Flatten channels to match num_classes
+            elif y.dim() == 4:  # In case y has a 4D shape, e.g., [batch_size, channels, height, width]
                 y = y.view(batch_size, -1, self.num_classes)  # Flatten all dimensions except batch size and num_classes
-            elif y.dim() == 4:  # In case of a 4D tensor (batch, channels, height, width)
-                y = y.view(batch_size, -1, self.num_classes)  # Flatten appropriately
             elif y.dim() == 2 and y.shape[0] == batch_size:  # Already 2D, no need to reshape
                 pass
             else:
