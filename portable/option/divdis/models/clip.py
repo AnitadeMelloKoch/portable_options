@@ -90,25 +90,29 @@ class Clip(nn.Module):
             torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
         print("Input shape:", x.shape)
+
         # Ensure indices are on the correct device
         x = x.to(self.device)
         batch_size = x.shape[0]
-        # Forward pass through full model (embedding + classification)
-        pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
-        
+
+        # Select the embeddings corresponding to input indices
+        selected_embeddings = self.clip_embedding[x]  # Shape: [batch_size, embedding_dim]
+        print(f"Selected embeddings shape: {selected_embeddings.shape}")
+
+        # Output tensor to store predictions
+        pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
+
+        # Forward pass through each classification head
         for idx in range(self.num_heads):
-            # Pass preloaded embeddings to the full model (bypassing indices)
-            y = self.full_model[idx](self.clip_embedding)[:batch_size]  # Embedding is already preloaded
-            
-            # Check the shape of y
+            y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
             print(f"Shape of y for head {idx}: {y.shape}")
-            
-            # Ensure y has the correct shape to match pred[:, idx, :]
-            if y.dim() == 2 and y.shape[0] == len(x):
+
+            # Ensure y has the correct shape
+            if y.dim() == 2 and y.shape[0] == batch_size:
                 pred[:, idx, :] = y
             else:
-                raise RuntimeError(f"Shape mismatch: expected (batch_size, num_classes), got {y.shape}")
-        
+                raise RuntimeError(f"Shape mismatch: expected ({batch_size}, {self.num_classes}), got {y.shape}")
+
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
