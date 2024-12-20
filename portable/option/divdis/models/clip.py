@@ -36,7 +36,7 @@ class Clip(nn.Module):
         self.clip_embedding = self._load_embeddings(saved_embedding_path).to(self.device)
         
         # Define classification heads
-        self.model = nn.ModuleList([
+        self.model = nn.ModuleList([  # Define each head
             nn.Sequential(
                 nn.Linear(embedding_dim, 128),
                 nn.ReLU(),
@@ -47,7 +47,7 @@ class Clip(nn.Module):
         ]).to(device)
 
         # Full model for visualization: embeddings -> classification heads
-        self.full_model = nn.ModuleList([
+        self.full_model = nn.ModuleList([  # Define the full model for each head
             nn.Sequential(
                 PrintLayer(),
                 nn.Identity(),  # Placeholder to simulate embedding input
@@ -96,7 +96,7 @@ class Clip(nn.Module):
         batch_size = x.shape[0]
 
         # Select the embeddings corresponding to input indices
-        selected_embeddings = self.clip_embedding[x]  # Shape: [batch_size, embedding_dim]
+        selected_embeddings = self.clip_embedding[x.long()]  # Ensure x is of type long
         print(f"Selected embeddings shape: {selected_embeddings.shape}")
 
         # Output tensor to store predictions
@@ -104,6 +104,7 @@ class Clip(nn.Module):
 
         # Forward pass through each classification head
         for idx in range(self.num_heads):
+            # Instead of passing the selected_embeddings separately, we'll do it inside the full model
             y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
             print(f"Shape of y for head {idx}: {y.shape}")
 
