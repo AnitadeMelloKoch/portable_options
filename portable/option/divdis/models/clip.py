@@ -82,10 +82,10 @@ class Clip(nn.Module):
     def forward(self, x):
         """
         Forward pass through the full model (embeddings + classification).
-        
+
         Args:
             x (torch.Tensor): Indices for selecting embeddings.
-        
+
         Returns:
             torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
@@ -93,17 +93,16 @@ class Clip(nn.Module):
         # Ensure indices are on the correct device
         x = x.to(self.device)
         
+        # Select embeddings based on input indices
+        selected_embeddings = self.clip_embedding[x]  # Shape: (batch_size, embedding_dim)
+        
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Pass preloaded embeddings to the full model (bypassing indices)
-            y = self.full_model[idx](self.clip_embedding)  # Embedding is already preloaded
-            
-            # Check the shape of y
+            y = self.full_model[idx](selected_embeddings)
             print(f"Shape of y for head {idx}: {y.shape}")
             
-            # Ensure y has the correct shape to match pred[:, idx, :]
             if y.dim() == 2 and y.shape[0] == len(x):
                 pred[:, idx, :] = y
             else:
@@ -112,3 +111,4 @@ class Clip(nn.Module):
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         return pred
+
