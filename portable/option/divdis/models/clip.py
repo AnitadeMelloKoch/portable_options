@@ -110,9 +110,10 @@ class Clip(nn.Module):
 
             # Check if the tensor has more than 2 dimensions, and flatten it if necessary
             if y.dim() > 2:  # This includes 3D, 4D, or 5D tensors
-                # If it is a 5D tensor like [batch_size, channels, height, width, num_classes]
-                # we will flatten the spatial dimensions (height and width) into one dimension
-                y = y.view(batch_size, -1, self.num_classes)  # Flatten all spatial dimensions
+                # If it is a 3D tensor like [batch_size, channels, spatial_size]
+                # or a tensor with flattened dimensions like [batch_size, feature_map_size, num_classes]
+                # we will flatten all spatial/feature map dimensions (if any)
+                y = y.view(batch_size, -1, self.num_classes)  # Flatten feature dimensions
                 print(f"Shape of y after flattening for head {idx}: {y.shape}")
             elif y.dim() == 2:  # If already 2D (e.g., [batch_size, num_classes])
                 pass  # No need to change the shape
