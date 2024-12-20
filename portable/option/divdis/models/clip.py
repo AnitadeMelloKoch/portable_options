@@ -108,23 +108,20 @@ class Clip(nn.Module):
             y = self.full_model[idx](selected_embeddings)  # Pass selected embeddings
             print(f"Shape of y for head {idx}: {y.shape}")
 
-            # Flatten the tensor to remove spatial dimensions, resulting in shape [batch_size, num_classes]
-            if y.dim() == 3:  # Check if y has the shape [batch_size, channels, num_classes]
-                y = y.view(batch_size, -1, self.num_classes)  # Flatten channels to match num_classes
-            elif y.dim() == 4:  # In case y has a 4D shape, e.g., [batch_size, channels, height, width]
-                y = y.view(batch_size, -1, self.num_classes)  # Flatten all dimensions except batch size and num_classes
-            elif y.dim() == 2 and y.shape[0] == batch_size:  # Already 2D, no need to reshape
-                pass
-            else:
-                raise RuntimeError(f"Unexpected tensor shape: {y.shape}")
-
-            print(f"Shape of y after flattening for head {idx}: {y.shape}")
+            # Check if the tensor has more than 2 dimensions, and flatten it if necessary
+            if y.dim() > 2:  # This includes 3D, 4D, or 5D tensors
+                # If it is a 5D tensor like [batch_size, channels, height, width, num_classes]
+                # we will flatten the spatial dimensions (height and width) into one dimension
+                y = y.view(batch_size, -1, self.num_classes)  # Flatten all spatial dimensions
+                print(f"Shape of y after flattening for head {idx}: {y.shape}")
+            elif y.dim() == 2:  # If already 2D (e.g., [batch_size, num_classes])
+                pass  # No need to change the shape
 
             # Ensure y has the correct shape for the classification head
             if y.dim() == 2 and y.shape[0] == batch_size:
                 pred[:, idx, :] = y
             else:
-                raise RuntimeError(f"Shape mismatch: expected ({batch_size}, {self.num_classes}), got {y.shape}")
+                raise RuntimeError(f"Unexpected tensor shape: {y.shape}")
 
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
