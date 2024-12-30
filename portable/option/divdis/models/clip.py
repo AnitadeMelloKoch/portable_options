@@ -33,7 +33,7 @@ class Clip(nn.Module):
         self.device = device
         
         # Load precomputed embeddings
-        self.clip_embedding = self._load_embeddings(saved_embedding_path).to(self.device)
+        self.clip_embedding = self._load_embeddings(saved_embedding_path).requires_grad_(True).to(self.device)
         
         # Define classification heads
         self.model = nn.ModuleList([
@@ -82,21 +82,22 @@ class Clip(nn.Module):
         # Ensure indices are on the correct device
         x = x.to(self.device)
         batch_size = x.shape[0]
+        
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Pass preloaded embeddings to the full model (bypassing indices)
-            y = self.model[idx](self.clip_embedding)[:batch_size]  # Embedding is already preloaded
+            # Pass preloaded embeddings to the classification head
+            y = self.model[idx](self.clip_embedding)[:batch_size]
             
-            # Check the shape of y
+            # Debugging shapes
             print(f"Shape of y for head {idx}: {y.shape}")
             
-            # Ensure y has the correct shape to match pred[:, idx, :]
-            if y.dim() == 2 and y.shape[0] == len(x):
+            # Ensure y has the correct shape
+            if y.shape == (batch_size, self.num_classes):
                 pred[:, idx, :] = y
             else:
-                raise RuntimeError(f"Shape mismatch: expected (batch_size, num_classes), got {y.shape}")
+                raise RuntimeError(f"Shape mismatch: expected ({batch_size}, {self.num_classes}), got {y.shape}")
         
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
