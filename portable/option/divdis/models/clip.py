@@ -79,12 +79,6 @@ class Clip(nn.Module):
             torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
         print("Input shape:", x.shape)
-        
-        ## reshaped x 
-        # Resize the spatial dimensions (height and width) to 768x768
-        # x = F.interpolate(x, size=(768, 768), mode='bilinear', align_corners=False)
-        x = F.interpolate(x, size=(768, 768), mode='bilinear', align_corners=False)
-        print("reshaped size:",x.shape)
         # Ensure indices are on the correct device
         x = x.to(self.device)
         batch_size = x.shape[0]
