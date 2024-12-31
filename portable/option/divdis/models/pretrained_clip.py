@@ -29,28 +29,22 @@ def extract_and_save_embeddings(npy_files, output_file):
 
         # Load .npy file (assumed shape: CxHxW or BxCxHxW)
         image_array = np.load(npy_file)  # NumPy array
-        if image_array.ndim == 3:  # Single image
-            image_tensor = torch.tensor(image_array).unsqueeze(0)  # Add batch dimension
-        elif image_array.ndim == 4:  # Batch of images
-            image_tensor = torch.tensor(image_array)
-        else:
-            raise ValueError("Unsupported .npy format: must be 3D (CxHxW) or 4D (BxCxHxW)")
+        print(f"Image shape: {image_array.shape}")
 
-        # Ensure proper shape and data type
-        image_tensor = image_tensor.float().to(device)  # Convert to float and move to device
-
-        # Preprocess and feed to CLIP model
+        # Use the CLIP processor to preprocess the image
+        inputs = processor(images=image_array, return_tensors="pt", padding=True).to(device)
+        
+        # Extract embeddings
         with torch.no_grad():
-            inputs = {'pixel_values': image_tensor}
             vision_outputs = vision_model(**inputs)
             cls_embedding = vision_outputs.last_hidden_state[:, 0, :]  # CLS token
             embeddings_list.append(cls_embedding.cpu())
 
     # Combine and save embeddings
     embeddings_tensor = torch.cat(embeddings_list, dim=0)
+    print(f"Embeddings shape before saving: {embeddings_tensor.shape}")
     torch.save(embeddings_tensor, output_file)
     print(f"Embeddings saved to {output_file}")
-
 
 # Example usage
 if __name__ == "__main__":
