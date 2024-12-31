@@ -6,9 +6,6 @@ from transformers import CLIPProcessor, CLIPVisionModel
 # Define the device
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Pretrained CLIP model name
-clip_model_name = "openai/clip-vit-base-patch32"
-
 class PrintLayer(nn.Module):
     """Print input tensor shape for debugging."""
     def __init__(self):
@@ -34,6 +31,9 @@ class Clip(nn.Module):
         
         # Load precomputed embeddings
         self.clip_embedding = self._load_embeddings(saved_embedding_path).requires_grad_(True).to(self.device)
+        
+        # Check the shape of the embeddings
+        print(f"Clip embedding shape after loading: {self.clip_embedding.shape}")
         
         # Define classification heads
         self.model = nn.ModuleList([
@@ -85,9 +85,17 @@ class Clip(nn.Module):
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            y = self.model[idx](self.clip_embedding)[:batch_size]
+            # Ensure we're slicing the embeddings tensor based on batch size
+            y = self.model[idx](self.clip_embedding[:batch_size])  # Select embeddings for this batch
             pred[:, idx, :] = y
 
+        # Check pred shape before applying softmax
+        print(f"Pred shape before softmax: {pred.shape}")
+        
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
+        
+        # Check pred shape after softmax
+        print(f"Pred shape after softmax: {pred.shape}")
+        
         return pred
