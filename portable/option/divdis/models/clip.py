@@ -81,12 +81,16 @@ class Clip(nn.Module):
         x = x.to(self.device)
         batch_size = x.shape[0]
         
+        # Print the batch size and clip_embedding shape
+        print(f"Batch size: {batch_size}")
+        print(f"clip_embedding shape before slicing: {self.clip_embedding.shape}")
+        
         # Forward pass through the full model
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Ensure we're slicing the embeddings tensor based on batch size
-            y = self.model[idx](self.clip_embedding[:batch_size])  # Select embeddings for this batch
+            # Make sure to slice the correct batch size
+            y = self.model[idx](self.clip_embedding[:batch_size, :])  # Select embeddings for this batch
             pred[:, idx, :] = y
 
         # Check pred shape before applying softmax
