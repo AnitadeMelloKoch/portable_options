@@ -68,32 +68,26 @@ class Clip(nn.Module):
         else:
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
-    def forward(self, x, head_idx=None):
+    def forward(self, x):
         """
-        Forward pass with optional single-head output for attributions.
-        
+        Forward pass through the full model (embeddings + classification).
+
         Args:
             x (torch.Tensor): Indices for selecting embeddings.
-            head_idx (int, optional): If specified, returns predictions for a single head.
-        
+
         Returns:
-            torch.Tensor: Output predictions with shape 
-                        - [batch_size, num_heads, num_classes] (if head_idx is None)
-                        - [batch_size, num_classes] (if head_idx is specified)
+            torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
         x = x.to(self.device)
         batch_size = x.shape[0]
+        
+        # Forward pass through the full model
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
             y = self.model[idx](self.clip_embedding)[:batch_size]
-            if y.shape == (batch_size, self.num_classes):
-                pred[:, idx, :] = y
-            else:
-                raise RuntimeError(f"Shape mismatch: expected ({batch_size}, {self.num_classes}), got {y.shape}")
-        
-        # Return only the specified head if head_idx is provided
-        if head_idx is not None:
-            return pred[:, head_idx, :]  # Shape: [batch_size, num_classes]
-        
-        return pred  # Shape: [batch_size, num_heads, num_classes]
+            pred[:, idx, :] = y
+
+        # Apply softmax to get probabilities
+        pred = F.softmax(pred, dim=-1)
+        return pred
