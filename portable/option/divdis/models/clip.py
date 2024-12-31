@@ -68,37 +68,32 @@ class Clip(nn.Module):
         else:
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
-    def forward(self, x):
+    def forward(self, x, head_idx=None):
         """
-        Forward pass through the full model (embeddings + classification).
+        Forward pass with optional single-head output for attributions.
         
         Args:
             x (torch.Tensor): Indices for selecting embeddings.
+            head_idx (int, optional): If specified, returns predictions for a single head.
         
         Returns:
-            torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
+            torch.Tensor: Output predictions with shape 
+                        - [batch_size, num_heads, num_classes] (if head_idx is None)
+                        - [batch_size, num_classes] (if head_idx is specified)
         """
-        print("Input shape:", x.shape)
-        # Ensure indices are on the correct device
         x = x.to(self.device)
         batch_size = x.shape[0]
-        
-        # Forward pass through full model (embedding + classification)
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
         
         for idx in range(self.num_heads):
-            # Pass preloaded embeddings to the classification head
             y = self.model[idx](self.clip_embedding)[:batch_size]
-            
-            # Debugging shapes
-            print(f"Shape of y for head {idx}: {y.shape}")
-            
-            # Ensure y has the correct shape
             if y.shape == (batch_size, self.num_classes):
                 pred[:, idx, :] = y
             else:
                 raise RuntimeError(f"Shape mismatch: expected ({batch_size}, {self.num_classes}), got {y.shape}")
         
-        # Apply softmax to get probabilities
-        pred = F.softmax(pred, dim=-1)
-        return pred
+        # Return only the specified head if head_idx is provided
+        if head_idx is not None:
+            return pred[:, head_idx, :]  # Shape: [batch_size, num_classes]
+        
+        return pred  # Shape: [batch_size, num_heads, num_classes]
