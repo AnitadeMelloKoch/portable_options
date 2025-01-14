@@ -117,18 +117,10 @@ class DivDisEvaluatorClassifier():
             nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
-                #     image,
-                #     target=label
-                # ).squeeze().cpu().detach().numpy().shape)
-
-                #attr = self.integrated_gradients[head_idx].attribute(
-                #    image,
-                #    nt_samples=10,
-                #    n_steps=10,
-                #    target=label
-                #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
-                ## check whether the embedding layer requires grad
+                print(f"pred_label_head:{pred_label_head}")
+                print(f"pred_label_head shape:{pred_label_head.shape}")
+                print(f"label: {label}")
+                print(f"label shape: {label.shape}")
 
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
