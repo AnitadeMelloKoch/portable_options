@@ -76,33 +76,32 @@ class Clip(nn.Module):
             x (torch.Tensor): Indices for selecting embeddings.
 
         Returns:
-            torch.Tensor: Output predictions with shape [batch_size, num_classes].
+            torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
         """
         x = x.to(self.device)
         batch_size = x.shape[0]
-
+        
         # Print the batch size and clip_embedding shape
         print(f"Batch size: {batch_size}")
         print(f"clip_embedding shape before slicing: {self.clip_embedding.shape}")
-
+        
         # Forward pass through the full model
-        pred = []
-
+        pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
+        
         for idx in range(self.num_heads):
-            # Select embeddings for this batch and pass through each head
-            y = self.model[idx](self.clip_embedding[:batch_size, :])  # [batch_size, num_classes]
-            pred.append(y)
+            # Make sure to slice the correct batch size
+            y = self.model[idx](self.clip_embedding)  # Select embeddings for this batch
+            pred[:, idx, :] = y
 
-        # Stack predictions and average across heads
-        pred = torch.stack(pred, dim=1)  # Shape: [batch_size, num_heads, num_classes]
-        print(f"Pred shape before aggregation: {pred.shape}")
-
+        # Check pred shape before applying softmax
+        print(f"Pred shape before softmax: {pred.shape}")
+        
         # Aggregate predictions across heads (e.g., by averaging)
-        pred = pred.mean(dim=1)  # Shape: [batch_size, num_classes]
-        print(f"Pred shape after aggregation: {pred.shape}")
-
+        pred = pred.mean(dim=1)  # Average across heads
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
+        
+        # Check pred shape after softmax
         print(f"Pred shape after softmax: {pred.shape}")
-
+        
         return pred
