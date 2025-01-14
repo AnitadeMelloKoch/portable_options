@@ -17,15 +17,6 @@ class PrintLayer(nn.Module):
 
 class Clip(nn.Module):
     def __init__(self, num_classes, num_heads, embedding_dim=768, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
-        """
-        Clip model with classification heads using preloaded embeddings.
-
-        Args:
-            num_classes (int): Number of output classes.
-            num_heads (int): Number of independent classification heads.
-            embedding_dim (int): Dimension of the embeddings.
-            saved_embedding_path (str): Path to precomputed embeddings file (.pt).
-        """
         super().__init__()
         self.device = device
         
@@ -50,15 +41,6 @@ class Clip(nn.Module):
         self.num_classes = num_classes
 
     def _load_embeddings(self, path):
-        """
-        Load precomputed embeddings directly from a .pt file.
-
-        Args:
-            path (str): Path to the precomputed embeddings file.
-
-        Returns:
-            torch.Tensor: Loaded embeddings tensor.
-        """
         if path.endswith(".pt"):
             embeddings = torch.load(path)
             if not isinstance(embeddings, torch.Tensor):
@@ -69,40 +51,31 @@ class Clip(nn.Module):
             raise ValueError("Unsupported embedding file format. Only .pt files are supported.")
 
     def forward(self, x):
-        """
-        Forward pass through the full model (embeddings + classification).
-
-        Args:
-            x (torch.Tensor): Indices for selecting embeddings.
-
-        Returns:
-            torch.Tensor: Output predictions with shape [batch_size, num_heads, num_classes].
-        """
         x = x.to(self.device)
         batch_size = x.shape[0]
-        
+
         # Print the batch size and clip_embedding shape
         print(f"Batch size: {batch_size}")
         print(f"clip_embedding shape before slicing: {self.clip_embedding.shape}")
-        
-        # Forward pass through the full model
-        pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
-        
-        for idx in range(self.num_heads):
-            # Make sure to slice the correct batch size
-            y = self.model[idx](self.clip_embedding[:batch_size, :])  # Select embeddings for this batch
-            print(f"y shape: {y.shape}")
-            pred[:, idx, :] = y
 
-        # Check pred shape before applying softmax
-        print(f"Pred shape before softmax: {pred.shape}")
-        
-        # Aggregate predictions across heads (e.g., by averaging)
-        pred = pred.mean(dim=1)  # Average across heads
+        # Forward pass through the full model
+        preds = []
+
+        for idx in range(self.num_heads):
+            # Select embeddings for this batch and pass through each head
+            y = self.model[idx](self.clip_embedding[:batch_size, :])  # [batch_size, num_classes]
+            preds.append(y)
+
+        # Stack predictions across all heads, keeping the shape [batch_size, num_heads, num_classes]
+        preds = torch.stack(preds, dim=1)  # Shape: [batch_size, num_heads, num_classes]
+        print(f"Pred shape after stacking: {preds.shape}")
+
+        # Aggregate predictions across heads (average across the heads dimension)
+        pred = preds.mean(dim=1)  # Shape: [batch_size, num_classes]
+        print(f"Pred shape after aggregation: {pred.shape}")
+
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
-        
-        # Check pred shape after softmax
         print(f"Pred shape after softmax: {pred.shape}")
-        
+
         return pred
