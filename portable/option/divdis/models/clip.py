@@ -90,7 +90,8 @@ class Clip(nn.Module):
         
         for idx in range(self.num_heads):
             # Make sure to slice the correct batch size
-            y = self.model[idx](self.clip_embedding)  # Select embeddings for this batch
+            y = self.model[idx](self.clip_embedding[:batch_size, :])  # Select embeddings for this batch
+            print(f"y shape: {y.shape}")
             pred[:, idx, :] = y
 
         # Check pred shape before applying softmax
