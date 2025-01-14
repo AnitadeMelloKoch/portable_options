@@ -120,7 +120,7 @@ class DivDisEvaluatorClassifier():
                 print(f"pred_label_head:{pred_label_head}")
                 print(f"pred_label_head shape:{pred_label_head.shape}")
                 print(f"label: {label}")
-                print(f"label shape: {label.shape}")
+                # print(f"label shape: {label.shape}")
 
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
