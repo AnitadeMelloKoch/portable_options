@@ -98,7 +98,7 @@ class Clip(nn.Module):
         print(f"Pred shape before softmax: {pred.shape}")
         
         # Aggregate predictions across heads (e.g., by averaging)
-        pred = pred.mean(dim=1)  # Average across heads
+        # pred = pred.mean(dim=1)  # Average across heads
         # Apply softmax to get probabilities
         pred = F.softmax(pred, dim=-1)
         
