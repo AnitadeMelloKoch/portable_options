@@ -28,11 +28,12 @@ class YOLOEnsemble(nn.Module):
     def forward(self, x):
         # Access backbone and neck layers (not including the final detection head)
         x = self.embedding_class.model.model[0](x)  # Backbone
+        print("backbone shape:{x.shape}")
         x = self.embedding_class.model.model[1](x)  # Neck
-
+        print("neck shape:{x.shape}")
         # Global average pooling over spatial dimensions (height, width)
         embedding = x.mean(dim=(2, 3))  # Global average pooling to [batch_size, channels]
-
+        print("embedding shape:{x.shape}")
 
         # Prediction logic: apply custom model layers on the embedding
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
