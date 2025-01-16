@@ -31,18 +31,26 @@ def extract_and_save_embeddings(npy_files, output_file):
         image_array = np.load(npy_file)  # NumPy array
         print(f"Image shape: {image_array.shape}")
 
+        # Handle single image or batch of images
+        if image_array.ndim == 3:  # Single image (CxHxW)
+            image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+
         # Use the CLIP processor to preprocess the image
-        inputs = processor(images=image_array, return_tensors="pt", padding=True).to(device)
+        inputs = processor(images=list(image_array), return_tensors="pt", padding=True).to(device)
         
         # Extract embeddings
         with torch.no_grad():
             vision_outputs = vision_model(**inputs)
             cls_embedding = vision_outputs.last_hidden_state[:, 0, :]  # CLS token
+            print(f"Extracted embedding shape: {cls_embedding.shape}")
             embeddings_list.append(cls_embedding.cpu())
 
     # Combine and save embeddings
-    embeddings_tensor = torch.cat(embeddings_list, dim=0)
-    print(f"Embeddings shape before saving: {embeddings_tensor.shape}")
+    embeddings_tensor = torch.cat(embeddings_list, dim=0)  # Concatenate along batch dimension
+    print(f"Final embeddings shape before saving: {embeddings_tensor.shape}")
+    if embeddings_tensor.ndimension() != 2:
+        raise ValueError(f"Embedding space is not 2D! Got shape: {embeddings_tensor.shape}")
+
     torch.save(embeddings_tensor, output_file)
     print(f"Embeddings saved to {output_file}")
 

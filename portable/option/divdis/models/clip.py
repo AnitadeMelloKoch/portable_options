@@ -87,7 +87,12 @@ class Clip(nn.Module):
         
         # Forward pass through the full model
         pred = torch.zeros(batch_size, self.num_heads, self.num_classes).to(self.device)
-        embedding = self.clip_embedding[:batch_size, :]
+        # Assume batch indices are sequential from 0 to batch_size - 1
+        batch_indices = torch.arange(batch_size, device=self.device)
+
+        # Gather embeddings dynamically using batch indices
+        embedding = self.clip_embedding.index_select(0, batch_indices)
+
         for idx in range(self.num_heads):
             # Make sure to slice the correct batch size
             y = self.model[idx](embedding)  # Select embeddings for this batch
