@@ -46,20 +46,21 @@ class YOLOEnsemble(nn.Module):
         # Full model includes embedding and classification head
         self.full_model = nn.ModuleList([
             nn.Sequential(
-            PrintLayer(),
+            # PrintLayer(),
             self.embedding_class.model.model[0], 
-            PrintLayer(),
+            # PrintLayer(),
             self.embedding_class.model.model[1], 
-            PrintLayer(),
+            # PrintLayer(),
             GlobalAveragePooling2D(),  # Custom GAP layer
-            PrintLayer(),
+            # PrintLayer(),
             classification_head,
-            PrintLayer())
+            # PrintLayer())
+            )
             for classification_head in self.model
         ])
 
     def forward(self, x):
-        print("x shape:", x.shape)
+        # print("x shape:", x.shape)
         # Access backbone and neck layers (not including the final detection head)
         
         # x = self.embedding_class.model.model[0](x)  # Backbone
@@ -81,7 +82,7 @@ class YOLOEnsemble(nn.Module):
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
             y = self.full_model[idx](x)
-            print("y shape:", y.shape)
+            # print("y shape:", y.shape)
             pred[:, idx, :] = y
             # Apply softmax to get probabilities for each class
         pred = F.softmax(pred, dim=-1)
