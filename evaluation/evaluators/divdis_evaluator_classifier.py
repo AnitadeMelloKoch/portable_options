@@ -77,6 +77,8 @@ class DivDisEvaluatorClassifier():
     def evaluate_images(self, num_images=5):
         images, labels = self.test_dataset.get_batch()
         
+        print(f"images : {images}")
+        print(f"labels : {labels}")
         images = images.to(self.classifier.device)
         labels = labels.to(self.classifier.device)
 
