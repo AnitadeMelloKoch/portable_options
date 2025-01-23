@@ -92,7 +92,8 @@ class DivDisEvaluatorClassifier():
             
         for image_idx in tqdm(range(num_images), desc='Evaluating Images'):
             image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
-
+            print(f"image : {image}")
+            print(f"label : {label}")
             image.requires_grad_()
             
             # Create a figure with subplots
