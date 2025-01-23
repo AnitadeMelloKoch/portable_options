@@ -13,7 +13,7 @@ from portable.option.divdis.models.monte_cnn import MonteCNN
 from portable.option.divdis.divdis import DivDisLoss
 from portable.option.divdis.models.yolo import YOLOEnsemble
 # from portable.option.divdis.models.clip import Clip
-from portable.option.divdis.models.clip_prev import Clip
+from portable.option.divdis.models.clip import Clip
 logger = logging.getLogger(__name__)
 MODEL_TYPE = [
     "one_head_mlp",
