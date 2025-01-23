@@ -69,7 +69,7 @@ def extract_and_save_embeddings(npy_files, output_file):
     print(f"Embeddings saved to {output_file}")
 
 
-# Example usage
+
 if __name__ == "__main__":
     # Directory containing .npy files
     npy_dir = "/home/yyang239/portable_options/resources/dog_images"
