@@ -34,10 +34,24 @@ def extract_and_save_embeddings(npy_files, output_file):
         # Handle single image or batch of images
         if image_array.ndim == 3:  # Single image (CxHxW)
             image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+        elif image_array.ndim != 4:  # Batch of images should have 4 dimensions
+            raise ValueError(f"Unexpected image array shape: {image_array.shape}. Expected 3 or 4 dimensions.")
+
+        # Ensure pixel values are normalized between 0 and 1
+        if image_array.max() > 1.0:
+            image_array = image_array / 255.0  # Normalize to [0, 1]
+
+        # Convert to list of images for the processor
+        image_list = [torch.tensor(img).permute(1, 2, 0).numpy() for img in image_array]  # Convert CxHxW to HxWxC
 
         # Use the CLIP processor to preprocess the image
-        inputs = processor(images=list(image_array), return_tensors="pt", padding=True).to(device)
-        
+        inputs = processor(
+            images=image_list,
+            return_tensors="pt",
+            padding=True,
+            do_rescale=False  # Avoid rescaling already normalized images
+        ).to(device)
+
         # Extract embeddings
         with torch.no_grad():
             vision_outputs = vision_model(**inputs)
@@ -53,6 +67,7 @@ def extract_and_save_embeddings(npy_files, output_file):
 
     torch.save(embeddings_tensor, output_file)
     print(f"Embeddings saved to {output_file}")
+
 
 # Example usage
 if __name__ == "__main__":
