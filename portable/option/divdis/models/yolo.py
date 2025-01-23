@@ -79,6 +79,11 @@ class YOLOEnsemble(nn.Module):
 
 
         # Prediction logic: apply custom model layers on the embedding
+        
+        # Convert input to float and scale to [0, 1]
+        if x.dtype == torch.uint8:  # Check if the input is in uint8 format
+            x = x.float() / 255.0  # Convert to float and normalize
+
         pred = torch.zeros(x.shape[0], self.num_heads, self.num_classes).to(x.device)
         for idx in range(self.num_heads):
             y = self.full_model[idx](x)
