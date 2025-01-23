@@ -52,9 +52,12 @@ class DivDisClassifier():
         else:
             self.device = torch.device('cuda:{}'.format(use_gpu)) 
         
-        self.dataset = SetDataset(max_size=dataset_max_size,
-                                            batchsize=dataset_batchsize,
-                                            unlabelled_batchsize=unlabelled_dataset_batchsize)
+        # self.dataset = SetDataset(max_size=dataset_max_size,
+        #                                     batchsize=dataset_batchsize,
+        #                                     unlabelled_batchsize=unlabelled_dataset_batchsize)
+        self.dataset = UnbalancedSetDataset(max_size=dataset_max_size,
+                                    batchsize=dataset_batchsize,
+                                    unlabelled_batchsize=unlabelled_dataset_batchsize)
         self.learning_rate = learning_rate
         self.l2_reg_weight = l2_reg_weight
         
@@ -98,7 +101,7 @@ class DivDisClassifier():
     
     def set_class_weights(self, weights=None):
         if weights is None:
-            weights = [0.5, 0.5] #self.dataset.get_equal_class_weight()
+            weights = self.dataset.get_equal_class_weight() #[0.5, 0.5]
         
         self.ce_criterion = torch.nn.CrossEntropyLoss(
             weight=torch.tensor(weights).to(self.device)
