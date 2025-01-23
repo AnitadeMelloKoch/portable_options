@@ -3,8 +3,8 @@
 #SBATCH --gres gpu:2
 #SBATCH --mem=64G
 #SBATCH --time=1-00:00:00
-#SBATCH --error=<clip_dog_eval>.%J.err
-#SBATCH --output=<clip_dog_eval>.%J.out
+#SBATCH --error=<yolo_robot>.%J.err
+#SBATCH --output=<yolo_robot>.%J.out
 #SBATCH --mail-type=END
 #SBATCH --mail-user=kyle_k_lee@brown.edu
 module load miniconda3/23.11.0s
