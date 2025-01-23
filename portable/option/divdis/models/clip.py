@@ -16,7 +16,7 @@ class PrintLayer(nn.Module):
         return x
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=768, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
+    def __init__(self, num_classes, num_heads, embedding_dim=224, saved_embedding_path="portable/option/divdis/models/clip_embeddings.pt"):
         """
         Clip model with classification heads using preloaded embeddings.
 

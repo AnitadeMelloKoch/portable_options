@@ -65,7 +65,7 @@ def load_annotations_from_folder(folder):
     return annotations, filenames
 # Define any image transformations you want (e.g., resizing)
 image_transform = transforms.Compose([
-    transforms.Resize((768, 768)),  
+    transforms.Resize((224, 224)),  
     transforms.ToTensor(),  # Convert to tensor
 ])
 

@@ -36,7 +36,7 @@ class DivDisEvaluatorClassifier():
             image_input=True,
             test_batch_size=64,
             base_dir=None,
-            stack_size=4):
+            stack_size=3):
         
         self.classifier = classifier
 
