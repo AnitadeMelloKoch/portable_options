@@ -94,7 +94,7 @@ class Clip(nn.Module):
     def forward(self, x):
         print(f"Original x shape: {x.shape} | Device: {x.device}")
 
-        x = x.to(device)  # Move input tensor to correct device
+        # x = x.to(device)  # Move input tensor to correct device
         x = x.unsqueeze(1).repeat(1, 3, 1, 1).to(device)  # Ensure correct shape: [10, 3, 768, 768]
 
         print(f"Modified x shape: {x.shape} | Device: {x.device}")
@@ -108,5 +108,4 @@ class Clip(nn.Module):
 
         pred = F.softmax(pred, dim=-1)  # Apply softmax
         return pred
-
 
