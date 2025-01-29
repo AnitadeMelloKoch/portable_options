@@ -27,7 +27,7 @@ class ClipVisionEmbedding(nn.Module):
         self.device = device
 
         # Linear projection directly to 512 dimensions
-        self.project_to_512 = nn.Linear(768, 512)
+        self.project_to_224 = nn.Linear(768, 224)
 
     def forward(self, images):
         # Ensure input is a torch tensor
@@ -52,12 +52,12 @@ class ClipVisionEmbedding(nn.Module):
         cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
 
         # Project to 512 dimensions
-        embeddings = self.project_to_512(cls_embedding)
+        embeddings = self.project_to_224(cls_embedding)
         return embeddings
 
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads, embedding_dim=224):
         super().__init__()
         
         # Define the CLIP vision embedding module
