@@ -36,7 +36,7 @@ class DivDisEvaluatorClassifier():
             image_input=True,
             test_batch_size=64,
             base_dir=None,
-            stack_size=3):
+            stack_size=4):
         
         self.classifier = classifier
 
@@ -77,8 +77,6 @@ class DivDisEvaluatorClassifier():
     def evaluate_images(self, num_images=5):
         images, labels = self.test_dataset.get_batch()
         
-        print(f"images : {images}")
-        print(f"labels : {labels}")
         images = images.to(self.classifier.device)
         labels = labels.to(self.classifier.device)
 
@@ -92,8 +90,7 @@ class DivDisEvaluatorClassifier():
             
         for image_idx in tqdm(range(num_images), desc='Evaluating Images'):
             image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
-            print(f"image : {image}")
-            print(f"label : {label}")
+
             image.requires_grad_()
             
             # Create a figure with subplots
@@ -120,34 +117,68 @@ class DivDisEvaluatorClassifier():
             nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                print(f"pred_label_head:{pred_label_head}")
-                print(f"pred_label_head shape:{pred_label_head.shape}")
-                print(f"label: {label}")
-                # print(f"label shape: {label.shape}")
+                # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
+                #     image,
+                #     target=label
+                # ).squeeze().cpu().detach().numpy().shape)
 
+                #attr = self.integrated_gradients[head_idx].attribute(
+                #    image,
+                #    nt_samples=10,
+                #    n_steps=10,
+                #    target=label
+                #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
+                ## check whether the embedding layer requires grad
+                
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
-                ).squeeze().cpu().detach().numpy().transpose(1,2,0)
+                ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
-                display_image = image.squeeze().detach().cpu().numpy().transpose(1,2,0) # (H, W, C)
+                display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
+                
+                # Ensure the display_image and attr have the correct shape: [batch_size, height, width, channels]
+                display_image = np.expand_dims(display_image, axis=0)  # Adding batch dimension
+                attr = np.expand_dims(attr, axis=0)  # Adding batch dimension
                 print("Display Image Shape: ", display_image.shape)
                 print("Attribution Shape: ", attr.shape)
 
 
+                # for channel_idx in range(self.stack_size):
+                #     ax = axes[head_idx+0, channel_idx]
+                #     ax.imshow(display_image[:,:,channel_idx], cmap='gray')
+                    
+                #     # Visualize attributions with heatmap
+                #     fig, ax = viz.visualize_image_attr(
+                #         attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                #         original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
+                #         method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
+                #         show_colorbar=False, plt_fig_axis=(fig, ax),
+                #         use_pyplot=False
+                #     )
+                #     ax.set_axis_off()
                 for channel_idx in range(self.stack_size):
                     ax = axes[head_idx+0, channel_idx]
-                    ax.imshow(display_image[:,:,channel_idx], cmap='gray')
+                    # Expand the dimensions of display_image for the current channel
+                    expanded_display_image = np.expand_dims(display_image[:,:,channel_idx], axis=-1)
                     
+                    # Ensure attr has the correct shape [batch_size, height, width, channels]
+                    expanded_attr = np.expand_dims(attr[:,:,channel_idx], axis=-1)
+                    
+                    # Verify the shapes of expanded display_image and expanded attr
+                    print(f"Expanded Display Image Shape: {expanded_display_image.shape}")
+                    print(f"Expanded Attribution Shape: {expanded_attr.shape}")
+
                     # Visualize attributions with heatmap
                     fig, ax = viz.visualize_image_attr(
-                        attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
-                        original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
+                        attr=expanded_attr,  # For the specific channel
+                        original_image=expanded_display_image,  # For the specific channel
                         method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
                         show_colorbar=False, plt_fig_axis=(fig, ax),
                         use_pyplot=False
                     )
                     ax.set_axis_off()
+
                 
 
                 if(label == 1) & (pred_label_head == 1):
