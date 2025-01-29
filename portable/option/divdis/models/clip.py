@@ -35,7 +35,7 @@ class ClipVisionEmbedding(nn.Module):
             raise ValueError("Images must be torch.Tensor type.")
         if not images.requires_grad:
             images.requires_grad_(True)
-        
+
         print(f"Input shape: {images.shape}, requires_grad: {images.requires_grad}")
 
         # Preprocess images (already a tensor)
@@ -46,19 +46,34 @@ class ClipVisionEmbedding(nn.Module):
         print(f"pixel_values.requires_grad: {inputs['pixel_values'].requires_grad}")
 
         # Enable gradient tracking within the CLIP model
-        with torch.enable_grad():  # Overrides any internal torch.no_grad()
+        with torch.enable_grad():
             vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
-            print(f"vision_outputs.shape: {vision_outputs.last_hidden_state.shape}")
 
+        # ✅ **New Debugging Check**
+        if vision_outputs is None:
+            raise RuntimeError("CLIP vision model returned None. Check input images.")
+        if not hasattr(vision_outputs, 'last_hidden_state'):
+            raise RuntimeError("vision_outputs has no attribute 'last_hidden_state'.")
 
         # Extract CLS token
         cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
-        print(f"cls_embedding.requires_grad (pre-projection): {cls_embedding.requires_grad}")
+
+        # ✅ **New Debugging Check**
+        if cls_embedding is None:
+            raise RuntimeError("Failed to extract CLS token from vision model.")
+
+        print(f"cls_embedding.shape: {cls_embedding.shape}, requires_grad: {cls_embedding.requires_grad}")
 
         # Project to 512 dimensions
         embeddings = self.project_to_512(cls_embedding)
-        print(f"embeddings.requires_grad: {embeddings.requires_grad}")
+
+        # ✅ **New Debugging Check**
+        if embeddings is None:
+            raise RuntimeError("Projection to 512 dimensions failed.")
+
+        print(f"embeddings.shape: {embeddings.shape}, requires_grad: {embeddings.requires_grad}")
         return embeddings
+
 
 
 class Clip(nn.Module):
