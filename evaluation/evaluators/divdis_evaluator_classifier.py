@@ -136,49 +136,23 @@ class DivDisEvaluatorClassifier():
                 ).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
                 
                 display_image = image.squeeze().detach().cpu().numpy().transpose(1, 2, 0) # (H, W, C)
-                
-                # Ensure the display_image and attr have the correct shape: [batch_size, height, width, channels]
-                display_image = np.expand_dims(display_image, axis=0)  # Adding batch dimension
-                attr = np.expand_dims(attr, axis=0)  # Adding batch dimension
                 print("Display Image Shape: ", display_image.shape)
                 print("Attribution Shape: ", attr.shape)
 
 
-                # for channel_idx in range(self.stack_size):
-                #     ax = axes[head_idx+0, channel_idx]
-                #     ax.imshow(display_image[:,:,channel_idx], cmap='gray')
-                    
-                #     # Visualize attributions with heatmap
-                #     fig, ax = viz.visualize_image_attr(
-                #         attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
-                #         original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
-                #         method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
-                #         show_colorbar=False, plt_fig_axis=(fig, ax),
-                #         use_pyplot=False
-                #     )
-                #     ax.set_axis_off()
                 for channel_idx in range(self.stack_size):
                     ax = axes[head_idx+0, channel_idx]
-                    # Expand the dimensions of display_image for the current channel
-                    expanded_display_image = np.expand_dims(display_image[:,:,channel_idx], axis=-1)
+                    ax.imshow(display_image[:,:,channel_idx], cmap='gray')
                     
-                    # Ensure attr has the correct shape [batch_size, height, width, channels]
-                    expanded_attr = np.expand_dims(attr[:,:,channel_idx], axis=-1)
-                    
-                    # Verify the shapes of expanded display_image and expanded attr
-                    print(f"Expanded Display Image Shape: {expanded_display_image.shape}")
-                    print(f"Expanded Attribution Shape: {expanded_attr.shape}")
-
                     # Visualize attributions with heatmap
                     fig, ax = viz.visualize_image_attr(
-                        attr=expanded_attr,  # For the specific channel
-                        original_image=expanded_display_image,  # For the specific channel
+                        attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
+                        original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
                         method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
                         show_colorbar=False, plt_fig_axis=(fig, ax),
                         use_pyplot=False
                     )
                     ax.set_axis_off()
-
                 
 
                 if(label == 1) & (pred_label_head == 1):

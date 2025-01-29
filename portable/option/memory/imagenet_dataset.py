@@ -36,17 +36,11 @@ def load_images_from_folder(folder, transform=None):
                 image = Image.open(img_path).convert('RGB')  # Convert image to RGB
                 if transform:
                     image = transform(image)
-                
-                # Verify the dimensions
-                if image.shape[1:] != (3, 224, 224):  # (C, H, W) format
-                    print(f"Warning: Image {filename} has shape {image.shape}, expected (3, 224, 224)")
-
                 images.append(np.array(image))  # Convert image to numpy array
                 filenames.append(filename)
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
     return images, filenames
-
 # Function to load XML annotations
 def load_annotations_from_folder(folder):
     annotations = []
@@ -78,7 +72,7 @@ image_transform = transforms.Compose([
 chihuahua_images, chihuahua_filenames = load_images_from_folder(chihuahua_image_dir, transform=image_transform)
 spaniel_images, spaniel_filenames = load_images_from_folder(spaniel_image_dir, transform=image_transform)
 # Specify where to save the images and annotations
-save_dir = '/home/yyang239/portable_options/resources/dog_images'
+save_dir = '/home/yyang239/divdis/portable_options/resources/dog_images'
 os.makedirs(save_dir, exist_ok=True)
 # Save each Chihuahua image and annotation as an individual .npy file
 for img, filename in zip(chihuahua_images, chihuahua_filenames):
