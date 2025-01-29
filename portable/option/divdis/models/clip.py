@@ -97,6 +97,8 @@ class Clip(nn.Module):
         print("x shape:", x.shape)
         # Ensure that x is on the correct device
         x = x.to(device)
+        x = x.unsqueeze(1).repeat(1, 3, 1, 1)  # Shape: [10, 3, 768, 768]
+
         
         # Forward pass through full model (embedding + classification)
         pred = torch.zeros(len(x), self.num_heads, self.num_classes).to(device)
