@@ -36,11 +36,17 @@ def load_images_from_folder(folder, transform=None):
                 image = Image.open(img_path).convert('RGB')  # Convert image to RGB
                 if transform:
                     image = transform(image)
+                
+                # Verify the dimensions
+                if image.shape[1:] != (3, 224, 224):  # (C, H, W) format
+                    print(f"Warning: Image {filename} has shape {image.shape}, expected (3, 224, 224)")
+
                 images.append(np.array(image))  # Convert image to numpy array
                 filenames.append(filename)
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
     return images, filenames
+
 # Function to load XML annotations
 def load_annotations_from_folder(folder):
     annotations = []
