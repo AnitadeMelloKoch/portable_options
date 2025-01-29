@@ -77,7 +77,8 @@ if __name__ == "__main__":
                         negative_train_files,
                         unlabelled_train_files)
     classifier.set_class_weights()
-    classifier.train(130) #, progress_bar=True)
+    
+    classifier.train(64) #, progress_bar=True)
 
     
 
