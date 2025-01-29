@@ -27,37 +27,42 @@ class ClipVisionEmbedding(nn.Module):
         self.device = device
 
         # Linear projection directly to 512 dimensions
-        self.project_to_224 = nn.Linear(768, 224)
+        self.project_to_512 = nn.Linear(768, 512)
 
     def forward(self, images):
-        # Ensure input is a torch tensor
+        # Ensure input is a torch tensor with requires_grad=True
         if not isinstance(images, torch.Tensor):
-            raise ValueError("Images must be a torch.Tensor type.")
+            raise ValueError("Images must be torch.Tensor type.")
+        if not images.requires_grad:
+            images.requires_grad_(True)
+        
+        print(f"Input shape: {images.shape}, requires_grad: {images.requires_grad}")
 
-        # Ensure images have the correct shape (B, C, H, W)
-        if images.ndim == 3:  # Missing batch dimension
-            images = images.unsqueeze(0)  # Add batch dimension
+        # Preprocess images (already a tensor)
+        inputs = {'pixel_values': images.to(self.device)}
 
-        images = images.to(self.device)
+        # Gradient tracking on pixel_values
+        inputs['pixel_values'].requires_grad_(True)
+        print(f"pixel_values.requires_grad: {inputs['pixel_values'].requires_grad}")
 
-        print(f"Input shape after unsqueeze (if needed): {images.shape}")
+        # Enable gradient tracking within the CLIP model
+        with torch.enable_grad():  # Overrides any internal torch.no_grad()
+            vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
+            print(f"vision_outputs.shape: {vision_outputs.last_hidden_state.shape}")
 
-        # Preprocess images
-        inputs = {'pixel_values': images}
-
-        # Pass through CLIP vision model
-        vision_outputs = self.clip_vision_model(pixel_values=inputs['pixel_values'])
 
         # Extract CLS token
         cls_embedding = vision_outputs.last_hidden_state[:, 0, :]
+        print(f"cls_embedding.requires_grad (pre-projection): {cls_embedding.requires_grad}")
 
         # Project to 512 dimensions
-        embeddings = self.project_to_224(cls_embedding)
+        embeddings = self.project_to_512(cls_embedding)
+        print(f"embeddings.requires_grad: {embeddings.requires_grad}")
         return embeddings
 
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=224):
+    def __init__(self, num_classes, num_heads, embedding_dim=512):
         super().__init__()
         
         # Define the CLIP vision embedding module
