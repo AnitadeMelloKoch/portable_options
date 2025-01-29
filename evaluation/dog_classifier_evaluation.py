@@ -78,7 +78,7 @@ if __name__ == "__main__":
                         unlabelled_train_files)
     classifier.set_class_weights()
     
-    classifier.train(64) #, progress_bar=True)
+    classifier.train(130) #, progress_bar=True)
 
     
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     print(f"acc_pos:      {acc_pos}")
     print(f"acc_neg:      {acc_neg}")
 
-    evaluator.evaluate_images(250)
+    evaluator.evaluate_images(64)
 
     #evaluator.add_true_from_files(positive_test_files)
     #evaluator.add_false_from_files(negative_test_files)
