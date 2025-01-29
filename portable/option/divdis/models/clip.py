@@ -26,8 +26,8 @@ class ClipVisionEmbedding(nn.Module):
         self.clip_vision_model = CLIPVisionModel.from_pretrained(clip_model_name)
         self.device = device
 
-        # Linear projection directly to 512 dimensions
-        self.project_to_512 = nn.Linear(768, 512)
+        # # Linear projection directly to 512 dimensions
+        # self.project_to_512 = nn.Linear(768, 512)
 
     def forward(self, images):
         # Ensure input is a torch tensor with requires_grad=True
@@ -62,7 +62,7 @@ class ClipVisionEmbedding(nn.Module):
 
 
 class Clip(nn.Module):
-    def __init__(self, num_classes, num_heads, embedding_dim=512):
+    def __init__(self, num_classes, num_heads, embedding_dim=768):
         super().__init__()
         
         # Define the CLIP vision embedding module
