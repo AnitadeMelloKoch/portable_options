@@ -36,7 +36,7 @@ class DivDisEvaluatorClassifier():
             image_input=True,
             test_batch_size=64,
             base_dir=None,
-            stack_size=4):
+            stack_size=3):
         
         self.classifier = classifier
 
@@ -58,7 +58,7 @@ class DivDisEvaluatorClassifier():
         self.stack_size = stack_size
         
         #self.integrated_gradients = [NoiseTunnel(IntegratedGradients(self.classifier.classifier.model[i])) for i in range(self.head_num)]
-        self.integrated_gradients = [(DeepLift(self.classifier.classifier.full_model[i])) for i in range(self.head_num)]
+        self.integrated_gradients = [(DeepLift(self.classifier.classifier.model[i])) for i in range(self.head_num)]
         self.ig_attr_test = [dict() for _ in range(self.head_num)]
         self.confusion_matrices = [None for _ in range(self.head_num)]
         self.classification_reports = [None for _ in range(self.head_num)]
@@ -77,6 +77,8 @@ class DivDisEvaluatorClassifier():
     def evaluate_images(self, num_images=5):
         images, labels = self.test_dataset.get_batch()
         
+        print(f"images : {images}")
+        print(f"labels : {labels}")
         images = images.to(self.classifier.device)
         labels = labels.to(self.classifier.device)
 
@@ -90,7 +92,8 @@ class DivDisEvaluatorClassifier():
             
         for image_idx in tqdm(range(num_images), desc='Evaluating Images'):
             image, label = images[image_idx].unsqueeze(0), labels[image_idx].item()
-
+            print(f"image : {image}")
+            print(f"label : {label}")
             image.requires_grad_()
             
             # Create a figure with subplots
@@ -117,25 +120,17 @@ class DivDisEvaluatorClassifier():
             nonagreement = False
             for head_idx in range(self.head_num):
                 pred_label_head = predicted_labels[head_idx].detach().cpu().numpy()
-                # print("attr dimension:", self.integrated_gradients[head_idx].attribute(
-                #     image,
-                #     target=label
-                # ).squeeze().cpu().detach().numpy().shape)
+                print(f"pred_label_head:{pred_label_head}")
+                print(f"pred_label_head shape:{pred_label_head.shape}")
+                print(f"label: {label}")
+                # print(f"label shape: {label.shape}")
 
-                #attr = self.integrated_gradients[head_idx].attribute(
-                #    image,
-                #    nt_samples=10,
-                #    n_steps=10,
-                #    target=label
-                #).squeeze().cpu().detach().numpy().transpose(1, 2, 0) # (H, W, C)
-                ## check whether the embedding layer requires grad
-                
                 attr = self.integrated_gradients[head_idx].attribute(
                     image,
                     target=label
-                ).squeeze().cpu().detach().numpy().transpose(0, 2, 1) # (H, W, C)
+                ).squeeze().cpu().detach().numpy().transpose(1,2,0)
                 
-                display_image = image.squeeze().detach().cpu().numpy().transpose(0, 2, 1) # (H, W, C)
+                display_image = image.squeeze().detach().cpu().numpy().transpose(1,2,0) # (H, W, C)
                 print("Display Image Shape: ", display_image.shape)
                 print("Attribution Shape: ", attr.shape)
 
