@@ -1,0 +1,20 @@
+import experiments.classifier.core.classifier_sweep_experiment
+import portable.option.divdis.divdis_classifier
+import portable.option.memory.unbalanced_set_dataset
+
+
+DivDisClassifierSweepExperiment.experiment_name         = "clip"
+DivDisClassifierSweepExperiment.use_gpu                 = 0
+DivDisClassifierSweepExperiment.default_num_heads       = 6
+DivDisClassifierSweepExperiment.default_lr              = 0.003
+DivDisClassifierSweepExperiment.default_div_weight      = 0.005
+DivDisClassifierSweepExperiment.default_l2_reg_weight   = 0.002
+DivDisClassifierSweepExperiment.default_epochs          = 15  
+
+
+DivDisClassifier.model_name        = 'clip'
+DivDisClassifier.dataset_batchsize = 64
+DivDisClassifier.num_classes       = 2
+
+
+UnbalancedSetDataset.class_weights  = [0.5, 0.5]
