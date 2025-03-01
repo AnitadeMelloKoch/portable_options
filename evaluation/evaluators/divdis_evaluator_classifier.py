@@ -138,6 +138,7 @@ class DivDisEvaluatorClassifier():
                     
                     # Visualize attributions with heatmap
                     fig, ax = viz.visualize_image_attr(
+                        # replace 142-143 with attr and no for loop
                         attr=np.expand_dims(attr[:,:,channel_idx], axis=-1), 
                         original_image=np.expand_dims(display_image[:,:,channel_idx], axis=-1), 
                         method='blended_heat_map', sign='all', alpha_overlay=0.7, cmap=custom_cmap,
