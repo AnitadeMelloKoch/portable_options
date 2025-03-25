@@ -14,6 +14,6 @@ conda activate port-options
 
 export OMPI_MCA_btl_tcp_if_include=10.42.0.0/24
 
-python -um experiments.divdis_minigrid.divdis_image_meta_full --config_file configs/divdis_image_meta_full_10.gin --base_dir runs --seed 14
+python -um experiments.divdis_minigrid.divdis_image_meta_perfect_options --config_file configs/divdis_image_meta_perfect_options.gin --base_dir runs --seed 19
 
 

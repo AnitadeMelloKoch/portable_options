@@ -1,20 +1,24 @@
 import portable.agent.model.linear_q
-import experiments.core.divdis_meta_masked_ppo_experiment
+import experiments.core.divdis_meta_experiment
 import portable.option.divdis.divdis_mock_option
 import portable.option.divdis.policy.policy_and_initiation
-import portable.agent.model.maskable_ppo 
+import portable.agent.model.ppo
 
-DivDisMetaMaskedPPOExperiment.experiment_name                       = "meta_image_policy_perfect_options"
-DivDisMetaMaskedPPOExperiment.num_options                           = 7
-DivDisMetaMaskedPPOExperiment.num_primitive_actions                 = 0
-DivDisMetaMaskedPPOExperiment.use_gpu                               = True
-DivDisMetaMaskedPPOExperiment.make_videos                           = True
-DivDisMetaMaskedPPOExperiment.option_type                           = "mock"
-DivDisMetaMaskedPPOExperiment.option_timeout                        = 10
+DivDisMetaExperiment.experiment_name                       = "meta_image_policy_perfect_options"
+DivDisMetaExperiment.num_options                           = 5
+DivDisMetaExperiment.option_head_num                                = 1
+DivDisMetaExperiment.num_primitive_actions                 = 0
+DivDisMetaExperiment.use_gpu                               = True
+DivDisMetaExperiment.make_videos                           = False
+DivDisMetaExperiment.option_type                           = "mock"
+DivDisMetaExperiment.option_timeout                        = 10
+DivDisMetaExperiment.log_q_values                          = False
 
-MaskablePPOAgent.learning_rate                                      = 2.5e-4
-MaskablePPOAgent.state_shape                                        = (3, 64, 64)
-MaskablePPOAgent.num_actions                                        = 7
+ActionPPO.learning_rate                                             = 2.5e-4
+ActionPPO.state_shape                                               = (3, 64, 64)
+ActionPPO.num_actions                                               = 5
+ActionPPO.update_interval                                           = 100
+ActionPPO.entropy_coef                                              = 0.01
 
 PolicyWithInitiation.warmup_steps                                   = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps                = 500000
@@ -32,3 +36,4 @@ PolicyWithInitiation.gru_hidden_size                                = 512
 PolicyWithInitiation.image_input                                    = True
 
 DivDisMockOption.exp_type                                           = "minigrid"
+DivDisMockOption.tabular_beta                                       = 0.0001
