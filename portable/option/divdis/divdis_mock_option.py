@@ -233,10 +233,10 @@ class DivDisMockOption():
             should_terminate = self.terminations[idx](state,
                                                       env)
             
-            if make_video:
-                self._video_log("In termination: {}".format(should_terminate))
-                if policy.initiation.is_initialized():
-                    self._video_log("Initiation: {}".format(policy.initiation.pessimistic_predict(next_state)))
+            # if make_video:
+            #     self._video_log("In termination: {}".format(should_terminate))
+            #     if policy.initiation.is_initialized():
+            #         self._video_log("Initiation: {}".format(policy.initiation.pessimistic_predict(next_state)))
             
             steps += 1
             rewards.append(reward)

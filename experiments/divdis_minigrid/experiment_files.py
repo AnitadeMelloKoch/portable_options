@@ -1,7 +1,7 @@
 minigrid_positive_files = [
     ["resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_0_termination_positive.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_0_termination_positive.npy"],
-    ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_positive.npy"],
+    ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorblue_0_termination_positive.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_termination_positive.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_togoal_0_termination_positive.npy"],
     
@@ -9,7 +9,7 @@ minigrid_positive_files = [
 minigrid_negative_files = [
     ["resources/minigrid_images/adv_doorkey_8x8_v2_getbluekey_doorblue_0_termination_negative.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_getgreenkey_doorgreen_0_termination_negative.npy"],
-    ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorred_0_termination_negative.npy"],
+    ["resources/minigrid_images/adv_doorkey_8x8_v2_getredkey_doorblue_0_termination_negative.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_openreddoor_doorred_0_termination_negative.npy"],
     ["resources/minigrid_images/adv_doorkey_8x8_v2_togoal_0_termination_negative.npy"],
 ]

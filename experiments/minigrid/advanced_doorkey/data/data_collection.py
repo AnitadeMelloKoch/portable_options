@@ -28,7 +28,7 @@ class MiniGridDataCollector:
             # Init env, not collected, just for visualisation
             env, _ = self.init_env('blue', []) 
             state, info = env.reset()
-            state = state.numpy()
+            # state = state.numpy()
             if self.show: 
                 fig = plt.figure(num=1, clear=True)
                 ax = fig.add_subplot()
@@ -119,7 +119,7 @@ class MiniGridDataCollector:
             
             env, _ = self.init_env(door_color, other_keys_colour) 
             state, _ = env.reset()
-            state = state.numpy()
+            # state = state.numpy()
             if self.show:
                 screen = env.render()
                 ax.imshow(screen)
@@ -607,7 +607,7 @@ class GridEnv:
         for _ in range(steps):
             
             state, _, terminated, info  = self.env.step(action)
-            state = state.numpy()
+            # state = state.numpy()
             
             if show:
                 screen = self.env.render()    
@@ -726,13 +726,13 @@ if __name__ == "__main__":
     if USE_MP:
         import multiprocess as mp
         with mp.Pool() as p:
-            collect_imgs = lambda seed: meta_data_collector.collect_envs(seed, env_mode=1, data_mode=1, manual_input_data=False)
+            collect_imgs = lambda seed: meta_data_collector.collect_envs(seed, env_mode=1, data_mode=2, manual_input_data=False)
             p.map(collect_imgs, seeds_to_collect)
 
     else:
         from tqdm import tqdm
         for seed in tqdm(seeds_to_collect):
-            meta_data_collector.collect_envs(seed, 1, 1, False, show=False)
+            meta_data_collector.collect_envs(seed, 1, 2, False, show=True)
 
         
     

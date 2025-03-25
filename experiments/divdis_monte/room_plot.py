@@ -585,7 +585,7 @@ def extract_room_seed(file, folder_idx):
     folders = file.split("/")
     folder_name = folders[folder_idx]
     split_folder_name = folder_name.split("_")
-    
+        
     # room = split_folder_name[6]
     # seed = split_folder_name[9]
     
@@ -610,11 +610,13 @@ def get_data_files(base_dir, exp_str):
     return files
 
 def get_df_from_pickle(file_name, num_rooms, seed):
+    # print(file_name)
     with open(file_name, 'rb') as f:
         experiment_data = pickle.load(f)
 
     exp_df = pd.DataFrame.from_dict(experiment_data)
-    exp_df["rolling_success"] = exp_df["true_success"].rolling(100,  min_periods=1).mean()
+    # print(exp_df)
+    # exp_df["rolling_success"] = exp_df["true_success"].rolling(100,  min_periods=1).mean()
     exp_df.insert(0, "num_rooms", num_rooms, True)
     exp_df["num_rooms"] = exp_df["num_rooms"].astype(int)
     exp_df.insert(1, "seed", seed, True)
@@ -760,79 +762,87 @@ def get_scatter_dict(df,
             
 
 
-file_dir = "runs/"
+file_dir = "runs/ladder_exp/"
 
 files1 = get_data_files(file_dir, "ladders_one_head")
 files2 = get_data_files(file_dir, "ladders_no_div")
 files3 = get_data_files(file_dir, "ladders")
-rooms, seeds = get_rooms_seeds(files1, 1)
+rooms, seeds = get_rooms_seeds(files3, 2)
 
-df1 = get_combined_df(files1, rooms, seeds)
-df2 = get_combined_df(files2, rooms, seeds)
-df3 = get_combined_df(files3, rooms, seeds)
+# df1 = get_combined_df(files1, rooms, seeds)
+# df2 = get_combined_df(files2, rooms, seeds)
+# df3 = get_combined_df(files3, rooms, seeds)
 
-data = {}
+# data = {}
 
-df1 = get_scatter_dict(df1, data, 0, 5, 2, 1, "CNN")
-df2 = get_scatter_dict(df2, data, 2, 5, 2, 1, "D-BAT Ensemble - No Diversity")
-df3 = get_scatter_dict(df3, data, 5, 5, 2, 1, "D-BAT Ensemble")
+# df1 = get_scatter_dict(df1, data, 0, 5, 2, 1, "CNN")
+# df2 = get_scatter_dict(df2, data, 2, 5, 2, 1, "D-BAT Ensemble - No Diversity")
+# df3 = get_scatter_dict(df3, data, 5, 5, 2, 1, "D-BAT Ensemble")
 
-styles = [['r','.'],['g','x'],['b','+']]
+# styles = [['r','.'],['g','x'],['b','+']]
 
-for key in data.keys():
-    scatter_df = pd.DataFrame.from_dict(data[key])
-    file_name = "scatter_room{}.png".format(key)
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    back = np.load("room_backgrounds/room{}.npy".format(key))
-    ax.imshow(back)
-    ax.invert_yaxis()
-    ax.axis('off')
+# for key in data.keys():
+#     scatter_df = pd.DataFrame.from_dict(data[key])
+#     file_name = "scatter_room{}.png".format(key)
+#     fig = plt.figure()
+#     ax = fig.add_subplot()
+#     back = np.load("room_backgrounds/room{}.npy".format(key))
+#     ax.imshow(back)
+#     ax.invert_yaxis()
+#     ax.axis('off')
     
-    for idx, type_name in enumerate(["CNN", "D-BAT Ensemble - No Diversity", "D-BAT Ensemble"]):
+#     for idx, type_name in enumerate(["CNN", "D-BAT Ensemble - No Diversity", "D-BAT Ensemble"]):
         
-        minidf = scatter_df.loc[scatter_df['type'] == type_name]
+#         minidf = scatter_df.loc[scatter_df['type'] == type_name]
     
-        # ax.set_ylim([0,300])
-        # ax.set_xlim([0,160])
-        print(scatter_df['x'])
-        ax.scatter(scatter_df['x'].to_list(), scatter_df['y'].to_list(), c=styles[idx][0], marker=styles[idx][1])
+#         # ax.set_ylim([0,300])
+#         # ax.set_xlim([0,160])
+#         print(scatter_df['x'])
+#         ax.scatter(scatter_df['x'].to_list(), scatter_df['y'].to_list(), c=styles[idx][0], marker=styles[idx][1])
         
+#     fig.savefig(file_name, bbox_inches="tight")
+#     plt.close(fig)
         
-    fig.savefig(file_name)
-    plt.close(fig)
-        
+# print("all done")
 
-
-# key = ["CNN", "D-BAT Ensemble - No diversity","D-BAT Ensemble"]
+key = ["CNN", "Standard Ensemble", "D-BAT Ensemble"]
 
 # df = get_combined_df(files3, rooms, seeds)
 
 # room_scatter_plots(df, "runs/scatter_ladder")
 
 
-# dist_df = []
+dist_df = []
 
-# for idx, files in enumerate([files1, files2, files3]):
-#     df = get_combined_df(files, rooms, seeds)
-#     print(df)
-#     # room_success_by_seen_plot(df, "runs/ladder.png")
-#     # term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], [ax], key[idx])
-#     dist_df = get_dists_dict(df, dist_df, key[idx])
-    
-# dist_df = pd.DataFrame.from_dict(dist_df)
+for idx, files in enumerate([files1, files2, files3]):
+    df = get_combined_df(files, rooms, seeds)
+    # room_success_by_seen_plot(df, "runs/ladder.png")
+    # term_dist_by_seen_plot(df, [1,0,2,3,5,7,14], [ax], key[idx])
+    dist_df = get_dists_dict(df, dist_df, key[idx])
+    print("done idx: {}".format(idx))
 
-# print(dist_df)
+dist_df = pd.DataFrame.from_dict(dist_df)
 
-# sns_plot = sns.barplot(x='Number of Seen Ladders',
-#             y='Distance from Termination',
-#             hue='type',
-#             data=dist_df,)
 
-# handles, labels = sns_plot.figure.axes[0].get_legend_handles_labels()
-# sns_plot.figure.axes[0].legend(handles=handles[0:], labels=labels[0:])
+print(dist_df)
 
-# sns_plot.figure.savefig("runs/full_ladder.png")
+sns.set(font_scale=1.1)
+sns.set_style("white")
+
+sns_plot = sns.barplot(x='Number of Seen Ladders',
+            y='Distance from Termination',
+            hue='type',
+            data=dist_df,)
+
+hatches = ['/', '\\', '|']
+for bars, hatch in zip(sns_plot.containers, hatches):
+    for bar in bars:
+        bar.set_hatch(hatch)
+
+handles, labels = sns_plot.figure.axes[0].get_legend_handles_labels()
+sns_plot.figure.axes[0].legend(handles=handles[0:], labels=labels[0:])
+
+sns_plot.figure.savefig("full_ladder.png")
 
 
 

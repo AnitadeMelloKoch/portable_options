@@ -31,5 +31,11 @@ DivDisOption.num_heads                                              = 5
 
 DivDisClassifier.learning_rate                                      = 0.00025
 DivDisClassifier.num_classes                                        = 2
-DivDisClassifier.diversity_weight                                   = 0.01
-DivDisClassifier.l2_reg_weight                                      = 0.0002
+#DivDisClassifier.diversity_weight                                   = 0
+DivDisClassifier.diversity_weight                                   = 3e-5
+DivDisClassifier.l2_reg_weight                                      = 5e-4
+DivDisClassifier.model_name                                         = "monte_cnn"
+
+UnbalancedSetDataset.class_weights                                  = [0.8, 0.2]
+UnbalancedSetDataset.data_dir                                       = "./"
+

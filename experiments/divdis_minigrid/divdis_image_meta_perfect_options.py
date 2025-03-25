@@ -1,4 +1,4 @@
-from experiments.core.divdis_meta_masked_ppo_experiment import DivDisMetaMaskedPPOExperiment
+from experiments.core.divdis_meta_experiment import DivDisMetaExperiment
 import argparse
 from portable.utils.utils import load_gin_configs
 import torch 
@@ -6,8 +6,7 @@ from experiments.minigrid.utils import environment_builder
 from experiments.minigrid.advanced_doorkey.core.policy_train_wrapper import AdvancedDoorKeyPolicyTrainWrapper
 import random
 from experiments.divdis_minigrid.core.advanced_minigrid_mock_terminations import *
-from portable.agent.model.ppo import create_cnn_vf
-from portable.agent.model.maskable_ppo import create_mask_cnn_policy
+from portable.agent.model.ppo import create_cnn_vf, create_cnn_policy
 
 def make_random_getkey_env(train_colour, seed, collect_key=False):
     colours = ["red", "green", "blue", "purple", "yellow", "grey"]
@@ -144,16 +143,15 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
     
     def policy_phi(x):
-        if type(x) is np.ndarray:
-            if np.max(x) > 1:
-                x = x/255.0
-            x = x.astype(np.float32)
-        else:
-            if torch.max(x) > 1:
-                x = x/255.0
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = (x/255.0).float()
         return x
     
     def option_agent_phi(x):
+        if type(x) == np.ndarray:
+            x = torch.from_numpy(x)
+        x = (x/255.0).float()
         return x
     
     terminations = [
@@ -161,24 +159,23 @@ if __name__ == "__main__":
         [PerfectGetKey("green")],
         [PerfectGetKey("blue")],
         [PerfectDoorOpen()],
-        [PerfectAtLocation(4,1)],
-        [PerfectAtLocation(5,3)],
         [PerfectAtLocation(6,6)],
     ]
     
-    experiment = DivDisMetaMaskedPPOExperiment(base_dir=args.base_dir,
+    experiment = DivDisMetaExperiment(base_dir=args.base_dir,
                                                seed=args.seed,
                                                option_policy_phi=policy_phi,
                                                agent_phi=option_agent_phi,
-                                               action_policy=create_mask_cnn_policy(3, 7),
+                                               action_policy=create_cnn_policy(3, 5),
                                                action_vf=create_cnn_vf(3),
                                                terminations=terminations,
-                                               option_head_num=1)
+                                               option_head_num=1,
+                                               option_type="mock")
     
     
-    experiment.train_option_policies(train_envs,
-                                     env_seed,
-                                     5e5)
+    # experiment.train_option_policies(train_envs,
+    #                                  env_seed,
+    #                                  5e5)
     
     # experiment.load()
     
@@ -186,13 +183,14 @@ if __name__ == "__main__":
                     'AdvancedDoorKey-8x8-v0',
                     seed=env_seed,
                     max_steps=int(1e4),
-                    grayscale=False
+                    grayscale=False,
+                    normalize_obs=False
                 )
     
     experiment.train_meta_agent(meta_env,
                                 env_seed,
                                 2e8,
-                                2)
+                                1)
     
     # experiment.eval_meta_agent(meta_env,
     #                            env_seed,

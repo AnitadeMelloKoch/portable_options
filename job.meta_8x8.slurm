@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --cpus-per-task=110
 #SBATCH --mem=230G
 #SBATCH --time=23:00:00
@@ -14,4 +14,6 @@ conda activate port-options
 
 export OMPI_MCA_btl_tcp_if_include=10.42.0.0/24
 
-python -um experiments.divdis_minigrid.divdis_image_meta_full --config_file configs/divdis_image_meta_full_10.gin --base_dir runs --seed 23
+python -um experiments.divdis_minigrid.divdis_image_meta_full --config_file configs/divdis_image_meta_full_10.gin --base_dir runs --seed 10
+
+
