@@ -256,7 +256,8 @@ class DivDisMockOption():
                 extrinsic_rewards.append(1)
             else:
                 extrinsic_rewards.append(0)
-                reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
+                reward = self.intrinsic_bonuses[idx].get_bonus(tuple(info["state"].flatten()))
+                # reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
             policy.observe(state,
                            action,
@@ -293,7 +294,7 @@ class DivDisMockOption():
         self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
         self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
         
-        return state, info, done, steps, rewards, extrinsic_rewards, states, infos
+        return state, info, done, steps, rewards, extrinsic_rewards, states, infos, []
     
     def bootstrap_policy(self,
                          idx,

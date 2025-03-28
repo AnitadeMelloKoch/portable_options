@@ -38,6 +38,7 @@ class DivDisMetaExperiment():
                  option_type,
                  num_options,
                  num_primitive_actions,
+                 termination_phi=None,
                  use_termination_masks=True,
                  log_q_values=False,
                  add_unlabelled_data=False,
@@ -79,6 +80,7 @@ class DivDisMetaExperiment():
         self.fix_options = fix_options_during_meta
         self.make_plots = make_plots
         self.pick_actions_randomly = pick_actions_randomly
+        self.termination_phi = termination_phi
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -142,6 +144,7 @@ class DivDisMetaExperiment():
                                                     log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
                                                     save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
                                                     terminations=termination_list,
+                                                    exp_type=self.exp,
                                                     policy_phi=option_policy_phi,
                                                     video_generator=self.video_generator,
                                                     plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
@@ -158,7 +161,9 @@ class DivDisMetaExperiment():
                                                  log_dir=os.path.join(self.log_dir, "option_{}".format(idx)),
                                                  save_dir=os.path.join(self.save_dir, "option_{}".format(idx)),
                                                  num_heads=option_head_num,
+                                                 exp_type=self.exp,
                                                  policy_phi=option_policy_phi,
+                                                 termination_phi=termination_phi,
                                                  video_generator=self.video_generator,
                                                  plot_dir=os.path.join(self.plot_dir, "option_{}".format(idx)),
                                                  use_seed_for_initiation=True))
@@ -357,7 +362,7 @@ class DivDisMetaExperiment():
             if self.video_generator is not None:
                 self.video_generator.episode_start()
             
-            obs, info = env.reset(random_start=True)
+            obs, info = env.reset()
             
             while not done:
                 if episode%200 == 0:
@@ -579,6 +584,10 @@ class DivDisMetaExperiment():
                                           batchsize=64)
             dataset_negative = SetDataset(max_size=1e6,
                                           batchsize=64)
+            
+            if self.termination_phi is not None:
+                dataset_positive.set_transform_function(self.termination_phi)
+                dataset_negative.set_transform_function(self.termination_phi)
             
             dataset_positive.add_true_files(test_positive_files[option_idx])
             dataset_negative.add_false_files(test_negative_files[option_idx])

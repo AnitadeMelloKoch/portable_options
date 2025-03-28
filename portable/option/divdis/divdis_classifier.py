@@ -252,8 +252,8 @@ class DivDisClassifier():
     def predict_idx(self, x, idx, use_phi=False):
         self.classifier.eval()
         
-        # if use_phi is True:
-        #     x = self.phi(x)
+        if use_phi is True and self.phi is not None:
+            x = self.phi(x)
         
         if len(x.shape) == self.state_dim:
             x = x.unsqueeze(0)

@@ -113,6 +113,8 @@ class UnbalancedSetDataset():
         for file in file_list:
             file = os.path.join(self.data_dir, file)
             data = np.load(file, allow_pickle=True)
+            if len(data) == 0:
+                continue
             data = torch.from_numpy(data)
             if torch.max(data) <= 1:
                 data = data*255

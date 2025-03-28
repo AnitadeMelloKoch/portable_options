@@ -82,8 +82,13 @@ class PolicyWithInitiation(Agent):
                 nn.ReLU(),
                 nn.MaxPool2d(kernel_size=2),
                 
+                nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1),
+                nn.LazyBatchNorm2d(),
+                nn.ReLU(),
+                
                 nn.Flatten()
             )
+            
             self.cnn.to(self.device)
         
         self.q_network = LinearQFunction(in_features=gru_hidden_size,
@@ -115,7 +120,7 @@ class PolicyWithInitiation(Agent):
             1.0,
             final_epsilon,
             final_exploration_frames,
-            lambda: np.random.randint(num_actions)
+            lambda: torch.randint(0, num_actions, size=(1,))
         )
         
         self.replay_buffer = replay_buffers.PrioritizedReplayBuffer(
@@ -331,7 +336,6 @@ class PolicyWithInitiation(Agent):
     def act(self, obs, return_q=False):
                 
         obs = batch_states([obs], self.device, self.phi)
-        print(obs)
         obs = obs.float()
         if self.image_input:
             obs = self.cnn(obs)
@@ -364,11 +368,11 @@ class PolicyWithInitiation(Agent):
         obs = obs.squeeze(0)
         q_values = self.q_network(obs)
 
-        randval = np.random.rand()
+        randval = torch.rand(1)
         if randval > 0.01:
             a = q_values.greedy_actions
         else:
-            a = np.random.randint(0, self.num_actions)
+            a = torch.randint(0, self.num_actions, size=(1,))
         
         return a, q_values.q_values
     

@@ -30,10 +30,10 @@ class DivDisOption():
                  num_heads,
                  
                  policy_phi,
-                #  termination_phi,
                  use_seed_for_initiation,
                  exp_type,
                  plot_dir,
+                 termination_phi=None,
                  model_type="dqn",
                  save_term_states=True,
                  tabular_beta=0.0,
@@ -62,7 +62,11 @@ class DivDisOption():
         
         self.terminations = DivDisClassifier(use_gpu=use_gpu[0],
                                              head_num=num_heads,
+                                             phi=termination_phi,
                                              log_dir=os.path.join(log_dir, 'termination'))
+        
+        if termination_phi is not None:
+            self.terminations.dataset.set_transform_function(termination_phi)
         
         self.num_heads = num_heads
         self.option_steps = [0]*self.num_heads
