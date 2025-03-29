@@ -1,6 +1,6 @@
 import portable.agent.model.linear_q
 import experiments.core.divdis_meta_experiment 
-import portable.option.divdis.divdis_option 
+import portable.option.divdis.divdis_mock_option 
 import portable.option.divdis.policy.policy_and_initiation
 import portable.agent.model.ppo 
 
@@ -12,7 +12,7 @@ DivDisMetaExperiment.use_gpu                            = True
 DivDisMetaExperiment.gpu_list                           = [0]
 DivDisMetaExperiment.make_videos                        = False
 DivDisMetaExperiment.classifier_epochs                  = 0
-DivDisMetaExperiment.option_timeout                     = 50
+DivDisMetaExperiment.option_timeout                     = 100
 DivDisMetaExperiment.log_q_values                       = False
 
 ActionPPO.learning_rate                                 = 2.5e-4
@@ -36,6 +36,6 @@ PolicyWithInitiation.q_hidden_size                      = 256
 PolicyWithInitiation.gru_hidden_size                    = 512
 PolicyWithInitiation.image_input                        = True
 
-DivDisOption.exp_type                                   = "minigrid"
-DivDisOption.tabular_beta                               = 0.0001
+DivDisMockOption.exp_type                               = "minigrid"
+DivDisMockOption.tabular_beta                           = 0.0001
 

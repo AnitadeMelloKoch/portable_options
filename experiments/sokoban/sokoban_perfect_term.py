@@ -63,7 +63,9 @@ if __name__ == "__main__":
                                       terminations=terminations,
                                       option_type="mock")
 
-    env = environment_builder(level_name="PushAndPull-Sokoban-v0", seed=args.seed)
+    env = environment_builder(level_name="PushAndPull-Sokoban-v0",
+                              max_steps=1000, 
+                              seed=args.seed)
     
     experiment.train_meta_agent(env,
                                 args.seed,

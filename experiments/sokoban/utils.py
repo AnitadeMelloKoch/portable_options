@@ -21,6 +21,26 @@ class SokobanScaleWrapper(Wrapper):
         img = Image.fromarray(obs)
         return np.asarray(img.resize(self.im_size, Image.BILINEAR)), reward, done, info
 
+class SokobanTimerWrapper(Wrapper):
+    def __init__(self, env, max_steps):
+       super().__init__(env)
+       self._max_steps = max_steps
+       self._steps = 0
+    
+    def reset(self):
+        self._steps = 0
+        return self.env.reset()
+    
+    def step(self, action):
+        obs, reward, done, info = self.env.step(int(action))
+        self._steps += 1
+        done = False
+        if self._steps >= self._max_steps or self.env.unwrapped.boxes_on_target == 3:
+            done = True
+        
+        return obs, reward, done, info
+            
+
 class SokobanInfoWrapper(Wrapper):
   def __init__(
     self,
@@ -129,6 +149,7 @@ def determine_task_goal_features(env):
 def environment_builder(
   level_name='Sokoban-v0',
   seed=42,
+  max_steps=150,
   to_float=False,
   use_sparse_rewards=False,
   scale_dims=(84, 84)
@@ -136,7 +157,7 @@ def environment_builder(
   env = gym.make(level_name)
   
   env = SokobanScaleWrapper(env, scale_dims)
-  
+  env = SokobanTimerWrapper(env, max_steps)
   env = SokobanInfoWrapper(env, seed=seed, use_sparse_rewards=use_sparse_rewards)
   
   return env
