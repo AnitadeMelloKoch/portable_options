@@ -28,6 +28,7 @@ class GlobalOption():
                                            learn_initiation=False)
         
         self.video_generator = video_generator
+        self.intrinsic_reward = TabularCount()
     
     def _video_log(self, line):
         if self.video_generator is not None:
@@ -49,9 +50,11 @@ class GlobalOption():
         
         next_obs, reward, done, info = env.step(action)
         
+        bonus = self.intrinsic_reward.get_bonus(tuple(info["state"].flatten()))
+        
         self.policy.observe(obs,
                             action,
-                            reward,
+                            reward+bonus,
                             next_obs,
                             done)
         # self.policy.move_to_cpu()

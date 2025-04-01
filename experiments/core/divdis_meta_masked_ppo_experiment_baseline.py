@@ -57,6 +57,7 @@ class DivDisMetaMaskedPPOExperiment():
                  discount_rate=0.9,
                  make_videos=False,
                  make_plots=False,
+                 train_meta_agent=True,
                  pick_actions_randomly=False,
                  fix_options_during_meta=False):
         
@@ -81,6 +82,7 @@ class DivDisMetaMaskedPPOExperiment():
         self.make_plots = make_plots
         self.pick_actions_randomly = pick_actions_randomly
         self.available_actions_function = available_actions_function
+        self.train_high_agent = train_meta_agent
         
         self.start_epsilon = start_epsilon
         self.end_epsilon = end_epsilon
@@ -296,6 +298,9 @@ class DivDisMetaMaskedPPOExperiment():
                 mask, 
                 rewards, 
                 done):
+        
+        if not self.train_high_agent:
+            return
         
         if len(rewards) > len(self._cumulative_discount_vector):
             self._cumulative_discount_vector = np.array(
