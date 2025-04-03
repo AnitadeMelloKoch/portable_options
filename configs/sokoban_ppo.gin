@@ -19,7 +19,7 @@ DivDisMetaMaskedPPOExperiment.log_q_values                  = False
 DivDisMetaMaskedPPOExperiment.use_global_option             = False
 
 MaskablePPOAgent.learning_rate                              = 2.5e-4
-MaskablePPOAgent.state_shape                                = (3, 84, 84)
+MaskablePPOAgent.state_shape                                = (3, 128, 128)
 MaskablePPOAgent.num_actions                                = 13
 MaskablePPOAgent.update_interval                            = 100
 

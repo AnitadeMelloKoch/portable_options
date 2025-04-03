@@ -21,7 +21,7 @@ DivDisMetaMaskedPPOExperiment.use_global_option             = True
 DivDisMetaMaskedPPOExperiment.train_meta_agent              = False
 
 MaskablePPOAgent.learning_rate                              = 2.5e-4
-MaskablePPOAgent.state_shape                                = (3, 84, 84)
+MaskablePPOAgent.state_shape                                = (3, 128, 128)
 MaskablePPOAgent.num_actions                                = 1
 MaskablePPOAgent.update_interval                            = 1000
 
@@ -35,7 +35,7 @@ PolicyWithInitiation.final_epsilon                          = 0.01
 PolicyWithInitiation.final_exploration_frames               = 8e6
 PolicyWithInitiation.batch_size                             = 32
 PolicyWithInitiation.num_actions                            = 13
-PolicyWithInitiation.policy_infeature_size                  = 18496
+PolicyWithInitiation.policy_infeature_size                  = 50176
 PolicyWithInitiation.q_hidden_size                          = 256
 PolicyWithInitiation.gru_hidden_size                        = 512
 PolicyWithInitiation.image_input                            = True

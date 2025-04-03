@@ -47,7 +47,8 @@ if __name__ == "__main__":
     
     env = environment_builder(level_name="PushAndPull-Sokoban-v0",
                               max_steps=150, 
-                              seed=args.seed)
+                              seed=args.seed,
+                              scale_dims=(128, 128))
     
     experiment.train_meta_agent(env,
                                 args.seed,
