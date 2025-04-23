@@ -71,19 +71,38 @@ class PolicyWithInitiation(Agent):
         
         self.image_input = image_input
         if image_input:
+            # self.cnn = nn.Sequential(
+            #     nn.LazyConv2d(out_channels=16, kernel_size=3, stride=1),
+            #     nn.LazyBatchNorm2d(),
+            #     nn.ReLU(),
+            #     nn.MaxPool2d(kernel_size=2),
+                
+            #     nn.LazyConv2d(out_channels=32, kernel_size=3, stride=1),
+            #     nn.LazyBatchNorm2d(),
+            #     nn.ReLU(),
+            #     nn.MaxPool2d(kernel_size=2),
+                
+            #     nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1),
+            #     nn.LazyBatchNorm2d(),
+            #     nn.ReLU(),
+                
+            #     nn.Flatten()
+            # )
+            
             self.cnn = nn.Sequential(
-                nn.LazyConv2d(out_channels=16, kernel_size=3, stride=1),
-                nn.LazyBatchNorm2d(),
+                nn.LazyConv2d(out_channels=32, kernel_size=5, stride=1),
+                nn.MaxPool2d(kernel_size=(2,2)),
+                # nn.LazyBatchNorm2d(),
                 nn.ReLU(),
-                nn.MaxPool2d(kernel_size=2),
                 
-                nn.LazyConv2d(out_channels=32, kernel_size=3, stride=1),
-                nn.LazyBatchNorm2d(),
+                nn.LazyConv2d(out_channels=64, kernel_size=5, stride=1),
+                nn.MaxPool2d(kernel_size=(2,2)),
+                # nn.LazyBatchNorm2d(),
                 nn.ReLU(),
-                nn.MaxPool2d(kernel_size=2),
                 
-                nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1),
-                nn.LazyBatchNorm2d(),
+                nn.LazyConv2d(out_channels=128, kernel_size=5, stride=1),
+                nn.MaxPool2d(kernel_size=(2,2)),
+                # nn.LazyBatchNorm2d(),
                 nn.ReLU(),
                 
                 nn.Flatten()
@@ -250,7 +269,7 @@ class PolicyWithInitiation(Agent):
                           "reward": reward,
                           "next_state": next_obs,
                           "next_action": None,
-                          "is_state_terminal": terminal}
+                          "is_state_terminal": terminal}            
             self.replay_buffer.append(**transition)
             if terminal:
                 self.replay_buffer.stop_current_episode()

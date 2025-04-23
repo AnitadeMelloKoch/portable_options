@@ -116,7 +116,7 @@ class DivDisMetaMaskedPPOExperiment():
         else:
             self.video_generator = None
         
-        self.meta_agent = MaskablePPOAgent(use_gpu=gpu_list[-1],
+        self.meta_agent = ActionPPO(use_gpu=gpu_list[-1],
                                            policy=action_policy,
                                            value_function=action_vf,
                                            model=action_model,
@@ -286,7 +286,8 @@ class DivDisMetaMaskedPPOExperiment():
         return masks
     
     def act(self, obs, mask):
-        action = self.meta_agent.act(obs, mask)
+        # action, q_vals = self.meta_agent.act(obs, mask)
+        action, q_vals = self.meta_agent.act(obs)
         
         if self.pick_actions_randomly is True:
             action = np.random.randint(0, self.num_actions)
@@ -309,8 +310,13 @@ class DivDisMetaMaskedPPOExperiment():
         
         reward = np.sum(self._cumulative_discount_vector[:len(rewards)]*rewards)
         
+        # self.meta_agent.observe(obs,
+        #                         mask,
+        #                         reward,
+        #                         done,
+        #                         done)
+        
         self.meta_agent.observe(obs,
-                                mask,
                                 reward,
                                 done,
                                 done)
@@ -351,9 +357,10 @@ class DivDisMetaMaskedPPOExperiment():
                          max_steps,
                          min_performance=1.0):
         total_steps = 0
-        episode_rewards = deque(maxlen=200)
+        episode_rewards = deque(maxlen=500)
         episode = 0
         undiscounted_rewards = []
+        
         
         term_states = defaultdict(partial(deque, maxlen=50))
         
@@ -404,7 +411,6 @@ class DivDisMetaMaskedPPOExperiment():
                 if not step_taken:
                     if action < self.num_primitive_actions:
                         next_obs, reward, done, info = env.step(action)
-                        undiscounted_reward += reward
                         rewards = [reward]
                         steps = 1
                     else:
@@ -434,7 +440,6 @@ class DivDisMetaMaskedPPOExperiment():
                 if self.plotter is not None:
                     self.plotter.record_term_location(chosen_action, info["player_pos"])
                 
-                
                 undiscounted_reward += np.sum(rewards)
                 self.decisions += 1
                 total_steps += steps
@@ -463,9 +468,10 @@ class DivDisMetaMaskedPPOExperiment():
             if self.plotter is not None:
                 self.plotter.plot("action_plots".format(episode))
             
-            logging.info("Episode {} total steps: {} decisions: {}  average undiscounted reward: {}".format(episode,
+            logging.info("Episode {} total steps: {} decisions: {} episode reward: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
-                                                                                     self.decisions,  
+                                                                                     self.decisions,
+                                                                                     undiscounted_reward,  
                                                                                      np.mean(episode_rewards)))
             
             if (undiscounted_reward > 0 or episode%500==0) and self.video_generator is not None:
@@ -473,7 +479,7 @@ class DivDisMetaMaskedPPOExperiment():
             
             undiscounted_rewards.append(undiscounted_reward)
             episode += 1
-            episode_rewards.append(undiscounted_rewards)
+            episode_rewards.append(undiscounted_reward)
             
             self.episode_data.append({
                 "episode": episode,

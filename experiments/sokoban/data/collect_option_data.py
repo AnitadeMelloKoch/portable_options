@@ -24,9 +24,9 @@ def collect_data(seed=0):
     box_3_pos = []
     box_3_neg = []
     
-    save_dir = 'resources/sokoban_images'
+    save_dir = 'resources/sokoban_images/2_box'
     os.makedirs(save_dir, exist_ok=True)
-    env = environment_builder(level_name="PushAndPull-Sokoban-v0", seed = seed)
+    env = environment_builder(level_name="PushAndPull-Sokoban-v2", seed = seed)
     
     if os.path.exists(f'{save_dir}/box_1_1_{seed}_positive.npy'):
         box_1_pos = np.load(f'{save_dir}/box_1_1_{seed}_positive.npy')
@@ -108,18 +108,23 @@ def collect_data(seed=0):
         box_3_pos = get_unique(box_3_pos)
         box_3_neg = get_unique(box_3_neg)
         
-        
-        np.save(f'{save_dir}/box_1_1_{seed}_positive.npy', box_1_pos)
-        np.save(f'{save_dir}/box_1_1_{seed}_negative.npy', box_1_neg)
+        if len(box_1_neg) > 0:
+            np.save(f'{save_dir}/box_1_1_{seed}_positive.npy', box_1_pos)
+        if len(box_1_pos) > 0:
+            np.save(f'{save_dir}/box_1_1_{seed}_negative.npy', box_1_neg)
         print(f'box 1 pos len {len(box_1_pos)} box 1 neg len {len(box_1_neg)}')
         
-        np.save(f'{save_dir}/box_2_1_{seed}_positive.npy', box_2_pos)
-        np.save(f'{save_dir}/box_2_1_{seed}_negative.npy', box_2_neg)
+        if len(box_2_neg) > 0:
+            np.save(f'{save_dir}/box_2_1_{seed}_negative.npy', box_2_neg)
+        if len(box_2_pos) > 0:
+            np.save(f'{save_dir}/box_2_1_{seed}_positive.npy', box_2_pos)
         print(f'box 2 pos len {len(box_2_pos)} box 2 neg len {len(box_2_neg)}')
         
-        np.save(f'{save_dir}/box_3_1_{seed}_positive.npy', box_3_pos)
-        np.save(f'{save_dir}/box_3_1_{seed}_negative.npy', box_3_neg)
+        if len(box_3_neg) > 0:
+            np.save(f'{save_dir}/box_3_1_{seed}_negative.npy', box_3_neg)
+        if len(box_3_pos) > 0:
+            np.save(f'{save_dir}/box_3_1_{seed}_positive.npy', box_3_pos)
         print(f'box 3 pos len {len(box_3_pos)} box 3 neg len {len(box_3_neg)}')
 
-collect_data(4)
+collect_data(6)
 

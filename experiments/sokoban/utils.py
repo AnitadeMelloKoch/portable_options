@@ -6,6 +6,8 @@ from PIL import Image
 from gym.core import Wrapper
 from PIL import Image
 
+import matplotlib.pyplot as plt
+
 class SokobanScaleWrapper(Wrapper):
     def __init__(self, env, im_size):
       super().__init__(env)
@@ -22,10 +24,11 @@ class SokobanScaleWrapper(Wrapper):
         return np.asarray(img.resize(self.im_size, Image.BILINEAR)), reward, done, info
 
 class SokobanTimerWrapper(Wrapper):
-    def __init__(self, env, max_steps):
+    def __init__(self, env, max_steps, num_boxes=3):
        super().__init__(env)
        self._max_steps = max_steps
        self._steps = 0
+       self._num_boxes = num_boxes
     
     def reset(self):
         self._steps = 0
@@ -35,7 +38,7 @@ class SokobanTimerWrapper(Wrapper):
         obs, reward, done, info = self.env.step(int(action))
         self._steps += 1
         done = False
-        if self._steps >= self._max_steps or self.env.unwrapped.boxes_on_target == 3:
+        if self._steps >= self._max_steps or self.env.unwrapped.boxes_on_target == self._num_boxes:
             done = True
         
         return obs, reward, done, info
@@ -72,6 +75,7 @@ class SokobanInfoWrapper(Wrapper):
     self._timestep += 1
     rew = float(terminated) if self._use_sparse_rewards else float(reward) / 10.
     self._last_info = info
+    
     return obs, rew, done, info
 
   def reset(self):
@@ -81,6 +85,7 @@ class SokobanInfoWrapper(Wrapper):
     info['reward'] = 0.
     info = self._modify_info_dict(info)
     self._last_info = info
+    
     return obs, info
 
   def get_info(self):
@@ -152,12 +157,13 @@ def environment_builder(
   max_steps=150,
   to_float=False,
   use_sparse_rewards=False,
-  scale_dims=(84, 84)
+  scale_dims=(84, 84),
+  num_boxes=3
 ):
   env = gym.make(level_name)
   
   env = SokobanScaleWrapper(env, scale_dims)
-  env = SokobanTimerWrapper(env, max_steps)
+  env = SokobanTimerWrapper(env, max_steps, num_boxes=num_boxes)
   env = SokobanInfoWrapper(env, seed=seed, use_sparse_rewards=use_sparse_rewards)
   
   return env
