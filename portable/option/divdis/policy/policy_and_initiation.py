@@ -257,11 +257,11 @@ class PolicyWithInitiation(Agent):
         
         if type(obs) == np.ndarray:
             obs = torch.from_numpy(obs)
-        obs = obs.int()
+        obs = obs.to(torch.uint8)
         
         if type(next_obs) == np.ndarray:
             next_obs = torch.from_numpy(next_obs)
-        next_obs = next_obs.int()
+        next_obs = next_obs.to(torch.uint8)
         
         if self.training:
             transition = {"state": obs,
@@ -269,7 +269,7 @@ class PolicyWithInitiation(Agent):
                           "reward": reward,
                           "next_state": next_obs,
                           "next_action": None,
-                          "is_state_terminal": terminal}            
+                          "is_state_terminal": terminal}   
             self.replay_buffer.append(**transition)
             if terminal:
                 self.replay_buffer.stop_current_episode()

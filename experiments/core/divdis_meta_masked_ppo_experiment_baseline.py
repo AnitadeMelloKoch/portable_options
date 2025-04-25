@@ -359,7 +359,6 @@ class DivDisMetaMaskedPPOExperiment():
         total_steps = 0
         episode_rewards = deque(maxlen=500)
         episode = 0
-        undiscounted_rewards = []
         
         
         term_states = defaultdict(partial(deque, maxlen=50))
@@ -447,15 +446,15 @@ class DivDisMetaMaskedPPOExperiment():
                 if self.add_unlabelled_data is True:
                     self.options[option_num].add_unlabelled_data(states)
                 
-                self.experiment_data.append({
-                    "meta_step": self.decisions,
-                    "option_length": steps,
-                    "option_rewards": rewards,
-                    "frames": total_steps,
-                    "action": chosen_action,
-                    "option": chosen_option,
-                    "head": chosen_head
-                })
+                # self.experiment_data.append({
+                #     "meta_step": self.decisions,
+                #     "option_length": steps,
+                #     "option_rewards": rewards,
+                #     "frames": total_steps,
+                #     "action": chosen_action,
+                #     "option": chosen_option,
+                #     "head": chosen_head
+                # })
                 
                 self.observe(obs,
                              action_mask,
@@ -468,26 +467,26 @@ class DivDisMetaMaskedPPOExperiment():
             if self.plotter is not None:
                 self.plotter.plot("action_plots".format(episode))
             
+            
+            if (undiscounted_reward > 0 or episode%500==0) and self.video_generator is not None:
+                self.video_generator.episode_end("episode_{}".format(episode))
+            
+            episode += 1
+            episode_rewards.append(undiscounted_reward)
+            
+            # self.episode_data.append({
+            #     "episode": episode,
+            #     "episode_rewards": undiscounted_reward,
+            #     "frames": total_steps
+            # })
+            
+            self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
+            
             logging.info("Episode {} total steps: {} decisions: {} episode reward: {}  average undiscounted reward: {}".format(episode,
                                                                                      total_steps,
                                                                                      self.decisions,
                                                                                      undiscounted_reward,  
                                                                                      np.mean(episode_rewards)))
-            
-            if (undiscounted_reward > 0 or episode%500==0) and self.video_generator is not None:
-                self.video_generator.episode_end("episode_{}".format(episode))
-            
-            undiscounted_rewards.append(undiscounted_reward)
-            episode += 1
-            episode_rewards.append(undiscounted_reward)
-            
-            self.episode_data.append({
-                "episode": episode,
-                "episode_rewards": undiscounted_reward,
-                "frames": total_steps
-            })
-            
-            self.writer.add_scalar('episode_rewards', undiscounted_reward, total_steps)
             
             # self.plot_learning_curve(episode_rewards)
             
