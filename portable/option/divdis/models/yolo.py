@@ -32,8 +32,8 @@ class YOLOEnsemble(nn.Module):
 
         self.model = nn.ModuleList([
             nn.Sequential(
-                nn.LazyLinear(1000),
-                nn.LazyLinear(700),
+                nn.LazyLinear(100),
+                nn.LazyLinear(60),
                 nn.LazyLinear(num_classes)
                 # add at least 3 more linear layers
             )
