@@ -7,7 +7,7 @@ DivDisClassifierSweepExperiment.experiment_name         = "yolo"
 DivDisClassifierSweepExperiment.use_gpu                 = 0
 DivDisClassifierSweepExperiment.default_num_heads       = 6
 DivDisClassifierSweepExperiment.default_lr              = 0.003
-DivDisClassifierSweepExperiment.default_div_weight      = 0.005
+DivDisClassifierSweepExperiment.default_div_weight      = 0.001
 DivDisClassifierSweepExperiment.default_l2_reg_weight   = 0.002
 DivDisClassifierSweepExperiment.default_epochs          = 15  
 
