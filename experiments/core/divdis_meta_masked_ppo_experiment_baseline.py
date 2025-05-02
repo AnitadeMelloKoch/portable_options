@@ -380,6 +380,7 @@ class DivDisMetaMaskedPPOExperiment():
                 self.save_image(env, save_image)
                 if type(obs) == np.ndarray:
                     obs = torch.from_numpy(obs).float()
+                
                 action_mask = self.get_termination_masks(obs, env)
                 action = self.act(obs, action_mask)
                 
@@ -530,49 +531,47 @@ class DivDisMetaMaskedPPOExperiment():
                     self.video_generator.episode_start()
                 obs, info = env.reset()
                 while not done:
-                    self.save_image(env)
+                    # self.save_image(env)
                     if type(obs) == np.ndarray:
                         obs = torch.from_numpy(obs).float()
                     action_mask = self.get_termination_masks(obs, env)
-                    action, q_vals = self.act(obs, action_mask)
+                    action = self.act(obs, action_mask)
                     
-                    self._video_log("[meta] action: {}".format(action))
-                    self._video_log("[meta] action q values")
-                    for idx in range(len(q_vals[0])):
-                        self._video_log("[meta] action {} value {}".format(idx, q_vals[0][idx]))
+                    step_taken = False
                     
                     if self.use_global_option:
                         if action == 0:
                             next_obs, reward, done, info, steps = self.global_option.eval_policy(env=env,
                                                                                                  info=info,
                                                                                                  obs=obs)
+                            step_taken = True
                         else:
                             action = action - 1
                     
-                    if action < self.num_primitive_actions:
-                        next_obs, reward, done, info = env.step(action)
-                        undiscounted_reward += reward
-                        rewards = [reward]
-                        total_steps += 1
-                        steps = 1
-                    else:
-                        action_offset = action-self.num_primitive_actions
-                        option_num = int(action_offset/self.num_heads)
-                        option_head = action_offset%self.num_heads
-                        self._video_log("[meta] selected option {}".format(action-self.num_primitive_actions))
-                        next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].eval_policy(option_head,
-                                                                                                             env,
-                                                                                                             obs,
-                                                                                                             info,
-                                                                                                             seed)
-                        undiscounted_reward += np.sum(rewards)
-                        total_steps += steps
-                    
-                        self.observe(obs,
-                                     action_mask,
-                                     rewards,
-                                     done)
-                        obs = next_obs
+                    if not step_taken:
+                        if action < self.num_primitive_actions:
+                            next_obs, reward, done, info = env.step(action)
+                            undiscounted_reward += reward
+                            rewards = [reward]
+                            total_steps += 1
+                            steps = 1
+                        else:
+                            action_offset = action-self.num_primitive_actions
+                            option_num = int(action_offset/self.num_heads)
+                            option_head = action_offset%self.num_heads
+                            next_obs, info, done, steps, rewards, _, _, _ = self.options[option_num].eval_policy(option_head,
+                                                                                                                env,
+                                                                                                                obs,
+                                                                                                                info,
+                                                                                                                seed)
+                            undiscounted_reward += np.sum(rewards)
+                            total_steps += steps
+                        
+                            self.observe(obs,
+                                        action_mask,
+                                        rewards,
+                                        done)
+                    obs = next_obs
                 
                 logging.info("Eval {} total steps: {} undiscounted reward: {}".format(run,
                                                                                       total_steps,

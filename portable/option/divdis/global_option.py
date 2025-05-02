@@ -7,6 +7,8 @@ import torch
 import pickle
 
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
+from portable.option.divdis.policy.double_dqn import DoubleDQN
+
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
@@ -23,9 +25,11 @@ class GlobalOption():
         self.policy_phi = policy_phi
         self.log_dir = log_dir
         
-        self.policy = PolicyWithInitiation(use_gpu=use_gpu,
-                                           policy_phi=policy_phi,
-                                           learn_initiation=False)
+        # self.policy = PolicyWithInitiation(use_gpu=use_gpu,
+        #                                    policy_phi=policy_phi,
+        #                                    learn_initiation=False)
+        self.policy = DoubleDQN(use_gpu=use_gpu,
+                                phi=policy_phi)
         
         self.video_generator = video_generator
         self.intrinsic_reward = TabularCount()
@@ -52,10 +56,14 @@ class GlobalOption():
         
         bonus = self.intrinsic_reward.get_bonus(tuple(info["state"].flatten()))
         
+        # self.policy.observe(obs,
+        #                     action,
+        #                     reward+bonus,
+        #                     next_obs,
+        #                     done)
         self.policy.observe(obs,
-                            action,
                             reward+bonus,
-                            next_obs,
+                            done,
                             done)
         # self.policy.move_to_cpu()
         return next_obs, reward, done, info, 1

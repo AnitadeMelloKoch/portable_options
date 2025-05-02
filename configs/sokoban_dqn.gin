@@ -7,8 +7,10 @@ import portable.agent.model.ppo
 import portable.option.divdis.divdis_classifier
 import portable.option.memory.unbalanced_set_dataset
 import portable.option.policy.intrinsic_motivation.tabular_count
+import portable.option.divdis.policy.double_dqn
 
 DivDisMetaMaskedPPOExperiment.experiment_name               = "baseline_sokoban_dqn"
+# DivDisMetaMaskedPPOExperiment.experiment_name               = "ihop"
 DivDisMetaMaskedPPOExperiment.num_options                   = 0
 DivDisMetaMaskedPPOExperiment.option_head_num               = 1
 DivDisMetaMaskedPPOExperiment.num_primitive_actions         = 0
@@ -28,20 +30,26 @@ ActionPPO.update_interval                            = 1000
 
 PolicyWithInitiation.warmup_steps                           = 1024
 PolicyWithInitiation.prioritized_replay_anneal_steps        = 500000
-PolicyWithInitiation.buffer_length                          = 500000
-PolicyWithInitiation.update_interval                        = 4
-PolicyWithInitiation.q_target_update_interval               = 100
+PolicyWithInitiation.buffer_length                          = 2000000
+PolicyWithInitiation.update_interval                        = 1
+PolicyWithInitiation.q_target_update_interval               = 1000
 PolicyWithInitiation.learning_rate                          = 2.5e-4
 PolicyWithInitiation.final_epsilon                          = 0.01
 PolicyWithInitiation.final_exploration_frames               = 1e6
 PolicyWithInitiation.batch_size                             = 32
 PolicyWithInitiation.num_actions                            = 13
-PolicyWithInitiation.policy_infeature_size                  = 6272
+PolicyWithInitiation.policy_infeature_size                  = 3136
 PolicyWithInitiation.q_hidden_size                          = 512
 PolicyWithInitiation.gru_hidden_size                        = 512
 PolicyWithInitiation.image_input                            = True
 
-TabularCount.beta                                           = 0.0001
+TabularCount.beta                                           = 0.000
 
-
+DoubleDQN.learning_rate                                     = 2.5e-4
+DoubleDQN.num_actions                                       = 13
+DoubleDQN.start_epsilon                                     = 1.0
+DoubleDQN.end_epsilon                                       = 0.01
+DoubleDQN.epsilon_decay_steps                               = 1e6
+DoubleDQN.buffer_capacity                                   = 1e6
+DoubleDQN.target_update_interval                            = 500
 
