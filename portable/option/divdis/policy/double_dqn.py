@@ -13,15 +13,19 @@ import torch.nn as nn
 from collections import deque 
 logger = logging.getLogger(__name__)
 
+import matplotlib.pyplot as plt
+
 def create_cnn(num_actions):
     return nn.Sequential(
-        nn.LazyConv2d(out_channels=32, kernel_size=8, stride=4),
+        nn.LazyConv2d(out_channels=32, kernel_size=12, stride=12),
         nn.ReLU(),
-        nn.LazyConv2d(out_channels=64, kernel_size=4, stride=2),
+        nn.LazyConv2d(out_channels=64, kernel_size=2, stride=1),
         nn.ReLU(),
-        nn.LazyConv2d(out_channels=64, kernel_size=3, stride=1),
+        nn.LazyConv2d(out_channels=64, kernel_size=2, stride=1),
         nn.ReLU(),
         nn.Flatten(),
+        nn.LazyLinear(512),
+        nn.ReLU(),
         nn.LazyLinear(512),
         nn.ReLU(),
         nn.LazyLinear(num_actions),
@@ -56,7 +60,7 @@ class DoubleDQN():
         self.agent = pfrl.agents.DoubleDQN(q_function=model,
                                            optimizer=opt,
                                            gpu=use_gpu,
-                                           replay_buffer=replay_buffers.ReplayBuffer(capacity=buffer_capacity),
+                                           replay_buffer=replay_buffers.PrioritizedReplayBuffer(capacity=buffer_capacity),
                                            gamma=gamma,
                                            explorer=explorer,
                                            minibatch_size=minibatch_size,
@@ -93,7 +97,7 @@ class DoubleDQN():
     
     def act(self, obs):
         self.step += 1
-        out = self.agent.act(obs)     
+        out = self.agent.act(obs)   
         
         return out
         
