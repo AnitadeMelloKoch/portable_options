@@ -55,7 +55,7 @@ class DoubleDQN():
         explorer = explorers.LinearDecayEpsilonGreedy(start_epsilon,
                                                       end_epsilon,
                                                       epsilon_decay_steps,
-                                                      lambda:np.random.randint(num_actions))
+                                                      lambda:torch.randint(0, num_actions, size=(1,))
         
         self.agent = pfrl.agents.DoubleDQN(q_function=model,
                                            optimizer=opt,
