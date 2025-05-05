@@ -47,7 +47,7 @@ if __name__ == "__main__":
                                                option_type="mock")
     
     env = environment_builder(level_name="PushAndPull-Sokoban-v2",
-                              max_steps=150, 
+                              max_steps=500, 
                               seed=args.seed,
                               scale_dims=(84, 84),
                               num_boxes=2)
@@ -56,5 +56,11 @@ if __name__ == "__main__":
                                 args.seed,
                                 10e6,
                                 0.98)
+    
+    # experiment.load()
+    
+    # experiment.eval_meta_agent(env,
+    #                            args.seed,
+    #                            2)
     
     

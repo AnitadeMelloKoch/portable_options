@@ -33,6 +33,83 @@ def create_cnn(num_actions):
         pfrl.q_functions.DiscreteActionValueHead()
     )
 
+def resnet_cnn(num_actions):
+    return ResnetCNN(num_actions)
+
+class ResidualBlock(nn.Module):
+    def __init__(self, out_channels, use_layer_norm=False):
+        super().__init__()
+        self.inner_op1 = nn.LazyConv2d(out_channels=out_channels, kernel_size=3, padding=1)
+        self.inner_op2 = nn.LazyConv2d(out_channels=out_channels, kernel_size=3, padding=1)
+        self.non_linearity = nn.ReLU() 
+        self.use_layer_norm = use_layer_norm
+        
+        if self.use_layer_norm:
+            self.norm1 = nn.LazyBatchNorm2d()
+            self.norm2 = nn.LazyBatchNorm2d()
+    
+    def __call__(self, x):
+        out = x
+        if self.use_layer_norm:
+            out = self.norm1(out)
+        out = self.non_linearity(out)
+        out = self.inner_op1(out)
+        
+        if self.use_layer_norm:
+            out = self.norm2(out)
+        out = self.non_linearity(out)
+        out = self.inner_op2(out)
+        
+        return x+out
+            
+class DownSample(nn.Module):
+    def __init__(self, out_channels):
+        super().__init__()   
+        self.model = nn.Sequential(
+            nn.LazyConv2d(
+                out_channels=out_channels,
+                kernel_size=3,
+                stride=1
+            ),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+    
+    def __call__(self, x):
+        return self.model(x)
+
+class ResnetCNN(nn.Module):
+    def __init__(self, num_actions):
+        super().__init__()
+        self.num_actions = num_actions
+        
+        self.model = nn.Sequential(
+            DownSample(16),
+            ResidualBlock(16),
+            ResidualBlock(16),
+            
+            DownSample(32),
+            ResidualBlock(32),
+            ResidualBlock(32),
+            
+            DownSample(32),
+            ResidualBlock(32),
+            ResidualBlock(32),
+            
+            nn.ReLU(),
+            
+            nn.Flatten(),
+            nn.LazyLinear(256),
+            nn.ReLU(),
+            nn.LazyLinear(num_actions),
+            
+            pfrl.q_functions.DiscreteActionValueHead()
+        )
+    
+    def __call__(self, x):
+        return self.model(x)
+    
+    
+
 @gin.configurable
 class DoubleDQN():
     def __init__(self,
@@ -49,13 +126,14 @@ class DoubleDQN():
                  update_interval=1,
                  gamma=0.99,
                  target_update_interval=100):
-        model = create_cnn(num_actions)
+        # model = create_cnn(num_actions)
+        model = resnet_cnn(num_actions)
         
         opt = optim.Adam(model.parameters(), lr=learning_rate)
         explorer = explorers.LinearDecayEpsilonGreedy(start_epsilon,
                                                       end_epsilon,
                                                       epsilon_decay_steps,
-                                                      lambda:torch.randint(0, num_actions, size=(1,))
+                                                      lambda:torch.randint(0, num_actions, size=(1,)))
         
         self.agent = pfrl.agents.DoubleDQN(q_function=model,
                                            optimizer=opt,
