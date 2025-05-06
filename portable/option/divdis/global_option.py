@@ -20,7 +20,8 @@ class GlobalOption():
                  log_dir,
                  save_dir,
                  policy_phi,
-                 video_generator=None):
+                 video_generator=None,
+                 summary_writer=None):
         self.save_dir = save_dir
         self.policy_phi = policy_phi
         self.log_dir = log_dir
@@ -29,7 +30,8 @@ class GlobalOption():
         #                                    policy_phi=policy_phi,
         #                                    learn_initiation=False)
         self.policy = DoubleDQN(use_gpu=use_gpu,
-                                phi=policy_phi)
+                                phi=policy_phi,
+                                summary_writer=summary_writer)
         
         self.video_generator = video_generator
         self.intrinsic_reward = TabularCount()

@@ -125,7 +125,8 @@ class DoubleDQN():
                  replay_start_size=1000,
                  update_interval=1,
                  gamma=0.99,
-                 target_update_interval=100):
+                 target_update_interval=100,
+                 summary_writer=None):
         # model = create_cnn(num_actions)
         model = resnet_cnn(num_actions)
         
@@ -153,6 +154,8 @@ class DoubleDQN():
         self.option_runs = 0
         self.phi = phi
         
+        self.writer = summary_writer
+        
         logger.info("==================== Policy HPs ====================")
         logger.info(f"learning rate: {learning_rate}")
         logger.info(f"replay buffer capacity: {buffer_capacity}")
@@ -177,9 +180,19 @@ class DoubleDQN():
         self.step += 1
         out = self.agent.act(obs)   
         
+        if self.writer is not None:
+            q_vals = self.agent.model(self.phi(obs).unsqueeze(0).to(self.agent.device).float()).q_values
+            self.writer.add_scalar("ddqn/max-q-val", q_vals.max().item(), self.step)
+            self.writer.add_scalar("ddqn/mean-q-val", q_vals.mean().item(), self.step)
+            if len(self.agent.loss_record) > 0:
+                self.writer.add_scalar("ddqn/loss", self.agent.loss_record[-1], self.step)
+        
         return out
         
     def observe(self, obs, reward, done, reset):
+        if type(obs) == np.ndarray:
+            obs = torch.from_numpy(obs)
+        obs = obs.to(torch.uint8)
         self.agent.observe(obs,
                            reward,
                            done,

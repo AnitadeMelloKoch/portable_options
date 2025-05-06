@@ -137,7 +137,8 @@ class DivDisMetaMaskedPPOExperiment():
             self.global_option = GlobalOption(use_gpu=gpu_assign_list[-1],
                                               log_dir=os.path.join(self.log_dir),
                                               save_dir=os.path.join(self.save_dir),
-                                              policy_phi=option_policy_phi)
+                                              policy_phi=option_policy_phi,
+                                              summary_writer=self.writer)
         
         if self.option_type == "mock":
             assert len(terminations) == num_options
