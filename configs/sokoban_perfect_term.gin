@@ -39,3 +39,12 @@ PolicyWithInitiation.image_input                        = True
 DivDisMockOption.exp_type                               = "minigrid"
 DivDisMockOption.tabular_beta                           = 0.0001
 
+DoubleDQN.learning_rate                                     = 2.5e-4
+DoubleDQN.num_actions                                       = 13
+DoubleDQN.start_epsilon                                     = 1.0
+DoubleDQN.end_epsilon                                       = 0.1
+DoubleDQN.epsilon_decay_steps                               = 1e6
+DoubleDQN.buffer_capacity                                   = 1e6
+DoubleDQN.target_update_interval                            = 2800
+DoubleDQN.update_interval                                   = 400
+DoubleDQN.minibatch_size                                    = 64

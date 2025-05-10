@@ -11,6 +11,7 @@ from collections import deque
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.divdis.policy.skill_ppo import SkillPPO
+from portable.option.divdis.policy.double_dqn import DoubleDQN
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
@@ -19,7 +20,7 @@ from experiments.experiment_logger import VideoGenerator
 from portable.option.sets.utils import BayesianWeighting
 from torch.utils.tensorboard import SummaryWriter
 
-MODEL_TYPE = ["dqn", "ppo"]
+MODEL_TYPE = ["dqn", "ppo","ddqn"]
 
 @gin.configurable 
 class DivDisOption():
@@ -192,7 +193,10 @@ class DivDisOption():
                                                                 policy_phi=self.policy_phi))
         if self.model_type == "ppo":
             self.policies[term_idx].append(SkillPPO(use_gpu=self.gpu_list[term_idx],
-                                                    phi=self.policy_phi))    
+                                                    phi=self.policy_phi)) 
+        if self.model_type == "ddqn":
+            self.policies[term_idx].append(DoubleDQN(use_gpu=self.gpu_list[term_idx],
+                                                     phi=self.policy_phi))   
     def find_possible_policy(self, *kwargs):
         if self.use_seed_for_initiation:
             return self._seed_possible_policies(*kwargs)
@@ -253,6 +257,10 @@ class DivDisOption():
         if self.model_type == "ppo":
             return SkillPPO(use_gpu=self.gpu_list[head_idx],
                             phi=self.policy_phi)
+        
+        if self.model_type == "ddqn":
+            return DoubleDQN(use_gpu=self.gpu_list[head_idx],
+                             phi=self.policy_phi)
 
         
     def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
@@ -383,11 +391,17 @@ class DivDisOption():
                 state = torch.from_numpy(state)
             
             state = state.to(torch.int)
-            policy.observe(state,
-                           action,
-                           reward,
-                           next_state,
-                           done or should_terminate)
+            if self.model_type == "ddqn":
+                policy.observe(state,
+                               reward,
+                               done or should_terminate,
+                               done or should_terminate)
+            else:
+                policy.observe(state,
+                               action,
+                               reward,
+                               next_state,
+                               done or should_terminate)
             
             option_rewards.append(reward)
 

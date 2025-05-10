@@ -198,6 +198,12 @@ class DoubleDQN():
                            done,
                            reset)
 
-
+    def end_skill(self, summed_reward):
+        self.train_rewards.append(summed_reward)
+        self.option_runs += 1
+        if self.option_runs%50 == 0:
+            logger.info("Option policy success rate: {} from {} episodes {} steps".format(np.mean(self.train_rewards), 
+                                                                                           self.option_runs,
+                                                                                           self.step))
 
 
