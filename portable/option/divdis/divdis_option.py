@@ -365,7 +365,7 @@ class DivDisOption():
             term_state = self.policy_phi(next_state).unsqueeze(0)
             pred_y = self.terminations.predict_idx(term_state, idx)
             should_terminate = (torch.argmax(pred_y) == 1).item()
-            in_term_accuracy.append(perfect_term(env.get_current_position()))
+            # in_term_accuracy.append(perfect_term(env.get_current_position()))
             steps += 1
             self.option_steps[idx] += 1
             rewards.append(reward)
