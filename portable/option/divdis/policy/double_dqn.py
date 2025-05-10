@@ -120,11 +120,11 @@ class DoubleDQN():
                  start_epsilon=1.0,
                  end_epsilon=0.01,
                  epsilon_decay_steps=1e6,
+                 update_interval=1,
                  buffer_capacity=1e6,
                  minibatch_size=32,
                  replay_start_size=1000,
-                 update_interval=1,
-                 gamma=0.99,
+                 gamma=0.9,
                  target_update_interval=100,
                  summary_writer=None):
         # model = create_cnn(num_actions)
@@ -139,12 +139,15 @@ class DoubleDQN():
         self.agent = pfrl.agents.DoubleDQN(q_function=model,
                                            optimizer=opt,
                                            gpu=use_gpu,
-                                           replay_buffer=replay_buffers.PrioritizedReplayBuffer(capacity=buffer_capacity),
+                                           replay_buffer=replay_buffers.PrioritizedReplayBuffer(capacity=buffer_capacity,
+                                                                                                alpha=0.9,
+                                                                                                beta0=0.6,
+                                                                                                error_max=0.9),
                                            gamma=gamma,
                                            explorer=explorer,
+                                           update_interval=update_interval,
                                            minibatch_size=minibatch_size,
                                            replay_start_size=replay_start_size,
-                                           update_interval=update_interval,
                                            target_update_interval=target_update_interval,
                                            phi=phi)
         
