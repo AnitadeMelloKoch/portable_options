@@ -8,6 +8,7 @@ import pickle
 from torch.utils.tensorboard import SummaryWriter 
 
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
+from portable.option.divdis.policy.double_dqn import DoubleDQN
 from portable.option.divdis.policy.skill_ppo import SkillPPO
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
@@ -111,8 +112,10 @@ class DivDisMockOption():
             with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
                 keys = pickle.load(f)
             for key in keys:
-                policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
-                                                     policy_phi=self.policy_phi)
+                # policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
+                #                                      policy_phi=self.policy_phi)
+                policies[key] = DoubleDQN(use_gpu=self.gpu_list[idx],
+                                          phi=self.policy_phi)
                 policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
             self.train_data = pickle.load(f)
@@ -130,6 +133,8 @@ class DivDisMockOption():
                    term_idx):
         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
                                                             policy_phi=self.policy_phi))
+        self.policies[term_idx].append(DoubleDQN(use_gpu=self.gpu_list[term_idx],
+                                                 phi=self.policy_phi))
     
     def find_possible_policy(self, *kwargs):
         if self.use_seed_for_initiation:
@@ -182,8 +187,10 @@ class DivDisMockOption():
                 return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self, head_idx):
-        return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
-                                    policy_phi=self.policy_phi)
+        # return PolicyWithInitiation(use_gpu=self.gpu_list[head_idx],
+        #                             policy_phi=self.policy_phi)
+        return DoubleDQN(use_gpu=self.gpu_list[head_idx],
+                         phi=self.policy_phi)
     
     def set_policy_save_to_disk(self, idx, policy_idx, store_buffer_bool):
         policy, _ = self._get_policy(head_idx=idx, option_idx=policy_idx)
@@ -259,10 +266,15 @@ class DivDisMockOption():
                 reward = self.intrinsic_bonuses[idx].get_bonus(tuple(info["state"].flatten()))
                 # reward = self.intrinsic_bonuses[idx].get_bonus(info["player_pos"])
             
+            # policy.observe(state,
+            #                action,
+            #                reward,
+            #                next_state,
+            #                done or should_terminate)
+            
             policy.observe(state,
-                           action,
                            reward,
-                           next_state,
+                           done or should_terminate,
                            done or should_terminate)
             
             option_rewards.append(reward)
