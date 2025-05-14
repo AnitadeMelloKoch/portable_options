@@ -313,7 +313,7 @@ class RGBImgObsWrapper(ObservationWrapper):
         new_image_space = spaces.Box(
             low=0,
             high=255,
-            shape=(self.env.width * tile_size, self.env.height * tile_size, 3),
+            shape=(self.env.unwrapped.width * tile_size, self.env.unwrapped.height * tile_size, 3),
             dtype="uint8",
         )
 
