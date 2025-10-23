@@ -49,7 +49,7 @@ DoubleDQN.learning_rate                                     = 2.5e-4
 DoubleDQN.num_actions                                       = 13
 DoubleDQN.start_epsilon                                     = 1.0
 DoubleDQN.end_epsilon                                       = 0.01
-DoubleDQN.epsilon_decay_steps                               = 1e6
-DoubleDQN.buffer_capacity                                   = 1e6
+DoubleDQN.epsilon_decay_steps                               = 6e5
+DoubleDQN.buffer_capacity                                   = 1e5
 DoubleDQN.target_update_interval                            = 500
 

@@ -56,7 +56,7 @@ if __name__ == "__main__":
                                       option_policy_phi=policy_phi,
                                       agent_phi=option_agent_phi,
                                       termination_phi=termination_phi,
-                                      action_policy=create_cnn_policy(3,15),
+                                      action_policy=create_cnn_policy(3,9),
                                       action_vf=create_cnn_vf(3),
                                       option_type="divdis")
     
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     experiment.test_classifiers(soko_test_positive,
                                 soko_test_negative)
 
-    env = environment_builder(level_name="PushAndPull-Sokoban-v0",
+    env = environment_builder(level_name="PushAndPull-Sokoban-v3",
                               max_steps=500, 
                               seed=args.seed,
                               scale_dims=(84, 84),

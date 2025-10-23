@@ -9,16 +9,16 @@ DivDisMetaExperiment.num_options                        = 3
 DivDisMetaExperiment.option_head_num                    = 1
 DivDisMetaExperiment.num_primitive_actions              = 0
 DivDisMetaExperiment.use_gpu                            = True
-DivDisMetaExperiment.gpu_list                           = [0]
+DivDisMetaExperiment.gpu_list                           = [0,1]
 DivDisMetaExperiment.make_videos                        = False
 DivDisMetaExperiment.classifier_epochs                  = 0
-DivDisMetaExperiment.option_timeout                     = 100
+DivDisMetaExperiment.option_timeout                     = 150
 DivDisMetaExperiment.log_q_values                       = False
 
 ActionPPO.learning_rate                                 = 2.5e-4
 ActionPPO.state_shape                                   = (3, 84, 84)
 ActionPPO.num_actions                                   = 3
-ActionPPO.update_interval                               = 150
+ActionPPO.update_interval                               = 1000
 ActionPPO.entropy_coef                                  = 0.01
 
 PolicyWithInitiation.warmup_steps                       = 1024
@@ -37,14 +37,12 @@ PolicyWithInitiation.gru_hidden_size                    = 512
 PolicyWithInitiation.image_input                        = True
 
 DivDisMockOption.exp_type                               = "minigrid"
-DivDisMockOption.tabular_beta                           = 0.0001
+DivDisMockOption.tabular_beta                           = 0.001
 
 DoubleDQN.learning_rate                                     = 2.5e-4
 DoubleDQN.num_actions                                       = 13
 DoubleDQN.start_epsilon                                     = 1.0
-DoubleDQN.end_epsilon                                       = 0.1
-DoubleDQN.epsilon_decay_steps                               = 1e6
-DoubleDQN.buffer_capacity                                   = 1e6
-DoubleDQN.target_update_interval                            = 2800
-DoubleDQN.update_interval                                   = 400
-DoubleDQN.minibatch_size                                    = 64
+DoubleDQN.end_epsilon                                       = 0.01
+DoubleDQN.epsilon_decay_steps                               = 6e5
+DoubleDQN.buffer_capacity                                   = 1e5
+DoubleDQN.target_update_interval                            = 500

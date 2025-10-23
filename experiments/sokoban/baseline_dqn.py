@@ -46,11 +46,11 @@ if __name__ == "__main__":
                                                action_vf=create_cnn_vf(3),
                                                option_type="mock")
     
-    env = environment_builder(level_name="PushAndPull-Sokoban-v2",
-                              max_steps=500, 
+    env = environment_builder(level_name="PushAndPull-Sokoban-v3",
+                              max_steps=150, 
                               seed=args.seed,
                               scale_dims=(84, 84),
-                              num_boxes=2)
+                              num_boxes=1)
     
     experiment.train_meta_agent(env,
                                 args.seed,
