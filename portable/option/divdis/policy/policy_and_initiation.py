@@ -36,6 +36,8 @@ class PolicyWithInitiation(Agent):
                  policy_infeature_size,
                  policy_phi,
                  gru_hidden_size,
+                 num_options,
+                 option_embed_dim=32,
                  learn_initiation=False,
                  save_replay_buffer=False,
                  max_len_init_classifier=500,
@@ -72,42 +74,45 @@ class PolicyWithInitiation(Agent):
         self.image_input = image_input
         if image_input:
             self.cnn = nn.Sequential(
-                nn.LazyConv2d(out_channels=16, kernel_size=3, stride=1),
-                nn.LazyBatchNorm2d(),
+                nn.Conv2d(1, 16, 3, padding=1),
                 nn.ReLU(),
-                nn.MaxPool2d(kernel_size=2),
-                
-                nn.LazyConv2d(out_channels=32, kernel_size=3, stride=1),
-                nn.LazyBatchNorm2d(),
-                nn.ReLU(),
-                nn.MaxPool2d(kernel_size=2),
-                
-                nn.Flatten()
-            )
+                nn.Flatten(),
+                            )
             self.cnn.to(self.device)
+            self.cnn_output_dim = 16 * 1 * 1  # Replace 1 * 1 with actual H * W if known
+        else:
+            self.cnn_output_dim = policy_infeature_size
+        self.option_embed = nn.Embedding(num_options, option_embed_dim).to(self.device)
         
-        self.q_network = LinearQFunction(in_features=gru_hidden_size,
-                                         n_actions=num_actions,
-                                         hidden_size=q_hidden_size)
-        self.q_network.to(self.device)
+        self.q_network = nn.Sequential(
+            nn.Linear(self.cnn_output_dim + option_embed_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, num_actions)
+        ).to(self.device)
         
-        self.recurrent_memory = nn.GRU(input_size=policy_infeature_size,
-                                       hidden_size=gru_hidden_size,
-                                       batch_first=True)
-        self.recurrent_memory.to(self.device)
+        # self.recurrent_memory = nn.GRU(input_size=policy_infeature_size,
+        #                                hidden_size=gru_hidden_size,
+        #                                batch_first=True)
+        # self.recurrent_memory.to(self.device)
         
         self.target_q_network = deepcopy(self.q_network)
         self.target_q_network.eval().to(self.device)
         
-        self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) \
-            + list(self.recurrent_memory.parameters())\
-                + list(self.cnn.parameters()),
-                                           lr=learning_rate)
+        # self.policy_optimizer = optim.Adam(list(self.q_network.parameters()) \
+        #     + list(self.recurrent_memory.parameters())\
+        #         + list(self.cnn.parameters()),
+        #                                    lr=learning_rate)
+        self.policy_optimizer = optim.Adam(
+            list(self.q_network.parameters()) + 
+            list(self.cnn.parameters()) +
+            list(self.option_embed.parameters()),
+            lr=learning_rate
+        )
         
         # classifier to determine if in initiation classifier
-        # self.initiation = FactoredInitiationClassifier(maxlen=max_len_init_classifier)
+        self.initiation = FactoredInitiationClassifier(maxlen=max_len_init_classifier)
         # # classifier to determine if state is part of existing context
-        # self.context = FactoredContextClassifier(maxlen=max_len_context_classifier)
+        self.context = FactoredContextClassifier(maxlen=max_len_context_classifier)
         
         self.phi = policy_phi
         
@@ -183,14 +188,14 @@ class PolicyWithInitiation(Agent):
         if self.image_input:
             self.cnn.to("cuda")
         self.target_q_network.to("cuda")
-        self.recurrent_memory.to("cuda")
+        # self.recurrent_memory.to("cuda")
     
     def move_to_cpu(self):
         self.q_network.to("cpu")
         if self.image_input:
             self.cnn.to("cpu")
         self.target_q_network.to("cpu")
-        self.recurrent_memory.to("cpu")
+        # self.recurrent_memory.to("cpu")
     
     def store_buffer(self, dir):
         if not self.store_buffer_to_disk:
@@ -228,7 +233,8 @@ class PolicyWithInitiation(Agent):
                 action,
                 reward,
                 next_obs,
-                terminal):
+                terminal,
+                option_idx):
         self.update_step()
         
         if type(obs) == np.ndarray:
@@ -245,7 +251,8 @@ class PolicyWithInitiation(Agent):
                           "reward": reward,
                           "next_state": next_obs,
                           "next_action": None,
-                          "is_state_terminal": terminal}
+                          "is_state_terminal": terminal,
+                          "option_idx": option_idx}
             self.replay_buffer.append(**transition)
             if terminal:
                 self.replay_buffer.stop_current_episode()
@@ -264,6 +271,9 @@ class PolicyWithInitiation(Agent):
                 phi=self.phi,
                 gamma=self.gamma,
                 batch_states=batch_states
+            )
+            exp_batch["option_idx"] = torch.tensor(
+                [e[0]["option_idx"] for e in experiences], device=self.device, dtype=torch.long
             )
             # get weights for prioritized experience replay
             if has_weight:
@@ -286,39 +296,38 @@ class PolicyWithInitiation(Agent):
     def _train_policy(self,
                       exp_batch,
                       errors_out=None,
-                      update_target_network=False):
+                      update_target_network=False,
+                      ):
         self.q_network.train()
-        self.recurrent_memory.flatten_parameters()
         
         batch_obs = exp_batch['state']
         batch_actions = exp_batch['action']
         batch_rewards = exp_batch['reward']
         batch_next_obs = exp_batch['next_state']
         batch_dones = exp_batch['is_state_terminal']
+        batch_option_idxs = exp_batch['option_idx']
         
         batch_obs = batch_obs.float()
         if self.image_input:
             batch_obs = self.cnn(batch_obs)
-        batch_obs = batch_obs.unsqueeze(1)
-        batch_obs, _ = self.recurrent_memory(batch_obs)
-        batch_obs = batch_obs.squeeze()
-        batch_pred_q_all_actions = self.q_network(batch_obs)
-        batch_pred_q = batch_pred_q_all_actions.evaluate_actions(batch_actions)
+        option_embeds = self.option_embed(batch_option_idxs)
+        obs_input = torch.cat([batch_obs, option_embeds], dim=-1)
+        q_pred_all = self.q_network(obs_input)
+        q_pred = q_pred_all.gather(1, batch_actions.long().unsqueeze(1)).squeeze(1)
         
         with torch.no_grad():
             batch_next_obs = batch_next_obs.float()
             if self.image_input:
                 batch_next_obs = self.cnn(batch_next_obs)
-            batch_next_obs = batch_next_obs.unsqueeze(1)
-            batch_next_obs, _ = self.recurrent_memory(batch_next_obs)
-            batch_next_obs = batch_next_obs.squeeze()
-            batch_next_pred_q_all_actions = self.target_q_network(batch_next_obs)
-            next_state_values = batch_next_pred_q_all_actions.max
-            batch_q_target = batch_rewards + self.gamma*(1-batch_dones)*next_state_values
+            option_next_embeds = self.option_embed(batch_option_idxs)
+            obs_next_input = torch.cat([batch_next_obs, option_next_embeds], dim=-1)
+            q_next_pred_all = self.q_network(obs_next_input)
+            q_max = q_next_pred_all.max(dim=1)[0]
+            q_target = batch_rewards + self.gamma * (1 - batch_dones.float()) * q_max
         
         loss = compute_q_learning_loss(exp_batch,
-                                       batch_pred_q,
-                                       batch_q_target,
+                                       q_pred,
+                                       q_target,
                                        errors_out=errors_out)
         
         self.policy_optimizer.zero_grad()
@@ -328,17 +337,16 @@ class PolicyWithInitiation(Agent):
         if update_target_network:
             self.target_q_network.load_state_dict(self.q_network.state_dict())
     
-    def act(self, obs, return_q=False):
+    def act(self, obs, option_idx, return_q=False):
                 
         obs = batch_states([obs], self.device, self.phi)
         print(obs)
         obs = obs.float()
         if self.image_input:
             obs = self.cnn(obs)
-        obs = obs.unsqueeze(1)
-        obs, _ = self.recurrent_memory(obs)
-        obs = obs.squeeze(0)
-        q_values = self.q_network(obs)
+        opt = self.option_embed(torch.tensor([option_idx], device=self.device))
+        x = torch.cat([obs, opt], dim=-1)
+        q_values = self.q_network(x)
         
         if self.training:
             a = self.explorer.select_action(
@@ -348,25 +356,25 @@ class PolicyWithInitiation(Agent):
         else:
             randval = np.random.rand()
             if randval > 0.01:
-                a = q_values.greedy_actions
+                a = torch.argmax(q_values, dim=-1).item()
+                # a = q_values.greedy_actions
             else:
                 a = np.random.randint(0, self.num_actions)
         if return_q is True:
             return a, q_values.q_values
         return a
 
-    def batch_act(self, obs):
+    def batch_act(self, obs, option_idx):
         obs = batch_states(obs, self.device, self.phi)
         if self.image_input:
             obs = self.cnn(obs)
-        obs = obs.unsqueeze(1).float()
-        obs, _ = self.recurrent_memory(obs)
-        obs = obs.squeeze(0)
-        q_values = self.q_network(obs)
+        opt = self.option_embed(torch.tensor([option_idx], device=self.device))
+        x = torch.cat([obs, opt], dim=-1)
+        q_values = self.q_network(x)
 
         randval = np.random.rand()
         if randval > 0.01:
-            a = q_values.greedy_actions
+            a = torch.argmax(q_values, dim=-1).item()
         else:
             a = np.random.randint(0, self.num_actions)
         

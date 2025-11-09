@@ -11,6 +11,8 @@ from collections import deque
 from portable.option.divdis.divdis_classifier import DivDisClassifier
 from portable.option.divdis.policy.policy_and_initiation import PolicyWithInitiation
 from portable.option.divdis.policy.skill_ppo import SkillPPO
+
+from portable.option.divdis.policy.shared_policy import SharedPolicy
 from portable.option.policy.agents import evaluating
 import matplotlib.pyplot as plt 
 from portable.option.policy.intrinsic_motivation.tabular_count import TabularCount
@@ -67,14 +69,9 @@ class DivDisOption():
         self.num_heads = num_heads
         self.option_steps = [0]*self.num_heads
         
-        if self.use_seed_for_initiation:
-            self.policies = [
-                {} for _ in range(self.num_heads)
-            ]
-        else:
-            self.policies = [
-                [] for _ in range(self.num_heads)
-            ]
+        self.policy = PolicyWithInitiation(use_gpu=use_gpu,
+                                           policy_phi=self.policy_phi,
+                                           num_options=num_heads)
         
         self.initiable_policies = None
         self.video_generator = video_generator
@@ -144,23 +141,24 @@ class DivDisOption():
             # print in green text
             print("\033[92m {}\033[00m" .format("Termination model loaded"))
             self.terminations.load(self._get_termination_save_path())
-            for idx, policies in enumerate(self.policies):
-                with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
-                    keys = pickle.load(f)
-                for key in keys:
-                    if self.model_type == "dqn":
-                        policies[key] = PolicyWithInitiation(use_gpu=self.gpu_list[idx],
-                                                            policy_phi=self.policy_phi)
-                    if self.model_type == "ppo":
-                        policies[key] = SkillPPO(use_gpu=self.gpu_list[idx],
-                                                 phi=self.policy_phi)
-                    policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
             self.confidences.load(os.path.join(self.save_dir, 'confidence.pkl'))
-
+            self.policy.load(os.path.join(self.save_dir, 'shared_policy'))
             with open(os.path.join(self.save_dir, "experiment_results.pkl"), 'rb') as f:
                 self.train_data = pickle.load(f)
             for idx, bonus in enumerate(self.intrinsic_bonuses):
-                bonus.load(os.path.join(self.save_dir, 'bonus_{}'.format(idx)))
+                bonus.load(os.path.join(self.save_dir, f'bonus_{idx}'))
+            # for idx, policies in enumerate(self.policies):
+            #     with open(os.path.join(self.save_dir, "{}_policy_keys.pkl".format(idx)), "rb") as f:
+            #         keys = pickle.load(f)
+            #     for key in keys:
+            #         if self.model_type == "dqn":
+            #             policies[key] = PolicyWithInitiation(use_gpu=use_gpu,
+            #                             policy_phi=self.policy_phi,
+            #                             num_options=self.num_heads)
+            #         if self.model_type == "ppo":
+            #             policies[key] = SkillPPO(use_gpu=self.gpu_list[idx],
+            #                                      phi=self.policy_phi)
+            #         policies[key].load(os.path.join(self.save_dir, "{}_{}".format(idx, key)))
         else:
             # print in red text
             print("\033[91m {}\033[00m" .format("No Checkpoint found. No model has been loaded"))
@@ -171,50 +169,55 @@ class DivDisOption():
     def reset_dataset(self):
         self.terminations.dataset.reset_memory()
     
-    def reset_policies(self):
-        if self.use_seed_for_initiation:
-            self.policies = [
-                {} for _ in range(self.num_heads)
-            ]
-        else:
-            self.policies = [
-                [] for _ in range(self.num_heads)
-            ]
+    # def reset_policies(self):
+    #     if self.use_seed_for_initiation:
+    #         self.policies = [
+    #             {} for _ in range(self.num_heads)
+    #         ]
+    #     else:
+    #         self.policies = [
+    #             [] for _ in range(self.num_heads)
+    #         ]
     
-    def add_policy(self, 
-                   term_idx):
-        if self.model_type == "dqn":
-            self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
-                                                                policy_phi=self.policy_phi))
-        if self.model_type == "ppo":
-            self.policies[term_idx].append(SkillPPO(use_gpu=self.gpu_list[term_idx],
-                                                    phi=self.policy_phi))    
-    def find_possible_policy(self, *kwargs):
-        if self.use_seed_for_initiation:
-            return self._seed_possible_policies(*kwargs)
-        else:
-            return self._initiation_possible_policies(*kwargs)
+    # def add_policy(self, 
+    #                term_idx):
+    #     if self.model_type == "dqn":
+    #         self.policies[term_idx].append(PolicyWithInitiation(use_gpu=self.gpu_list[term_idx],
+    #                                                             policy_phi=self.policy_phi))
+    #     if self.model_type == "ppo":
+    #         self.policies[term_idx].append(SkillPPO(use_gpu=self.gpu_list[term_idx],
+    #                                                 phi=self.policy_phi))    
+    # def find_possible_policy(self, *kwargs):
+    #     if self.use_seed_for_initiation:
+    #         return self._seed_possible_policies(*kwargs)
+    #     else:
+    #         return self._initiation_possible_policies(*kwargs)
     
     def _initiation_possible_policies(self, obs):
-        policy_idxs = []
+        initiable = []
+        for idx in range(self.num_heads):
+            if self.policy.can_initiate(obs, idx):
+                initiable.append(idx)
+        self.initiable_policies = initiable
+        return initiable
+        # policy_idxs = []
         
-        for policies in self.policies:
-            idxs = []
-            for idx in range(len(policies)):
-                if policies[idx].can_initiate(obs):
-                    idxs.append(idx)
-            policy_idxs.append(idxs)
+        # for policies in self.policies:
+        #     idxs = []
+        #     for idx in range(len(policies)):
+        #         if policies[idx].can_initiate(obs):
+        #             idxs.append(idx)
+        #     policy_idxs.append(idxs)
         
-        self.initiable_policies = policy_idxs
+        # self.initiable_policies = policy_idxs
         
-        return policy_idxs
+        # return policy_idxs
     
     def _seed_possible_policies(self, seed):
-        mask = [False]*self.num_heads
-        for idx, policies in enumerate(self.policies):
-            if seed in policies.keys():
+        mask = [False] * self.num_heads
+        for idx in range(self.num_heads):
+            if self.policy.can_initiate(seed):
                 mask[idx] = True
-        
         return mask
     
     def add_datafiles(self,
@@ -229,18 +232,19 @@ class DivDisOption():
         self.terminations.add_unlabelled_data(data)
     
     def _get_policy(self, head_idx, option_idx):
-        if self.use_seed_for_initiation:
-            if option_idx not in self.policies[head_idx].keys():
-                self.policies[head_idx][option_idx] = self._get_new_policy(head_idx)
-            return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
-        else:
-            if len(self.initiable_policies[head_idx]) > 0:
-                return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
-            else:
-                policy = self._get_new_policy(head_idx)
-                self.policies[head_idx].append(policy)
-                policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
-                return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
+        return self.policy, os.path.join(self.save_dir, f"{head_idx}_{option_idx}")
+        # if self.use_seed_for_initiation:
+        #     if option_idx not in self.policies[head_idx].keys():
+        #         self.policies[head_idx][option_idx] = self._get_new_policy(head_idx)
+        #     return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
+        # else:
+        #     if len(self.initiable_policies[head_idx]) > 0:
+        #         return self.policies[head_idx][option_idx], os.path.join(self.save_dir,"{}_{}".format(head_idx, option_idx))
+        #     else:
+        #         policy = self._get_new_policy(head_idx)
+        #         self.policies[head_idx].append(policy)
+        #         policy.store_buffer(os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1)))
+        #         return policy, os.path.join(self.save_dir,"{}_{}".format(head_idx, len(self.policies[head_idx]) - 1))
     
     def _get_new_policy(self, head_idx):
         if self.model_type == "dqn":
@@ -331,7 +335,7 @@ class DivDisOption():
         done = False
         should_terminate = False
         
-        policy, buffer_dir = self._get_policy(idx, policy_idx)
+        # policy, buffer_dir = self._get_policy(idx, policy_idx)
 
         # policy.move_to_gpu()
         # self.terminations.move_to_gpu()
@@ -341,7 +345,7 @@ class DivDisOption():
             states.append(state)
             infos.append(info)
             
-            action = policy.act(state)
+            action = self.policy.act(state, policy_idx)
             if make_video and self.video_generator:
                 self._video_log("[option] action: {}".format(action))
                 if self.exp_type == "minigrid":
@@ -379,11 +383,11 @@ class DivDisOption():
                 state = torch.from_numpy(state)
             
             state = state.to(torch.int)
-            policy.observe(state,
+            self.policy.observe(state,
                            action,
                            reward,
                            next_state,
-                           done or should_terminate)
+                           done or should_terminate, policy_idx)
             
             option_rewards.append(reward)
 
@@ -391,16 +395,16 @@ class DivDisOption():
         
         if not self.use_seed_for_initiation:
             if should_terminate:
-                policy.add_data_initiation(positive_examples=states)
+                self.policy.add_data_initiation(positive_examples=states)
             else:
-                policy.add_data_initiation(negative_examples=states)
-            policy.add_context_examples(states)
+                self.policy.add_data_initiation(negative_examples=states)
+            self.policy.add_context_examples(states)
         
 
         # policy.move_to_cpu()
         # self.terminations.move_to_cpu()
         # policy.store_buffer(buffer_dir)
-        policy.end_skill(sum(extrinsic_rewards))
+        self.policy.end_skill(sum(extrinsic_rewards))
         
         self.train_data[int(idx)].append({
             "head_idx": idx,
@@ -413,9 +417,9 @@ class DivDisOption():
         })
         
         if self.writer is not None:
-            self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, policy.option_runs)
-            self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), policy.option_runs)
-            self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), policy.option_runs)
+            self.writer.add_scalar('option_length/{}'.format(policy_idx), steps, self.policy.option_runs)
+            self.writer.add_scalar('intrinsic_reward/{}'.format(policy_idx), sum(option_rewards), self.policy.option_runs)
+            self.writer.add_scalar('option_reward/{}'.format(policy_idx), sum(extrinsic_rewards), self.policy.option_runs)
                 
         return state, info, done, steps, rewards, option_rewards, states, infos, in_term_accuracy
     
@@ -469,22 +473,22 @@ class DivDisOption():
         
         done = False
         
-        if seed not in self.policies[idx].keys():
-            if self.model_type == "dqn":
-                self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
-                                                                policy_phi=self.policy_phi)
-            if self.model_type == "ppo":
-                self.policies[idx][seed] = SkillPPO(use_gpu=self.use_gpu,
-                                                    phi=self.policy_phi)
+        # if seed not in self.policies[idx].keys():
+        #     if self.model_type == "dqn":
+        #         self.policies[idx][seed] = PolicyWithInitiation(use_gpu=self.use_gpu,
+        #                                                         policy_phi=self.policy_phi)
+        #     if self.model_type == "ppo":
+        #         self.policies[idx][seed] = SkillPPO(use_gpu=self.use_gpu,
+        #                                             phi=self.policy_phi)
             
-        policy = self.policies[idx][seed]
+        policy = self.policy
         policy.move_to_gpu()
         
         while not done:
             states.append(state)
             infos.append(info)
             
-            action = policy.act(state)
+            action = policy.act(state, idx)
             
             next_state, reward, done, info = env.step(action)
             steps += 1
@@ -493,13 +497,12 @@ class DivDisOption():
                            action,
                            reward,
                            next_state,
-                           done)
+                           done, idx)
             
             option_rewards.append(reward)
             
             state = next_state
         
-        self.policies[idx][seed] = policy
         
         return state, info, steps, rewards, option_rewards, states, infos
     
@@ -521,10 +524,10 @@ class DivDisOption():
         done = False
         should_terminate = False
         
-        if seed not in self.policies[idx]:
-            raise Exception("Policy has not been initialized. Train policy before evaluating")
+        # if seed not in self.policies[idx]:
+        #     raise Exception("Policy has not been initialized. Train policy before evaluating")
         
-        policy = self.policies[idx][seed]
+        policy = self.policy
         buffer_dir = os.path.join(self.save_dir,"{}_{}".format(idx, seed))
 
         # policy.move_to_gpu()
@@ -536,7 +539,7 @@ class DivDisOption():
                 states.append(state)
                 infos.append(info)
                 
-                action = policy.act(state)
+                action = self.policy.act(state, idx)
                 self._video_log("action: {}".format(action))
                 self._video_log("State representation: {}".format(state))
                 if self.video_generator is not None:
@@ -560,11 +563,11 @@ class DivDisOption():
                 else:
                     reward = 0
                 
-                policy.observe(state,
+                self.policy.observe(state,
                                action,
                                reward,
                                next_state,
-                               done or should_terminate)
+                               done or should_terminate, idx)
                 
                 option_rewards.append(reward)
                 state = next_state
@@ -593,7 +596,7 @@ class DivDisOption():
                         idx,
                         states,
                         seed):
-        actions, q_vals = self.policies[idx][seed].batch_act(states)
+        actions, q_vals = self.policy.batch_act(states, idx)
         return actions, q_vals
     
     def get_confidences(self):
@@ -602,4 +605,3 @@ class DivDisOption():
     def update_confidences(self,
                            update):
         self.confidences.update_successes(update)
-

@@ -2,12 +2,20 @@ from typing import Tuple
 from gymnasium.core import Env, Wrapper 
 # from minigrid.core.world_object import Key, Door
 from custom_minigrid.core.custom_world_object import CustomDoor, CustomKey
-from experiments.minigrid.utils import actions 
 import numpy as np 
 import matplotlib.pyplot as plt 
 import torch
 from copy import deepcopy, copy
 from PIL import Image
+from minigrid.core.actions import Actions as MG
+
+class actions:
+    LEFT = MG.left
+    RIGHT = MG.right
+    FORWARD = MG.forward
+    PICKUP = MG.pickup
+    DROP = MG.drop
+    TOGGLE = MG.toggle
 
 
 class KeyTuple():
@@ -212,8 +220,7 @@ class AdvancedDoorKeyPolicyTrainWrapper(Wrapper):
                      pickup_colour="",
                      force_door_closed=False,
                      force_door_open=False):
-        # randomly move+pick up keys in the environment
-        # randomly open/unlock door
+
         
         split_idx = self.env.unwrapped.splitIdx
         height = self.env.unwrapped.height - 1
