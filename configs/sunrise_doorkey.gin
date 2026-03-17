@@ -1,0 +1,17 @@
+import portable.option.vf_transfer.policy.sunrise
+import portable.option.vf_transfer.models
+
+SunriseDQNAgent.use_gpu = 0
+SunriseDQNAgent.buffer_length = 100000
+SunriseDQNAgent.learning_rate = 1e-4
+SunriseDQNAgent.batch_size = 32
+SunriseDQNAgent.discount_rate = 0.99
+SunriseDQNAgent.ucb_beta = 1.0
+SunriseDQNAgent.target_update_interval = 1000
+SunriseDQNAgent.epsilon_start = 1.0
+SunriseDQNAgent.epsilon_end = 0.01
+SunriseDQNAgent.epsilon_decay = 100000
+
+# Ensemble Model Configuration
+DQNEnsemble.num_heads = 5
+DQNEnsemble.num_actions = 7
