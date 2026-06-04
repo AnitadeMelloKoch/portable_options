@@ -1,4 +1,4 @@
 """SUNRISE MinGrid experiments."""
-from experiments.policy_transfer_minigrid.core.sunrise_minigrid_experiment import SunriseMinigridExperiment
+from experiments.policy_transfer_minigrid.core.ensemble_dqn_minigrid_experiment import EnsembleDQNMinigridExperiment
 
-__all__ = ['SunriseMinigridExperiment']
+__all__ = ['EnsembleDQNMinigridExperiment']

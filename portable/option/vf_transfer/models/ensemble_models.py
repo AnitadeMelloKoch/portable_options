@@ -1,31 +1,36 @@
-import torch.nn as nn 
+import torch.nn as nn
 from pfrl.q_functions import DiscreteActionValueHead
 import torch
 import gin
 
+# CNN output size for 84x84 input:
+# Conv(in, 32, 8, 4) -> 20x20, Conv(32, 64, 4, 2) -> 9x9, Conv(64, 64, 3, 1) -> 7x7
+# Flatten -> 64*7*7 = 3136
+CNN_OUTPUT_SIZE = 3136
+
 class DQNHead(nn.Module):
     def __init__(self, num_actions):
         super().__init__()
-        
+
         self.head = nn.Sequential(
-            nn.LazyLinear(512),
+            nn.Linear(CNN_OUTPUT_SIZE, 512),
             nn.ReLU(),
             nn.Linear(512, num_actions)
         )
-    
+
     def forward(self, x):
         return self.head(x)
 
 @gin.configurable
 class DQNEnsemble(nn.Module):
-    def __init__(self, num_heads, num_actions):
+    def __init__(self, num_heads, num_actions, in_channels=1):
         super().__init__()
-        
+
         self.num_heads = num_heads
         self.num_actions = num_actions
-        
+
         self.shared = nn.Sequential(
-            nn.LazyConv2d(out_channels=32, kernel_size=8, stride=4),
+            nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4),
             nn.ReLU(),
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
             nn.ReLU(),
@@ -33,9 +38,9 @@ class DQNEnsemble(nn.Module):
             nn.ReLU(),
             nn.Flatten(),
         )
-        
+
         self.heads = nn.ModuleList([DQNHead(num_actions) for _ in range(num_heads)])
-        
+
     def forward(self, x):
         out = self.shared(x)
         q_values = [h(out) for h in self.heads]

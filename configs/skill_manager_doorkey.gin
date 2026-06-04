@@ -1,0 +1,40 @@
+import portable.option.vf_transfer.policy.ensemble_dqn
+import portable.option.vf_transfer.models
+import portable.option.vf_transfer.models.meta_value_function
+import portable.option.vf_transfer.models.skill_manager
+
+# Policy
+EnsembleDQNAgent.use_gpu = 0
+EnsembleDQNAgent.buffer_length = 1000000
+EnsembleDQNAgent.learning_rate = 5e-5
+EnsembleDQNAgent.batch_size = 32
+EnsembleDQNAgent.discount_rate = 0.99
+EnsembleDQNAgent.replay_start_size = 1000
+EnsembleDQNAgent.target_update_interval = 10000
+EnsembleDQNAgent.epsilon_start = 1.0
+EnsembleDQNAgent.epsilon_end = 0.05
+EnsembleDQNAgent.epsilon_decay = 1000000
+
+# Ensemble Model
+DQNEnsemble.num_heads = 5
+DQNEnsemble.num_actions = 7
+DQNEnsemble.in_channels = 1
+
+# Meta Value Function (used per cluster)
+VFEnsemble.num_heads = 5
+MetaVF.use_gpu = 0
+MetaVF.max_capacity = 100000
+MetaVF.vf_heads = 5
+MetaVF.learning_rate = 1e-4
+MetaVF.batch_size = 32
+MetaVF.epochs_per_update = 5
+MetaVF.gamma = 0.99
+
+# Skill Manager
+SkillManager.divergence_threshold = 0.5
+SkillManager.min_confidence_threshold = 0.1
+
+# Experiment
+EnsembleDQNMinigridExperiment.transfer_epsilon_start = 0.3
+EnsembleDQNMinigridExperiment.early_stop_threshold = 0.9
+EnsembleDQNMinigridExperiment.early_stop_window = 5

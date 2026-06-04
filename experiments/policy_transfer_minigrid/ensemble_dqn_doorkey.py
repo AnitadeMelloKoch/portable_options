@@ -1,12 +1,13 @@
 """SUNRISE DQN experiment for MiniGrid DoorKey environment."""
 import argparse
+import sys
+import os
 import torch
 import numpy as np
 from portable.utils.utils import load_gin_configs
 from experiments.minigrid.utils import environment_builder
-from experiments.policy_transfer_minigrid.core.sunrise_minigrid_experiment import SunriseMinigridExperiment
-from portable.option.vf_transfer.policy.sunrise import SunriseDQNAgent
-from portable.option.vf_transfer.models.ensemble_models import DQNEnsemble
+from experiments.policy_transfer_minigrid.core.ensemble_dqn_minigrid_experiment import EnsembleDQNMinigridExperiment
+from portable.option.vf_transfer.vf_transfer_option import VFTransferAgent
 
 
 def policy_phi(x):
@@ -32,38 +33,44 @@ if __name__ == "__main__":
     load_gin_configs(args.config_file, args.gin_bindings)
 
     # Create experiment
-    experiment = SunriseMinigridExperiment(
+    experiment = EnsembleDQNMinigridExperiment(
         base_dir=args.base_dir,
-        experiment_name="sunrise_doorkey",
+        experiment_name="ensemble_dqn_doorkey",
         seed=args.seed,
         policy_phi=policy_phi,
         use_gpu=0,
         make_videos=False
     )
 
-    agent = SunriseDQNAgent(
+    # Save the full command used to run this experiment
+    log_dir = os.path.join(args.base_dir, "ensemble_dqn_doorkey", str(args.seed), "logs")
+    with open(os.path.join(log_dir, "command.txt"), "w") as f:
+        f.write(" ".join(sys.argv) + "\n")
+
+    agent = VFTransferAgent(
         use_gpu=0,
-        buffer_length=100000,
-        learning_rate=1e-4,
-        batch_size=32,
+        log_dir=experiment.log_dir,
+        save_dir=experiment.save_dir,
+        plot_dir=experiment.plot_dir,
         policy_phi=policy_phi,
-        discount_rate=0.99,
-        ucb_beta=1.0,
-        target_update_interval=1000,
-        epsilon_start=1.0,
-        epsilon_end=0.01,
-        epsilon_decay=100000
     )
 
     envs = [
-        environment_builder('AdvancedDoorKey-8x8-v0', seed=args.seed, grayscale=False, normalize_obs=False, max_steps=1500),
+        
+        environment_builder('MiniGrid-DoorKey-8x8-v0', 
+                            seed=args.seed, 
+                            grayscale=True, 
+                            normalize_obs=False, 
+                            max_steps=2000, 
+                            scale_obs=True, 
+                            final_image_size=(84,84)),
     ]
 
     # Train the agent
     successes = experiment.train_policy(
         agent=agent,
         envs=envs,
-        max_steps=500000,
+        max_steps=3e6,
         eval_interval=10000,
         eval_episodes=20
     )

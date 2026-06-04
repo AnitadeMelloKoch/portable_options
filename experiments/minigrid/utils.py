@@ -55,6 +55,8 @@ class MinigridInfoWrapper(Wrapper):
         info['timestep'] = self._timestep # total number of timesteps in env
         info['door_open'] = determine_is_door_open(self)
         info['seed'] = self.env_seed
+        info['key_collected'] = self.env.unwrapped.carrying is not None
+        
         return info
 
 class FactoredObsWrapperDoorKey(Wrapper):
@@ -354,8 +356,8 @@ def environment_builder(
         env = NormalizeObsWrapper(env)
     if reward_fn == 'sparse':
         env = SparseRewardWrapper(env)
-    # if scale_obs is True:
-    #     env = ScaleObsWrapper(env, final_image_size)
+    if scale_obs is True:
+        env = ScaleObsWrapper(env, final_image_size)
     if pad_obs is True:
         env = PadObsWrapper(env, final_image_size)
     env = TransposeObsWrapper(env)

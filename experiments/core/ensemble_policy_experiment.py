@@ -10,10 +10,10 @@ import random
 import matplotlib.pyplot as plt 
 import pickle 
 
-from portable.option.vf_transfer.vf_transfer_option import VFTransferAgent
+from portable.option.vf_transfer.vf_transfer_option import VFTransferAgent 
 import math 
 
-from collections import deque
+from collections import deque 
 
 @gin.configurable
 class ValueTransferExperiment():

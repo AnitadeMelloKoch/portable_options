@@ -17,7 +17,7 @@ from portable.option.policy.agents import Agent
 from portable.option.vf_transfer.models.ensemble_models import DQNEnsemble
 
 @gin.configurable
-class SunriseDQNAgent(Agent):
+class EnsembleDQNAgent(Agent):
     def __init__(self,
                  use_gpu,
                  buffer_length,
@@ -25,11 +25,14 @@ class SunriseDQNAgent(Agent):
                  batch_size,
                  policy_phi,
                  discount_rate=0.99,
-                 ucb_beta=1.0,
                  target_update_interval=10000,
                  epsilon_start=1.0,
                  epsilon_end=0.01,
-                 epsilon_decay=100000):
+                 epsilon_decay=100000,
+                 replay_start_size=10000,
+                 use_meta_vf=True,
+                 task_buffer_length=100,
+                 beta=1.0):
         super().__init__()
         
         if use_gpu == -1:
@@ -41,27 +44,38 @@ class SunriseDQNAgent(Agent):
         self.batch_size = batch_size
         self.policy_phi = policy_phi
         self.discount_rate = discount_rate
-        
-        self.ucb_beta = ucb_beta
+        self.use_meta_vf = use_meta_vf
+        self.buffer_length = task_buffer_length
+        self.beta = beta # this coefficient controls how much the task alignment affects lambda
+
         self.target_update_interval = target_update_interval
         self.epsilon_start = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
+        self.replay_start_size = replay_start_size
         
         self.model = DQNEnsemble()
         self.model.to(self.device)
         self.target_model = deepcopy(self.model)
-        self.target_model.eval().to(self.device)
-        
+        self.target_model.eval()
+        self.policy_optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+
+        self.meta_vf = None
+        self.meta_vf_ready = False
+        self.writer = None
+
         self.train_rewards = deque(maxlen=200)
         self.runs = 0
         self.step_number = 0
         self.option_runs = 0
         
-        self.replay_buffer = replay_buffers.PrioritizedReplayBuffer(
+        self.task_value_buffer = deque(maxlen=self.buffer_length)
+        self.task_error_buffer = deque(maxlen=self.buffer_length)
+
+        self.replay_buffer = replay_buffers.ReplayBuffer(
             capacity=buffer_length,
         )
-        
+
         self.replay_updater = ReplayUpdater(
             replay_buffer=self.replay_buffer,
             update_func=self.update,
@@ -69,33 +83,53 @@ class SunriseDQNAgent(Agent):
             episodic_update=False,
             episodic_update_len=None,
             n_times_update=1,
-            replay_start_size=1e4,
-            update_interval=1
+            replay_start_size=replay_start_size,
+            update_interval=4
         )
         
-        self.policy_optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+    def update_task_error(self, state, next_state, reward):
+        if self.meta_vf is None:
+            return
+        with torch.no_grad():
+            s = self.policy_phi(state.float()).unsqueeze(0)
+            ns = self.policy_phi(next_state.float()).unsqueeze(0)
+            v_state, _ = self.meta_vf.query(s)
+            v_next, _ = self.meta_vf.query(ns)
+        error = v_state.item() - (reward + self.discount_rate * v_next.item())
+        self.task_error_buffer.append(error ** 2)
+        self.task_value_buffer.append(v_state.item())
         
+    def _compute_epsilon(self):
+        step_epsilon = max(
+            self.epsilon_end,
+            self.epsilon_start - (self.epsilon_start - self.epsilon_end) *
+            self.step_number / self.epsilon_decay,
+        )
+        if self.meta_vf_ready and self.task_error_buffer and self.beta > 0:
+            mean_v = max(np.mean(self.task_value_buffer), 1e-8)
+            mean_e = np.mean(self.task_error_buffer)
+            psi = mean_v / (mean_v + self.beta * mean_e + 1e-8)
+            bellman_epsilon = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * (1 - psi)
+            return min(step_epsilon, bellman_epsilon)
+        return step_epsilon
+
     def act(self, obs):
         with torch.no_grad():
             if type(obs) == np.ndarray:
                 obs = torch.from_numpy(obs)
             obs = self.policy_phi(obs).unsqueeze(0).to(self.device)
-            
+
             q_mean, q_std = self.model(obs)
-            
+
             if self.training:
-                # Epsilon-greedy with UCB
-                epsilon = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * \
-                          np.exp(-self.step_number / self.epsilon_decay)
-                
+                epsilon = self._compute_epsilon()
                 if np.random.rand() < epsilon:
                     action = np.random.randint(self.model.num_actions)
                 else:
-                    ucb_values = q_mean + self.ucb_beta * q_std
-                    action = torch.argmax(ucb_values, dim=1).item()
+                    action = torch.argmax(q_mean, dim=1).item()
             else:
                 action = torch.argmax(q_mean, dim=1).item()
-            
+
             return action
     
     def value_function(self, obs):
@@ -121,10 +155,10 @@ class SunriseDQNAgent(Agent):
             'target_model_state_dict': self.target_model.state_dict(),
             'optimizer_state_dict': self.policy_optimizer.state_dict(),
             'step_number': self.step_number,
-        }, os.path.join(dirname, 'sunrise_agent.pt'))
+        }, os.path.join(dirname, 'ensemble_dqn_agent.pt'))
     
     def load(self, dirname):
-        checkpoint = torch.load(os.path.join(dirname, 'sunrise_agent.pt'), 
+        checkpoint = torch.load(os.path.join(dirname, 'ensemble_dqn_agent.pt'), 
                                map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.target_model.load_state_dict(checkpoint['target_model_state_dict'])
@@ -140,6 +174,9 @@ class SunriseDQNAgent(Agent):
             x = torch.from_numpy(x)
         return x.int()
     
+    def set_meta_vf(self, meta_vf):
+        self.meta_vf = meta_vf
+
     def _update_target_network(self):
         self.target_model.load_state_dict(self.model.state_dict())
     
@@ -155,6 +192,10 @@ class SunriseDQNAgent(Agent):
         obs = self._storage_phi(obs)
         next_obs = self._storage_phi(next_obs)
         
+        self.update_task_error(next_state=next_obs,
+                               state=obs,
+                               reward=reward)
+        
         if self.training:
             transition = {
                 "state": obs,
@@ -166,10 +207,7 @@ class SunriseDQNAgent(Agent):
             }
             
             self.replay_buffer.append(**transition)
-            self.replay_updater.update_if_necessary(self.step_number)
-        
-        
-        
+            self.replay_updater.update_if_necessary(self.step_number) 
     
     def update_step(self):
         self.step_number += 1
@@ -217,7 +255,7 @@ class SunriseDQNAgent(Agent):
         batch_rewards = exp_batch['reward']
         batch_next_obs = exp_batch['next_state']
         batch_dones = exp_batch['is_state_terminal']
-        
+
         batch_obs = batch_obs.float()
         batch_next_obs = batch_next_obs.float()
         batch_action = batch_action.long()
@@ -227,53 +265,66 @@ class SunriseDQNAgent(Agent):
 
         with torch.no_grad():
             batch_pred_next_q = self.target_model.forward_all_heads(batch_next_obs)
-            
-            # Compute ensemble disagreement for SUNRISE weighting
-            # Stack to (num_heads, batch_size, num_actions)
-            next_q_stack = torch.stack(batch_pred_next_q, dim=0)
-            # Get std across heads for next state
-            ensemble_std = next_q_stack.std(dim=0)  # (batch_size, num_actions)
-            # Use max action's std as uncertainty measure
-            max_actions = next_q_stack.mean(dim=0).argmax(dim=1)
-            uncertainty = ensemble_std.gather(1, max_actions.unsqueeze(1))  # (batch_size, 1)
-        
+
+            # Compute next-state value target
+            stacked_next_q = torch.stack(batch_pred_next_q, dim=0)  # (num_heads, batch, num_actions)
+            q_next_mean = stacked_next_q.mean(dim=0)                 # (batch, num_actions)
+            q_next_std = stacked_next_q.std(dim=0)                   # (batch, num_actions)
+            best_actions = q_next_mean.argmax(dim=1, keepdim=True)   # (batch, 1)
+            v_own = q_next_mean.gather(1, best_actions)              # (batch, 1)
+
+            if self.meta_vf is not None and self.use_meta_vf and self.meta_vf_ready:
+                v_meta, v_meta_std = self.meta_vf.query(batch_next_obs)
+                v_meta = v_meta.to(self.device)
+                sigma2_own = q_next_std.gather(1, best_actions).pow(2)
+                sigma2_meta = v_meta_std.to(self.device).pow(2)
+                mean_v = max(np.mean(self.task_value_buffer), 1e-8) if self.task_value_buffer else 1.0
+                mean_e = np.mean(self.task_error_buffer) if self.task_error_buffer else 0.0
+                psi = mean_v / (mean_v + self.beta * mean_e + 1e-8)
+                lambda_ = (sigma2_own * psi) / (sigma2_own + sigma2_meta + 1e-8)
+                v_next = lambda_ * v_meta + (1 - lambda_) * v_own
+            else:
+                v_next = v_own
+
         total_loss = []
         all_td_errors = []
         self.policy_optimizer.zero_grad()
-        
+
+        batch_size = batch_obs.shape[0]
         for head in range(self.model.num_heads):
-            # Compute target Q-value
-            next_state_values, _ = torch.max(batch_pred_next_q[head], dim=1, keepdim=True)
-            target_q = batch_rewards.unsqueeze(1) + \
-                      (1 - batch_dones.unsqueeze(1).float()) * self.discount_rate * next_state_values
-            
-            # Get predicted Q-value for taken action
-            pred_q = batch_pred_q[head].gather(1, batch_action.unsqueeze(1))
-            
-            # SUNRISE: Downweight high-uncertainty updates
-            # Use inverse of uncertainty as weight (high uncertainty = low weight)
-            weights = 1.0 / (uncertainty + 1e-3)  # Add epsilon for numerical stability
-            weights = weights / weights.mean()  # Normalize to mean 1.0
-            
-            # Apply prioritized replay weights if available
+            # Per-head bootstrap mask: each head trains on a random ~50% subset
+            mask = torch.bernoulli(torch.full((batch_size,), 0.5, device=self.device)).bool()
+            if mask.sum() == 0:
+                continue
+
+            target_q = batch_rewards[mask].unsqueeze(1) + \
+                      (1 - batch_dones[mask].unsqueeze(1).float()) * self.discount_rate * v_next[mask]
+
+            pred_q = batch_pred_q[head][mask].gather(1, batch_action[mask].unsqueeze(1))
+
             if "weights" in exp_batch:
-                weights = weights * exp_batch["weights"].unsqueeze(1)
-            
-            # Weighted Huber loss
-            loss = F.smooth_l1_loss(pred_q, target_q, reduction='none')
-            weighted_loss = (loss * weights).mean()
-            
-            total_loss.append(weighted_loss)
-            
-            # Track TD errors for prioritized replay
+                weights = exp_batch["weights"][mask].unsqueeze(1)
+                loss = (F.smooth_l1_loss(pred_q, target_q, reduction='none') * weights).mean()
+            else:
+                loss = F.smooth_l1_loss(pred_q, target_q, reduction='mean')
+
+            total_loss.append(loss)
+
+            # Track TD errors for prioritized replay (over full batch, using unmasked head)
             if errors_out is not None:
-                td_error = torch.abs(pred_q - target_q).squeeze(1)
+                full_pred_q = batch_pred_q[head].gather(1, batch_action.unsqueeze(1))
+                full_target_q = batch_rewards.unsqueeze(1) + \
+                               (1 - batch_dones.unsqueeze(1).float()) * self.discount_rate * v_next
+                td_error = torch.abs(full_pred_q - full_target_q).squeeze(1)
                 all_td_errors.append(td_error)
         
         # Average loss across all heads
         if len(total_loss) > 0:
             total_loss = sum(total_loss) / self.model.num_heads
+            if self.writer is not None:
+                self.writer.add_scalar('policy_loss', total_loss.item(), self.step_number)
             total_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
             self.policy_optimizer.step()
             
             # Update prioritized replay errors
@@ -288,3 +339,9 @@ class SunriseDQNAgent(Agent):
         if update_target_network:
             self._update_target_network()
 
+    def query(self, batch_obs):
+        """This is here in case the policy is used as the meta vf"""
+        with torch.no_grad():
+            q_mean, q_std = self.model(batch_obs.to(self.device))
+            max_a = q_mean.argmax(dim=1, keepdim=True)
+            return q_mean.gather(1, max_a), q_std.gather(1, max_a)
