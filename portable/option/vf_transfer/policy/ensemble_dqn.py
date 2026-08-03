@@ -14,7 +14,7 @@ from copy import deepcopy
 import torch.nn.functional as F
 
 from portable.option.policy.agents import Agent
-from portable.option.vf_transfer.models.ensemble_models import DQNEnsemble
+from portable.option.vf_transfer.models.ensemble_models import DQNEnsemble, DQNEnsembleFull
 
 @gin.configurable
 class EnsembleDQNAgent(Agent):
@@ -32,8 +32,11 @@ class EnsembleDQNAgent(Agent):
                  replay_start_size=10000,
                  use_meta_vf=True,
                  task_buffer_length=100,
-                 beta=1.0):
+                 k=5.0,
+                 z0=0.0):
         super().__init__()
+        self.k = k
+        self.z0 = z0
         
         if use_gpu == -1:
             self.device = torch.device('cpu')
@@ -46,7 +49,6 @@ class EnsembleDQNAgent(Agent):
         self.discount_rate = discount_rate
         self.use_meta_vf = use_meta_vf
         self.buffer_length = task_buffer_length
-        self.beta = beta # this coefficient controls how much the task alignment affects lambda
 
         self.target_update_interval = target_update_interval
         self.epsilon_start = epsilon_start
@@ -54,7 +56,7 @@ class EnsembleDQNAgent(Agent):
         self.epsilon_decay = epsilon_decay
         self.replay_start_size = replay_start_size
         
-        self.model = DQNEnsemble()
+        self.model = DQNEnsembleFull()
         self.model.to(self.device)
         self.target_model = deepcopy(self.model)
         self.target_model.eval()
@@ -105,12 +107,6 @@ class EnsembleDQNAgent(Agent):
             self.epsilon_start - (self.epsilon_start - self.epsilon_end) *
             self.step_number / self.epsilon_decay,
         )
-        if self.meta_vf_ready and self.task_error_buffer and self.beta > 0:
-            mean_v = max(np.mean(self.task_value_buffer), 1e-8)
-            mean_e = np.mean(self.task_error_buffer)
-            psi = mean_v / (mean_v + self.beta * mean_e + 1e-8)
-            bellman_epsilon = self.epsilon_end + (self.epsilon_start - self.epsilon_end) * (1 - psi)
-            return min(step_epsilon, bellman_epsilon)
         return step_epsilon
 
     def act(self, obs):
@@ -274,15 +270,13 @@ class EnsembleDQNAgent(Agent):
             v_own = q_next_mean.gather(1, best_actions)              # (batch, 1)
 
             if self.meta_vf is not None and self.use_meta_vf and self.meta_vf_ready:
-                v_meta, v_meta_std = self.meta_vf.query(batch_next_obs)
-                v_meta = v_meta.to(self.device)
-                sigma2_own = q_next_std.gather(1, best_actions).pow(2)
-                sigma2_meta = v_meta_std.to(self.device).pow(2)
-                mean_v = max(np.mean(self.task_value_buffer), 1e-8) if self.task_value_buffer else 1.0
-                mean_e = np.mean(self.task_error_buffer) if self.task_error_buffer else 0.0
-                psi = mean_v / (mean_v + self.beta * mean_e + 1e-8)
-                lambda_ = (sigma2_own * psi) / (sigma2_own + sigma2_meta + 1e-8)
-                v_next = lambda_ * v_meta + (1 - lambda_) * v_own
+                v_meta, meta_unc = self.meta_vf.query(batch_next_obs)
+                v_meta = v_meta.to(self.device).clamp(-10.0, 10.0)
+                meta_unc = meta_unc.to(self.device)
+                own_unc = q_next_std.gather(1, best_actions)
+                z = torch.log(meta_unc.clamp_min(1e-6)) - torch.log(own_unc.clamp_min(1e-6))
+                alpha = torch.sigmoid(-self.k * (z - self.z0))
+                v_next = alpha * v_meta + (1 - alpha) * v_own
             else:
                 v_next = v_own
 

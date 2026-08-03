@@ -14,12 +14,15 @@ EnsembleDQNAgent.target_update_interval = 5000
 EnsembleDQNAgent.epsilon_start = 1.0
 EnsembleDQNAgent.epsilon_end = 0.05
 EnsembleDQNAgent.epsilon_decay = 150000
-EnsembleDQNAgent.beta = 0.0
 
 # Ensemble Model
-DQNEnsemble.num_heads = 5
-DQNEnsemble.num_actions = 7
-DQNEnsemble.in_channels = 1
+DQNEnsembleFull.num_heads = 5
+DQNEnsembleFull.num_actions = 7
+DQNEnsembleFull.in_channels = 1
+DQNEnsembleFull.beta = 1.0
+
+EnsembleDQNAgent.k = 5.0
+EnsembleDQNAgent.z0 = 0.0
 
 # Meta Value Function
 VFEnsemble.num_heads = 5

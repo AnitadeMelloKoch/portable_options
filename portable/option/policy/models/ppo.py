@@ -233,15 +233,10 @@ def _make_dataset(
 
 def _yield_minibatches(dataset, minibatch_size, num_epochs):
     assert dataset
-    buf = []
-    n = 0
-    while n < len(dataset) * num_epochs:
-        while len(buf) < minibatch_size:
-            buf = random.sample(dataset, k=len(dataset)) + buf
-        assert len(buf) >= minibatch_size
-        yield buf[-minibatch_size:]
-        n += minibatch_size
-        buf = buf[:-minibatch_size]
+    for _ in range(num_epochs):
+        perm = random.sample(dataset, k=len(dataset))
+        for start in range(0, len(dataset) - minibatch_size + 1, minibatch_size):
+            yield perm[start:start + minibatch_size]
 
 
 class PPO(agent.AttributeSavingMixin, agent.BatchAgent):
@@ -587,6 +582,10 @@ class PPO(agent.AttributeSavingMixin, agent.BatchAgent):
             advs=flat_advs,
             vs_teacher=flat_vs_teacher,
         )
+
+        if self.optimizer is None:
+            return loss
+
         loss.backward()
         if self.max_grad_norm is not None:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
@@ -612,12 +611,18 @@ class PPO(agent.AttributeSavingMixin, agent.BatchAgent):
             mean_advs = None
             std_advs = None
 
+        total_loss = 0
         for _ in range(self.epochs):
             random.shuffle(dataset)
             for minibatch in _yield_subset_of_sequences_with_fixed_number_of_items(
                 dataset, self.minibatch_size
             ):
-                self._update_once_recurrent(minibatch, mean_advs, std_advs)
+                maybe_loss = self._update_once_recurrent(minibatch, mean_advs, std_advs)
+                if self.optimizer is None:
+                    total_loss += maybe_loss
+
+        if self.optimizer is None:
+            return total_loss
 
     def _lossfun(
         self, entropy, vs_pred, log_probs, vs_pred_old, log_probs_old, advs, vs_teacher
@@ -634,7 +639,7 @@ class PPO(agent.AttributeSavingMixin, agent.BatchAgent):
         self.policy_loss_record.append(float(loss_policy))
 
         if self.clip_eps_vf is None:
-            loss_value_func = F.mse_loss(vs_pred, vs_teacher)
+            loss_value_func = 0.5 * F.mse_loss(vs_pred, vs_teacher)
         else:
             clipped_vs_pred = _elementwise_clip(
                 vs_pred, vs_pred_old - self.clip_eps_vf, vs_pred_old + self.clip_eps_vf,

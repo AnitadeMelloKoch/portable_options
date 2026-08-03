@@ -16,9 +16,13 @@ EnsembleDQNAgent.epsilon_end = 0.05
 EnsembleDQNAgent.epsilon_decay = 1500000
 
 # Ensemble Model
-DQNEnsemble.num_heads = 5
-DQNEnsemble.num_actions = 7
-DQNEnsemble.in_channels = 1
+DQNEnsembleFull.num_heads = 5
+DQNEnsembleFull.num_actions = 7
+DQNEnsembleFull.in_channels = 1
+DQNEnsembleFull.beta = 1.0
+
+EnsembleDQNAgent.k = 5.0
+EnsembleDQNAgent.z0 = 0.0
 
 # Meta Value Function
 VFEnsemble.num_heads = 5
@@ -39,6 +43,6 @@ VFTransferAgent.use_gpu = 0
 VFTransferAgent.uncertainty_threshold = 1.0
 
 # Experiment
-EnsembleDQNMinigridExperiment.transfer_epsilon_start = 0.3
+EnsembleDQNMinigridExperiment.transfer_epsilon_start = 0.9
 EnsembleDQNMinigridExperiment.early_stop_threshold = 0.9
 EnsembleDQNMinigridExperiment.early_stop_window = 5

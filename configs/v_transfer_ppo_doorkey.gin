@@ -1,0 +1,36 @@
+import portable.option.vf_transfer.policy.uncertain_ppo
+import portable.option.vf_transfer.models.uncertain_ppo_model
+import portable.option.vf_transfer.ppo_skill_library
+import experiments.policy_transfer_minigrid.core.ensemble_ppo_minigrid_experiment
+
+# PPO agent
+UncertainPPO.num_actions = 7
+UncertainPPO.num_vf_heads = 5
+UncertainPPO.learning_rate = 1e-4
+UncertainPPO.gamma = 0.99
+UncertainPPO.lambd = 0.95
+UncertainPPO.value_func_coef = 0.5
+UncertainPPO.clip_eps_vf = 0.2
+UncertainPPO.entropy_coef = 0.1
+UncertainPPO.update_interval = 4096
+UncertainPPO.minibatch_size = 64
+UncertainPPO.epochs = 4
+UncertainPPO.clip_eps = 0.2
+UncertainPPO.max_grad_norm = 0.5
+UncertainPPO.standardize_advantages = True
+UncertainPPO.meta_vf_weight = 1.0
+UncertainPPO.prior_scale = 1.0
+UncertainPPO.z0 = 0.0
+
+# Skill wrapper
+PPOEnsembleVFAgent.num_actions = 7
+PPOEnsembleVFAgent.num_vf_heads = 5
+PPOEnsembleVFAgent.gpu_id = 0
+
+# Skill library / meta VF
+PPOSkillLibrary.num_meta_vf_heads = 5
+
+# Experiment
+EnsemblePPOMinigridExperiment.early_stop_threshold = 1.0
+EnsemblePPOMinigridExperiment.early_stop_window = 5000
+EnsemblePPOMinigridExperiment.n_parallel_envs = 16
